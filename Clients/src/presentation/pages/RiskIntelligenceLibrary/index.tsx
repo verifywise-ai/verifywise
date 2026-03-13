@@ -5,6 +5,7 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import RiskLibraryFilterBar from "./RiskLibraryFilters";
 import RiskLibraryTable from "./RiskLibraryTable";
 import RiskLibraryDetail from "./RiskLibraryDetail";
+import GeneratePanel from "./GeneratePanel";
 import {
   useRiskLibrarySearch,
   useRiskLibraryFilters,
@@ -92,10 +93,9 @@ const RiskIntelligenceLibrary = () => {
       title="Risk Intelligence Library"
       description="Browse, search, and generate AI risk scenarios with multi-dimensional taxonomy. Powered by MIT, IBM, and AI-generated intelligence."
     >
-      {/* Search bar */}
-      <Box sx={{ mb: 2 }}>
+      {/* Search bar + AI Generate button */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
         <TextField
-          fullWidth
           size="small"
           placeholder="Search risks by keyword..."
           value={searchInput}
@@ -107,8 +107,9 @@ const RiskIntelligenceLibrary = () => {
               </InputAdornment>
             ),
           }}
-          sx={{ maxWidth: 500 }}
+          sx={{ maxWidth: 500, flex: 1 }}
         />
+        <GeneratePanel />
       </Box>
 
       {/* Filters */}
