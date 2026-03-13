@@ -9,6 +9,8 @@ import {
   useRiskLibrarySearch,
   useRiskLibraryFilters,
   useRiskLibraryEntry,
+  useSubmitFeedback,
+  useRemoveFeedback,
 } from "../../../application/hooks/useRiskLibrary";
 import { RiskLibraryEntry, RiskLibrarySearchParams } from "../../../domain/types/RiskLibrary";
 
@@ -61,6 +63,10 @@ const RiskIntelligenceLibrary = () => {
   const { data: searchResult, isLoading } = useRiskLibrarySearch(searchParams);
   const { data: filterOptions } = useRiskLibraryFilters();
   const { data: entryDetail } = useRiskLibraryEntry(selectedEntryId);
+
+  // Feedback mutations
+  const submitFeedback = useSubmitFeedback();
+  const removeFeedback = useRemoveFeedback();
 
   // Handlers
   const handleFilterChange = useCallback(
@@ -136,6 +142,9 @@ const RiskIntelligenceLibrary = () => {
         detail={entryDetail || null}
         open={drawerOpen}
         onClose={handleCloseDrawer}
+        onSubmitFeedback={submitFeedback.mutate}
+        onRemoveFeedback={removeFeedback.mutate}
+        isFeedbackSubmitting={submitFeedback.isPending || removeFeedback.isPending}
       />
     </PageHeaderExtended>
   );

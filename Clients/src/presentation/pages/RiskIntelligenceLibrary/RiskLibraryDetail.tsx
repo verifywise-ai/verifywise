@@ -11,11 +11,19 @@ import {
 import { X, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { RiskLibraryEntryDetail, RiskLibraryMitigation, RiskLibraryIncident } from "../../../domain/types/RiskLibrary";
+import FeedbackButtons from "../../components/FeedbackButtons";
 
 interface Props {
   detail: RiskLibraryEntryDetail | null;
   open: boolean;
   onClose: () => void;
+  onSubmitFeedback: (params: {
+    id: number;
+    feedback_type: "upvote" | "downvote" | "flag";
+    flag_reason?: string;
+  }) => void;
+  onRemoveFeedback: (params: { id: number }) => void;
+  isFeedbackSubmitting?: boolean;
 }
 
 const strategyColors: Record<string, string> = {
@@ -173,12 +181,19 @@ const OrgNotesTab = ({
   </Box>
 );
 
-const RiskLibraryDetail = ({ detail, open, onClose }: Props) => {
+const RiskLibraryDetail = ({
+  detail,
+  open,
+  onClose,
+  onSubmitFeedback,
+  onRemoveFeedback,
+  isFeedbackSubmitting,
+}: Props) => {
   const [tab, setTab] = useState(0);
 
   if (!detail) return null;
 
-  const { entry, mitigations, incidents, orgCustomization } = detail;
+  const { entry, mitigations, incidents, orgCustomization, feedback } = detail;
 
   return (
     <Drawer
@@ -209,7 +224,17 @@ const RiskLibraryDetail = ({ detail, open, onClose }: Props) => {
 
       <Divider />
 
-      <Typography variant="body2" sx={{ mt: 2, mb: 1 }}>
+      <Box sx={{ mt: 2, mb: 1 }}>
+        <FeedbackButtons
+          entryId={entry.id}
+          feedback={feedback}
+          onSubmit={onSubmitFeedback}
+          onRemove={onRemoveFeedback}
+          isSubmitting={isFeedbackSubmitting}
+        />
+      </Box>
+
+      <Typography variant="body2" sx={{ mb: 1 }}>
         {entry.description}
       </Typography>
 
