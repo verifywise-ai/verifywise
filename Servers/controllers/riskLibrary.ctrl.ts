@@ -12,6 +12,12 @@ import {
   upsertRiskLibraryCustomizationQuery,
 } from "../utils/riskLibrary.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
+import {
+  generateRiskTaxonomy,
+  generateRiskMitigations,
+  generateRiskAssessment,
+  submitGenerationFeedback,
+} from "../services/riskLibraryAi.service";
 
 const fileName = "riskLibrary.ctrl.ts";
 
@@ -386,6 +392,193 @@ export const upsertRiskLibraryCustomization = async (req: Request, res: Response
       fileName
     );
     logger.error("Error in upsertRiskLibraryCustomization:", error);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+};
+
+// ========================================
+// AI GENERATION HANDLERS
+// ========================================
+
+/**
+ * Generate risk taxonomy for an industry/use case.
+ * POST /api/risk-library/generate/taxonomy
+ */
+export const generateTaxonomy = async (req: Request, res: Response) => {
+  const functionName = "generateTaxonomy";
+
+  logStructured("processing", "generating risk taxonomy", functionName, fileName);
+
+  try {
+    const { industry, use_case, ai_system_type, lifecycle_phase, project_description, existing_risks, llm_key_id } = req.body;
+
+    if (!industry || !use_case) {
+      return res.status(400).json(STATUS_CODE[400]("industry and use_case are required"));
+    }
+    if (!llm_key_id) {
+      return res.status(400).json(STATUS_CODE[400]("llm_key_id is required"));
+    }
+
+    const result = await generateRiskTaxonomy(
+      { industry, use_case, ai_system_type, lifecycle_phase, project_description, existing_risks },
+      llm_key_id,
+      req.organizationId!,
+      req.userId!
+    );
+
+    logStructured(
+      "successful",
+      `generated ${result.risks.length} risks for taxonomy`,
+      functionName,
+      fileName
+    );
+
+    return res.status(200).json(STATUS_CODE[200](result));
+  } catch (error) {
+    logStructured(
+      "error",
+      `failed to generate taxonomy: ${(error as Error).message}`,
+      functionName,
+      fileName
+    );
+    logger.error("Error in generateTaxonomy:", error);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+};
+
+/**
+ * Generate mitigations for a specific risk.
+ * POST /api/risk-library/generate/mitigations
+ */
+export const generateMitigations = async (req: Request, res: Response) => {
+  const functionName = "generateMitigations";
+
+  logStructured("processing", "generating risk mitigations", functionName, fileName);
+
+  try {
+    const { risk_summary, risk_description, risk_category, severity, industry, existing_mitigations, llm_key_id } = req.body;
+
+    if (!risk_summary || !risk_description) {
+      return res.status(400).json(STATUS_CODE[400]("risk_summary and risk_description are required"));
+    }
+    if (!llm_key_id) {
+      return res.status(400).json(STATUS_CODE[400]("llm_key_id is required"));
+    }
+
+    const result = await generateRiskMitigations(
+      { risk_summary, risk_description, risk_category, severity, industry, existing_mitigations },
+      llm_key_id,
+      req.organizationId!,
+      req.userId!
+    );
+
+    logStructured(
+      "successful",
+      `generated ${result.mitigations.length} mitigations`,
+      functionName,
+      fileName
+    );
+
+    return res.status(200).json(STATUS_CODE[200](result));
+  } catch (error) {
+    logStructured(
+      "error",
+      `failed to generate mitigations: ${(error as Error).message}`,
+      functionName,
+      fileName
+    );
+    logger.error("Error in generateMitigations:", error);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+};
+
+/**
+ * Generate a full risk assessment for a use case.
+ * POST /api/risk-library/generate/assessment
+ */
+export const generateAssessment = async (req: Request, res: Response) => {
+  const functionName = "generateAssessment";
+
+  logStructured("processing", "generating risk assessment", functionName, fileName);
+
+  try {
+    const { use_case, industry, project_description, model_type, lifecycle_phase, llm_key_id } = req.body;
+
+    if (!use_case || !industry) {
+      return res.status(400).json(STATUS_CODE[400]("use_case and industry are required"));
+    }
+    if (!llm_key_id) {
+      return res.status(400).json(STATUS_CODE[400]("llm_key_id is required"));
+    }
+
+    const result = await generateRiskAssessment(
+      { use_case, industry, project_description, model_type, lifecycle_phase },
+      llm_key_id,
+      req.organizationId!,
+      req.userId!
+    );
+
+    logStructured(
+      "successful",
+      `generated risk assessment with ${result.assessment.risks.length} risks`,
+      functionName,
+      fileName
+    );
+
+    return res.status(200).json(STATUS_CODE[200](result));
+  } catch (error) {
+    logStructured(
+      "error",
+      `failed to generate assessment: ${(error as Error).message}`,
+      functionName,
+      fileName
+    );
+    logger.error("Error in generateAssessment:", error);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+};
+
+/**
+ * Submit feedback on an AI generation.
+ * POST /api/risk-library/generations/:id/feedback
+ */
+export const submitGenFeedback = async (req: Request, res: Response) => {
+  const functionName = "submitGenFeedback";
+
+  logStructured("processing", "submitting generation feedback", functionName, fileName);
+
+  try {
+    const idParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = parseInt(idParam, 10);
+    if (!Number.isSafeInteger(id)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid generation ID"));
+    }
+
+    const { feedback_type } = req.body;
+    if (!feedback_type || !["upvote", "downvote", "flag"].includes(feedback_type)) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("feedback_type must be one of: upvote, downvote, flag"));
+    }
+
+    await submitGenerationFeedback(id, req.organizationId!, feedback_type);
+
+    logStructured(
+      "successful",
+      `submitted feedback for generation ${id}: ${feedback_type}`,
+      functionName,
+      fileName
+    );
+
+    return res.status(200).json(STATUS_CODE[200]({ message: "Feedback submitted" }));
+  } catch (error) {
+    logStructured(
+      "error",
+      `failed to submit generation feedback: ${(error as Error).message}`,
+      functionName,
+      fileName
+    );
+    logger.error("Error in submitGenFeedback:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 };

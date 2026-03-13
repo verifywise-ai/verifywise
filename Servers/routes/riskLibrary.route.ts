@@ -11,6 +11,10 @@ import {
   removeRiskLibraryFeedback,
   getRiskLibraryFeedback,
   upsertRiskLibraryCustomization,
+  generateTaxonomy,
+  generateMitigations,
+  generateAssessment,
+  submitGenFeedback,
 } from "../controllers/riskLibrary.ctrl";
 
 // CRUD
@@ -26,5 +30,11 @@ router.get("/:id/feedback", authenticateJWT, getRiskLibraryFeedback);
 
 // Org customization
 router.put("/:id/customize", authenticateJWT, upsertRiskLibraryCustomization);
+
+// AI generation
+router.post("/generate/taxonomy", authenticateJWT, generateTaxonomy);
+router.post("/generate/mitigations", authenticateJWT, generateMitigations);
+router.post("/generate/assessment", authenticateJWT, generateAssessment);
+router.post("/generations/:id/feedback", authenticateJWT, submitGenFeedback);
 
 export default router;
