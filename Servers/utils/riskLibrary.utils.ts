@@ -1,3 +1,4 @@
+import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { IRiskLibrarySearchParams } from "../domain.layer/interfaces/i.riskLibrary";
 
@@ -253,4 +254,143 @@ export const getRiskLibraryStatsQuery = async () => {
     bySeverity: bySeverityResult[0],
     byEuAiActTier: byTierResult[0],
   };
+};
+
+// ========================================
+// FEEDBACK QUERIES
+// ========================================
+
+/**
+ * Submit feedback (upvote/downvote/flag) on a risk library entry.
+ * Upserts: one vote per user per entry.
+ */
+export const upsertRiskLibraryFeedbackQuery = async (
+  organizationId: number,
+  userId: number,
+  libraryEntryId: number,
+  feedbackType: string,
+  flagReason?: string | null,
+  context?: string | null
+) => {
+  const result = (await sequelize.query(
+    `INSERT INTO risk_library_feedback
+       (organization_id, user_id, library_entry_id, feedback_type, flag_reason, context)
+     VALUES (:organizationId, :userId, :libraryEntryId, :feedbackType, :flagReason, :context)
+     ON CONFLICT (organization_id, user_id, library_entry_id)
+     DO UPDATE SET feedback_type = :feedbackType, flag_reason = :flagReason
+     RETURNING *`,
+    {
+      replacements: {
+        organizationId,
+        userId,
+        libraryEntryId,
+        feedbackType,
+        flagReason: flagReason || null,
+        context: context || null,
+      },
+    }
+  )) as [any[], number];
+
+  return result[0][0];
+};
+
+/**
+ * Remove feedback for a user on a risk library entry.
+ */
+export const deleteRiskLibraryFeedbackQuery = async (
+  organizationId: number,
+  userId: number,
+  libraryEntryId: number
+) => {
+  const result = (await sequelize.query(
+    `DELETE FROM risk_library_feedback
+     WHERE organization_id = :organizationId AND user_id = :userId AND library_entry_id = :libraryEntryId
+     RETURNING id`,
+    {
+      replacements: { organizationId, userId, libraryEntryId },
+    }
+  )) as [any[], number];
+
+  return result[0].length > 0;
+};
+
+/**
+ * Get aggregated feedback for a risk library entry + current user's vote.
+ */
+export const getRiskLibraryFeedbackQuery = async (
+  libraryEntryId: number,
+  organizationId: number,
+  userId: number
+) => {
+  const feedbackResult = (await sequelize.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE feedback_type = 'upvote') as upvotes,
+       COUNT(*) FILTER (WHERE feedback_type = 'downvote') as downvotes,
+       COUNT(*) FILTER (WHERE feedback_type = 'flag') as flags
+     FROM risk_library_feedback
+     WHERE library_entry_id = :libraryEntryId`,
+    { replacements: { libraryEntryId } }
+  )) as [any[], number];
+
+  const userVoteResult = (await sequelize.query(
+    `SELECT feedback_type FROM risk_library_feedback
+     WHERE library_entry_id = :libraryEntryId AND organization_id = :organizationId AND user_id = :userId`,
+    { replacements: { libraryEntryId, organizationId, userId } }
+  )) as [any[], number];
+
+  const fb = feedbackResult[0][0] || { upvotes: 0, downvotes: 0, flags: 0 };
+
+  return {
+    upvotes: parseInt(fb.upvotes, 10) || 0,
+    downvotes: parseInt(fb.downvotes, 10) || 0,
+    flags: parseInt(fb.flags, 10) || 0,
+    userVote: userVoteResult[0][0]?.feedback_type || null,
+  };
+};
+
+// ========================================
+// ORG CUSTOMIZATION QUERIES
+// ========================================
+
+/**
+ * Upsert org-specific customization for a risk library entry.
+ */
+export const upsertRiskLibraryCustomizationQuery = async (
+  organizationId: number,
+  libraryEntryId: number,
+  data: {
+    custom_mitigations?: string | null;
+    custom_notes?: string | null;
+    is_hidden?: boolean;
+  },
+  transaction: Transaction
+) => {
+  const result = (await sequelize.query(
+    `INSERT INTO risk_library_org_customizations
+       (organization_id, library_entry_id, custom_mitigations, custom_notes, is_hidden)
+     VALUES (:organizationId, :libraryEntryId, :customMitigations, :customNotes, :isHidden)
+     ON CONFLICT (organization_id, library_entry_id)
+     DO UPDATE SET
+       custom_mitigations = COALESCE(:customMitigations, risk_library_org_customizations.custom_mitigations),
+       custom_notes = COALESCE(:customNotes, risk_library_org_customizations.custom_notes),
+       is_hidden = :isHidden,
+       updated_at = now()
+     RETURNING *`,
+    {
+      replacements: {
+        organizationId,
+        libraryEntryId,
+        customMitigations: data.custom_mitigations !== undefined
+          ? (data.custom_mitigations ?? null)
+          : null,
+        customNotes: data.custom_notes !== undefined
+          ? (data.custom_notes ?? null)
+          : null,
+        isHidden: data.is_hidden ?? false,
+      },
+      transaction,
+    }
+  )) as [any[], number];
+
+  return result[0][0];
 };
