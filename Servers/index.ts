@@ -89,6 +89,7 @@ import auditLedgerRoutes from "./routes/auditLedger.route";
 import featureSettingsRoutes from "./routes/featureSettings.route";
 import riskBenchmarkRoutes from "./routes/riskBenchmark.route";
 import quantitativeRiskRoutes from "./routes/quantitativeRisk.route";
+import riskLibraryRoutes from "./routes/riskLibrary.route";
 import { setupNotificationSubscriber } from "./services/notificationSubscriber.service";
 
 const swaggerDoc = YAML.load("./swagger.yaml");
@@ -252,6 +253,7 @@ try {
   app.use("/api/feature-settings", featureSettingsRoutes);
   app.use("/api/risk-benchmarks", riskBenchmarkRoutes);
   app.use("/api/quantitative-risks", quantitativeRiskRoutes);
+  app.use("/api/risk-library", riskLibraryRoutes);
 
   // Setup notification subscriber for real-time notifications
   (async () => {
