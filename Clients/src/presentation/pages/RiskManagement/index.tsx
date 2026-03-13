@@ -18,6 +18,7 @@ import CustomizableSkeleton from "../../components/Skeletons";
 import allowedRoles from "../../../application/constants/permissions";
 import AddNewRiskMITModal from "../../components/AddNewRiskMITForm";
 import AddNewRiskIBMModal from "../../components/AddNewRiskIBMForm";
+import RiskLibraryImportModal from "../../components/RiskLibraryImportModal";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import useUsers from "../../../application/hooks/useUsers";
@@ -99,6 +100,7 @@ const RiskManagement = () => {
   const [currentRow, setCurrentRow] = useState<number | null>(null);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isIBMModalOpen, setIsIBMModalOpen] = useState(false);
+  const [isRiskLibraryModalOpen, setIsRiskLibraryModalOpen] = useState(false);
   const [insertFromMenuAnchor, setInsertFromMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedRiskData, setSelectedRiskData] = useState<{
     riskName: string;
@@ -534,6 +536,11 @@ const RiskManagement = () => {
     handleInsertFromMenuClose();
   };
 
+  const handleRiskLibraryModalOpen = () => {
+    setIsRiskLibraryModalOpen(true);
+    handleInsertFromMenuClose();
+  };
+
   const handleAiRiskModalClose = () => {
     setIsAiRiskModalOpen(false);
     setSelectedRiskData(null);
@@ -930,6 +937,37 @@ const RiskManagement = () => {
                       Academic research-based risks covering AI safety, fairness, and societal impact
                     </Typography>
                   </Box>
+                  <Box
+                    role="menuitem"
+                    tabIndex={0}
+                    aria-label="Insert risk from Risk Intelligence Library"
+                    onClick={handleRiskLibraryModalOpen}
+                    onKeyDown={(e: React.KeyboardEvent) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleRiskLibraryModalOpen();
+                      }
+                    }}
+                    sx={aiRiskCardBaseStyle}
+                  >
+                    <Typography
+                      sx={{ fontSize: 24, lineHeight: 1 }}
+                    >
+                      {"🔍"}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={aiRiskCardTitleStyle}
+                    >
+                      Risk Intelligence Library
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={aiRiskCardCaptionStyle}
+                    >
+                      AI-generated and curated risks with multi-dimensional taxonomy and mitigations
+                    </Typography>
+                  </Box>
 
                   {/* Plugin Slot for Risk Import menu items */}
                   <PluginSlot
@@ -1025,6 +1063,11 @@ const RiskManagement = () => {
       <AddNewRiskIBMModal
         isOpen={isIBMModalOpen}
         setIsOpen={setIsIBMModalOpen}
+        onRiskSelected={handleRiskSelected}
+      />
+      <RiskLibraryImportModal
+        isOpen={isRiskLibraryModalOpen}
+        setIsOpen={setIsRiskLibraryModalOpen}
         onRiskSelected={handleRiskSelected}
       />
       {/* AI Risk Modal */}
