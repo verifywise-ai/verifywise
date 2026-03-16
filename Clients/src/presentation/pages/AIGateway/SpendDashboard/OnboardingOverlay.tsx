@@ -36,6 +36,7 @@ import {
   WARNING_TEXT,
   KEY_DISPLAY_BG,
 } from "../shared";
+import { validateApiKeyFormat } from "../../../../../application/utils/apiKeyValidation";
 
 // Spinner keyframes for loading state
 const spinKeyframes = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
@@ -360,9 +361,32 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
       setKeyError("All fields are required");
       return;
     }
+
+    // 1. Client-side format check
+    const formatError = validateApiKeyFormat(keyForm.provider, keyForm.api_key);
+    if (formatError) {
+      setKeyError(formatError);
+      return;
+    }
+
     setKeySubmitting(true);
     setKeyError("");
+
     try {
+      // 2. Live verification
+      const verifyRes = await apiServices.post("/ai-gateway/keys/verify", {
+        provider: keyForm.provider,
+        apiKey: keyForm.api_key,
+      });
+      // verifyApiKey uses raw res.json() — valid is at verifyRes.data.valid (not nested in data.data)
+      const { valid, message } = verifyRes?.data || {};
+
+      if (valid === false) {
+        setKeyError(message || "API key is invalid. Please check it and try again.");
+        return;
+      }
+
+      // 3. Save — preserve the original success path exactly
       await apiServices.post("/ai-gateway/keys", keyForm);
       closeModal();
       onStepCompleted();
