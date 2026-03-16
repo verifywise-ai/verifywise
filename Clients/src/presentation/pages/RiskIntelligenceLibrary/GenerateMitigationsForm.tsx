@@ -1,13 +1,7 @@
 import { useState } from "react";
-import {
-  Box,
-  Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-} from "@mui/material";
+import { Box, Button, TextField } from "@mui/material";
+import { SelectChangeEvent } from "@mui/material";
+import Select from "../../components/Inputs/Select";
 import { LLMKeysModel } from "../../../domain/models/Common/llmKeys/llmKeys.model";
 
 interface Props {
@@ -24,6 +18,11 @@ interface Props {
 }
 
 const severities = ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"];
+
+const toItems = (options: string[], emptyLabel = "Any") => [
+  { _id: "", name: emptyLabel },
+  ...options.map((opt) => ({ _id: opt, name: opt })),
+];
 
 const GenerateMitigationsForm = ({ llmKeys, onSubmit, isLoading }: Props) => {
   const [riskSummary, setRiskSummary] = useState("");
@@ -47,22 +46,24 @@ const GenerateMitigationsForm = ({ llmKeys, onSubmit, isLoading }: Props) => {
     });
   };
 
+  const llmKeyItems = llmKeys.map((k) => ({
+    _id: k.id,
+    name: `${k.name} — ${k.model}`,
+  }));
+
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <FormControl size="small" fullWidth>
-        <InputLabel>LLM Key *</InputLabel>
-        <Select
-          value={llmKeyId}
-          label="LLM Key *"
-          onChange={(e) => setLlmKeyId(Number(e.target.value))}
-        >
-          {llmKeys.map((k) => (
-            <MenuItem key={k.id} value={k.id}>
-              {k.name} — {k.model}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <Select
+        id="gen-mitigations-llm-key"
+        label="LLM Key *"
+        placeholder="Select LLM key"
+        value={llmKeyId}
+        items={llmKeyItems}
+        onChange={(e: SelectChangeEvent<string | number>) =>
+          setLlmKeyId(Number(e.target.value))
+        }
+        sx={{ width: "100%" }}
+      />
 
       <TextField
         size="small"
@@ -93,21 +94,17 @@ const GenerateMitigationsForm = ({ llmKeys, onSubmit, isLoading }: Props) => {
         placeholder="e.g., Discrimination & Toxicity"
       />
 
-      <FormControl size="small" fullWidth>
-        <InputLabel>Severity</InputLabel>
-        <Select
-          value={severity}
-          label="Severity"
-          onChange={(e) => setSeverity(e.target.value)}
-        >
-          <MenuItem value="">Any</MenuItem>
-          {severities.map((s) => (
-            <MenuItem key={s} value={s}>
-              {s}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <Select
+        id="gen-mitigations-severity"
+        label="Severity"
+        placeholder="Any"
+        value={severity}
+        items={toItems(severities)}
+        onChange={(e: SelectChangeEvent<string | number>) =>
+          setSeverity(e.target.value as string)
+        }
+        sx={{ width: "100%" }}
+      />
 
       <TextField
         size="small"

@@ -1,4 +1,5 @@
-import { Box, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent } from "@mui/material";
+import { Box, SelectChangeEvent } from "@mui/material";
+import Select from "../../components/Inputs/Select";
 import { RiskLibraryFilters as FiltersType } from "../../../domain/types/RiskLibrary";
 
 interface FilterState {
@@ -19,11 +20,14 @@ interface Props {
   filterOptions?: FiltersType;
 }
 
-const selectSx = { minWidth: 140, "& .MuiSelect-select": { py: 1 } };
+const toItems = (options: string[]) => [
+  { _id: "", name: "All" },
+  ...options.map((opt) => ({ _id: opt, name: opt })),
+];
 
 const RiskLibraryFilterBar = ({ filters, onFilterChange, filterOptions }: Props) => {
-  const handleChange = (key: keyof FilterState) => (event: SelectChangeEvent) => {
-    onFilterChange(key, event.target.value);
+  const handleChange = (key: keyof FilterState) => (event: SelectChangeEvent<string | number>) => {
+    onFilterChange(key, event.target.value as string);
   };
 
   const renderSelect = (
@@ -31,25 +35,20 @@ const RiskLibraryFilterBar = ({ filters, onFilterChange, filterOptions }: Props)
     label: string,
     options: string[]
   ) => (
-    <FormControl size="small" sx={selectSx}>
-      <InputLabel>{label}</InputLabel>
-      <Select
-        value={filters[key]}
-        label={label}
-        onChange={handleChange(key)}
-      >
-        <MenuItem value="">All</MenuItem>
-        {options.map((opt) => (
-          <MenuItem key={opt} value={opt}>
-            {opt}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
+    <Select
+      id={`risk-library-filter-${key}`}
+      label={label}
+      placeholder="All"
+      value={filters[key]}
+      items={toItems(options)}
+      onChange={handleChange(key)}
+      isFilterApplied={!!filters[key]}
+      sx={{ minWidth: 140 }}
+    />
   );
 
   return (
-    <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", mb: 2 }}>
+    <Box sx={{ display: "flex", gap: "20px", flexWrap: "wrap", mb: 2 }}>
       {renderSelect("source", "Source", filterOptions?.sources || [])}
       {renderSelect("risk_type", "Risk Type", filterOptions?.riskTypes || [])}
       {renderSelect("risk_source", "Risk Source", filterOptions?.riskSources || [])}

@@ -1,8 +1,9 @@
 import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { getLLMKeysWithKeyQuery } from "../utils/llmKey.utils";
+import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../utils/llmKey.utils";
 import { sequelize } from "../database/db";
+import logger from "../utils/logger/fileLogger";
 
 // ============================================================================
 // TYPES
@@ -73,22 +74,30 @@ async function getModelFromKey(llmKeyId: number, organizationId: number) {
 
   if (!llmKey) return null;
 
-  const keyName = ((llmKey as any).name || "").toLowerCase();
-  if (keyName.includes("anthropic") || keyName.includes("claude")) {
+  const provider = (llmKey as any).name || "";
+  const apiKey = (llmKey as any).key || "";
+  const baseURL = (llmKey as any).url || getLLMProviderUrl(provider);
+  const model = (llmKey as any).model;
+  const headers = (llmKey as any).custom_headers || undefined;
+
+  logger.debug(`[riskLibraryAi] provider=${provider}, model=${model}, baseURL=${baseURL}, keyLength=${apiKey.length}, keyPrefix=${apiKey.substring(0, 8)}...`);
+
+  if (provider === "Anthropic") {
     const anthropic = createAnthropic({
-      apiKey: (llmKey as any).key,
-      baseURL: (llmKey as any).url || undefined,
-      headers: (llmKey as any).custom_headers || undefined,
+      apiKey,
+      baseURL: baseURL || undefined,
+      headers,
     });
-    return anthropic((llmKey as any).model || "claude-sonnet-4-20250514");
+    return anthropic(model || "claude-sonnet-4-20250514");
   }
 
+  // OpenAI, OpenRouter, Custom all use OpenAI-compatible interface
   const openai = createOpenAI({
-    apiKey: (llmKey as any).key,
-    baseURL: (llmKey as any).url || undefined,
-    headers: (llmKey as any).custom_headers || undefined,
+    apiKey,
+    baseURL,
+    headers,
   });
-  return openai((llmKey as any).model || "gpt-4o-mini");
+  return openai(model || "gpt-4o-mini");
 }
 
 async function getFirstAvailableKey(organizationId: number) {

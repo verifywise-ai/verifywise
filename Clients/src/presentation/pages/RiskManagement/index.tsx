@@ -3,7 +3,8 @@ import { Box, Stack, Popover, Typography, IconButton } from "@mui/material";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { RisksCard } from "../../components/Cards/RisksCard";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { BarChart3, ChevronDown } from "lucide-react"
+import { BarChart3, ChevronDown, Library } from "lucide-react"
+import RiskLibraryDrawer from "../RiskIntelligenceLibrary/RiskLibraryDrawer";
 import ibmLogo from "../../assets/ibm_logo.svg";
 import mitLogo from "../../assets/mit_logo.svg";
 import VWProjectRisksTable from "../../components/Table/VWProjectRisksTable";
@@ -122,6 +123,7 @@ const RiskManagement = () => {
   // State for filtering
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isAnalyticsDrawerOpen, setIsAnalyticsDrawerOpen] = useState(false);
+  const [isRiskLibraryDrawerOpen, setIsRiskLibraryDrawerOpen] = useState(false);
 
   // Modal state for StandardModal pattern
   const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
@@ -791,6 +793,13 @@ const RiskManagement = () => {
               filename="risk-management"
               title="Risk Management"
             />
+            <IconButton
+              onClick={() => setIsRiskLibraryDrawerOpen(true)}
+              aria-label="Risk Intelligence Library"
+              sx={analyticsIconButtonStyle}
+            >
+              <Library size={16} color="#344054" />
+            </IconButton>
             <div data-joyride-id="analytics-button">
               <IconButton
                 onClick={() => setIsAnalyticsDrawerOpen(true)}
@@ -1093,6 +1102,12 @@ const RiskManagement = () => {
           onSubmitRef={onAiRiskSubmitRef}
         />
       </StandardModal>
+
+      {/* Risk Intelligence Library Drawer */}
+      <RiskLibraryDrawer
+        open={isRiskLibraryDrawerOpen}
+        onClose={() => setIsRiskLibraryDrawerOpen(false)}
+      />
 
       {/* Analytics Drawer */}
       <AnalyticsDrawer

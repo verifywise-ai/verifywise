@@ -25,6 +25,7 @@ import { availableEvidenceTools } from "../advisor/functions/evidenceFunctions";
 import { availableReportingTools } from "../advisor/functions/reportingFunctions";
 import { availableAiTrustCentreTools } from "../advisor/functions/aiTrustCentreFunctions";
 import { availableAgentDiscoveryTools } from "../advisor/functions/agentDiscoveryFunctions";
+import { availableRiskLibraryTools } from "../advisor/functions/riskLibraryFunctions";
 import { toolsDefinition as riskToolsDefinition } from "../advisor/tools/riskTools";
 import { toolsDefinition as modelInventoryToolsDefinition } from "../advisor/tools/modelInventoryTools";
 import { toolsDefinition as modelRiskToolsDefinition } from "../advisor/tools/modelRiskTools";
@@ -40,6 +41,7 @@ import { toolsDefinition as evidenceToolsDefinition } from "../advisor/tools/evi
 import { toolsDefinition as reportingToolsDefinition } from "../advisor/tools/reportingTools";
 import { toolsDefinition as aiTrustCentreToolsDefinition } from "../advisor/tools/aiTrustCentreTools";
 import { toolsDefinition as agentDiscoveryToolsDefinition } from "../advisor/tools/agentDiscoveryTools";
+import { toolsDefinition as riskLibraryToolsDefinition } from "../advisor/tools/riskLibraryTools";
 
 const fileName = "advisor.ctrl.ts";
 
@@ -74,6 +76,7 @@ const availableTools = {
   ...availableReportingTools,
   ...availableAiTrustCentreTools,
   ...availableAgentDiscoveryTools,
+  ...availableRiskLibraryTools,
 };
 
 const toolsDefinition = [
@@ -92,6 +95,7 @@ const toolsDefinition = [
   ...reportingToolsDefinition,
   ...aiTrustCentreToolsDefinition,
   ...agentDiscoveryToolsDefinition,
+  ...riskLibraryToolsDefinition,
 ];
 
 export async function runAdvisor(req: Request, res: Response) {

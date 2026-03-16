@@ -44,9 +44,48 @@ type ResultState =
   | { type: "assessment"; assessment: GeneratedAssessment; generationId?: number }
   | null;
 
-const GeneratePanel = () => {
+/** Banner shown when no LLM keys are configured */
+export const GenerateKeyBanner = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { data: keyStatus, loading } = useLLMKeyStatus();
+
+  if (loading || keyStatus?.hasKeys) return null;
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        p: 1.5,
+        borderRadius: 1,
+        backgroundColor: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.divider}`,
+        alignItems: "center",
+        justifyContent: "space-between",
+        mb: 2,
+      }}
+    >
+      <Box>
+        <Typography variant="body2" fontWeight={600}>
+          Unlock AI-powered risk generation
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Configure an LLM key to generate risk taxonomies, mitigations, and assessments.
+        </Typography>
+      </Box>
+      <Button
+        size="small"
+        variant="outlined"
+        onClick={() => navigate("/settings/apikeys")}
+        sx={{ textTransform: "none", whiteSpace: "nowrap", ml: 2 }}
+      >
+        Configure LLM Key
+      </Button>
+    </Box>
+  );
+};
+
+const GeneratePanel = () => {
   const { data: keyStatus, loading: keyStatusLoading } = useLLMKeyStatus();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -141,39 +180,9 @@ const GeneratePanel = () => {
     generateMitigations.error ||
     generateAssessment.error;
 
-  // No keys configured — show setup prompt
+  // No keys configured — button is hidden (banner is rendered separately)
   if (!keyStatusLoading && !keyStatus?.hasKeys) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          p: 1.5,
-          borderRadius: 1,
-          backgroundColor: theme.palette.background.paper,
-          border: `1px solid ${theme.palette.primary.main}`,
-          alignItems: "center",
-          justifyContent: "space-between",
-          mb: 2,
-        }}
-      >
-        <Box>
-          <Typography variant="body2" fontWeight={600}>
-            Unlock AI-powered risk generation
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Configure an LLM key to generate risk taxonomies, mitigations, and assessments.
-          </Typography>
-        </Box>
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => navigate("/settings/apikeys")}
-          sx={{ textTransform: "none", whiteSpace: "nowrap", ml: 2 }}
-        >
-          Configure LLM Key
-        </Button>
-      </Box>
-    );
+    return null;
   }
 
   return (
