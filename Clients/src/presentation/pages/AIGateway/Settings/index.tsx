@@ -12,6 +12,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, ProviderIcon, TOP_PROVIDERS } from "../shared";
+import { validateApiKeyFormat } from "../../../../application/utils/apiKeyValidation";
 
 const TOP_IDS = new Set(TOP_PROVIDERS.map((p) => p._id));
 
@@ -104,9 +105,32 @@ export default function AIGatewaySettingsPage() {
       setKeyError("All fields are required");
       return;
     }
+
+    // 1. Client-side format check (instant feedback)
+    const formatError = validateApiKeyFormat(keyForm.provider, keyForm.api_key);
+    if (formatError) {
+      setKeyError(formatError);
+      return;
+    }
+
     setKeySubmitting(true);
     setKeyError("");
+
     try {
+      // 2. Live verification — call the provider's API
+      const verifyRes = await apiServices.post("/ai-gateway/keys/verify", {
+        provider: keyForm.provider,
+        apiKey: keyForm.api_key,
+      });
+      // verifyApiKey uses raw res.json() so valid is at the top level (verifyRes.data.valid)
+      const { valid, message } = verifyRes?.data || {};
+
+      if (valid === false) {
+        setKeyError(message || "API key is invalid. Please check it and try again.");
+        return;
+      }
+
+      // 3. Save
       await apiServices.post("/ai-gateway/keys", keyForm);
       setIsKeyModalOpen(false);
       setKeyForm({ key_name: "", provider: "", api_key: "" });
