@@ -36,7 +36,7 @@ import {
   WARNING_TEXT,
   KEY_DISPLAY_BG,
 } from "../shared";
-import { validateApiKeyFormat } from "../../../../../application/utils/apiKeyValidation";
+import { validateApiKeyFormat } from "../../../../application/utils/apiKeyValidation";
 
 // Spinner keyframes for loading state
 const spinKeyframes = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
