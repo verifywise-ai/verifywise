@@ -1,6 +1,6 @@
 /**
  * Client-side API key format validation for AI Gateway provider keys.
- * Patterns mirror those in Servers/utils/evaluationLlmApiKey.utils.ts.
+ * Patterns are consistent with those used in the broader VerifyWise codebase.
  *
  * Returns null if the key is valid (or the provider has no known pattern).
  * Returns an error message string if the key is invalid.

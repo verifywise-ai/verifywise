@@ -216,7 +216,7 @@ export async function verifyApiKey(req: Request, res: Response) {
         headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       },
       gemini: {
-        url: `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`,
+        url: `https://generativelanguage.googleapis.com/v1/models?key=${encodeURIComponent(apiKey)}`,
         headers: {},
       },
       xai: {
