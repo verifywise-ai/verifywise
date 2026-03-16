@@ -16,7 +16,7 @@ const PROVIDER_KEY_PATTERNS: Record<string, { pattern: RegExp; description: stri
     description: 'Anthropic keys start with "sk-ant-" (e.g. "sk-ant-api03-...")',
   },
   gemini: {
-    pattern: /^AIza[a-zA-Z0-9_-]{34,}$/,
+    pattern: /^AIza[a-zA-Z0-9_-]{35,}$/,
     description: 'Google Gemini keys start with "AIza"',
   },
   xai: {

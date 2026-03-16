@@ -29,7 +29,7 @@ describe("validateApiKeyFormat", () => {
 
   // Google / Gemini
   it("accepts a valid Google Gemini key for gemini provider", () => {
-    expect(validateApiKeyFormat("gemini", "AIzaABCDEFGHIJKLMNOPQRSTUVWXYZ12345678")).toBeNull();
+    expect(validateApiKeyFormat("gemini", "AIzaABCDEFGHIJKLMNOPQRSTUVWXYZ123456789")).toBeNull();
   });
 
   it("rejects a Gemini key without AIza prefix", () => {
