@@ -10,6 +10,7 @@ import {
   createApiKey,
   updateApiKey,
   deleteApiKey,
+  verifyApiKey,
   // Endpoints
   getEndpoints,
   getEndpoint,
@@ -67,6 +68,7 @@ router.use(authenticateJWT);
 // API Key management — Admin only for create/update/delete
 router.get("/keys", getApiKeys);
 router.post("/keys", authorize(["Admin"]), createApiKey);
+router.post("/keys/verify", authorize(["Admin"]), verifyApiKey);
 router.patch("/keys/:id", authorize(["Admin"]), updateApiKey);
 router.delete("/keys/:id", authorize(["Admin"]), deleteApiKey);
 

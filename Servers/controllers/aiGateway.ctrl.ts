@@ -193,6 +193,83 @@ export async function deleteApiKey(req: Request, res: Response) {
   }
 }
 
+export async function verifyApiKey(req: Request, res: Response) {
+  const fn = "verifyApiKey";
+  try {
+    const { provider, apiKey } = req.body;
+
+    if (!provider) {
+      return res.status(400).json({ success: false, valid: false, message: "provider is required" });
+    }
+    if (!apiKey) {
+      return res.status(400).json({ success: false, valid: false, message: "apiKey is required" });
+    }
+
+    // Provider verification endpoints. gemini maps to Google's API.
+    const endpoints: Record<string, { url: string; headers: Record<string, string> }> = {
+      openai: {
+        url: "https://api.openai.com/v1/models",
+        headers: { Authorization: `Bearer ${apiKey}` },
+      },
+      anthropic: {
+        url: "https://api.anthropic.com/v1/models",
+        headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      },
+      gemini: {
+        url: `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`,
+        headers: {},
+      },
+      xai: {
+        url: "https://api.x.ai/v1/models",
+        headers: { Authorization: `Bearer ${apiKey}` },
+      },
+      mistral: {
+        url: "https://api.mistral.ai/v1/models",
+        headers: { Authorization: `Bearer ${apiKey}` },
+      },
+      openrouter: {
+        url: "https://openrouter.ai/api/v1/auth/key",
+        headers: { Authorization: `Bearer ${apiKey}` },
+      },
+    };
+
+    const config = endpoints[provider];
+    if (!config) {
+      // bedrock, azure, together_ai, cohere, etc. — no simple verification endpoint
+      return res.status(200).json({ success: true, valid: true, message: "Provider not configured for verification, assuming valid" });
+    }
+
+    try {
+      const response = await fetch(config.url, {
+        method: "GET",
+        headers: { ...config.headers, "Content-Type": "application/json" },
+      });
+
+      if (response.ok) {
+        return res.status(200).json({ success: true, valid: true, message: "API key verified successfully" });
+      } else if (response.status === 401 || response.status === 403) {
+        return res.status(200).json({ success: true, valid: false, message: "Invalid API key — authentication failed" });
+      } else if (response.status === 400) {
+        let errorMsg = "Invalid API key";
+        try {
+          const data = await response.json();
+          errorMsg = data?.error?.message || data?.message || errorMsg;
+        } catch { /* ignore */ }
+        return res.status(200).json({ success: true, valid: false, message: errorMsg });
+      } else if (response.status === 429) {
+        return res.status(200).json({ success: true, valid: true, message: "Rate limited — key appears valid" });
+      } else {
+        return res.status(200).json({ success: true, valid: true, message: "Could not verify key, assuming valid" });
+      }
+    } catch {
+      return res.status(200).json({ success: true, valid: true, message: "Network error during verification, assuming valid" });
+    }
+  } catch (error: any) {
+    logStructured("error", "failed to verify gateway API key", fn, fileName);
+    return res.status(500).json({ success: false, valid: false, message: "Internal server error" });
+  }
+}
+
 // ─── Endpoints ───────────────────────────────────────────────────────────────
 
 export async function getEndpoints(req: Request, res: Response) {
