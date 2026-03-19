@@ -377,27 +377,48 @@ async def delete_test_dataset(
     return {"deleted": True}
 
 
-@router.post("/test", status_code=501)
+@router.post("/test")
 async def test_prompt(request: Request, body: TestPromptRequest):
     """
-    Test a prompt by resolving variables and proxying to the LLM completion
-    endpoint. The LLM proxy integration lives in the Express backend for now;
-    this stub returns 501 until the proxy is co-located in the AIGateway
-    service.
+    Test a prompt by resolving variables and streaming the LLM response.
+    Returns SSE stream compatible with the frontend's streamPromptTest().
     """
-    verify_internal_key(request)
+    import json as _json
 
-    # Resolve variables so callers can at least validate substitution locally
+    from fastapi.responses import StreamingResponse
+    from services.proxy_service import resolve_endpoint_for_key
+    from services.llm_service import stream_chat_completion
+
+    verify_internal_key(request)
+    org_id = get_org_id(request)
+
+    # Resolve variables in the prompt content
     resolved_content = crud.resolve_variables(
         body.content,
         body.variables or {},
     )
 
-    raise HTTPException(
-        status_code=501,
-        detail=(
-            "test-prompt requires proxy integration — "
-            "LLM proxy currently runs in the Express backend. "
-            "Resolved content is available but cannot be forwarded yet."
-        ),
-    )
+    # Resolve the endpoint to get provider, model, and API key
+    try:
+        endpoint = await resolve_endpoint_for_key(
+            organization_id=org_id,
+            endpoint_slug=body.endpoint_slug,
+            allowed_endpoint_ids=[],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    # Stream the LLM response
+    async def _stream():
+        try:
+            async for chunk_str in stream_chat_completion(
+                model=endpoint["model"],
+                messages=resolved_content,
+                api_key=endpoint["decrypted_key"],
+            ):
+                yield chunk_str
+        except Exception as e:
+            yield f"data: {_json.dumps({'error': str(e)})}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")
