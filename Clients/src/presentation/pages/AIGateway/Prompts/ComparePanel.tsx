@@ -115,6 +115,7 @@ export default function ComparePanel({
             onChange={(e) => setVersionA(Number(e.target.value))}
             items={versionItems}
             placeholder="Select version"
+            getOptionValue={(item) => item._id}
             sx={{ flex: 1 }}
           />
           <Select
@@ -124,6 +125,7 @@ export default function ComparePanel({
             onChange={(e) => setVersionB(Number(e.target.value))}
             items={versionItems}
             placeholder="Select version"
+            getOptionValue={(item) => item._id}
             sx={{ flex: 1 }}
           />
         </Box>
@@ -134,6 +136,7 @@ export default function ComparePanel({
           onChange={(e) => setLocalEndpoint(e.target.value as string)}
           items={endpoints.map((e) => ({ _id: e.slug, name: `${e.display_name} (${e.slug})` }))}
           placeholder="Select endpoint"
+          getOptionValue={(item) => item._id}
           sx={{ width: "100%" }}
         />
         <Typography fontSize={11} color="text.disabled" mt="4px">
