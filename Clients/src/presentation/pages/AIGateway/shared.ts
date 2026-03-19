@@ -245,7 +245,8 @@ export async function streamPromptTest(
 ): Promise<StreamPromptTestResult> {
   const startTime = Date.now();
 
-  const response = await fetch(`${GATEWAY_API_URL}/ai-gateway/prompts/test`, {
+  // Use relative URL to go through Vite proxy (avoids CORS with fetch)
+  const response = await fetch("/api/ai-gateway/prompts/test", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
