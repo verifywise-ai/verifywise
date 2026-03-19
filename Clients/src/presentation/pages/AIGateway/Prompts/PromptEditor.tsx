@@ -206,6 +206,8 @@ export default function PromptEditorPage() {
   const { providers: gwProviders, getModelsForProvider: gwModelsFor } = useGatewayModels();
   // Build flat model list from all providers for the model metadata dropdown
   const allModelItems = gwProviders.flatMap((p) => gwModelsFor(p));
+  const [modelSearch, setModelSearch] = useState("");
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [currentStatus, setCurrentStatus] = useState<"draft" | "published">("draft");
   const [isSaving, setIsSaving] = useState(false);
@@ -532,16 +534,49 @@ export default function PromptEditorPage() {
 
           {/* Model + config */}
           <Box sx={{ display: "flex", gap: "16px", mb: "16px", alignItems: "flex-end" }}>
-            <Select
-              id="prompt-model-select"
-              label="Model"
-              value={model}
-              onChange={(e) => setModel(e.target.value as string)}
-              items={allModelItems}
-              placeholder="Select model"
-              sx={{ flex: 1 }}
-              getOptionValue={(item) => item._id}
-            />
+            <Box sx={{ flex: 1, position: "relative" }}>
+              <Field
+                label="Model"
+                placeholder="Search models (type 2+ chars)..."
+                value={modelSearch || model}
+                onChange={(e) => {
+                  setModelSearch(e.target.value);
+                  setModelDropdownOpen(e.target.value.length >= 2);
+                  if (!e.target.value) setModel("");
+                }}
+                onFocus={() => { if (modelSearch.length >= 2) setModelDropdownOpen(true); }}
+                onBlur={() => setTimeout(() => setModelDropdownOpen(false), 200)}
+                sx={{ minWidth: "unset" }}
+              />
+              {modelDropdownOpen && modelSearch.length >= 2 && (() => {
+                const q = modelSearch.toLowerCase();
+                const filtered = allModelItems.filter((m) => m.name.toLowerCase().includes(q)).slice(0, 20);
+                if (filtered.length === 0) return null;
+                return (
+                  <Box sx={{
+                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
+                    bgcolor: "background.paper", border: `1px solid ${palette.border.dark}`,
+                    borderRadius: "4px", maxHeight: 200, overflowY: "auto", mt: "2px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  }}>
+                    {filtered.map((m) => (
+                      <Box
+                        key={m._id}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { setModel(m._id); setModelSearch(""); setModelDropdownOpen(false); }}
+                        sx={{
+                          px: "12px", py: "8px", cursor: "pointer", fontSize: 12,
+                          "&:hover": { bgcolor: palette.background.alt },
+                          bgcolor: model === m._id ? `${palette.brand.primary}08` : "transparent",
+                        }}
+                      >
+                        {m.name}
+                      </Box>
+                    ))}
+                  </Box>
+                );
+              })()}
+            </Box>
             <IconButton
               size="small"
               onClick={() => { setTempConfig({ ...config }); setIsConfigOpen(true); }}
