@@ -685,39 +685,37 @@ export default function PromptEditorPage() {
             ))}
           </Box>
 
+          {/* Endpoint selector + variables (shared across all tabs) */}
+          <Box sx={{ p: "16px", borderBottom: `1px solid ${palette.border.light}`, flexShrink: 0 }}>
+            <Select
+              id="prompt-endpoint-select"
+              label="Test endpoint"
+              value={selectedEndpoint}
+              onChange={(e) => setSelectedEndpoint(e.target.value as string)}
+              items={endpoints.map((e: any) => ({ _id: e.slug, name: `${e.display_name} (${e.slug})` }))}
+              placeholder="Select endpoint"
+              sx={{ width: "100%" }}
+              getOptionValue={(item) => item._id}
+            />
+            {detectedVars.length > 0 && (
+              <Stack spacing="8px" sx={{ mt: "12px" }}>
+                <Typography fontSize={12} fontWeight={600} color="text.secondary">Variables</Typography>
+                {detectedVars.map((v) => (
+                  <Field
+                    key={v}
+                    label={v}
+                    value={variableValues[v] || ""}
+                    onChange={(e) => setVariableValues((prev) => ({ ...prev, [v]: e.target.value }))}
+                    placeholder={`Value for {{${v}}}`}
+                  />
+                ))}
+              </Stack>
+            )}
+          </Box>
+
           {/* Chat tab content */}
           {testTab === "chat" && (
             <>
-              {/* Endpoint selector + variables */}
-              <Box sx={{ p: "16px", borderBottom: `1px solid ${palette.border.light}`, flexShrink: 0 }}>
-                <Select
-                  id="prompt-endpoint-select"
-                  label="Test endpoint"
-                  value={selectedEndpoint}
-                  onChange={(e) => setSelectedEndpoint(e.target.value as string)}
-                  items={endpoints.map((e: any) => ({ _id: e.slug, name: `${e.display_name} (${e.slug})` }))}
-                  placeholder="Select endpoint"
-                  sx={{ width: "100%" }}
-                />
-                <Typography fontSize={11} color="text.disabled" mt="4px" mb={detectedVars.length > 0 ? "16px" : 0}>
-                  Pick an endpoint to route test requests through. The model and API key come from the endpoint configuration.
-                </Typography>
-                {detectedVars.length > 0 && (
-                  <Stack spacing="8px">
-                    <Typography fontSize={12} fontWeight={600} color="text.secondary">Variables</Typography>
-                    {detectedVars.map((v) => (
-                      <Field
-                        key={v}
-                        label={v}
-                        value={variableValues[v] || ""}
-                        onChange={(e) => setVariableValues((prev) => ({ ...prev, [v]: e.target.value }))}
-                        placeholder={`Value for {{${v}}}`}
-                      />
-                    ))}
-                  </Stack>
-                )}
-              </Box>
-
               {/* Chat area */}
               <Box sx={{ flex: 1, overflow: "auto", p: "16px" }}>
                 {chatMessages.length === 0 && (
