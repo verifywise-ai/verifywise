@@ -1,5 +1,6 @@
+import { brand, text, background, border as borderPalette } from "../../../themes/palette";
 export const textfieldStyle = {
-  backgroundColor: "#FFFFFF",
+  backgroundColor: `${background.main}`,
   "& input": {
     padding: "0 14px",
   },
@@ -7,12 +8,12 @@ export const textfieldStyle = {
 
 export const dropdownStyle = {
   width: "350px",
-  backgroundColor: "#FFFFFF",
+  backgroundColor: `${background.main}`,
 };
 
 export const createProjectButtonStyle = {
-  backgroundColor: "#13715B",
-  border: "1px solid #13715B",
+  backgroundColor: `${brand.primary}`,
+  border: `1px solid ${brand.primary}`,
   gap: 2,
 };
 
@@ -48,7 +49,7 @@ export const teamMembersSlotProps = {
           paddingRight: "9px",
         },
         "& .MuiAutocomplete-option.Mui-focused": {
-          background: "#f9fafb",
+          background: `${background.accent}`,
         },
       },
       "& .MuiAutocomplete-noOptions": {
@@ -70,33 +71,33 @@ export const radioOptionStyle = {
   padding: "16px",
   border: "1px solid #E4E7EC",
   borderRadius: "4px",
-  backgroundColor: "#FFFFFF",
+  backgroundColor: `${background.main}`,
   cursor: "pointer",
   transition: "all 0.2s ease-in-out",
   "&:hover": {
-    borderColor: "#13715B",
+    borderColor: `${brand.primary}`,
     backgroundColor: "#F9F9F9",
   },
   "&.selected": {
-    borderColor: "#13715B",
+    borderColor: `${brand.primary}`,
     backgroundColor: "#F0F9F6",
   },
 };
 
 export const continueButtonStyle = {
-  backgroundColor: "#13715B",
-  border: "1px solid #13715B",
+  backgroundColor: `${brand.primary}`,
+  border: `1px solid ${brand.primary}`,
   gap: 2,
   marginTop: 2,
 };
 
 export const backButtonStyle = {
-  backgroundColor: "#FFFFFF",
-  border: "1px solid #D0D5DD",
-  color: "#344054",
+  backgroundColor: `${background.main}`,
+  border: `1px solid ${borderPalette.dark}`,
+  color: `${text.secondary}`,
   gap: 2,
   "&:hover": {
     backgroundColor: "#F9F9F9",
-    border: "1px solid #D0D5DD",
+    border: `1px solid ${borderPalette.dark}`,
   },
 };

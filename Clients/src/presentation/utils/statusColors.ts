@@ -1,66 +1,67 @@
 import { IStatusData } from "../types/interfaces/i.chart";
+import { status, risk, text } from "../themes/palette";
 
 // Color schemes for different entity statuses
 export const statusColorSchemes = {
   // Model statuses (4 different states)
   models: {
-    development: "#3B82F6", // Blue
-    training: "#F59E0B", // Amber
-    validation: "#8B5CF6", // Purple
-    production: "#10B981", // Emerald
+    development: status.info.text,
+    training: status.warning.text,
+    validation: "#8B5CF6",
+    production: status.success.text,
   },
 
   // Vendor statuses
   vendors: {
-    "in review": "#F59E0B", // Amber
-    reviewed: "#10B981", // Emerald
-    "requires follow up": "#EF4444", // Red
-    active: "#10B981", // Emerald
-    inactive: "#6B7280", // Gray
+    "in review": status.warning.text,
+    reviewed: status.success.text,
+    "requires follow up": status.error.text,
+    active: status.success.text,
+    inactive: status.default.text,
   },
 
   // Policy statuses
   policies: {
-    draft: "#6B7280", // Gray
-    "in review": "#F59E0B", // Amber
-    approved: "#10B981", // Emerald
-    published: "#3B82F6", // Blue
-    archived: "#9CA3AF", // Light Gray
+    draft: status.default.text,
+    "in review": status.warning.text,
+    approved: status.success.text,
+    published: status.info.text,
+    archived: text.disabled,
   },
 
   // Training statuses
   trainings: {
-    planned: "#6B7280", // Gray
-    "in progress": "#F59E0B", // Amber
-    completed: "#10B981", // Emerald
+    planned: status.default.text,
+    "in progress": status.warning.text,
+    completed: status.success.text,
   },
 
   // Vendor risk levels
   vendorRisks: {
-    "very high": "#DC2626", // Dark Red
-    high: "#EF4444", // Red
-    medium: "#F59E0B", // Amber
-    low: "#10B981", // Emerald
-    "very low": "#059669", // Dark Emerald
+    "very high": risk.critical.text,
+    high: risk.high.text,
+    medium: risk.medium.text,
+    low: risk.low.text,
+    "very low": risk.veryLow.text,
   },
 
   // Incident statuses
   incidents: {
-    open: "#EF4444", // Red
-    "in progress": "#F59E0B", // Amber
-    resolved: "#10B981", // Emerald
-    closed: "#6B7280", // Gray
+    open: status.error.text,
+    "in progress": status.warning.text,
+    resolved: status.success.text,
+    closed: status.default.text,
   },
 };
 
 // Helper function to get color for a status
 export const getStatusColor = (
   entityType: keyof typeof statusColorSchemes,
-  status: string
+  statusName: string
 ): string => {
   const scheme = statusColorSchemes[entityType];
-  const normalizedStatus = status.toLowerCase().trim();
-  return scheme[normalizedStatus as keyof typeof scheme] || "#6B7280"; // Default gray
+  const normalizedStatus = statusName.toLowerCase().trim();
+  return scheme[normalizedStatus as keyof typeof scheme] || status.default.text;
 };
 
 // Helper function to create StatusData array from status counts
@@ -68,10 +69,10 @@ export const createStatusData = (
   entityType: keyof typeof statusColorSchemes,
   statusCounts: Record<string, number>
 ): IStatusData[] => {
-  return Object.entries(statusCounts).map(([status, count]) => ({
-    label: status,
+  return Object.entries(statusCounts).map(([statusName, count]) => ({
+    label: statusName,
     value: count,
-    color: getStatusColor(entityType, status),
+    color: getStatusColor(entityType, statusName),
   }));
 };
 

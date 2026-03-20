@@ -41,26 +41,25 @@ export async function getFileContentById(
   if (!req.userId) {
     return res.status(401).json({ message: "Unauthenticated" });
   }
-  if (!req.tenantId) {
+  if (!req.organizationId) {
     return res.status(400).json({ message: "Missing tenant" });
   }
 
   const userId = req.userId;
   const role = req.role || "";
-  const tenantId = req.tenantId;
 
   logProcessing({
     description: `starting getFileContentById for ID ${fileId}`,
     functionName: "getFileContentById",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     // Authorization check: verify user has access to this file
     const orgId = req.organizationId ? Number(req.organizationId) : undefined;
-    const hasAccess = await canUserAccessFile(fileId, userId, role, tenantId, orgId);
+    const hasAccess = await canUserAccessFile(fileId, userId, role, req.organizationId!, orgId);
     if (!hasAccess) {
       await logFailure({
         eventType: "Read",
@@ -69,12 +68,12 @@ export async function getFileContentById(
         fileName: "file.ctrl.ts",
         error: new Error(`User ${userId} with role '${role}' denied access to file ${fileId}`),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const file = await getFileById(fileId, tenantId);
+    const file = await getFileById(fileId, req.organizationId!);
     if (file) {
       await logSuccess({
         eventType: "Read",
@@ -82,7 +81,7 @@ export async function getFileContentById(
         functionName: "getFileContentById",
         fileName: "file.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       res.setHeader("Content-Type", file.type);
@@ -99,7 +98,7 @@ export async function getFileContentById(
       functionName: "getFileContentById",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -111,7 +110,7 @@ export async function getFileContentById(
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -129,18 +128,18 @@ export async function getFileMetaByProjectId(
     functionName: "getFileMetaByProjectId",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const files = await getFileMetadataByProjectId(projectId, req.tenantId!);
+    const files = await getFileMetadataByProjectId(projectId, req.organizationId!);
     await logSuccess({
       eventType: "Read",
       description: `Retrieved file metadata for project ID ${projectId}`,
       functionName: "getFileMetaByProjectId",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     if (files && files.length > 0) {
@@ -155,7 +154,7 @@ export async function getFileMetaByProjectId(
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -174,7 +173,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
     functionName: "getUserFilesMetaData",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -188,7 +187,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
     const files = await getUserFilesMetaDataQuery(
       req.role || "",
       userId,
-      req.tenantId!,
+      req.organizationId!,
       {
         limit: validPageSize,
         offset,
@@ -201,7 +200,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
       functionName: "getUserFilesMetaData",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).send(files);
@@ -213,7 +212,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json({ error: "Internal server error" });
@@ -231,7 +230,7 @@ export async function postFileContent(
     functionName: "postFileContent",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -244,7 +243,7 @@ export async function postFileContent(
 
     const filesToDelete = JSON.parse(body.delete || "[]") as number[];
     for (let fileToDelete of filesToDelete) {
-      await deleteFileById(fileToDelete, req.tenantId!, transaction);
+      await deleteFileById(fileToDelete, req.organizationId!, transaction);
     }
 
     const questionId = parseInt(body.question_id);
@@ -255,7 +254,7 @@ export async function postFileContent(
         body.user_id,
         body.project_id,
         "Assessment tracker group",
-        req.tenantId!,
+        req.organizationId!,
         transaction
       );
       uploadedFiles.push({
@@ -274,7 +273,7 @@ export async function postFileContent(
       body.project_id,
       uploadedFiles,
       filesToDelete,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
     await transaction.commit();
@@ -285,7 +284,7 @@ export async function postFileContent(
       functionName: "postFileContent",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](question.evidence_files));
@@ -299,7 +298,7 @@ export async function postFileContent(
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -329,7 +328,7 @@ export async function attachFileToEntity(
   if (!req.userId) {
     return res.status(401).json({ message: "Unauthenticated" });
   }
-  if (!req.tenantId) {
+  if (!req.organizationId) {
     return res.status(400).json({ message: "Missing tenant" });
   }
 
@@ -338,7 +337,7 @@ export async function attachFileToEntity(
     functionName: "attachFileToEntity",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.tenantId,
+    tenantId: req.organizationId,
   });
 
   try {
@@ -352,7 +351,7 @@ export async function attachFileToEntity(
         link_type: (link_type as LinkType) || "evidence",
         created_by: req.userId,
       },
-      req.tenantId
+      req.organizationId!
     );
 
     await logSuccess({
@@ -361,7 +360,7 @@ export async function attachFileToEntity(
       functionName: "attachFileToEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.tenantId,
+      tenantId: req.organizationId,
     });
 
     if (link) {
@@ -378,7 +377,7 @@ export async function attachFileToEntity(
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.tenantId,
+      tenantId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -407,7 +406,7 @@ export async function detachFileFromEntity(
   if (!req.userId) {
     return res.status(401).json({ message: "Unauthenticated" });
   }
-  if (!req.tenantId) {
+  if (!req.organizationId) {
     return res.status(400).json({ message: "Missing tenant" });
   }
 
@@ -416,7 +415,7 @@ export async function detachFileFromEntity(
     functionName: "detachFileFromEntity",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.tenantId,
+    tenantId: req.organizationId,
   });
 
   try {
@@ -425,7 +424,7 @@ export async function detachFileFromEntity(
       framework_type as FrameworkType,
       entity_type as EntityType,
       parseInt(entity_id, 10),
-      req.tenantId
+      req.organizationId!
     );
 
     await logSuccess({
@@ -434,7 +433,7 @@ export async function detachFileFromEntity(
       functionName: "detachFileFromEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.tenantId,
+      tenantId: req.organizationId,
     });
 
     if (deleted) {
@@ -450,7 +449,7 @@ export async function detachFileFromEntity(
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.tenantId,
+      tenantId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -484,7 +483,7 @@ export async function attachFilesToEntity(
   if (!req.userId) {
     return res.status(401).json({ message: "Unauthenticated" });
   }
-  if (!req.tenantId) {
+  if (!req.organizationId) {
     return res.status(400).json({ message: "Missing tenant" });
   }
 
@@ -493,7 +492,7 @@ export async function attachFilesToEntity(
     functionName: "attachFilesToEntity",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.tenantId,
+    tenantId: req.organizationId,
   });
 
   try {
@@ -511,7 +510,7 @@ export async function attachFilesToEntity(
             link_type: (link_type as LinkType) || "evidence",
             created_by: req.userId,
           },
-          req.tenantId
+          req.organizationId!
         );
 
         results.push({
@@ -534,7 +533,7 @@ export async function attachFilesToEntity(
       functionName: "attachFilesToEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.tenantId,
+      tenantId: req.organizationId,
     });
 
     return res.status(200).json({
@@ -549,7 +548,7 @@ export async function attachFilesToEntity(
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.tenantId,
+      tenantId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -577,7 +576,7 @@ export async function getEntityFiles(
   if (!req.userId) {
     return res.status(401).json({ message: "Unauthenticated" });
   }
-  if (!req.tenantId) {
+  if (!req.organizationId) {
     return res.status(400).json({ message: "Missing tenant" });
   }
 
@@ -586,7 +585,7 @@ export async function getEntityFiles(
     functionName: "getEntityFiles",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.tenantId,
+    tenantId: req.organizationId,
   });
 
   try {
@@ -595,7 +594,7 @@ export async function getEntityFiles(
       framework_type as FrameworkType,
       entity_type as EntityType,
       parseInt(entityIdStr, 10),
-      req.tenantId
+      req.organizationId!
     );
 
     await logSuccess({
@@ -604,7 +603,7 @@ export async function getEntityFiles(
       functionName: "getEntityFiles",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.tenantId,
+      tenantId: req.organizationId,
     });
 
     return res.status(200).json(files);
@@ -616,7 +615,7 @@ export async function getEntityFiles(
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.tenantId,
+      tenantId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

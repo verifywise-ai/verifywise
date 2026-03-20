@@ -36,12 +36,12 @@ export async function getAllTrainingRegistar(
     functionName: "getAllTrainingRegistar",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("📚 Fetching all training registrars");
 
   try {
-    const trainingRegistars = await getAllTrainingRegistarQuery(req.tenantId!);
+    const trainingRegistars = await getAllTrainingRegistarQuery(req.organizationId!);
     if (trainingRegistars) {
       await logSuccess({
         eventType: "Read",
@@ -49,7 +49,7 @@ export async function getAllTrainingRegistar(
         functionName: "getAllTrainingRegistar",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](trainingRegistars));
     }
@@ -60,7 +60,7 @@ export async function getAllTrainingRegistar(
       functionName: "getAllTrainingRegistar",
       fileName: "trainingRegistar.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](trainingRegistars));
   } catch (error) {
@@ -71,7 +71,7 @@ export async function getAllTrainingRegistar(
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -89,14 +89,14 @@ export async function getTrainingRegistarById(
     functionName: "getTrainingRegistarById",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(`🔍 Looking up training registrar ID ${trainingRegistarId}`);
 
   try {
     const trainingRegistar = await getTrainingRegistarByIdQuery(
       trainingRegistarId,
-      req.tenantId!
+      req.organizationId!
     );
 
     if (trainingRegistar) {
@@ -106,7 +106,7 @@ export async function getTrainingRegistarById(
         functionName: "getTrainingRegistarById",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](trainingRegistar));
     }
@@ -117,7 +117,7 @@ export async function getTrainingRegistarById(
       functionName: "getTrainingRegistarById",
       fileName: "trainingRegistar.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](trainingRegistar));
   } catch (error) {
@@ -128,7 +128,7 @@ export async function getTrainingRegistarById(
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -146,7 +146,7 @@ export async function createNewTrainingRegistar(
     functionName: "createNewTrainingRegistar",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("🛠️ Creating new training registrar");
 
@@ -155,7 +155,7 @@ export async function createNewTrainingRegistar(
 
     const createdNewTrainingRegistar = await createNewTrainingRegistarQuery(
       newTrainingRegistar,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -174,7 +174,7 @@ export async function createNewTrainingRegistar(
           "training",
           trainingId,
           req.userId,
-          req.tenantId!,
+          req.organizationId!,
           normalizedData,
           transaction
         );
@@ -187,7 +187,7 @@ export async function createNewTrainingRegistar(
         functionName: "createNewTrainingRegistar",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       // Send training assigned notifications to org admins
@@ -205,7 +205,7 @@ export async function createNewTrainingRegistar(
 
         for (const admin of admins) {
           await notifyTrainingAssigned(
-            req.tenantId!,
+            req.organizationId!,
             admin.id!,
             {
               id: trainingId,
@@ -232,7 +232,7 @@ export async function createNewTrainingRegistar(
       fileName: "trainingRegistar.ctrl.ts",
       error: new Error("Creation failed"),
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
@@ -244,7 +244,7 @@ export async function createNewTrainingRegistar(
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -264,7 +264,7 @@ export async function updateTrainingRegistarById(
     functionName: "updateTrainingRegistarById",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(`✏️ Updating training registrar ID ${trainingRegistarId}`);
 
@@ -279,13 +279,13 @@ export async function updateTrainingRegistarById(
     // Get existing data for change tracking
     const existingTraining = await getTrainingRegistarByIdQuery(
       trainingRegistarId,
-      req.tenantId!
+      req.organizationId!
     );
 
     const trainingRegistar = await updateTrainingRegistarByIdQuery(
       trainingRegistarId,
       updatedTrainingRegistar,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -302,7 +302,7 @@ export async function updateTrainingRegistarById(
             "training",
             trainingRegistarId,
             req.userId,
-            req.tenantId!,
+            req.organizationId!,
             changes,
             transaction
           );
@@ -316,7 +316,7 @@ export async function updateTrainingRegistarById(
         functionName: "updateTrainingRegistarById",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](trainingRegistar));
     }
@@ -329,7 +329,7 @@ export async function updateTrainingRegistarById(
       fileName: "trainingRegistar.ctrl.ts",
       error: new Error("Training registrar not found"),
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -341,7 +341,7 @@ export async function updateTrainingRegistarById(
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -359,21 +359,21 @@ export async function deleteTrainingRegistarById(
     functionName: "deleteTrainingRegistarById",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(`🗑️ Deleting training registrar ID ${trainingRegistarId}`);
 
   try {
     const deleteTrainingRegistar = await deleteTrainingRegistarByIdQuery(
       trainingRegistarId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
     if (deleteTrainingRegistar) {
       // Record deletion in change history
       if (req.userId) {
-        await recordEntityDeletion("training", trainingRegistarId, req.userId, req.tenantId!, transaction);
+        await recordEntityDeletion("training", trainingRegistarId, req.userId, req.organizationId!, transaction);
       }
 
       await transaction.commit();
@@ -383,7 +383,7 @@ export async function deleteTrainingRegistarById(
         functionName: "deleteTrainingRegistarById",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](deleteTrainingRegistar));
     }
@@ -396,7 +396,7 @@ export async function deleteTrainingRegistarById(
       fileName: "trainingRegistar.ctrl.ts",
       error: new Error("Training registrar not found"),
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -408,7 +408,7 @@ export async function deleteTrainingRegistarById(
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

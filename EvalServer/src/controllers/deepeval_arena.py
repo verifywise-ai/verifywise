@@ -2,6 +2,8 @@
 DeepEval Arena Controller
 
 Controller functions for LLM Arena comparisons using ArenaGEval.
+
+Shared-schema multi-tenancy: Uses organization_id for tenant isolation.
 """
 
 from fastapi import BackgroundTasks, HTTPException
@@ -31,15 +33,15 @@ logger = logging.getLogger('uvicorn')
 MAX_PROMPTS_PER_COMPARISON = 10  # Limit to avoid long-running tasks
 
 
-async def load_dataset_prompts(dataset_path: str, tenant: str) -> List[Dict[str, Any]]:
+async def load_dataset_prompts(dataset_path: str, organization_id: int) -> List[Dict[str, Any]]:
     """
     Load prompts from a dataset file.
     """
     import json
     import os
     from pathlib import Path
-    
-    logger.info(f"[ARENA] Loading dataset: path={dataset_path}, tenant={tenant}")
+
+    logger.info(f"[ARENA] Loading dataset: path={dataset_path}, organization_id={organization_id}")
     
     # Handle different dataset path formats
     if not dataset_path:
@@ -202,7 +204,7 @@ async def call_llm_model(
 async def run_arena_comparison_task(
     comparison_id: str,
     config_data: Dict[str, Any],
-    tenant: str,
+    organization_id: int,
 ):
     """
     Background task to run the arena comparison using DeepEval's ArenaGEval.
@@ -211,14 +213,14 @@ async def run_arena_comparison_task(
     try:
         from deepeval.test_case import LLMTestCase, LLMTestCaseParams
         from deepeval.metrics import GEval
-        
+
         logger.debug(f"[ARENA] {comparison_id}: Imports successful")
-        
+
         # Update status to running
         async with get_db() as db:
             await update_arena_comparison(
                 comparison_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 status="running",
                 progress="Initializing arena...",
                 db=db,
@@ -234,9 +236,9 @@ async def run_arena_comparison_task(
         logger.info(f"[ARENA] {comparison_id}: API keys provided for {len(api_keys)} providers")
         
         logger.info(f"[ARENA] {comparison_id}: Loading dataset")
-        
+
         # Load prompts from dataset
-        prompts = await load_dataset_prompts(dataset_path, tenant)
+        prompts = await load_dataset_prompts(dataset_path, organization_id)
         
         if not prompts:
             # If no dataset, check if testCases are provided directly
@@ -257,7 +259,7 @@ async def run_arena_comparison_task(
         async with get_db() as db:
             await update_arena_comparison(
                 comparison_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 progress=f"Generating responses for {len(prompts)} prompts...",
                 db=db,
             )
@@ -285,7 +287,7 @@ async def run_arena_comparison_task(
             async with get_db() as db:
                 await update_arena_comparison(
                     comparison_id,
-                    tenant=tenant,
+                    organization_id=organization_id,
                     progress=f"Processing prompt {idx + 1}/{total_prompts}",
                     db=db,
                 )
@@ -464,7 +466,7 @@ IMPORTANT: Respond with ONLY the JSON, no other text."""
         async with get_db() as db:
             await update_arena_comparison(
                 comparison_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 status="completed",
                 progress=f"Completed {total_prompts}/{total_prompts} prompts",
                 winner=overall_winner,
@@ -484,7 +486,7 @@ IMPORTANT: Respond with ONLY the JSON, no other text."""
         async with get_db() as db:
             await update_arena_comparison(
                 comparison_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 status="failed",
                 error_message=str(e),
                 db=db,
@@ -495,7 +497,7 @@ IMPORTANT: Respond with ONLY the JSON, no other text."""
 async def create_arena_comparison_controller(
     background_tasks: BackgroundTasks,
     config_data: Dict[str, Any],
-    tenant: str,
+    organization_id: int,
     user_id: Optional[str] = None,
 ) -> JSONResponse:
     """
@@ -503,7 +505,7 @@ async def create_arena_comparison_controller(
     """
     try:
         logger.info("[ARENA] ========== CREATE ARENA COMPARISON ==========")
-        logger.info(f"[ARENA] Tenant: {tenant}, User: {user_id}")
+        logger.info(f"[ARENA] Organization: {organization_id}, User: {user_id}")
         logger.debug(f"[ARENA] Config data keys: {list(config_data.keys())}")
         logger.debug("[ARENA] Dataset path configured")
         logger.info(f"[ARENA] Contestants: {len(config_data.get('contestants', []))}")
@@ -522,12 +524,11 @@ async def create_arena_comparison_controller(
                 comparison_id=comparison_id,
                 name=config_data.get("name", "Arena Comparison"),
                 description=config_data.get("description"),
-                org_id=config_data.get("orgId"),
                 contestants=contestants_config,
                 contestant_names=contestant_names,
                 metric_config=metric_config,
                 judge_model=config_data.get("judgeModel", "gpt-4o"),
-                tenant=tenant,
+                organization_id=organization_id,
                 created_by=user_id,
                 db=db,
             )
@@ -539,7 +540,7 @@ async def create_arena_comparison_controller(
             run_arena_comparison_task,
             comparison_id,
             config_data,
-            tenant,
+            organization_id,
         )
         logger.info(f"[ARENA] Background task scheduled for {comparison_id}")
         
@@ -560,14 +561,14 @@ async def create_arena_comparison_controller(
 
 async def get_arena_comparison_status_controller(
     comparison_id: str,
-    tenant: str,
+    organization_id: int,
 ) -> JSONResponse:
     """
     Get the status of an arena comparison.
     """
     try:
         async with get_db() as db:
-            comparison = await get_arena_comparison(comparison_id, tenant=tenant, db=db)
+            comparison = await get_arena_comparison(comparison_id, organization_id=organization_id, db=db)
             
         if not comparison:
             raise HTTPException(status_code=404, detail="Arena comparison not found")
@@ -594,14 +595,14 @@ async def get_arena_comparison_status_controller(
 
 async def get_arena_comparison_results_controller(
     comparison_id: str,
-    tenant: str,
+    organization_id: int,
 ) -> JSONResponse:
     """
     Get the results of a completed arena comparison.
     """
     try:
         async with get_db() as db:
-            comparison = await get_arena_comparison(comparison_id, tenant=tenant, db=db)
+            comparison = await get_arena_comparison(comparison_id, organization_id=organization_id, db=db)
             
         if not comparison:
             raise HTTPException(status_code=404, detail="Arena comparison not found")
@@ -646,15 +647,15 @@ async def get_arena_comparison_results_controller(
 
 
 async def list_arena_comparisons_controller(
-    tenant: str,
+    organization_id: int,
     org_id: Optional[str] = None,
 ) -> JSONResponse:
     """
-    List all arena comparisons for the current tenant.
+    List all arena comparisons for the current organization.
     """
     try:
         async with get_db() as db:
-            comparisons = await list_arena_comparisons(tenant=tenant, org_id=org_id, db=db)
+            comparisons = await list_arena_comparisons(organization_id=organization_id, db=db)
         
         return JSONResponse(
             status_code=200,
@@ -668,14 +669,14 @@ async def list_arena_comparisons_controller(
 
 async def delete_arena_comparison_controller(
     comparison_id: str,
-    tenant: str,
+    organization_id: int,
 ) -> JSONResponse:
     """
     Delete an arena comparison.
     """
     try:
         async with get_db() as db:
-            deleted = await delete_arena_comparison(comparison_id, tenant=tenant, db=db)
+            deleted = await delete_arena_comparison(comparison_id, organization_id=organization_id, db=db)
             await db.commit()
             
         if not deleted:

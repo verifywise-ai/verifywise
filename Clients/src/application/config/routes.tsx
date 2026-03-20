@@ -38,6 +38,7 @@ import AgentDiscovery from "../../presentation/pages/AgentDiscovery";
 import Framework from "../../presentation/pages/Framework";
 import Tasks from "../../presentation/pages/Tasks";
 import IntegratedDashboard from "../../presentation/pages/DashboardOverview/IntegratedDashboard";
+import StartHere from "../../presentation/pages/StartHere";
 import RiskManagement from "../../presentation/pages/RiskManagement";
 import AutomationsPage from "../../presentation/pages/Automations";
 import StyleGuide from "../../presentation/pages/StyleGuide";
@@ -55,6 +56,16 @@ import UserActivityPage from "../../presentation/pages/ShadowAI/UserActivityPage
 import AIToolsPage from "../../presentation/pages/ShadowAI/AIToolsPage";
 import RulesPage from "../../presentation/pages/ShadowAI/RulesPage";
 import ShadowAISettingsPage from "../../presentation/pages/ShadowAI/SettingsPage";
+import AIGatewayEndpointsPage from "../../presentation/pages/AIGateway/Endpoints";
+import AIGatewayAnalyticsPage from "../../presentation/pages/AIGateway/SpendDashboard";
+import AIGatewayPlaygroundPage from "../../presentation/pages/AIGateway/Playground";
+import AIGatewayGuardrailsPage from "../../presentation/pages/AIGateway/Guardrails";
+import AIGatewayLogsPage from "../../presentation/pages/AIGateway/Logs";
+import AIGatewayModelsPage from "../../presentation/pages/AIGateway/Models";
+import AIGatewaySettingsPage from "../../presentation/pages/AIGateway/Settings";
+import AIGatewayVirtualKeysPage from "../../presentation/pages/AIGateway/VirtualKeys";
+import AIGatewayPromptsPage from "../../presentation/pages/AIGateway/Prompts";
+import AIGatewayPromptEditorPage from "../../presentation/pages/AIGateway/Prompts/PromptEditor";
 import MonitoringForm from "../../presentation/pages/PostMarketMonitoring/MonitoringForm";
 import ReportsArchive from "../../presentation/pages/PostMarketMonitoring/ReportsArchive";
 import IntakeFormsListPage from "../../presentation/pages/IntakeFormBuilder/IntakeFormsListPage";
@@ -97,6 +108,7 @@ export const createRoutes = (
       <Route path="/file-manager" element={<FileManager />} />
     <Route path="/reporting" element={<Reporting />} />
     <Route index element={<IntegratedDashboard />} />
+    <Route path="/start-here" element={<StartHere />} />
     <Route path="/overview" element={<VWHome />} />
     <Route path="/framework/:tab?" element={<Framework />} />
     <Route path="/project-view" element={<VWProjectView />} />
@@ -146,6 +158,20 @@ export const createRoutes = (
     <Route path="/shadow-ai/rules" element={<RulesPage />} />
     <Route path="/shadow-ai/rules/alerts" element={<RulesPage />} />
     <Route path="/shadow-ai/settings" element={<ShadowAISettingsPage />} />
+    <Route path="/ai-gateway" element={<Navigate to="/ai-gateway/dashboard" replace />} />
+    <Route path="/ai-gateway/endpoints" element={<AIGatewayEndpointsPage />} />
+    <Route path="/ai-gateway/dashboard" element={<AIGatewayAnalyticsPage />} />
+    <Route path="/ai-gateway/playground" element={<AIGatewayPlaygroundPage />} />
+    <Route path="/ai-gateway/guardrails" element={<Navigate to="/ai-gateway/guardrails/pii" replace />} />
+    <Route path="/ai-gateway/guardrails/:tab" element={<AIGatewayGuardrailsPage />} />
+    <Route path="/ai-gateway/models" element={<Navigate to="/ai-gateway/models/catalog" replace />} />
+    <Route path="/ai-gateway/models/:tab" element={<AIGatewayModelsPage />} />
+    <Route path="/ai-gateway/logs" element={<AIGatewayLogsPage />} />
+    <Route path="/ai-gateway/prompts" element={<AIGatewayPromptsPage />} />
+    <Route path="/ai-gateway/prompts/:id" element={<AIGatewayPromptEditorPage />} />
+    <Route path="/ai-gateway/virtual-keys" element={<AIGatewayVirtualKeysPage />} />
+    <Route path="/ai-gateway/settings" element={<Navigate to="/ai-gateway/settings/api-keys" replace />} />
+    <Route path="/ai-gateway/settings/:tab" element={<AIGatewaySettingsPage />} />
     <Route path="/monitoring/cycle/:cycleId" element={<MonitoringForm />} />
     <Route path="/monitoring/reports" element={<ReportsArchive />} />
     <Route path="/intake-forms" element={<IntakeFormsListPage />}>

@@ -5,10 +5,11 @@ import { Topics } from "../structures/EU-AI-Act/assessment-tracker/topics.struct
 import { QueryTypes, Transaction } from "sequelize";
 import { ITopic } from "../domain.layer/interfaces/i.topic";
 
-export const getAllTopicsQuery = async (tenant: string): Promise<ITopic[]> => {
+export const getAllTopicsQuery = async (organizationId: number): Promise<ITopic[]> => {
   const topics = await sequelize.query(
-    `SELECT * FROM "${tenant}".topics ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM topics WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: TopicModel,
     }
@@ -18,12 +19,12 @@ export const getAllTopicsQuery = async (tenant: string): Promise<ITopic[]> => {
 
 export const getTopicByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<ITopic | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".topics WHERE id = :id`,
+    `SELECT * FROM topics WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: TopicModel,
     }
@@ -33,13 +34,14 @@ export const getTopicByIdQuery = async (
 
 export const createNewTopicQuery = async (
   topic: TopicModel,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<TopicModel> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".topics (assessment_id, title) VALUES (:assessment_id, :title) RETURNING *`,
+    `INSERT INTO topics (organization_id, assessment_id, title) VALUES (:organizationId, :assessment_id, :title) RETURNING *`,
     {
       replacements: {
+        organizationId,
         assessment_id: topic.assessment_id,
         title: topic.title,
       },
@@ -55,10 +57,10 @@ export const createNewTopicQuery = async (
 export const updateTopicByIdQuery = async (
   id: number,
   topic: Partial<TopicModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<TopicModel | null> => {
-  const updateTopic: Partial<Record<keyof TopicModel, any>> = {};
+  const updateTopic: Partial<Record<keyof TopicModel, any>> & { organizationId?: number } = {};
   const setClause = ["title"]
     .filter((f) => {
       if (
@@ -73,9 +75,10 @@ export const updateTopicByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE "${tenant}".topics SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE topics SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateTopic.id = id;
+  updateTopic.organizationId = organizationId;
 
   const result = await sequelize.query(query, {
     replacements: updateTopic,
@@ -90,13 +93,13 @@ export const updateTopicByIdQuery = async (
 
 export const deleteTopicByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".topics WHERE id = :id RETURNING *`,
+    `DELETE FROM topics WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: TopicModel,
       type: QueryTypes.DELETE,
@@ -108,12 +111,12 @@ export const deleteTopicByIdQuery = async (
 
 export const getTopicByAssessmentIdQuery = async (
   assessmentId: number,
-  tenant: string
+  organizationId: number
 ): Promise<ITopic[]> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".topics WHERE assessment_id = :assessment_id ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM topics WHERE organization_id = :organizationId AND assessment_id = :assessment_id ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { assessment_id: assessmentId },
+      replacements: { organizationId, assessment_id: assessmentId },
       mapToModel: true,
       model: TopicModel,
     }
@@ -124,14 +127,15 @@ export const getTopicByAssessmentIdQuery = async (
 export const createNewTopicsQuery = async (
   assessmentId: number,
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const createdTopics = [];
-  let query = `INSERT INTO "${tenant}".topics(assessment_id, title, order_no) VALUES (:assessment_id, :title, :order_no) RETURNING *;`;
+  let query = `INSERT INTO topics(organization_id, assessment_id, title, order_no) VALUES (:organizationId, :assessment_id, :title, :order_no) RETURNING *;`;
   for (let topicStruct of Topics) {
     const result = await sequelize.query(query, {
       replacements: {
+        organizationId,
         assessment_id: assessmentId,
         title: topicStruct.title,
         order_no: topicStruct.order_no || null,
@@ -146,7 +150,7 @@ export const createNewTopicsQuery = async (
       topic_id,
       topicStruct.subtopics,
       enable_ai_data_insertion,
-      tenant,
+      organizationId,
       transaction
     );
     createdTopics.push({ ...result[0].dataValues, subTopics });

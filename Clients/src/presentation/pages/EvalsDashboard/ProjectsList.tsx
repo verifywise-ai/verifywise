@@ -18,7 +18,7 @@ import {
   Menu,
   MenuItem,
 } from "@mui/material";
-import { Plus, FileSearch, MessageSquare, Bot, ChevronsUpDown, ChevronUp, ChevronDown, MoreVertical } from "lucide-react";
+import { Plus, FileSearch, MessageSquare, Bot, ChevronsUpDown, ChevronUp, ChevronDown, MoreVertical, FlaskConical, Target, Layers, TrendingUp } from "lucide-react";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import SelectableCard from "../../components/SelectableCard";
 import { CustomizableButton } from "../../components/button/customizable-button";
@@ -26,6 +26,7 @@ import StandardModal from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
 import Alert from "../../components/Alert";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import TablePaginationActions from "../../components/TablePagination";
 import SearchBox from "../../components/Search/SearchBox";
@@ -499,13 +500,34 @@ export default function ProjectsList() {
       {/* Projects Table */}
       {filteredProjects.length === 0 ? (
         <EmptyState
+          icon={FlaskConical}
           message={
             projects.length === 0
-              ? "No projects yet. Create your first project to start evaluating LLMs."
+              ? "No evaluation projects yet. Create a project to start benchmarking your LLM applications."
               : "No projects match your search or filter criteria."
           }
           showBorder
-        />
+        >
+          {projects.length === 0 && (
+            <>
+              <EmptyStateTip
+                icon={Target}
+                title="What is an eval project?"
+                description="A project groups related evaluations for a single LLM application. Define test suites, scoring criteria, and track quality over time."
+              />
+              <EmptyStateTip
+                icon={Layers}
+                title="Compare models side by side"
+                description="Run the same test suite across different models or prompts. The arena view shows head-to-head comparisons with automated scoring."
+              />
+              <EmptyStateTip
+                icon={TrendingUp}
+                title="Track quality over releases"
+                description="Re-run evaluations after each deployment. Monitor regression and improvement trends with historical score charts."
+              />
+            </>
+          )}
+        </EmptyState>
       ) : (
         <TableContainer>
           <Table sx={singleTheme.tableStyles.primary.frame}>

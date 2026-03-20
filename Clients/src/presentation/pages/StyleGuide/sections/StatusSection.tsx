@@ -3,6 +3,7 @@ import { Box, Stack, Typography, useTheme, Divider, Snackbar, Chip } from "@mui/
 import { Copy, Check, Clock, AlertTriangle, XCircle, Circle, AlertCircle, Zap } from "lucide-react";
 import { statusColorSchemes, getStatusColor } from "../../../utils/statusColors";
 import CodeBlock from "../components/CodeBlock";
+import { background, status } from "../../../themes/palette";
 
 // Code snippets
 const statusColorsSnippet = `import { statusColorSchemes, getStatusColor } from "../utils/statusColors";
@@ -271,10 +272,10 @@ const StatusSection: React.FC = () => {
                 onCopy={handleCopy}
               >
                 <Box sx={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-                  <DotIndicator label="Active" color="#138A5E" />
+                  <DotIndicator label="Active" color={status.success.text} />
                   <DotIndicator label="Pending" color="#795548" />
-                  <DotIndicator label="Inactive" color="#6B7280" />
-                  <DotIndicator label="Error" color="#D32F2F" />
+                  <DotIndicator label="Inactive" color={status.default.text} />
+                  <DotIndicator label="Error" color={status.error.text} />
                 </Box>
               </ExampleWithCode>
             </Stack>
@@ -326,7 +327,7 @@ const StatusSection: React.FC = () => {
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
           <SemanticColorCard
             name="Success / Active"
-            textColor="#138A5E"
+            textColor={status.success.text}
             bgColor="#E6F4EA"
             usage="Completed, Active, Production, Low risk"
             onCopy={handleCopy}
@@ -340,7 +341,7 @@ const StatusSection: React.FC = () => {
           />
           <SemanticColorCard
             name="Error / Critical"
-            textColor="#D32F2F"
+            textColor={status.error.text}
             bgColor="#FFD6D6"
             usage="Failed, Open incidents, High risk"
             onCopy={handleCopy}
@@ -354,8 +355,8 @@ const StatusSection: React.FC = () => {
           />
           <SemanticColorCard
             name="Neutral / Inactive"
-            textColor="#6B7280"
-            bgColor="#F3F4F6"
+            textColor={status.default.text}
+            bgColor={background.hover}
             usage="Draft, Inactive, Closed, Planned"
             onCopy={handleCopy}
           />
@@ -512,11 +513,11 @@ const StatusSchemeCard: React.FC<StatusSchemeCardProps> = ({ title, entityType, 
 };
 
 const statusVariants = {
-  success: { bg: "#E6F4EA", text: "#138A5E" },
+  success: { bg: "#E6F4EA", text: "status.success.text" },
   warning: { bg: "#FFF8E1", text: "#795548" },
-  error: { bg: "#FFD6D6", text: "#D32F2F" },
+  error: { bg: "#FFD6D6", text: "status.error.text" },
   info: { bg: "#E3F2FD", text: "#1565C0" },
-  neutral: { bg: "#F3F4F6", text: "#6B7280" },
+  neutral: { bg: "background.hover", text: "status.default.text" },
 };
 
 interface StatusChipProps {

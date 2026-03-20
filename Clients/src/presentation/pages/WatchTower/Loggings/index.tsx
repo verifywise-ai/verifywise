@@ -10,9 +10,11 @@ import { useState, useEffect, useMemo } from "react";
 import { getAllLogs } from "../../../../application/repository/logs.repository";
 import LogsTable from "../../../components/Table/LogsTable";
 import { EmptyState } from "../../../components/EmptyState";
-import { RefreshCw as RefreshIcon } from "lucide-react";
+import { RefreshCw as RefreshIcon, ScrollText, Activity, AlertCircle, Search } from "lucide-react";
+import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import SearchBox from "../../../components/Search/SearchBox";
 import Select from "../../../components/Inputs/Select";
+import { border as borderPalette } from "../../../themes/palette";
 
 const WatchTowerLogs = () => {
   const theme = useTheme();
@@ -102,7 +104,7 @@ const WatchTowerLogs = () => {
           alignItems="center"
           justifyContent="center"
           sx={{
-            border: "1px solid #d0d5dd",
+            border: `1px solid ${borderPalette.dark}`,
             borderRadius: "4px",
             padding: theme.spacing(15, 5),
             minHeight: 200,
@@ -225,7 +227,23 @@ const WatchTowerLogs = () => {
       {filteredLogs.length > 0 ? (
         <LogsTable data={filteredLogs} isLoading={isLoading} paginated={true} />
       ) : !error ? (
-        <EmptyState message="There are currently no logs available." />
+        <EmptyState icon={ScrollText} message="There are currently no logs available.">
+          <EmptyStateTip
+            icon={Activity}
+            title="What appears here"
+            description="System events, API calls, and background job results are logged automatically. Logs appear as your workspace generates activity."
+          />
+          <EmptyStateTip
+            icon={AlertCircle}
+            title="Monitor for issues"
+            description="Watch for error-level entries that may indicate failed operations, authentication problems, or service disruptions."
+          />
+          <EmptyStateTip
+            icon={Search}
+            title="Search and filter"
+            description="Use the search bar and level filters above to find specific log entries. Filter by severity to focus on warnings or errors."
+          />
+        </EmptyState>
       ) : null}
     </Stack>
   );

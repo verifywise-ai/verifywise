@@ -9,11 +9,11 @@ export async function getDashboardData(req: Request, res: Response) {
     functionName: "getDashboardData",
     fileName: "dashboard.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const dashboard = await getDashboardDataQuery(req.tenantId!, req.userId!, req.role!);
+    const dashboard = await getDashboardDataQuery(req.organizationId!, req.userId!, req.role!);
 
     await logSuccess({
       eventType: "Read",
@@ -21,7 +21,7 @@ export async function getDashboardData(req: Request, res: Response) {
       functionName: "getDashboardData",
       fileName: "dashboard.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res
@@ -35,7 +35,7 @@ export async function getDashboardData(req: Request, res: Response) {
       fileName: "dashboard.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

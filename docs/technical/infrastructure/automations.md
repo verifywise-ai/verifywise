@@ -467,7 +467,7 @@ await logAutomationExecution(
   automationId,
   triggerData,
   actionResults,
-  tenantHash,
+  organizationId,
   startTime
 );
 ```
@@ -485,7 +485,7 @@ await logAutomationExecution(
 
 export const getAutomationExecutionStats = async (
   automationId: number,
-  tenantHash: string
+  organizationId: number
 ) => {
   const query = `
     SELECT
@@ -493,8 +493,8 @@ export const getAutomationExecutionStats = async (
       COUNT(*) FILTER (WHERE status = 'success') as successful,
       COUNT(*) FILTER (WHERE status = 'failure') as failed,
       AVG(execution_time_ms) as avg_execution_time
-    FROM "${tenantHash}".automation_execution_logs
-    WHERE automation_id = :automationId
+    FROM automation_execution_logs
+    WHERE organization_id = :organizationId AND automation_id = :automationId
   `;
   // ...
 };

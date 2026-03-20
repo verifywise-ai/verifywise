@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-03-05
+> **Last Updated:** 2026-03-17
 
 This document contains core rules and patterns for all development in the VerifyWise codebase. For detailed feature documentation, see the [Reference Index](#detailed-references) at the bottom.
 
@@ -39,7 +39,7 @@ VerifyWise is an AI governance platform supporting EU AI Act, ISO 42001, ISO 270
 |-------|-------------|
 | **Frontend** | React 18, TypeScript, Vite, Material-UI 7, Redux Toolkit, React Query |
 | **Backend** | Node.js 22, Express.js 4, TypeScript, Sequelize 6 |
-| **Database** | PostgreSQL (schema-per-tenant) |
+| **Database** | PostgreSQL (shared schema, org_id isolation) |
 | **Cache/Queue** | Redis + BullMQ |
 | **Python Services** | FastAPI, Python 3.12 (EvalServer) |
 
@@ -64,6 +64,15 @@ verifywise/
 │   ├── templates/              # Email (MJML) & PDF (EJS) templates
 │   └── jobs/                   # BullMQ workers
 ├── EvalServer/                 # Python LLM evaluation service
+│   ├── src/
+│   │   ├── app.py              # FastAPI entry point
+│   │   ├── alembic.ini         # Alembic config
+│   │   ├── routers/            # API routes
+│   │   ├── database/           # DB config, Alembic migrations
+│   │   ├── scripts/            # Data migration scripts
+│   │   └── middlewares/        # Tenant middleware
+│   ├── Dockerfile              # Production (alembic + uvicorn)
+│   └── Dockerfile.dev          # Development (with --reload)
 └── docs/                       # Documentation
 ```
 
@@ -102,35 +111,20 @@ Express Router → Middleware Chain → Controller → Service → Utils → Pos
 
 ## 3. Multi-Tenancy
 
-VerifyWise uses **schema-per-tenant** isolation. Each organization gets its own PostgreSQL schema.
+Shared-schema isolation with `organization_id` column on all tenant-scoped tables. All data lives in the `verifywise` schema (via `search_path`).
 
-### Tenant Hash Generation
+| Schema | Purpose |
+|--------|---------|
+| `verifywise` | All tables — users, organizations, projects, vendors, risks, files, model_inventories, frameworks, llm_evals_*, etc. |
+| `public` | PostgreSQL extensions only (uuid-ossp, pgcrypto). Also `public.organizations` and `public.users` which EvalServer FKs reference (since EvalServer starts in parallel). |
 
-```typescript
-// File: Servers/tools/getTenantHash.ts
-import { createHash } from "crypto";
+**Access:** `req.organizationId` from auth middleware. Queries use unqualified table names (resolved by `search_path`): `SELECT * FROM projects WHERE organization_id = :orgId AND id = :id`.
 
-export const getTenantHash = (tenantId: number): string => {
-  const hash = createHash('sha256').update(tenantId.toString()).digest('base64');
-  return hash.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
-}
-// Example: Organization ID 1 → Schema "a1b2c3d4e5"
-```
+**EvalServer:** Uses `search_path` for queries (unqualified `llm_evals_*` table names). FK references in DDL point to `public.organizations(id)` and `public.users(id)` — NOT `verifywise.*` — because EvalServer starts in parallel with the main server and can't depend on `verifywise` tables existing first.
 
-### Schema Structure
-
-| Schema | Tables | Purpose |
-|--------|--------|---------|
-| `public` | users, organizations, roles, frameworks, subscriptions | Shared data |
-| `{tenantHash}` | projects, vendors, risks, files, model_inventories, etc. | Tenant-specific data |
-
-### Using Tenant Context
-
-```typescript
-const tenantId = req.tenantId;  // From auth middleware
-const organizationId = req.organizationId;
-const query = `SELECT * FROM "${tenantId}".projects WHERE id = :id`;
-```
+**Legacy:** Previously used schema-per-tenant (`{tenantHash}` schemas). Two migration scripts handle the transition:
+- `Servers/scripts/migrateToSharedSchema.ts` — Main server data migration (runs on startup)
+- `EvalServer/src/scripts/migrate_to_shared_schema.py` — EvalServer data migration (runs on startup with advisory lock for multi-worker safety)
 
 ---
 
@@ -146,62 +140,24 @@ cd Servers
 npx sequelize migration:create --name my-migration-name
 ```
 
-### Migration Pattern: ALL TENANTS
+### Schema Rules
+
+All tables live in the `verifywise` PostgreSQL schema. The `public` schema only holds extensions.
+
+- **Application SQL:** Use **unqualified** table names (e.g., `SELECT * FROM projects`). Resolved via `search_path = verifywise` set in Sequelize `afterConnect` hook.
+- **NEVER** use `public.tablename` or `verifywise.tablename` in application code (controllers, utils, services).
+- **Consolidated DDL migrations** (`20260226234300` through `20260226234302`): Use explicit `verifywise.` prefix for CREATE TABLE, CREATE TYPE, etc.
+- **Framework struct tables** (shared, no org_id): `*_struct_*` tables in `20260226234301-public-schema-tables.js`
+- **Tenant-scoped tables** (with org_id): in `20260226234302-tenant-tables.js`
+- **Seed data:** `20260302111132-seed-framework-struct-data.js`
+
+### Migration Pattern
 
 ```javascript
 'use strict';
 module.exports = {
   async up(queryInterface, Sequelize) {
-    const transaction = await queryInterface.sequelize.transaction();
-    try {
-      const [organizations] = await queryInterface.sequelize.query(
-        `SELECT id FROM organizations;`, { transaction }
-      );
-      // MUST use dist path
-      const { getTenantHash } = require("../../dist/tools/getTenantHash");
-
-      for (const organization of organizations) {
-        const tenantHash = getTenantHash(organization.id);
-        await queryInterface.sequelize.query(`
-          ALTER TABLE "${tenantHash}".my_table
-          ADD COLUMN new_column VARCHAR(255);
-        `, { transaction });
-      }
-      await transaction.commit();
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-  },
-  async down(queryInterface, Sequelize) {
-    const transaction = await queryInterface.sequelize.transaction();
-    try {
-      const [organizations] = await queryInterface.sequelize.query(
-        `SELECT id FROM organizations;`, { transaction }
-      );
-      const { getTenantHash } = require("../../dist/tools/getTenantHash");
-      for (const organization of organizations) {
-        const tenantHash = getTenantHash(organization.id);
-        await queryInterface.sequelize.query(`
-          ALTER TABLE "${tenantHash}".my_table
-          DROP COLUMN IF EXISTS new_column;
-        `, { transaction });
-      }
-      await transaction.commit();
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-  }
-};
-```
-
-### Migration Pattern: PUBLIC Schema Only
-
-```javascript
-'use strict';
-module.exports = {
-  async up(queryInterface, Sequelize) {
+    // Use unqualified table names — search_path resolves to verifywise
     await queryInterface.addColumn('users', 'new_field', {
       type: Sequelize.STRING, allowNull: true
     });
@@ -212,17 +168,54 @@ module.exports = {
 };
 ```
 
-### CRITICAL: Update createNewTenant.ts
+### Data Migration (Legacy Tenant Schemas)
 
-After tenant-affecting migrations, you MUST also update `Servers/scripts/createNewTenant.ts` so new organizations get the same schema changes.
+`Servers/scripts/migrateToSharedSchema.ts` migrates data from old `{tenantHash}` schemas → `verifywise` schema with `organization_id`. Config in `Servers/scripts/migrationConfig.ts` defines table order, FK mappings, and skip lists. Dedicated handlers exist for NIST AI RMF and custom frameworks (struct/impl split).
+
+Key behaviors:
+- `copySharedTables()` runs FIRST — copies `roles`, `organizations`, `users`, `tiers`, `subscriptions`, `frameworks` from `public` → `verifywise` with automatic type casting and COALESCE for NOT NULL columns
+- Then queries `verifywise.organizations` (via search_path) to discover orgs
+- Skips all `llm_evals_*` tables (owned by EvalServer, different schema structure)
+- NOT NULL safety check: skips tables where target has NOT NULL columns missing from source
+- `SKIP_TABLES` in `migrationConfig.ts` lists tables to skip (all 13 `llm_evals_*` tables + others)
+
+### EvalServer Migrations (Alembic)
+
+EvalServer uses Alembic (not Sequelize) for migrations. All `llm_evals_*` tables are defined in a single consolidated migration.
+
+```bash
+cd EvalServer/src
+alembic upgrade head                    # Run migrations
+alembic downgrade -1                    # Rollback last
+```
+
+**Key files:**
+- `EvalServer/src/alembic.ini` — Alembic config
+- `EvalServer/src/database/migrations/env.py` — Migration environment (creates `verifywise` schema, sets `version_table_schema="verifywise"`)
+- `EvalServer/src/database/migrations/versions/c20260303115117_create_shared_schema_tables.py` — All 14 tables (13 `llm_evals_*` + `evalserver_migration_status`)
+
+**Alembic version tracking:** `verifywise.alembic_version` (NOT `public.alembic_version`). The `env.py` drops `public.alembic_version` on startup for backward compatibility with older EvalServer versions.
+
+**EvalServer startup order (Docker & local):**
+```bash
+alembic upgrade head && uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4
+```
+Alembic runs ONCE before uvicorn spawns workers. Data migration (`run_data_migration()`) runs per-worker in the startup event but is protected by `pg_advisory_lock(8675309)` so only one worker executes it.
+
+**EvalServer data migration:** `EvalServer/src/scripts/migrate_to_shared_schema.py` migrates `llm_evals_*` data from old tenant schemas. Config in `EvalServer/src/scripts/migration_config.py`. Handles JSONB serialization (`json.dumps` for asyncpg), NOT NULL safety checks, and FK remapping with `IdMapping`.
 
 ### Running Migrations
 
 ```bash
+# Main server (Sequelize)
 cd Servers
 npm run build                    # Build TypeScript first (migrations use dist/)
 npx sequelize db:migrate         # Run migrations
 npx sequelize db:migrate:undo    # Rollback last
+
+# EvalServer (Alembic)
+cd EvalServer/src
+alembic upgrade head             # Run migrations
 ```
 
 ---
@@ -235,7 +228,7 @@ npx sequelize db:migrate:undo    # Rollback last
 
 1. **Route** (`Servers/routes/{entity}.route.ts`) — Define endpoints, apply `authenticateJWT`
 2. **Controller** (`Servers/controllers/{entity}.ctrl.ts`) — Handle request, validate, call utils, use `logProcessing`/`logSuccess`/`logFailure`, return `STATUS_CODE[xxx](...)`
-3. **Utils** (`Servers/utils/{entity}.utils.ts`) — Raw SQL via `sequelize.query()` with `"${tenantId}".table_name` and `:replacements`
+3. **Utils** (`Servers/utils/{entity}.utils.ts`) — Raw SQL via `sequelize.query()` with unqualified table names and `:replacements` (including `organization_id` for tenant isolation)
 4. **Model** (`Servers/domain.layer/models/{entity}/`) — Sequelize-typescript decorators
 
 **Don't forget:** Register new routes in `Servers/index.ts`:
@@ -307,6 +300,7 @@ const { authToken, role } = useSelector((state) => state.auth);
 cd Servers && npm install && npm run watch    # Backend (Terminal 1)
 cd Clients && npm install && npm run dev      # Frontend (Terminal 2)
 cd Servers && npm run worker                  # BullMQ Worker (Terminal 3, optional)
+cd EvalServer/src && alembic upgrade head && uvicorn app:app --port 8000 --workers 4  # EvalServer (Terminal 4, optional)
 ```
 
 ### Build
@@ -364,6 +358,12 @@ VITE_APP_PORT=5173
 VITE_IS_MULTI_TENANT=false
 ```
 
+### EvalServer (.env in EvalServer/)
+
+Key variables: `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `LLM_EVALS_PORT`
+
+**Note:** EvalServer `.env` is at `EvalServer/.env` (NOT `EvalServer/src/.env`). The `database/config.py` loads it via `Path(__file__).parent.parent.parent / ".env"`. EvalServer may use a different database/port than the main server (e.g., port `5433` vs `5432`).
+
 ### Required Services
 
 | Service | Default Port | Required |
@@ -387,8 +387,14 @@ VITE_IS_MULTI_TENANT=false
 | Route definitions (BE) | `Servers/routes/*.ts` |
 | Route definitions (FE) | `Clients/src/application/config/routes.tsx` |
 | Database models | `Servers/domain.layer/models/` |
-| Tenant hash | `Servers/tools/getTenantHash.ts` |
-| Create tenant script | `Servers/scripts/createNewTenant.ts` |
+| Shared schema migration (main) | `Servers/scripts/migrateToSharedSchema.ts` |
+| Migration config (main) | `Servers/scripts/migrationConfig.ts` |
+| EvalServer entry | `EvalServer/src/app.py` |
+| EvalServer DB config | `EvalServer/src/database/config.py` |
+| EvalServer Alembic env | `EvalServer/src/database/migrations/env.py` |
+| EvalServer DDL migration | `EvalServer/src/database/migrations/versions/c20260303115117_*.py` |
+| EvalServer data migration | `EvalServer/src/scripts/migrate_to_shared_schema.py` |
+| EvalServer migration config | `EvalServer/src/scripts/migration_config.py` |
 | Auth middleware | `Servers/middleware/auth.middleware.ts` |
 | Axios config | `Clients/src/infrastructure/api/customAxios.ts` |
 | Redux store | `Clients/src/application/redux/store.ts` |
@@ -415,6 +421,7 @@ cd Servers && npx sequelize migration:create --name name
 cd Servers && npm run build && npx sequelize db:migrate
 cd Servers && npm run watch                      # Start backend
 cd Clients && npm run dev                        # Start frontend
+cd EvalServer/src && alembic upgrade head && uvicorn app:app --port 8000 --workers 4  # EvalServer
 ```
 
 ---
@@ -472,6 +479,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Authentication architecture | `docs/technical/architecture/authentication.md` |
 | Multi-tenancy architecture | `docs/technical/architecture/multi-tenancy.md` |
 | Testing guide | `docs/technical/guides/testing.md` |
+| EvalServer (LLM evaluations) | `EvalServer/src/app.py` (entry), `EvalServer/src/database/` (DB + migrations) |
 
 ---
 

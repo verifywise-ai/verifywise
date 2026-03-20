@@ -15,7 +15,6 @@
 
 import { EntityGraphAnnotationsModel } from "../domain.layer/models/entityGraphAnnotations/entityGraphAnnotations.model";
 import {
-  ensureAnnotationsTableExists,
   getAnnotationsByUserQuery,
   getAnnotationByEntityQuery,
   getAnnotationByIdQuery,
@@ -51,7 +50,6 @@ export class EntityGraphAnnotationsService {
    * @param {string} entityType - Entity type
    * @param {string} entityId - Entity ID
    * @param {number} organizationId - Organization ID
-   * @param {string} tenantId - Tenant schema ID
    * @returns {Promise<EntityGraphAnnotationsModel>} Created/updated annotation
    * @throws {ValidationException} If validation fails
    */
@@ -60,15 +58,14 @@ export class EntityGraphAnnotationsService {
     userId: number,
     entityType: string,
     entityId: string,
-    organizationId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<EntityGraphAnnotationsModel> {
     logProcessing({
       description: "Starting EntityGraphAnnotationsService.saveAnnotation",
       functionName: "saveAnnotation",
       fileName: "entityGraphAnnotationsService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
@@ -109,9 +106,6 @@ export class EntityGraphAnnotationsService {
         );
       }
 
-      // Ensure table exists
-      await ensureAnnotationsTableExists(tenantId);
-
       // Create annotation model
       const annotation = await EntityGraphAnnotationsModel.createAnnotation(
         sanitizedContent,
@@ -122,7 +116,7 @@ export class EntityGraphAnnotationsService {
       );
 
       // Upsert to database
-      const savedAnnotation = await upsertAnnotationQuery(annotation, tenantId);
+      const savedAnnotation = await upsertAnnotationQuery(annotation, organizationId);
 
       await logSuccess({
         eventType: "Create",
@@ -130,7 +124,7 @@ export class EntityGraphAnnotationsService {
         functionName: "saveAnnotation",
         fileName: "entityGraphAnnotationsService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return savedAnnotation;
@@ -142,7 +136,7 @@ export class EntityGraphAnnotationsService {
         fileName: "entityGraphAnnotationsService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -155,30 +149,24 @@ export class EntityGraphAnnotationsService {
    * @async
    * @param {number} userId - User ID
    * @param {number} organizationId - Organization ID
-   * @param {string} tenantId - Tenant schema ID
    * @returns {Promise<EntityGraphAnnotationsModel[]>} Array of annotations
    */
   static async getAnnotations(
     userId: number,
-    organizationId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<EntityGraphAnnotationsModel[]> {
     logProcessing({
       description: "Starting EntityGraphAnnotationsService.getAnnotations",
       functionName: "getAnnotations",
       fileName: "entityGraphAnnotationsService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
-      // Ensure table exists
-      await ensureAnnotationsTableExists(tenantId);
-
       const annotations = await getAnnotationsByUserQuery(
         userId,
-        organizationId,
-        tenantId
+        organizationId
       );
 
       await logSuccess({
@@ -187,7 +175,7 @@ export class EntityGraphAnnotationsService {
         functionName: "getAnnotations",
         fileName: "entityGraphAnnotationsService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return annotations;
@@ -199,7 +187,7 @@ export class EntityGraphAnnotationsService {
         fileName: "entityGraphAnnotationsService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -213,14 +201,14 @@ export class EntityGraphAnnotationsService {
    * @param {number} userId - User ID
    * @param {string} entityType - Entity type
    * @param {string} entityId - Entity ID
-   * @param {string} tenantId - Tenant schema ID
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<EntityGraphAnnotationsModel | null>} Annotation or null
    */
   static async getAnnotationByEntity(
     userId: number,
     entityType: string,
     entityId: string,
-    tenantId: string
+    organizationId: number
   ): Promise<EntityGraphAnnotationsModel | null> {
     try {
       // Validate entityType against whitelist
@@ -241,14 +229,11 @@ export class EntityGraphAnnotationsService {
         );
       }
 
-      // Ensure table exists
-      await ensureAnnotationsTableExists(tenantId);
-
       return await getAnnotationByEntityQuery(
         userId,
         entityType,
         entityId,
-        tenantId
+        organizationId
       );
     } catch (error) {
       throw error;
@@ -262,29 +247,26 @@ export class EntityGraphAnnotationsService {
    * @async
    * @param {number} annotationId - Annotation ID
    * @param {number} userId - User ID attempting deletion
-   * @param {string} tenantId - Tenant schema ID
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<boolean>} True if deleted successfully
    * @throws {BusinessLogicException} If user lacks permission
    */
   static async deleteAnnotation(
     annotationId: number,
     userId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<boolean> {
     logProcessing({
       description: `Starting EntityGraphAnnotationsService.deleteAnnotation for ID ${annotationId}`,
       functionName: "deleteAnnotation",
       fileName: "entityGraphAnnotationsService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
-      // Ensure table exists
-      await ensureAnnotationsTableExists(tenantId);
-
       // Fetch existing annotation
-      const annotation = await getAnnotationByIdQuery(annotationId, tenantId);
+      const annotation = await getAnnotationByIdQuery(annotationId, organizationId);
 
       if (!annotation) {
         throw new Error(`Annotation with ID ${annotationId} not found`);
@@ -302,7 +284,7 @@ export class EntityGraphAnnotationsService {
       // Delete from database
       const deleteCount = await deleteAnnotationByIdQuery(
         annotationId,
-        tenantId
+        organizationId
       );
 
       if (deleteCount === 0) {
@@ -315,7 +297,7 @@ export class EntityGraphAnnotationsService {
         functionName: "deleteAnnotation",
         fileName: "entityGraphAnnotationsService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return true;
@@ -327,7 +309,7 @@ export class EntityGraphAnnotationsService {
         fileName: "entityGraphAnnotationsService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -341,21 +323,21 @@ export class EntityGraphAnnotationsService {
    * @param {number} userId - User ID
    * @param {string} entityType - Entity type
    * @param {string} entityId - Entity ID
-   * @param {string} tenantId - Tenant schema ID
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<boolean>} True if deleted (or didn't exist)
    */
   static async deleteAnnotationByEntity(
     userId: number,
     entityType: string,
     entityId: string,
-    tenantId: string
+    organizationId: number
   ): Promise<boolean> {
     logProcessing({
       description: `Starting EntityGraphAnnotationsService.deleteAnnotationByEntity for ${entityType}:${entityId}`,
       functionName: "deleteAnnotationByEntity",
       fileName: "entityGraphAnnotationsService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
@@ -377,10 +359,7 @@ export class EntityGraphAnnotationsService {
         );
       }
 
-      // Ensure table exists
-      await ensureAnnotationsTableExists(tenantId);
-
-      await deleteAnnotationByEntityQuery(userId, entityType, entityId, tenantId);
+      await deleteAnnotationByEntityQuery(userId, entityType, entityId, organizationId);
 
       await logSuccess({
         eventType: "Delete",
@@ -388,7 +367,7 @@ export class EntityGraphAnnotationsService {
         functionName: "deleteAnnotationByEntity",
         fileName: "entityGraphAnnotationsService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return true;
@@ -400,7 +379,7 @@ export class EntityGraphAnnotationsService {
         fileName: "entityGraphAnnotationsService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }

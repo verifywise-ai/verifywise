@@ -1,4 +1,5 @@
 import { IntakeFormStatus, IntakeEntityType } from "../../../domain/intake/enums";
+import { brand } from "../../themes/palette";
 
 /**
  * Field types supported in the intake form builder
@@ -79,7 +80,7 @@ export interface FormDesignSettings {
 export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
   format: "narrow",
   alignment: "left",
-  colorTheme: "#13715B",
+  colorTheme: `${brand.primary}`,
   backgroundColor: "#fafafa",
   logoUrl: "",
   fontFamily: "Inter",

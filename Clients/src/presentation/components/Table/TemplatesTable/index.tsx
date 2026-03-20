@@ -21,6 +21,7 @@ import {
   getPaginationRowCount,
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
+import { brand, text, background, border as borderPalette, status } from "../../../themes/palette";
 
 // Re-export TemplateRow from TemplatesList
 export type { TemplateRow } from "./TemplatesList";
@@ -159,7 +160,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
         >
           {label}
         </Typography>
-        <Box sx={{ color: sortConfig.key === sortKey ? "primary.main" : "#9CA3AF", display: "flex", alignItems: "center" }}>
+        <Box sx={{ color: sortConfig.key === sortKey ? "primary.main" : `${text.disabled}`, display: "flex", alignItems: "center" }}>
           {sortConfig.key === sortKey && sortConfig.direction === "asc" && <ChevronUp size={14} />}
           {sortConfig.key === sortKey && sortConfig.direction === "desc" && <ChevronDown size={14} />}
           {sortConfig.key !== sortKey && <ChevronsUpDown size={14} />}
@@ -189,7 +190,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
           {loading ? (
             <TableRow>
               <TableCell colSpan={6} sx={{ textAlign: "center", py: 4 }}>
-                <CircularProgress size={24} sx={{ color: "#13715B" }} />
+                <CircularProgress size={24} sx={{ color: `${brand.primary}` }} />
               </TableCell>
             </TableRow>
           ) : paginatedRows.length === 0 ? (
@@ -210,7 +211,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                   sx={{
                     ...singleTheme.tableStyles.primary.body.row,
                     cursor: onRowClick ? "pointer" : "default",
-                    "&:hover": { backgroundColor: "#f5f5f5" },
+                    "&:hover": { backgroundColor: `${background.surface}` },
                   }}
                 >
                   <TableCell sx={{ ...singleTheme.tableStyles.primary.body.cell, maxWidth: "400px" }}>
@@ -221,7 +222,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                       <Typography
                         sx={{
                           fontSize: "11px",
-                          color: "#9CA3AF",
+                          color: `${text.disabled}`,
                           mt: 0.25,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -244,7 +245,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                         textColor={getTypeStyles(template.type).color}
                       />
                     ) : (
-                      <Typography sx={{ fontSize: "13px", color: "#9CA3AF" }}>-</Typography>
+                      <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>-</Typography>
                     )}
                   </TableCell>
                   <TableCell sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}>
@@ -257,7 +258,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                     />
                   </TableCell>
                   <TableCell sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}>
-                    <Typography sx={{ fontSize: compact ? "12px" : "13px", color: "#6B7280" }}>
+                    <Typography sx={{ fontSize: compact ? "12px" : "13px", color: `${status.default.text}` }}>
                       {template.test_count ?? "-"}
                     </Typography>
                   </TableCell>
@@ -284,11 +285,11 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                       sx={{
                         fontSize: compact ? "11px" : "12px",
                         minHeight: compact ? "24px" : "28px",
-                        borderColor: "#d0d5dd",
-                        color: "#344054",
+                        borderColor: `${borderPalette.dark}`,
+                        color: `${text.secondary}`,
                         "&:hover": {
-                          borderColor: "#13715B",
-                          color: "#13715B",
+                          borderColor: `${brand.primary}`,
+                          color: `${brand.primary}`,
                         },
                       }}
                     />

@@ -52,6 +52,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   return createPortal(
     <>
       <Stack
+        className="confirmation-backdrop"
         onClick={onCancel}
         sx={{
           position: "fixed",

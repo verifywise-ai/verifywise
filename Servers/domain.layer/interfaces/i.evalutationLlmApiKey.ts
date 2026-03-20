@@ -1,7 +1,7 @@
 export interface IEvaluationLlmApiKey {
   id?: number;
   provider: string;
-  encrypted_api_key?: string;
+  api_key_encrypted?: string;
   created_at?: Date;
   updated_at?: Date;
 }

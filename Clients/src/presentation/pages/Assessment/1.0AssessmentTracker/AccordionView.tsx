@@ -22,6 +22,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import Alert from "../../../components/Alert";
 import { AlertProps } from "../../../types/alert.types";
+import { background } from "../../../themes/palette";
 
 interface AccordionViewProps {
   subtopics: Array<Subtopic & { questions?: Question[] }>;
@@ -72,7 +73,7 @@ const EUAIActStatusDropdown = ({
         onClick={(e) => !disabled && setAnchorEl(e.currentTarget)}
         sx={{
           backgroundColor: statusColor,
-          color: "#fff",
+          color: `${background.main}`,
           fontSize: 12,
           fontWeight: 500,
           padding: "4px 8px",
@@ -88,7 +89,7 @@ const EUAIActStatusDropdown = ({
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          {isUpdating && <CircularProgress size={10} sx={{ color: "#fff" }} />}
+          {isUpdating && <CircularProgress size={10} sx={{ color: `${background.main}` }} />}
           <span>{currentStatus || "Not started"}</span>
         </Box>
         {!isUpdating && <ChevronDown size={14} />}
@@ -333,7 +334,7 @@ const AccordionView = ({
                           height: "20px",
                           fontSize: "12px",
                           backgroundColor: "#f0f0f0",
-                          color: "#344054",
+                          color: "text.secondary",
                         }}
                       />
                     </Box>

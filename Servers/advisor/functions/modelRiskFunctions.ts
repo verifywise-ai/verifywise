@@ -16,13 +16,13 @@ export interface FetchModelRisksParams {
 
 const fetchModelRisks = async (
   params: FetchModelRisksParams,
-  tenant: string,
+  organizationId: number,
 ): Promise<Partial<ModelRiskModel>[]> => {
   let risks: ModelRiskModel[] = [];
 
   try {
     // Fetch all active model risks
-    risks = await getAllModelRisksQuery(tenant, "active");
+    risks = await getAllModelRisksQuery(organizationId, "active");
 
     // Apply filters
     if (params.modelId) {
@@ -96,11 +96,11 @@ export interface ModelRiskAnalytics {
 
 const getModelRiskAnalytics = async (
   params: { modelId?: number },
-  tenant: string,
+  organizationId: number,
 ): Promise<ModelRiskAnalytics> => {
   try {
     // Fetch all model risks
-    let risks = await getAllModelRisksQuery(tenant, "active");
+    let risks = await getAllModelRisksQuery(organizationId, "active");
 
     // Filter by model if specified
     if (params.modelId) {
@@ -242,11 +242,11 @@ export interface ModelRiskExecutiveSummary {
 
 const getModelRiskExecutiveSummary = async (
   params: { modelId?: number },
-  tenant: string,
+  organizationId: number,
 ): Promise<ModelRiskExecutiveSummary> => {
   try {
     // Fetch all model risks
-    let risks = await getAllModelRisksQuery(tenant, "active");
+    let risks = await getAllModelRisksQuery(organizationId, "active");
 
     // Filter by model if specified
     if (params.modelId) {

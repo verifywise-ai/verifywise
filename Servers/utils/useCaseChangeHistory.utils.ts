@@ -34,7 +34,7 @@ export const recordUseCaseChange = async (
   useCaseId: number,
   action: "created" | "updated" | "deleted",
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
@@ -45,7 +45,7 @@ export const recordUseCaseChange = async (
     useCaseId,
     action,
     changedByUserId,
-    tenant,
+    organizationId,
     fieldName,
     oldValue,
     newValue,
@@ -60,7 +60,7 @@ export const recordUseCaseChange = async (
 export const recordMultipleFieldChanges = async (
   useCaseId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -68,7 +68,7 @@ export const recordMultipleFieldChanges = async (
     "use_case",
     useCaseId,
     changedByUserId,
-    tenant,
+    organizationId,
     changes,
     transaction
   );
@@ -80,14 +80,14 @@ export const recordMultipleFieldChanges = async (
  */
 export const getUseCaseChangeHistory = async (
   useCaseId: number,
-  tenant: string,
+  organizationId: number,
   limit: number = 100,
   offset: number = 0
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
   return getEntityChangeHistory(
     "use_case",
     useCaseId,
-    tenant,
+    organizationId,
     limit,
     offset
   );
@@ -111,7 +111,7 @@ export const trackUseCaseChanges = async (
 export const recordUseCaseCreation = async (
   useCaseId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   useCaseData: Partial<IProjectAttributes>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -119,7 +119,7 @@ export const recordUseCaseCreation = async (
     "use_case",
     useCaseId,
     changedByUserId,
-    tenant,
+    organizationId,
     useCaseData,
     transaction
   );
@@ -132,14 +132,14 @@ export const recordUseCaseCreation = async (
 export const recordUseCaseDeletion = async (
   useCaseId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   return recordEntityDeletion(
     "use_case",
     useCaseId,
     changedByUserId,
-    tenant,
+    organizationId,
     transaction
   );
 };

@@ -46,7 +46,7 @@ export const noProjectDescriptionStyle: SxProps<Theme> = (theme) => ({
 export const newProjectButtonStyle: SxProps<Theme> = (theme) => ({
   backgroundColor: "#4C7DE7", // TODO: Move this to theme as secondary action color
   border: "1px solid #4C7DE7",
-  color: "#fff",
+  color: "background.main",
   fontFamily: theme.typography.fontFamily,
   fontSize: theme.typography.fontSize,
   fontWeight: 400,
@@ -94,6 +94,6 @@ export const tabListStyle: SxProps<Theme> = {
   borderBottom: "none",
   "& .MuiTabs-flexContainer": { columnGap: "34px" },
   "& .MuiTabs-indicator": {
-    backgroundColor: "#13715B",
+    backgroundColor: "brand.primary",
   },
 };

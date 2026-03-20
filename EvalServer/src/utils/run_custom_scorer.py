@@ -135,7 +135,10 @@ def get_provider_client(
 
     resolved_key = api_key or os.getenv(env_var)
     if not resolved_key:
-        raise RuntimeError(f"{env_var} environment variable not set")
+        raise RuntimeError(
+            f"No API key found for provider '{provider}' (expected env var: {env_var}). "
+            f"Please save your {provider.upper()} API key in LLM Evals Settings."
+        )
 
     if base_url:
         client = OpenAI(api_key=resolved_key, base_url=base_url)

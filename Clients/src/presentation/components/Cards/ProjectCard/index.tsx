@@ -489,8 +489,8 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
               })
             }
             sx={{
-              backgroundColor: "#13715B",
-              border: "1px solid #13715B",
+              backgroundColor: "brand.primary",
+              border: "1px solid brand.primary",
               mb: 0,
               mt: 0,
             }}

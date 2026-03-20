@@ -27,8 +27,8 @@ async function getAdminUsersForOrganization(organizationId: number): Promise<Arr
   try {
     const admins = await sequelize.query(
       `SELECT u.id, u.name, u.email
-       FROM public.users u
-       JOIN public.roles r ON u.role_id = r.id
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
        WHERE r.name = 'Admin' AND u.organization_id = :organizationId`,
       {
         replacements: { organizationId },

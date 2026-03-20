@@ -486,10 +486,6 @@ export const SuggestedQuestionsPanel = forwardRef<SuggestedQuestionsPanelHandle,
       (q) => !addedLabels.has(q.label.toLowerCase()) && !dismissedLabels.has(q.label)
     );
 
-    const sparkleSx = isSparkleAnimating
-      ? { animation: `${sparkleShimmer} 0.8s ease-in-out 3` }
-      : {};
-
     // ── LLM mode ──
     if (hasLLM) {
       return (
@@ -603,7 +599,7 @@ export const SuggestedQuestionsPanel = forwardRef<SuggestedQuestionsPanelHandle,
                   </Typography>
                   <CustomizableButton
                     variant="text"
-                    onClick={fetchLLMQuestions}
+                    onClick={() => fetchLLMQuestions()}
                     sx={{ height: 24, fontSize: "11px", color: theme.palette.primary.main, minWidth: 0, px: "8px" }}
                   >
                     Retry

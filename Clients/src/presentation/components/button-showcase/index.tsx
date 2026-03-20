@@ -335,7 +335,7 @@ function ButtonShowcase() {
                 <Box sx={{
                   height: 28,
                   width: 100,
-                  backgroundColor: '#13715B',
+                  backgroundColor: 'brand.primary',
                   color: 'white',
                   display: 'flex',
                   alignItems: 'center',
@@ -369,7 +369,7 @@ function ButtonShowcase() {
                 <Box sx={{
                   height: 32,
                   width: 100,
-                  backgroundColor: '#6B7280',
+                  backgroundColor: 'status.default.text',
                   color: 'white',
                   display: 'flex',
                   alignItems: 'center',
@@ -386,7 +386,7 @@ function ButtonShowcase() {
                 <Box sx={{
                   height: 34,
                   width: 100,
-                  backgroundColor: '#13715B',
+                  backgroundColor: 'brand.primary',
                   color: 'white',
                   display: 'flex',
                   alignItems: 'center',

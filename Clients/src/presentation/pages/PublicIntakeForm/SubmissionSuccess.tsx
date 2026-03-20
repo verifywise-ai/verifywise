@@ -62,7 +62,7 @@ export function SubmissionSuccess() {
         {/* Ticket top */}
         <Box
           sx={{
-            backgroundColor: "#fff",
+            backgroundColor: "background.main",
             borderRadius: "16px 16px 0 0",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             p: 4,
@@ -96,7 +96,7 @@ export function SubmissionSuccess() {
         {/* Ticket bottom */}
         <Box
           sx={{
-            backgroundColor: "#fff",
+            backgroundColor: "background.main",
             borderRadius: "0 0 16px 16px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             p: 4,
@@ -144,10 +144,10 @@ export function SubmissionSuccess() {
                 startIcon={<Edit size={15} />}
                 text="Edit and resubmit"
                 sx={{
-                  width: "100%", height: 44, backgroundColor: "#13715B",
+                  width: "100%", height: 44, backgroundColor: "brand.primary",
                   fontSize: "13px", fontWeight: 600, borderRadius: "8px", textTransform: "none",
                   boxShadow: "none",
-                  "&:hover": { backgroundColor: "#0F5A47" },
+                  "&:hover": { backgroundColor: "brand.primaryHover" },
                 }}
               />
             </Box>

@@ -58,11 +58,11 @@ export async function createApprovalRequest(
   );
 
   try {
-    const { userId, tenantId } = req;
+    const { userId, organizationId } = req;
     const { request_name, workflow_id, entity_id, entity_type, entity_data } =
       req.body;
 
-    if (!userId || !tenantId) {
+    if (!userId || !organizationId) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
@@ -81,7 +81,7 @@ export async function createApprovalRequest(
     // Get workflow and steps
     const workflow = await getApprovalWorkflowByIdQuery(
       workflow_id,
-      tenantId,
+      organizationId,
       transaction
     );
 
@@ -92,7 +92,7 @@ export async function createApprovalRequest(
 
     const workflowSteps = await getWorkflowStepsQuery(
       workflow_id,
-      tenantId,
+      organizationId,
       transaction
     );
 
@@ -115,7 +115,7 @@ export async function createApprovalRequest(
         requested_by: userId,
       },
       workflowSteps,
-      tenantId,
+      organizationId,
       transaction
     );
 
@@ -133,7 +133,7 @@ export async function createApprovalRequest(
       try {
         // Get requester name
         const requesterResult = await sequelize.query<{ name: string; surname: string }>(
-          `SELECT name, surname FROM public.users WHERE id = :userId`,
+          `SELECT name, surname FROM users WHERE id = :userId`,
           { replacements: { userId }, type: QueryTypes.SELECT }
         );
         const requester = requesterResult[0];
@@ -149,7 +149,7 @@ export async function createApprovalRequest(
             const approverId = typeof approver === 'object' ? (approver as any).approver_id : approver;
             if (approverId !== userId) {
               await notifyApprovalRequested(
-                tenantId,
+                organizationId,
                 approverId,
                 {
                   id: request.id!,
@@ -203,13 +203,13 @@ export async function getMyApprovalRequests(
   );
 
   try {
-    const { userId, tenantId } = req;
+    const { userId, organizationId } = req;
 
-    if (!userId || !tenantId) {
+    if (!userId || !organizationId) {
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
 
-    const requests = await getMyApprovalRequestsQuery(userId, tenantId);
+    const requests = await getMyApprovalRequestsQuery(userId, organizationId);
 
     logStructured(
       "successful",
@@ -247,13 +247,13 @@ export async function getPendingApprovals(
   );
 
   try {
-    const { userId, tenantId } = req;
+    const { userId, organizationId } = req;
 
-    if (!userId || !tenantId) {
+    if (!userId || !organizationId) {
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
 
-    const requests = await getPendingApprovalsQuery(userId, tenantId);
+    const requests = await getPendingApprovalsQuery(userId, organizationId);
 
     logStructured(
       "successful",
@@ -291,10 +291,10 @@ export async function getApprovalRequestById(
   );
 
   try {
-    const { userId, tenantId } = req;
+    const { userId, organizationId } = req;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-    if (!userId || !tenantId) {
+    if (!userId || !organizationId) {
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
 
@@ -303,7 +303,7 @@ export async function getApprovalRequestById(
       return res.status(400).json(STATUS_CODE[400]("Invalid request ID"));
     }
 
-    const request = await getApprovalRequestByIdQuery(requestId, tenantId);
+    const request = await getApprovalRequestByIdQuery(requestId, organizationId);
 
     if (!request) {
       return res.status(404).json(STATUS_CODE[404]("Request not found"));
@@ -347,11 +347,11 @@ export async function approveRequest(
   );
 
   try {
-    const { userId, tenantId } = req;
+    const { userId, organizationId } = req;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { comments } = req.body;
 
-    if (!userId || !tenantId) {
+    if (!userId || !organizationId) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
@@ -368,7 +368,7 @@ export async function approveRequest(
       userId,
       ApprovalResult.APPROVED,
       comments,
-      tenantId,
+      organizationId,
       transaction
     );
 
@@ -389,7 +389,7 @@ export async function approveRequest(
 
           // Get approver name
           const approverResult = await sequelize.query<{ name: string; surname: string }>(
-            `SELECT name, surname FROM public.users WHERE id = :userId`,
+            `SELECT name, surname FROM users WHERE id = :userId`,
             { replacements: { userId }, type: QueryTypes.SELECT }
           );
           const approver = approverResult[0];
@@ -399,31 +399,31 @@ export async function approveRequest(
             // Notify next step approvers
             const nextStepApprovers = await sequelize.query<{ user_id: number }>(
               `SELECT DISTINCT arsa.approver_id as user_id
-               FROM "${tenantId}".approval_request_step_approvals arsa
-               JOIN "${tenantId}".approval_request_steps ars ON arsa.request_step_id = ars.id
-               WHERE ars.request_id = :requestId AND ars.step_number = :stepNumber`,
-              { replacements: { requestId, stepNumber: notificationInfo.stepNumber }, type: QueryTypes.SELECT }
+               FROM approval_request_step_approvals arsa
+               JOIN approval_request_steps ars ON arsa.request_step_id = ars.id AND arsa.organization_id = ars.organization_id
+               WHERE ars.organization_id = :organizationId AND ars.request_id = :requestId AND ars.step_number = :stepNumber`,
+              { replacements: { organizationId, requestId, stepNumber: notificationInfo.stepNumber }, type: QueryTypes.SELECT }
             );
 
             // Get workflow info
             const [request] = await sequelize.query<{ workflow_id: number }>(
-              `SELECT workflow_id FROM "${tenantId}".approval_requests WHERE id = :requestId`,
-              { replacements: { requestId }, type: QueryTypes.SELECT }
+              `SELECT workflow_id FROM approval_requests WHERE organization_id = :organizationId AND id = :requestId`,
+              { replacements: { organizationId, requestId }, type: QueryTypes.SELECT }
             );
 
             const [workflow] = await sequelize.query<{ workflow_title: string }>(
-              `SELECT workflow_title FROM "${tenantId}".approval_workflows WHERE id = :workflowId`,
-              { replacements: { workflowId: request?.workflow_id }, type: QueryTypes.SELECT }
+              `SELECT workflow_title FROM approval_workflows WHERE organization_id = :organizationId AND id = :workflowId`,
+              { replacements: { organizationId, workflowId: request?.workflow_id }, type: QueryTypes.SELECT }
             );
 
             const [totalSteps] = await sequelize.query<{ count: string }>(
-              `SELECT COUNT(*) as count FROM "${tenantId}".approval_request_steps WHERE request_id = :requestId`,
-              { replacements: { requestId }, type: QueryTypes.SELECT }
+              `SELECT COUNT(*) as count FROM approval_request_steps WHERE organization_id = :organizationId AND request_id = :requestId`,
+              { replacements: { organizationId, requestId }, type: QueryTypes.SELECT }
             );
 
             for (const approverRow of nextStepApprovers) {
               await notifyApprovalRequested(
-                tenantId,
+                organizationId,
                 approverRow.user_id,
                 {
                   id: requestId,
@@ -440,7 +440,7 @@ export async function approveRequest(
             // Also notify the requester about step completion progress
             if (notificationInfo.requesterId && notificationInfo.completedStep) {
               await notifyRequesterStepCompleted(
-                tenantId,
+                organizationId,
                 notificationInfo.requesterId,
                 requestId,
                 notificationInfo.requestName,
@@ -456,12 +456,12 @@ export async function approveRequest(
           } else if (notificationInfo.type === 'requester_approved') {
             // Notify requester that request is fully approved
             const [totalSteps] = await sequelize.query<{ count: string }>(
-              `SELECT COUNT(*) as count FROM "${tenantId}".approval_request_steps WHERE request_id = :requestId`,
-              { replacements: { requestId }, type: QueryTypes.SELECT }
+              `SELECT COUNT(*) as count FROM approval_request_steps WHERE organization_id = :organizationId AND request_id = :requestId`,
+              { replacements: { organizationId, requestId }, type: QueryTypes.SELECT }
             );
 
             await notifyApprovalComplete(
-              tenantId,
+              organizationId,
               notificationInfo.requesterId!,
               {
                 id: requestId,
@@ -511,11 +511,11 @@ export async function rejectRequest(
   );
 
   try {
-    const { userId, tenantId } = req;
+    const { userId, organizationId } = req;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { comments } = req.body;
 
-    if (!userId || !tenantId) {
+    if (!userId || !organizationId) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
@@ -532,7 +532,7 @@ export async function rejectRequest(
       userId,
       ApprovalResult.REJECTED,
       comments,
-      tenantId,
+      organizationId,
       transaction
     );
 
@@ -553,7 +553,7 @@ export async function rejectRequest(
 
           // Get rejector name
           const rejectorResult = await sequelize.query<{ name: string; surname: string }>(
-            `SELECT name, surname FROM public.users WHERE id = :userId`,
+            `SELECT name, surname FROM users WHERE id = :userId`,
             { replacements: { userId }, type: QueryTypes.SELECT }
           );
           const rejector = rejectorResult[0];
@@ -561,7 +561,7 @@ export async function rejectRequest(
 
           // Get requester name
           const requesterResult = await sequelize.query<{ name: string; surname: string }>(
-            `SELECT name, surname FROM public.users WHERE id = :requesterId`,
+            `SELECT name, surname FROM users WHERE id = :requesterId`,
             { replacements: { requesterId: notificationInfo.requesterId }, type: QueryTypes.SELECT }
           );
           const requester = requesterResult[0];
@@ -569,7 +569,7 @@ export async function rejectRequest(
 
           // Send rejection notification
           await sendInAppNotification(
-            tenantId,
+            organizationId,
             {
               user_id: notificationInfo.requesterId!,
               type: NotificationType.APPROVAL_REJECTED,
@@ -633,10 +633,10 @@ export async function withdrawRequest(
   );
 
   try {
-    const { userId, tenantId } = req;
+    const { userId, organizationId } = req;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-    if (!userId || !tenantId) {
+    if (!userId || !organizationId) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
@@ -648,7 +648,7 @@ export async function withdrawRequest(
     }
 
     // Verify user is the requestor
-    const request = await getApprovalRequestByIdQuery(requestId, tenantId, transaction);
+    const request = await getApprovalRequestByIdQuery(requestId, organizationId, transaction);
     if (!request || request.requested_by !== userId) {
       await transaction.rollback();
       return res
@@ -658,7 +658,7 @@ export async function withdrawRequest(
         );
     }
 
-    await withdrawApprovalRequestQuery(requestId, tenantId, transaction);
+    await withdrawApprovalRequestQuery(requestId, organizationId, transaction);
 
     await transaction.commit();
 
@@ -701,15 +701,16 @@ export async function getAllApprovalRequests(
   );
 
   try {
-    const { tenantId } = req;
+    const { organizationId } = req;
 
-    if (!tenantId) {
+    if (!organizationId) {
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
 
     const requests = await sequelize.query(
-      `SELECT * FROM "${tenantId}".approval_requests ORDER BY created_at DESC`,
+      `SELECT * FROM approval_requests WHERE organization_id = :organizationId ORDER BY created_at DESC`,
       {
+        replacements: { organizationId },
         type: "SELECT",
       }
     );

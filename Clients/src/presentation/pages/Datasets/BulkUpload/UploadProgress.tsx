@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import { keyframes } from "@mui/system";
 import { CheckCircle2, XCircle, Loader2, FileSpreadsheet } from "lucide-react";
+import { brand, text } from "../../../themes/palette";
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -45,12 +46,12 @@ export default function UploadProgress({
       {/* Overall progress */}
       <Box>
         <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 500, color: "#344054" }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.secondary" }}>
             {isComplete
               ? "Upload complete"
               : `Uploading ${completed + 1} of ${totalFiles}...`}
           </Typography>
-          <Typography sx={{ fontSize: 13, color: "#475467" }}>
+          <Typography sx={{ fontSize: 13, color: "text.tertiary" }}>
             {completed}/{totalFiles}
           </Typography>
         </Stack>
@@ -62,7 +63,7 @@ export default function UploadProgress({
             borderRadius: "3px",
             backgroundColor: "#E0E4E9",
             "& .MuiLinearProgress-bar": {
-              backgroundColor: errorCount > 0 ? "#DC6803" : "#13715B",
+              backgroundColor: errorCount > 0 ? "#DC6803" : "brand.primary",
               borderRadius: "3px",
             },
           }}
@@ -117,22 +118,22 @@ export default function UploadProgress({
                   ? "#F9ECED"
                   : result.status === "success"
                     ? "#ECFDF3"
-                    : "#F9FAFB",
+                    : "background.accent",
             }}
           >
-            <FileSpreadsheet size={16} color="#667085" />
-            <Typography sx={{ flex: 1, fontSize: 13, color: "#344054" }}>
+            <FileSpreadsheet size={16} color={text.icon} />
+            <Typography sx={{ flex: 1, fontSize: 13, color: "text.secondary" }}>
               {result.fileName}
             </Typography>
             {result.status === "pending" && (
-              <Typography sx={{ fontSize: 12, color: "#475467" }}>
+              <Typography sx={{ fontSize: 12, color: "text.tertiary" }}>
                 Waiting...
               </Typography>
             )}
             {result.status === "uploading" && (
               <Loader2
                 size={16}
-                color="#13715B"
+                color={brand.primary}
                 style={{ animation: `${spin} 1s linear infinite` }}
               />
             )}

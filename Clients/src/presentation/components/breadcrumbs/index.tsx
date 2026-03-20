@@ -71,12 +71,18 @@ function Breadcrumbs({
 
     const breadcrumbs: BreadcrumbItemPresentation[] = [];
 
-    // Add home item
-    breadcrumbs.push({
-      label: homeLabel,
-      path: homePath,
-      icon: getRouteIcon(homePath),
-    });
+    // Add home item (skip for module pages that have their own root breadcrumb)
+    const skipHome = location.pathname.startsWith("/ai-gateway") ||
+                     location.pathname.startsWith("/evals") ||
+                     location.pathname.startsWith("/ai-detection") ||
+                     location.pathname.startsWith("/shadow-ai");
+    if (!skipHome) {
+      breadcrumbs.push({
+        label: homeLabel,
+        path: homePath,
+        icon: getRouteIcon(homePath),
+      });
+    }
 
     // Build path progressively, skipping numeric-only intermediate segments
     let currentPath = "";

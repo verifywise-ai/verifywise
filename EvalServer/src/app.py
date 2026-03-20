@@ -10,32 +10,39 @@ from routers.evaluation_logs import router as evaluation_logs
 from routers.deepeval_orgs import router as deepeval_orgs
 from routers.deepeval_arena import router as deepeval_arena
 from routers.bias_audits import router as bias_audits
+from routers.reports import router as reports
 from middlewares.middleware import TenantMiddleware
 from database.redis import close_redis
-from alembic.config import Config
-from alembic import command
+from database.config import settings
 
 import logging
 logger = logging.getLogger('uvicorn')
 
-def run_migrations():
-    logger.info("Running migrations...")
+
+
+async def run_data_migration():
+    """Run tenant-to-shared-schema data migration if needed."""
+    logger.info("Checking for pending data migration...")
     try:
-        import subprocess
-        result = subprocess.run(
-            ["alembic", "upgrade", "head"],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        if result.returncode == 0:
-            logger.info("Migrations completed successfully")
-        else:
-            logger.warning(f"Migrations failed: {result.stderr}")
-    except subprocess.TimeoutExpired:
-        logger.warning("Migrations timed out, continuing anyway")
+        from scripts.migrate_to_shared_schema import check_and_run_migration
+
+        # Get database URL
+        database_url = settings.sqlalchemy_database_url
+
+        result = await check_and_run_migration(database_url)
+
+        if result.status == "already_completed":
+            logger.info("Data migration already completed")
+        elif result.status == "no_tenants":
+            logger.info("No tenant schemas found, data migration not needed")
+        elif result.status == "just_completed":
+            logger.info(f"Data migration completed: {result.organizations_migrated} orgs, {result.rows_migrated} rows")
+        elif not result.success:
+            logger.error(f"Data migration failed: {result.errors}")
+    except ImportError as e:
+        logger.warning(f"Data migration module not available: {e}")
     except Exception as e:
-        logger.warning(f"Migrations skipped or failed: {e}")
+        logger.warning(f"Data migration check failed: {e}")
 
 async def shutdown_redis():
     await close_redis()
@@ -61,9 +68,23 @@ async def cleanup_orphaned_experiments():
     from sqlalchemy import text
     try:
         async with get_db() as db:
+            # First, try shared-schema (llm_evals_experiments)
+            try:
+                res = await db.execute(text(
+                    "UPDATE llm_evals_experiments "
+                    "SET status = 'failed', error_message = 'Server restarted during execution', "
+                    "completed_at = NOW() WHERE status = 'running'"
+                ))
+                if res.rowcount > 0:
+                    logger.info(f"Marked {res.rowcount} orphaned experiment(s) as failed in verifywise schema")
+            except Exception:
+                pass
+
+            # Also check legacy tenant schemas (for backward compatibility during migration)
             result = await db.execute(text(
                 "SELECT schema_name FROM information_schema.schemata "
-                "WHERE schema_name NOT IN ('public', 'information_schema', 'pg_catalog', 'pg_toast')"
+                "WHERE schema_name NOT IN ('public', 'information_schema', 'pg_catalog', 'pg_toast') "
+                "AND schema_name NOT LIKE 'pg_%'"
             ))
             schemas = [row[0] for row in result.fetchall()]
             for schema in schemas:
@@ -83,7 +104,8 @@ async def cleanup_orphaned_experiments():
 
 @app.on_event("startup")
 async def startup_event():
-    run_migrations()
+    # Alembic migrations run once in Dockerfile/CLI before uvicorn starts workers.
+    await run_data_migration()
     await cleanup_orphaned_experiments()
 
 @app.get("/")
@@ -96,6 +118,7 @@ app.include_router(deepeval_orgs, prefix="/deepeval", tags=["DeepEval Orgs"])
 app.include_router(deepeval_arena, prefix="/deepeval", tags=["DeepEval Arena"])
 app.include_router(bias_audits, prefix="/deepeval", tags=["Bias Audits"])
 app.include_router(evaluation_logs, tags=["Evaluation Logs & Monitoring"])
+app.include_router(reports, tags=["Reports"])
 
 if __name__ == "__main__":
     import uvicorn

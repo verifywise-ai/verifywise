@@ -7,7 +7,7 @@ import { getFeatureSettingsQuery } from "./featureSettings.utils";
 export const GENESIS_HASH = "0".repeat(64);
 
 interface AuditLedgerEntry {
-  tenantId: string;
+  organizationId: number;
   entryType: "event_log" | "change_history";
   userId: number;
   eventType?: string | null;
@@ -50,21 +50,21 @@ export function computeEntryHash(payload: AuditLedgerHashPayload): string {
 }
 
 /**
- * In-memory cache for the audit_ledger_enabled setting per tenant.
+ * In-memory cache for the audit_ledger_enabled setting per organization.
  * Avoids a DB query on every single event. Expires after 30 seconds.
  */
-const enabledCache = new Map<string, { enabled: boolean; expiry: number }>();
+const enabledCache = new Map<number, { enabled: boolean; expiry: number }>();
 const CACHE_TTL_MS = 30_000;
 
-async function isAuditLedgerEnabled(tenant: string): Promise<boolean> {
+async function isAuditLedgerEnabled(organizationId: number): Promise<boolean> {
   const now = Date.now();
-  const cached = enabledCache.get(tenant);
+  const cached = enabledCache.get(organizationId);
   if (cached && cached.expiry > now) return cached.enabled;
 
   try {
-    const settings = await getFeatureSettingsQuery(tenant);
+    const settings = await getFeatureSettingsQuery(organizationId);
     const enabled = settings.audit_ledger_enabled !== false;
-    enabledCache.set(tenant, { enabled, expiry: now + CACHE_TTL_MS });
+    enabledCache.set(organizationId, { enabled, expiry: now + CACHE_TTL_MS });
     return enabled;
   } catch {
     // If we can't read settings, default to enabled (don't lose audit data)
@@ -73,10 +73,10 @@ async function isAuditLedgerEnabled(tenant: string): Promise<boolean> {
 }
 
 /**
- * Append an entry to the tenant's audit_ledger using a SERIALIZABLE transaction.
+ * Append an entry to the audit_ledger using a SERIALIZABLE transaction.
  *
  * Flow:
- * 1. Check if audit ledger is enabled for this tenant
+ * 1. Check if audit ledger is enabled for this organization
  * 2. Get the prev_hash from the last entry (or GENESIS_HASH)
  * 3. INSERT with entry_hash = 'pending' sentinel
  * 4. Compute the real hash using the assigned id
@@ -87,14 +87,10 @@ async function isAuditLedgerEnabled(tenant: string): Promise<boolean> {
 export async function appendToAuditLedger(
   entry: AuditLedgerEntry
 ): Promise<void> {
-  const tenant = entry.tenantId;
+  const organizationId = entry.organizationId;
 
-  if (!/^[A-Za-z0-9]{10}$/.test(tenant)) {
-    throw new Error("Invalid tenant identifier for audit ledger");
-  }
-
-  // Skip if audit ledger is disabled for this tenant
-  if (!(await isAuditLedgerEnabled(tenant))) return;
+  // Skip if audit ledger is disabled for this organization
+  if (!(await isAuditLedgerEnabled(organizationId))) return;
 
   const txn: Transaction = await sequelize.transaction({
     isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
@@ -103,22 +99,25 @@ export async function appendToAuditLedger(
   try {
     // Step 1: Get the previous hash
     const lastRows: any[] = await sequelize.query(
-      `SELECT entry_hash FROM "${tenant}".audit_ledger ORDER BY id DESC LIMIT 1`,
-      { type: QueryTypes.SELECT, transaction: txn }
+      `SELECT entry_hash FROM audit_ledger
+       WHERE organization_id = :organizationId
+       ORDER BY id DESC LIMIT 1`,
+      { replacements: { organizationId }, type: QueryTypes.SELECT, transaction: txn }
     );
     const prevHash = lastRows.length > 0 ? lastRows[0].entry_hash.trim() : GENESIS_HASH;
 
     // Step 2: INSERT with sentinel hash
     const sentinel = "pending".padEnd(64, "0");
     const insertResult: any[] = await sequelize.query(
-      `INSERT INTO "${tenant}".audit_ledger
-       (entry_type, user_id, occurred_at, event_type, entity_type, entity_id,
+      `INSERT INTO audit_ledger
+       (organization_id, entry_type, user_id, occurred_at, event_type, entity_type, entity_id,
         action, field_name, old_value, new_value, description, entry_hash, prev_hash)
-       VALUES (:entry_type, :user_id, NOW(), :event_type, :entity_type, :entity_id,
+       VALUES (:organizationId, :entry_type, :user_id, NOW(), :event_type, :entity_type, :entity_id,
         :action, :field_name, :old_value, :new_value, :description, :sentinel, :prev_hash)
        RETURNING id, occurred_at`,
       {
         replacements: {
+          organizationId,
           entry_type: entry.entryType,
           user_id: entry.userId,
           event_type: entry.eventType || null,
@@ -165,7 +164,7 @@ export async function appendToAuditLedger(
 
     // Step 4: UPDATE sentinel → real hash (trigger allows this one transition)
     await sequelize.query(
-      `UPDATE "${tenant}".audit_ledger SET entry_hash = :realHash WHERE id = :id`,
+      `UPDATE audit_ledger SET entry_hash = :realHash WHERE id = :id`,
       {
         replacements: { realHash, id: newId },
         transaction: txn,
@@ -197,13 +196,9 @@ interface VerifyChainResult {
  * Returns the first broken link if any.
  */
 export async function verifyChain(
-  tenantId: string,
+  organizationId: number,
   options?: VerifyChainOptions
 ): Promise<VerifyChainResult> {
-  if (!/^[A-Za-z0-9]{10}$/.test(tenantId)) {
-    throw new Error("Invalid tenant identifier");
-  }
-
   const batchSize = options?.batchSize || 1000;
   const maxEntries = options?.maxEntries || 100000;
   let offset = 0;
@@ -215,11 +210,12 @@ export async function verifyChain(
       `SELECT id, entry_type, user_id, occurred_at, event_type, entity_type,
               entity_id, action, field_name, old_value, new_value, description,
               entry_hash, prev_hash
-       FROM "${tenantId}".audit_ledger
+       FROM audit_ledger
+       WHERE organization_id = :organizationId
        ORDER BY id ASC
        LIMIT :batchSize OFFSET :offset`,
       {
-        replacements: { batchSize, offset },
+        replacements: { organizationId, batchSize, offset },
         type: QueryTypes.SELECT,
       }
     );

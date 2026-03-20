@@ -3,6 +3,8 @@ DeepEval Controller
 
 Handles DeepEval evaluation requests, background task execution,
 and result retrieval.
+
+Shared-schema multi-tenancy: Uses organization_id for tenant isolation.
 """
 
 import sys
@@ -156,41 +158,41 @@ DEEPEVAL_STATUS = {}
 async def create_deepeval_evaluation_controller(
     background_tasks: BackgroundTasks,
     config_data: dict,
-    tenant: str
+    organization_id: int
 ) -> JSONResponse:
     """
     Create and start a DeepEval evaluation in the background.
-    
+
     Args:
         background_tasks: FastAPI background tasks
         config_data: Evaluation configuration
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with evaluation ID and status
     """
     try:
         # Generate evaluation ID
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        eval_id = f"deepeval_{tenant}_{timestamp}"
-        
+        eval_id = f"deepeval_{organization_id}_{timestamp}"
+
         # Store initial status
         DEEPEVAL_STATUS[eval_id] = {
             "eval_id": eval_id,
             "status": "pending",
-            "tenant": tenant,
+            "organization_id": organization_id,
             "config": config_data,
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
             "progress": "0/0 prompts evaluated"
         }
-        
+
         # Add background task
         background_tasks.add_task(
             run_deepeval_evaluation_task,
             eval_id=eval_id,
             config_data=config_data,
-            tenant=tenant
+            organization_id=organization_id
         )
         
         return JSONResponse(
@@ -213,7 +215,7 @@ async def create_deepeval_evaluation_controller(
 async def run_deepeval_evaluation_task(
     eval_id: str,
     config_data: dict,
-    tenant: str
+    organization_id: int
 ):
     """
     Background task to run DeepEval evaluation.
@@ -221,7 +223,7 @@ async def run_deepeval_evaluation_task(
     Args:
         eval_id: Unique evaluation ID
         config_data: Evaluation configuration
-        tenant: Tenant ID
+        organization_id: Organization ID for tenant isolation
     """
     try:
         # Force use of asyncio event loop (not uvloop)
@@ -232,7 +234,7 @@ async def run_deepeval_evaluation_task(
         DEEPEVAL_STATUS[eval_id]["status"] = "running"
         DEEPEVAL_STATUS[eval_id]["updated_at"] = datetime.now().isoformat()
 
-        print(f"[DeepEval] Starting evaluation {eval_id} for tenant {tenant}")
+        print(f"[DeepEval] Starting evaluation {eval_id} for organization {organization_id}")
 
         # Import DeepEval components
         from deepeval_engine.deepeval_evaluator import DeepEvalEvaluator
@@ -362,7 +364,7 @@ async def run_deepeval_evaluation_task(
         simple_config = SimpleConfig()
         config_manager = type('obj', (object,), {'config': simple_config})()
         
-        output_dir = f"artifacts/deepeval_results/{tenant}/{eval_id}"
+        output_dir = f"artifacts/deepeval_results/{organization_id}/{eval_id}"
         evaluator = DeepEvalEvaluator(
             config_manager=config_manager,
             output_dir=output_dir,
@@ -386,7 +388,7 @@ async def run_deepeval_evaluation_task(
         # Store results
         DEEPEVAL_RESULTS[eval_id] = {
             "eval_id": eval_id,
-            "tenant": tenant,
+            "organization_id": organization_id,
             "status": "completed",
             "config": config_data,
             "results": results,
@@ -414,15 +416,15 @@ async def run_deepeval_evaluation_task(
 
 async def get_deepeval_evaluation_status_controller(
     eval_id: str,
-    tenant: str
+    organization_id: int
 ) -> JSONResponse:
     """
     Get the status of a DeepEval evaluation.
-    
+
     Args:
         eval_id: Evaluation ID
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with evaluation status
     """
@@ -431,16 +433,16 @@ async def get_deepeval_evaluation_status_controller(
             status_code=404,
             detail=f"Evaluation {eval_id} not found"
         )
-    
+
     status_data = DEEPEVAL_STATUS[eval_id]
-    
-    # Verify tenant
-    if status_data["tenant"] != tenant:
+
+    # Verify organization
+    if status_data.get("organization_id") != organization_id:
         raise HTTPException(
             status_code=403,
             detail="Access denied"
         )
-    
+
     return JSONResponse(
         status_code=200,
         content=status_data
@@ -449,15 +451,15 @@ async def get_deepeval_evaluation_status_controller(
 
 async def get_deepeval_evaluation_results_controller(
     eval_id: str,
-    tenant: str
+    organization_id: int
 ) -> JSONResponse:
     """
     Get the results of a completed DeepEval evaluation.
-    
+
     Args:
         eval_id: Evaluation ID
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with evaluation results
     """
@@ -475,41 +477,41 @@ async def get_deepeval_evaluation_results_controller(
                     status_code=500,
                     detail=f"Evaluation failed: {DEEPEVAL_STATUS[eval_id].get('error', 'Unknown error')}"
                 )
-        
+
         raise HTTPException(
             status_code=404,
             detail=f"Evaluation results for {eval_id} not found"
         )
-    
+
     results_data = DEEPEVAL_RESULTS[eval_id]
-    
-    # Verify tenant
-    if results_data["tenant"] != tenant:
+
+    # Verify organization
+    if results_data.get("organization_id") != organization_id:
         raise HTTPException(
             status_code=403,
             detail="Access denied"
         )
-    
+
     return JSONResponse(
         status_code=200,
         content=results_data
     )
 
 
-async def get_all_deepeval_evaluations_controller(tenant: str) -> JSONResponse:
+async def get_all_deepeval_evaluations_controller(organization_id: int) -> JSONResponse:
     """
-    Get all DeepEval evaluations for a tenant.
-    
+    Get all DeepEval evaluations for an organization.
+
     Args:
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with list of evaluations
     """
-    tenant_evaluations = []
-    
+    org_evaluations = []
+
     for eval_id, status_data in DEEPEVAL_STATUS.items():
-        if status_data["tenant"] == tenant:
+        if status_data.get("organization_id") == organization_id:
             evaluation_summary = {
                 "eval_id": eval_id,
                 "status": status_data["status"],
@@ -529,28 +531,28 @@ async def get_all_deepeval_evaluations_controller(tenant: str) -> JSONResponse:
                 evaluation_summary["total_samples"] = summary.get("total_samples", 0)
                 evaluation_summary["completed_at"] = DEEPEVAL_RESULTS[eval_id].get("completed_at")
             
-            tenant_evaluations.append(evaluation_summary)
+            org_evaluations.append(evaluation_summary)
     
     # Sort by created_at descending
-    tenant_evaluations.sort(key=lambda x: x["created_at"], reverse=True)
+    org_evaluations.sort(key=lambda x: x["created_at"], reverse=True)
     
     return JSONResponse(
         status_code=200,
-        content={"evaluations": tenant_evaluations}
+        content={"evaluations": org_evaluations}
     )
 
 
 async def delete_deepeval_evaluation_controller(
     eval_id: str,
-    tenant: str
+    organization_id: int
 ) -> JSONResponse:
     """
     Delete a DeepEval evaluation and its results.
-    
+
     Args:
         eval_id: Evaluation ID
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with deletion confirmation
     """
@@ -559,26 +561,26 @@ async def delete_deepeval_evaluation_controller(
             status_code=404,
             detail=f"Evaluation {eval_id} not found"
         )
-    
+
     status_data = DEEPEVAL_STATUS[eval_id]
-    
-    # Verify tenant
-    if status_data["tenant"] != tenant:
+
+    # Verify organization
+    if status_data.get("organization_id") != organization_id:
         raise HTTPException(
             status_code=403,
             detail="Access denied"
         )
-    
+
     # Delete from both storages
     if eval_id in DEEPEVAL_STATUS:
         del DEEPEVAL_STATUS[eval_id]
-    
+
     if eval_id in DEEPEVAL_RESULTS:
         del DEEPEVAL_RESULTS[eval_id]
-    
+
     # Delete files if they exist
     try:
-        output_dir = Path(f"artifacts/deepeval_results/{tenant}/{eval_id}")
+        output_dir = Path(f"artifacts/deepeval_results/{organization_id}/{eval_id}")
         if output_dir.exists():
             import shutil
             shutil.rmtree(output_dir)
@@ -658,7 +660,7 @@ async def get_evaluation_dataset_info_controller() -> JSONResponse:
 
 async def upload_deepeval_dataset_controller(
     dataset: UploadFile,
-    tenant: str,
+    organization_id: int,
     org_id: str,
     dataset_type: str = "chatbot",
     turn_type: str = "single-turn",
@@ -700,7 +702,7 @@ async def upload_deepeval_dataset_controller(
 
         # Build upload path (Docker: /app/data/uploads, Local: EvaluationModule/data/uploads)
         uploads_root = _get_uploads_root()
-        uploads_dir = uploads_root / tenant
+        uploads_dir = uploads_root / str(organization_id)
         uploads_dir.mkdir(parents=True, exist_ok=True)
 
         # Use only the original filename, no timestamp prefix
@@ -751,12 +753,12 @@ async def upload_deepeval_dataset_controller(
             json.dump(data, f, ensure_ascii=False, indent=2)
 
         # Return path relative to EvaluationModule for runner consumption
-        relative_path = str(Path("data") / "uploads" / tenant / filename)
+        relative_path = str(Path("data") / "uploads" / str(organization_id) / filename)
         # Also persist metadata in DB for Datasets tab with clean name and prompt count
         try:
             async with get_db() as db:
                 await create_user_dataset(
-                    tenant=tenant,
+                    organization_id=organization_id,
                     db=db,
                     name=final_dataset_name,
                     path=relative_path,
@@ -764,7 +766,6 @@ async def upload_deepeval_dataset_controller(
                     prompt_count=prompt_count,
                     dataset_type=dataset_type,
                     turn_type=turn_type,
-                    org_id=org_id,
                     created_by=user_id,
                 )
                 await db.commit()
@@ -778,7 +779,7 @@ async def upload_deepeval_dataset_controller(
                 "path": relative_path,
                 "filename": filename,
                 "size": len(content_bytes),
-                "tenant": tenant,
+                "organizationId": organization_id,
                 "datasetType": dataset_type,
                 "turnType": turn_type,
             },
@@ -931,7 +932,7 @@ async def read_deepeval_dataset_controller(path: str) -> JSONResponse:
     Return the JSON contents of a dataset at a relative path.
     Path can be:
     - Relative to datasets folder (e.g., "chatbot/chatbot_basic.json")
-    - For uploads: "data/uploads/tenant/file.json"
+    - For uploads: "data/uploads/{organization_id}/file.json"
     """
     try:
         # Security: Early rejection of suspicious path patterns
@@ -943,14 +944,14 @@ async def read_deepeval_dataset_controller(path: str) -> JSONResponse:
 
         # Check if it's a user upload path (starts with "data/uploads/")
         if path.startswith("data/uploads/"):
-            # Extract tenant and filename from path: "data/uploads/{tenant}/{filename}"
+            # Extract org_folder and filename from path: "data/uploads/{organization_id}/{filename}"
             path_parts = path.split("/")
             if len(path_parts) >= 4:
-                tenant = path_parts[2]
+                org_folder = path_parts[2]
                 filename = "/".join(path_parts[3:])
                 uploads_root = _get_uploads_root()
-                target = (uploads_root / tenant / filename).resolve()
-                allowed_base = (uploads_root / tenant).resolve()
+                target = (uploads_root / org_folder / filename).resolve()
+                allowed_base = (uploads_root / org_folder).resolve()
             else:
                 raise HTTPException(status_code=400, detail="Invalid upload path format")
         else:
@@ -983,58 +984,58 @@ async def read_deepeval_dataset_controller(path: str) -> JSONResponse:
 
 
 async def list_user_datasets_controller(
-    tenant: str,
+    organization_id: int,
     org_id: Optional[str] = None,
 ) -> JSONResponse:
     """
-    List user-uploaded datasets from the database (tenant-scoped).
+    List user-uploaded datasets from the database (organization-scoped).
     Optionally filter by org_id.
     """
     try:
         async with get_db() as db:
-            items = await list_user_datasets(tenant=tenant, db=db, org_id=org_id)
+            items = await list_user_datasets(organization_id=organization_id, db=db)
             return JSONResponse(status_code=200, content={"datasets": items})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list user datasets: {e}")
 
 
-async def delete_user_datasets_controller(tenant: str, paths: list[str]) -> JSONResponse:
+async def delete_user_datasets_controller(organization_id: int, paths: list[str]) -> JSONResponse:
     """
-    Delete user-uploaded datasets by paths (tenant-scoped).
-    Security: Only allows deletion within the tenant's own uploads directory.
+    Delete user-uploaded datasets by paths (organization-scoped).
+    Security: Only allows deletion within the organization's own uploads directory.
     """
     try:
         uploads_root = _get_uploads_root()
-        tenant_uploads_dir = (uploads_root / tenant).resolve()
+        org_uploads_dir = (uploads_root / str(organization_id)).resolve()
         deleted_count = 0
 
         async with get_db() as db:
             from crud.deepeval_datasets import delete_user_datasets
 
             # Delete from database
-            await delete_user_datasets(tenant=tenant, db=db, paths=paths)
+            await delete_user_datasets(organization_id=organization_id, db=db, paths=paths)
 
             # Delete physical files
             for path in paths:
                 try:
-                    # Path format: "data/uploads/{tenant}/{filename}"
+                    # Path format: "data/uploads/{organization_id}/{filename}"
                     path_parts = path.split("/")
-                    if len(path_parts) >= 4 and path_parts[2] == tenant:
+                    if len(path_parts) >= 4 and path_parts[2] == str(organization_id):
                         filename = "/".join(path_parts[3:])
-                        file_path = (tenant_uploads_dir / filename).resolve()
-                        # Security check: ensure file is within tenant's uploads directory
-                        if file_path.is_relative_to(tenant_uploads_dir) and file_path.is_file():
+                        file_path = (org_uploads_dir / filename).resolve()
+                        # Security check: ensure file is within organization's uploads directory
+                        if file_path.is_relative_to(org_uploads_dir) and file_path.is_file():
                             file_path.unlink()
                             deleted_count += 1
                         else:
-                            print(f"Security: Blocked deletion of {path} - outside tenant directory")
+                            print(f"Security: Blocked deletion of {path} - outside org directory")
                     else:
-                        print(f"Security: Blocked deletion of {path} - invalid path or wrong tenant")
+                        print(f"Security: Blocked deletion of {path} - invalid path or wrong org")
                 except Exception as e:
                     print(f"Failed to delete file {path}: {e}")
-            
+
             await db.commit()
-        
+
         return JSONResponse(
             status_code=200,
             content={"message": f"Deleted {deleted_count} dataset(s)", "deleted": deleted_count}
@@ -1046,15 +1047,15 @@ async def delete_user_datasets_controller(tenant: str, paths: list[str]) -> JSON
 # ==================== SCORERS ====================
 
 async def list_deepeval_scorers_controller(
-    tenant: str,
+    organization_id: int,
     org_id: Optional[str] = None,
 ) -> JSONResponse:
     """
-    List scorer definitions for the current tenant (optionally filtered by project).
+    List scorer definitions for the current organization (optionally filtered by project).
     """
     try:
         async with get_db() as db:
-            items = await list_scorers(tenant=tenant, db=db, org_id=org_id)
+            items = await list_scorers(organization_id=organization_id, db=db)
             return JSONResponse(status_code=200, content={"scorers": items})
     except Exception as e:
         error_str = str(e).lower()
@@ -1066,7 +1067,7 @@ async def list_deepeval_scorers_controller(
 
 async def create_deepeval_scorer_controller(
     *,
-    tenant: str,
+    organization_id: int,
     payload: Dict[str, Any],
 ) -> JSONResponse:
     """
@@ -1108,7 +1109,6 @@ async def create_deepeval_scorer_controller(
         async with get_db() as db:
             created = await create_scorer(
                 scorer_id=scorer_id,
-                org_id=org_id,
                 name=name,
                 description=description,
                 scorer_type=scorer_type,
@@ -1117,7 +1117,7 @@ async def create_deepeval_scorer_controller(
                 enabled=enabled,
                 default_threshold=default_threshold,
                 weight=weight,
-                tenant=tenant,
+                organization_id=organization_id,
                 created_by=created_by,
                 db=db,
             )
@@ -1136,7 +1136,7 @@ async def create_deepeval_scorer_controller(
 async def update_deepeval_scorer_controller(
     scorer_id: str,
     *,
-    tenant: str,
+    organization_id: int,
     payload: Dict[str, Any],
 ) -> JSONResponse:
     """
@@ -1146,7 +1146,7 @@ async def update_deepeval_scorer_controller(
         async with get_db() as db:
             updated = await update_scorer(
                 scorer_id=scorer_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 name=payload.get("name"),
                 description=payload.get("description"),
                 scorer_type=payload.get("type"),
@@ -1172,14 +1172,14 @@ async def update_deepeval_scorer_controller(
 async def delete_deepeval_scorer_controller(
     scorer_id: str,
     *,
-    tenant: str,
+    organization_id: int,
 ) -> JSONResponse:
     """
     Delete a scorer definition.
     """
     try:
         async with get_db() as db:
-            deleted = await delete_scorer(scorer_id=scorer_id, tenant=tenant, db=db)
+            deleted = await delete_scorer(scorer_id=scorer_id, organization_id=organization_id, db=db)
             await db.commit()
 
         if not deleted:
@@ -1198,12 +1198,12 @@ async def delete_deepeval_scorer_controller(
 async def test_deepeval_scorer_controller(
     scorer_id: str,
     *,
-    tenant: str,
+    organization_id: int,
     payload: Dict[str, Any],
 ) -> JSONResponse:
     """
     Test a scorer with sample input/output data.
-    
+
     Expected payload:
     {
       "input": "The source text to evaluate...",
@@ -1214,7 +1214,7 @@ async def test_deepeval_scorer_controller(
     try:
         # Get scorer config from database
         async with get_db() as db:
-            scorer = await get_scorer_by_id(scorer_id=scorer_id, tenant=tenant, db=db)
+            scorer = await get_scorer_by_id(scorer_id=scorer_id, organization_id=organization_id, db=db)
         
         if not scorer:
             raise HTTPException(status_code=404, detail="Scorer not found")
@@ -1270,17 +1270,17 @@ async def test_deepeval_scorer_controller(
 
 
 async def list_deepeval_models_controller(
-    tenant: str,
+    organization_id: int,
     org_id: Optional[str] = None,
 ) -> JSONResponse:
     """
-    List saved model configurations for the current tenant.
+    List saved model configurations for the current organization.
     """
     from crud.deepeval_models import list_models
 
     try:
         async with get_db() as db:
-            items = await list_models(tenant=tenant, db=db, org_id=org_id)
+            items = await list_models(organization_id=organization_id, db=db)
             return JSONResponse(status_code=200, content={"models": items})
     except Exception as e:
         error_str = str(e).lower()
@@ -1292,7 +1292,7 @@ async def list_deepeval_models_controller(
 
 async def create_deepeval_model_controller(
     *,
-    tenant: str,
+    organization_id: int,
     payload: Dict[str, Any],
 ) -> JSONResponse:
     """
@@ -1327,11 +1327,10 @@ async def create_deepeval_model_controller(
         async with get_db() as db:
             created = await create_model(
                 model_id=model_id,
-                org_id=org_id,
                 name=name,
                 provider=provider,
                 endpoint_url=endpoint_url,
-                tenant=tenant,
+                organization_id=organization_id,
                 created_by=created_by,
                 db=db,
             )
@@ -1350,7 +1349,7 @@ async def create_deepeval_model_controller(
 async def update_deepeval_model_controller(
     model_id: str,
     *,
-    tenant: str,
+    organization_id: int,
     payload: Dict[str, Any],
 ) -> JSONResponse:
     """
@@ -1362,7 +1361,7 @@ async def update_deepeval_model_controller(
         async with get_db() as db:
             updated = await update_model(
                 model_id=model_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 name=payload.get("name"),
                 provider=payload.get("provider"),
                 endpoint_url=payload.get("endpointUrl"),
@@ -1383,7 +1382,7 @@ async def update_deepeval_model_controller(
 async def delete_deepeval_model_controller(
     model_id: str,
     *,
-    tenant: str,
+    organization_id: int,
 ) -> JSONResponse:
     """
     Delete a saved model configuration.
@@ -1392,7 +1391,7 @@ async def delete_deepeval_model_controller(
 
     try:
         async with get_db() as db:
-            deleted = await delete_model(model_id=model_id, tenant=tenant, db=db)
+            deleted = await delete_model(model_id=model_id, organization_id=organization_id, db=db)
             await db.commit()
 
         if not deleted:
@@ -1412,7 +1411,7 @@ async def delete_deepeval_model_controller(
 
 
 async def get_latest_model_controller(
-    tenant: str,
+    organization_id: int,
     org_id: Optional[str] = None,
 ) -> JSONResponse:
     """
@@ -1423,7 +1422,7 @@ async def get_latest_model_controller(
 
     try:
         async with get_db() as db:
-            model = await get_latest_model(tenant=tenant, db=db, org_id=org_id)
+            model = await get_latest_model(organization_id=organization_id, db=db)
             return JSONResponse(status_code=200, content={"model": model})
     except Exception as e:
         error_str = str(e).lower()
@@ -1433,7 +1432,7 @@ async def get_latest_model_controller(
 
 
 async def get_latest_scorer_controller(
-    tenant: str,
+    organization_id: int,
     org_id: Optional[str] = None,
 ) -> JSONResponse:
     """
@@ -1444,7 +1443,7 @@ async def get_latest_scorer_controller(
 
     try:
         async with get_db() as db:
-            scorer = await get_latest_scorer(tenant=tenant, db=db, org_id=org_id)
+            scorer = await get_latest_scorer(organization_id=organization_id, db=db)
             return JSONResponse(status_code=200, content={"scorer": scorer})
     except Exception as e:
         error_str = str(e).lower()

@@ -29,6 +29,7 @@ import { TabFilterBar } from "../../../components/FrameworkFilter/TabFilterBar";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
+import { text } from "../../../themes/palette";
 
 const FRAMEWORK_IDS = {
   EU_AI_ACT: 1,
@@ -213,21 +214,21 @@ const ProjectFrameworks = ({
               width: 80,
               height: 80,
               borderRadius: "50%",
-              backgroundColor: "#f3f4f6",
+              backgroundColor: "background.hover",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               mb: 3,
             }}
           >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={text.disabled} strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </Box>
           <Box sx={{ fontSize: 18, fontWeight: 600, color: "#374151", mb: 1 }}>
             No frameworks installed
           </Box>
-          <Box sx={{ fontSize: 14, color: "#6b7280", maxWidth: 400, mb: 3 }}>
+          <Box sx={{ fontSize: 14, color: "status.default.text", maxWidth: 400, mb: 3 }}>
             This use case doesn't have any compliance frameworks yet.
             Add a framework to start tracking controls and assessments.
           </Box>
@@ -271,7 +272,7 @@ const ProjectFrameworks = ({
         <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 1 }}>
           <TabList
             onChange={(_, v) => setTracker(v)}
-            TabIndicatorProps={{ style: { backgroundColor: "#13715B" } }}
+            TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
             sx={tabListStyle}
           >
             {tabs.map((tab) => (
@@ -445,21 +446,21 @@ const ProjectFrameworks = ({
               width: 80,
               height: 80,
               borderRadius: "50%",
-              backgroundColor: "#f3f4f6",
+              backgroundColor: "background.hover",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               mb: 3,
             }}
           >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={text.disabled} strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </Box>
           <Box sx={{ fontSize: 18, fontWeight: 600, color: "#374151", mb: 1 }}>
             No frameworks installed
           </Box>
-          <Box sx={{ fontSize: 14, color: "#6b7280", maxWidth: 400, mb: 3 }}>
+          <Box sx={{ fontSize: 14, color: "status.default.text", maxWidth: 400, mb: 3 }}>
             This use case doesn't have any compliance frameworks yet.
             Add a framework to start tracking controls and assessments.
           </Box>

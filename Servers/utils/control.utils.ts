@@ -5,11 +5,12 @@ import { QueryTypes, Transaction } from "sequelize";
 import { IControl } from "../domain.layer/interfaces/i.control";
 
 export const getAllControlsQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<IControl[]> => {
   const controls = await sequelize.query(
-    `SELECT * FROM "${tenant}".controls ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM controls WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: ControlModel,
     }
@@ -19,14 +20,14 @@ export const getAllControlsQuery = async (
 
 export const getControlByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<IControl | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".controls WHERE id = :id`,
+    `SELECT * FROM controls WHERE organization_id = :organizationId AND id = :id`,
     {
       mapToModel: true,
       model: ControlModel,
-      replacements: { id: id },
+      replacements: { organizationId, id },
     }
   );
   return result[0];
@@ -34,12 +35,12 @@ export const getControlByIdQuery = async (
 
 export const getAllControlsByControlGroupQuery = async (
   controlGroupId: any,
-  tenant: string
+  organizationId: number
 ): Promise<IControl[]> => {
   const controls = await sequelize.query(
-    `SELECT * FROM "${tenant}".controls WHERE control_category_id = :control_category_id ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM controls WHERE organization_id = :organizationId AND control_category_id = :control_category_id ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { control_category_id: controlGroupId },
+      replacements: { organizationId, control_category_id: controlGroupId },
       mapToModel: true,
       model: ControlModel,
     }
@@ -50,15 +51,17 @@ export const getAllControlsByControlGroupQuery = async (
 export const getControlByIdAndControlTitleAndControlDescriptionQuery = async (
   id: number,
   controlTitle: string,
-  controlDescription: string
+  controlDescription: string,
+  organizationId: number
 ): Promise<IControl | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM controls WHERE
-      control_category_id = : control_category_id 
-      AND control_title = :control_title 
+    `SELECT * FROM controls WHERE organization_id = :organizationId
+      AND control_category_id = :control_category_id
+      AND control_title = :control_title
       AND control_description = :control_description`,
     {
       replacements: {
+        organizationId,
         control_category_id: id,
         control_title: controlTitle,
         control_description: controlDescription,
@@ -72,22 +75,23 @@ export const getControlByIdAndControlTitleAndControlDescriptionQuery = async (
 
 export const createNewControlQuery = async (
   control: Partial<ControlModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ControlModel> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".controls (
-      title, description, order_no, 
-      status, approver, risk_review, 
-      owner, reviewer, due_date, 
+    `INSERT INTO controls (
+      organization_id, title, description, order_no,
+      status, approver, risk_review,
+      owner, reviewer, due_date,
       implementation_details, control_category_id
     ) VALUES (
-      :title, :description, :order_no,
+      :organizationId, :title, :description, :order_no,
       :status, :approver, :risk_review,
       :owner, :reviewer, :due_date,
       :implementation_details, :control_category_id) RETURNING *`,
     {
       replacements: {
+        organizationId,
         title: control.title,
         description: control.description,
         order_no: control.order_no || null,
@@ -111,10 +115,10 @@ export const createNewControlQuery = async (
 export const updateControlByIdQuery = async (
   id: number,
   control: Partial<ControlModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ControlModel> => {
-  const updateControl: Partial<Record<keyof ControlModel, any>> = {};
+  const updateControl: Partial<Record<keyof ControlModel, any>> & { organizationId?: number } = {};
   const setClause = [
     "title",
     "description",
@@ -140,9 +144,10 @@ export const updateControlByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE "${tenant}".controls SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE controls SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateControl.id = id;
+  updateControl.organizationId = organizationId;
 
   const result = await sequelize.query(query, {
     replacements: updateControl,
@@ -156,13 +161,13 @@ export const updateControlByIdQuery = async (
 
 export const deleteControlByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".controls WHERE id = :id RETURNING *`,
+    `DELETE FROM controls WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: ControlModel,
       type: QueryTypes.DELETE,
@@ -189,20 +194,21 @@ export const createNewControlsQuery = async (
     }[];
   }[],
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const createdControls = [];
-  let query = `INSERT INTO "${tenant}".controls(
-    title, description, order_no, control_category_id,
+  let query = `INSERT INTO controls(
+    organization_id, title, description, order_no, control_category_id,
     implementation_details, status
   ) VALUES (
-    :title, :description, :order_no, :control_category_id,
+    :organizationId, :title, :description, :order_no, :control_category_id,
     :implementation_details, :status
   ) RETURNING *;`;
   for (let controlStruct of controls) {
     const result = await sequelize.query(query, {
       replacements: {
+        organizationId,
         title: controlStruct.title,
         description: controlStruct.description,
         order_no: controlStruct.order_no,
@@ -222,7 +228,7 @@ export const createNewControlsQuery = async (
       control_id,
       controlStruct.subControls,
       enable_ai_data_insertion,
-      tenant,
+      organizationId,
       transaction
     );
     createdControls.push({ ...result[0].dataValues, subControls });

@@ -24,8 +24,7 @@ import { QueryTypes } from "sequelize";
  * Main function to calculate overall compliance score for an organization
  */
 export const calculateComplianceScore = async (
-  _organizationId: number,
-  tenantId: string,
+  organizationId: number,
   weights: IComplianceWeights = DEFAULT_COMPLIANCE_WEIGHTS
 ): Promise<IComplianceScore> => {
   // Validate weights sum to 1.0
@@ -39,11 +38,11 @@ export const calculateComplianceScore = async (
   // Gather data for all modules in parallel
   const [riskData, vendorData, projectData, modelData, policyData] =
     await Promise.all([
-      getRiskManagementData(tenantId),
-      getVendorManagementData(tenantId),
-      getProjectGovernanceData(tenantId),
-      getModelLifecycleData(tenantId),
-      getPolicyDocumentationData(tenantId),
+      getRiskManagementData(organizationId),
+      getVendorManagementData(organizationId),
+      getProjectGovernanceData(organizationId),
+      getModelLifecycleData(organizationId),
+      getPolicyDocumentationData(organizationId),
     ]);
 
   // Calculate module scores
@@ -79,7 +78,7 @@ export const calculateComplianceScore = async (
   };
 
   return {
-    organizationId: _organizationId,
+    organizationId,
     overallScore,
     calculatedAt: new Date(),
     modules: {
@@ -103,40 +102,44 @@ interface RiskManagementData {
 }
 
 async function getRiskManagementData(
-  tenantId: string
+  organizationId: number
 ): Promise<RiskManagementData> {
   try {
     // Total risks (excluding soft deleted)
     const totalResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".project_risks
-       WHERE (is_deleted = false OR is_deleted IS NULL)`,
-      { type: QueryTypes.SELECT }
+      `SELECT COUNT(*) as count FROM project_risks
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)`,
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Mitigated risks
     const mitigatedResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".project_risks
-       WHERE (is_deleted = false OR is_deleted IS NULL)
+      `SELECT COUNT(*) as count FROM project_risks
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)
        AND mitigation_status = 'Completed'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // High risks (unmitigated)
     const highResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".project_risks
-       WHERE (is_deleted = false OR is_deleted IS NULL)
+      `SELECT COUNT(*) as count FROM project_risks
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)
        AND mitigation_status != 'Completed'
        AND (current_risk_level = 'High risk' OR current_risk_level = 'Very high risk')`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Critical risks
     const criticalResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".project_risks
-       WHERE (is_deleted = false OR is_deleted IS NULL)
+      `SELECT COUNT(*) as count FROM project_risks
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)
        AND mitigation_status != 'Completed'
        AND current_risk_level = 'Very high risk'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     return {
@@ -157,30 +160,33 @@ interface VendorManagementData {
 }
 
 async function getVendorManagementData(
-  tenantId: string
+  organizationId: number
 ): Promise<VendorManagementData> {
   try {
     // Total vendors
     const totalResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".vendors
-       WHERE (is_deleted = false OR is_deleted IS NULL)`,
-      { type: QueryTypes.SELECT }
+      `SELECT COUNT(*) as count FROM vendors
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)`,
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Assessed vendors (reviewed)
     const assessedResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".vendors
-       WHERE (is_deleted = false OR is_deleted IS NULL)
+      `SELECT COUNT(*) as count FROM vendors
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)
        AND review_status = 'Reviewed'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // High risk vendors (based on risk_score)
     const highRiskResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".vendors
-       WHERE (is_deleted = false OR is_deleted IS NULL)
+      `SELECT COUNT(*) as count FROM vendors
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)
        AND (risk_score >= 70 OR review_result = 'High risk')`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     return {
@@ -200,30 +206,33 @@ interface ProjectGovernanceData {
 }
 
 async function getProjectGovernanceData(
-  tenantId: string
+  organizationId: number
 ): Promise<ProjectGovernanceData> {
   try {
     // Total projects (excluding organizational)
     const totalResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".projects
-       WHERE is_organizational = false OR is_organizational IS NULL`,
-      { type: QueryTypes.SELECT }
+      `SELECT COUNT(*) as count FROM projects
+       WHERE organization_id = :organizationId
+       AND (is_organizational = false OR is_organizational IS NULL)`,
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Completed projects
     const completedResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".projects
-       WHERE (is_organizational = false OR is_organizational IS NULL)
+      `SELECT COUNT(*) as count FROM projects
+       WHERE organization_id = :organizationId
+       AND (is_organizational = false OR is_organizational IS NULL)
        AND status = 'Completed'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Projects with frameworks
     const frameworksResult = (await sequelize.query(
-      `SELECT COUNT(DISTINCT p.id) as count FROM "${tenantId}".projects p
-       INNER JOIN "${tenantId}".projects_frameworks pf ON p.id = pf.project_id
-       WHERE (p.is_organizational = false OR p.is_organizational IS NULL)`,
-      { type: QueryTypes.SELECT }
+      `SELECT COUNT(DISTINCT p.id) as count FROM projects p
+       INNER JOIN projects_frameworks pf ON p.id = pf.project_id AND pf.organization_id = :organizationId
+       WHERE p.organization_id = :organizationId
+       AND (p.is_organizational = false OR p.is_organizational IS NULL)`,
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     return {
@@ -248,38 +257,42 @@ interface ModelLifecycleData {
 }
 
 async function getModelLifecycleData(
-  tenantId: string
+  organizationId: number
 ): Promise<ModelLifecycleData> {
   try {
     // Total models
     const totalResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".model_inventories
-       WHERE (is_deleted = false OR is_deleted IS NULL)`,
-      { type: QueryTypes.SELECT }
+      `SELECT COUNT(*) as count FROM model_inventories
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)`,
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Approved models
     const approvedResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".model_inventories
-       WHERE (is_deleted = false OR is_deleted IS NULL)
+      `SELECT COUNT(*) as count FROM model_inventories
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)
        AND status = 'Approved'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Pending models
     const pendingResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".model_inventories
-       WHERE (is_deleted = false OR is_deleted IS NULL)
+      `SELECT COUNT(*) as count FROM model_inventories
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)
        AND status = 'Pending'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Blocked models
     const blockedResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".model_inventories
-       WHERE (is_deleted = false OR is_deleted IS NULL)
+      `SELECT COUNT(*) as count FROM model_inventories
+       WHERE organization_id = :organizationId
+       AND (is_deleted = false OR is_deleted IS NULL)
        AND status = 'Blocked'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     return {
@@ -300,27 +313,30 @@ interface PolicyDocumentationData {
 }
 
 async function getPolicyDocumentationData(
-  tenantId: string
+  organizationId: number
 ): Promise<PolicyDocumentationData> {
   try {
     // Total policies
     const totalResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".policy_manager`,
-      { type: QueryTypes.SELECT }
+      `SELECT COUNT(*) as count FROM policy_manager
+       WHERE organization_id = :organizationId`,
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Active policies
     const activeResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".policy_manager
-       WHERE status = 'Active'`,
-      { type: QueryTypes.SELECT }
+      `SELECT COUNT(*) as count FROM policy_manager
+       WHERE organization_id = :organizationId
+       AND status = 'Active'`,
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     // Overdue policies
     const overdueResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".policy_manager
-       WHERE status = 'Overdue' OR (next_review_date < NOW() AND status != 'Active')`,
-      { type: QueryTypes.SELECT }
+      `SELECT COUNT(*) as count FROM policy_manager
+       WHERE organization_id = :organizationId
+       AND (status = 'Overdue' OR (next_review_date < NOW() AND status != 'Active'))`,
+      { type: QueryTypes.SELECT, replacements: { organizationId } }
     )) as { count: string }[];
 
     return {

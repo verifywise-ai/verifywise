@@ -10,11 +10,11 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The AI Governance Risk Score (AGRS) evaluates scan findings across multiple risk dimensions to produce a single numeric score (0–100) and letter grade (A–F). The score helps your team quickly assess the governance risk posture of a scanned repository.',
+      text: 'The AI Governance Risk Score (AGRS) grades scan findings across multiple risk dimensions into a single score (0 to 100) and letter grade (A through F). It gives your team a quick read on the governance risk of a scanned repository.',
     },
     {
       type: 'paragraph',
-      text: 'Risk scores appear on the scan details page after a scan completes. You can calculate the score manually or enable LLM-enhanced analysis for deeper insights including narrative summaries, recommendations, and suggested risks.',
+      text: 'Scores show up on the scan details page after a scan finishes. You can calculate the score manually, or turn on LLM-enhanced analysis for written summaries, recommendations, and suggested risks.',
     },
     {
       type: 'heading',
@@ -29,8 +29,8 @@ export const riskScoringContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Overall score', text: 'Numeric score from 0 to 100 with a risk level label — Low risk (80+), Moderate risk (60–79), or High risk (below 60)' },
-        { bold: 'Grade', text: 'Letter grade from A (Excellent) to F (Critical) with the calculation timestamp' },
+        { bold: 'Overall score', text: 'Score from 0 to 100 with a risk label: Low risk (80+), Moderate risk (60 to 79), or High risk (below 60)' },
+        { bold: 'Grade', text: 'Letter grade from A (Excellent) to F (Critical), with the calculation timestamp' },
         { bold: 'Dimensions at risk', text: 'Count of dimensions scoring below the 70-point threshold' },
         { bold: 'Dimension breakdown', text: 'Horizontal progress bars showing the score for each risk dimension' },
       ],
@@ -43,16 +43,16 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The overall score is composed of five weighted dimensions. Each dimension starts at 100 and receives penalties based on the types of findings detected:',
+      text: 'The score is made up of 5 weighted dimensions. Each starts at 100 and gets penalties based on what the scan finds. The engine treats **inventory items** (libraries, dependencies, API calls) differently from **risk indicators** (secrets, vulnerabilities). Inventory items only penalize when they\'re medium or high risk; low-risk ones are informational and don\'t affect the score. Vulnerability findings always count.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Data sovereignty', text: 'Penalized when data is sent to external cloud APIs. High-risk library imports, API calls to external providers, and hardcoded secrets contribute to penalties.' },
-        { bold: 'Transparency', text: 'Penalized when AI usage is poorly documented or hard to audit. Undocumented model references, missing licenses, and low-confidence findings increase risk.' },
-        { bold: 'Security', text: 'Penalized by model file vulnerabilities, hardcoded credentials, and critical security findings. Severity levels (Critical, High, Medium, Low) determine penalty weights.' },
-        { bold: 'Autonomy', text: 'Penalized when autonomous AI agents are detected. Agent frameworks, MCP servers, and tool-using agents increase this dimension\'s risk.' },
-        { bold: 'Supply chain', text: 'Penalized by external dependencies and third-party AI components. Libraries with restrictive licenses, numerous external providers, and RAG components contribute.' },
+        { bold: 'Data sovereignty', text: 'Penalized when data goes to external cloud APIs. High-risk library imports, calls to external providers, and hardcoded secrets all count.' },
+        { bold: 'Transparency', text: 'Penalized when AI usage is poorly documented or hard to audit. Undocumented model references, missing licenses, and low-confidence findings add up.' },
+        { bold: 'Security', text: 'Penalized by model file vulnerabilities, hardcoded credentials, and security findings. Severity (Critical, High, Medium, Low) determines penalty weight.' },
+        { bold: 'Autonomy', text: 'Penalized when autonomous AI agents show up. Agent frameworks, MCP servers, and tool-using agents increase this dimension\'s risk.' },
+        { bold: 'Supply chain', text: 'Penalized by external dependencies and 3rd-party AI components. Libraries with restrictive licenses, many external providers, and RAG components add to it.' },
       ],
     },
     {
@@ -73,11 +73,11 @@ export const riskScoringContent: ArticleContent = {
         { key: 'label', label: 'Label' },
       ],
       rows: [
-        { grade: 'A', range: '90–100', label: 'Excellent — minimal governance risk' },
-        { grade: 'B', range: '75–89', label: 'Good — low governance risk' },
-        { grade: 'C', range: '60–74', label: 'Moderate — some areas need attention' },
-        { grade: 'D', range: '40–59', label: 'Poor — significant governance gaps' },
-        { grade: 'F', range: '0–39', label: 'Critical — immediate action required' },
+        { grade: 'A', range: '90 to 100', label: 'Excellent: minimal governance risk' },
+        { grade: 'B', range: '75 to 89', label: 'Good: low governance risk' },
+        { grade: 'C', range: '60 to 74', label: 'Moderate: some areas need attention' },
+        { grade: 'D', range: '40 to 59', label: 'Poor: significant governance gaps' },
+        { grade: 'F', range: '0 to 39', label: 'Critical: immediate action needed' },
       ],
     },
     {
@@ -88,11 +88,11 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'On the scan details page, click **Calculate risk score** (or **Recalculate score** if a score already exists) to generate the AGRS. A progress dialog shows each step of the calculation process. The score is stored with the scan and displayed on future visits.',
+      text: 'On the scan details page, click **Calculate risk score** (or **Recalculate score** if one already exists). A progress dialog walks through each step. The score is saved with the scan and shows up on future visits.',
     },
     {
       type: 'paragraph',
-      text: 'You can recalculate at any time — for example, after enabling LLM analysis in settings or after adjusting dimension weights. The previous score is replaced with the new calculation.',
+      text: 'You can recalculate whenever you want, for example after enabling LLM analysis or adjusting dimension weights. The old score gets replaced.',
     },
     {
       type: 'heading',
@@ -102,25 +102,25 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When enabled in **AI Detection → Settings → Risk scoring**, the scoring engine sends anonymized finding summaries to your configured LLM for deeper analysis. The LLM provides:',
+      text: 'When enabled in **AI Detection → Settings → Risk scoring**, the scoring engine sends anonymized finding summaries to your configured LLM. The LLM returns:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Narrative summary', text: 'A written analysis of the repository\'s risk posture, highlighting key areas of concern with important findings in bold' },
-        { bold: 'Recommendations', text: 'Actionable steps to improve the governance score' },
-        { bold: 'Dimension adjustments', text: 'Fine-tuned score adjustments based on contextual analysis that rule-based scoring alone may miss' },
-        { bold: 'Suggested risks', text: 'Structured risk suggestions that can be added to your risk register' },
+        { bold: 'Narrative summary', text: 'A written analysis of the repo\'s risk posture, with key concerns called out in bold' },
+        { bold: 'Recommendations', text: 'Specific steps to improve the score' },
+        { bold: 'Dimension adjustments', text: 'Score tweaks based on context that rule-based scoring alone would miss' },
+        { bold: 'Suggested risks', text: 'Risk suggestions you can add to your risk register' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'The AI analysis section appears below the score cards as a collapsible panel. Click the chevron to expand or collapse it.',
+      text: 'The analysis section appears below the score cards. Click the chevron to expand or collapse it.',
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'LLM analysis requires an LLM key to be configured in **Settings → LLM keys**. The analysis uses your organization\'s own API key and no scan data is stored by the LLM provider.',
+      text: 'LLM analysis needs an LLM key configured in **Settings → LLM keys**. It uses your organization\'s own API key; no scan data is stored by the LLM provider.',
     },
     {
       type: 'heading',
@@ -130,7 +130,7 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When LLM analysis is enabled, the system may suggest concrete risks based on the scan findings. These appear in a collapsible "Suggested risks" section below the AI analysis.',
+      text: 'With LLM analysis on, the system may suggest specific risks based on what the scan found. These show up in a collapsible "Suggested risks" section below the analysis.',
     },
     {
       type: 'paragraph',
@@ -139,11 +139,11 @@ export const riskScoringContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Risk name', text: 'A concise title describing the risk' },
-        { bold: 'Risk dimension', text: 'Which AGRS dimension this risk relates to' },
-        { bold: 'Risk level', text: 'Likelihood and severity assessment' },
-        { bold: 'Description', text: 'Explanation of the risk and its potential impact' },
-        { bold: 'Risk categories', text: 'Classification tags (e.g., Cybersecurity risk, Compliance risk)' },
+        { bold: 'Risk name', text: 'Short title for the risk' },
+        { bold: 'Risk dimension', text: 'Which AGRS dimension it relates to' },
+        { bold: 'Risk level', text: 'Likelihood and severity' },
+        { bold: 'Description', text: 'What the risk is and what it could affect' },
+        { bold: 'Risk categories', text: 'Tags like Cybersecurity risk, Compliance risk, etc.' },
       ],
     },
     {
@@ -154,11 +154,11 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click **Add to risk register** on any suggestion to open the risk creation form with pre-filled values. The form includes the suggested risk name, description, category, lifecycle phase, likelihood, severity, impact, and mitigation plan. Review and adjust the values as needed, then save to add the risk to your organization\'s risk register.',
+      text: 'Click **Add to risk register** on any suggestion to open the risk form with pre-filled values (name, description, category, lifecycle phase, likelihood, severity, impact, and mitigation plan). Adjust as needed, then save.',
     },
     {
       type: 'paragraph',
-      text: 'The review notes field is automatically populated with a reference to the scan and the specific findings that prompted the suggestion.',
+      text: 'The review notes field gets filled in automatically with a reference to the scan and the findings behind the suggestion.',
     },
     {
       type: 'heading',
@@ -168,7 +168,17 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click **Ignore** on a suggestion to dismiss it. You can choose a reason — "Not relevant" or "Already mitigated" — from the dropdown menu. Dismissed suggestions are hidden from the current view but do not affect the underlying score.',
+      text: 'Click **Ignore** on a suggestion to dismiss it. Pick a reason ("Not relevant" or "Already mitigated") from the dropdown. Dismissed suggestions are hidden but don\'t affect the score.',
+    },
+    {
+      type: 'heading',
+      id: 'cross-referencing',
+      level: 2,
+      text: 'Cross-referencing findings',
+    },
+    {
+      type: 'paragraph',
+      text: 'After a scan finishes, the system cross-references vulnerability findings with non-vulnerability findings (libraries, agents, security) in the same files. Matched findings get a teal "Cross-ref" badge in the Vulnerabilities tab, so you can see related detections together. For example, a prompt injection finding in the same file as a LangChain library finding.',
     },
     {
       type: 'heading',
@@ -178,13 +188,13 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to **AI Detection → Settings → Risk scoring** to adjust how much each dimension contributes to the overall score. Use the sliders to increase or decrease the weight of each dimension. The total weight across all dimensions must equal 100%. Click **Save** to apply your changes, then recalculate existing scores to reflect the new weights.',
+      text: 'Go to **AI Detection → Settings → Risk scoring** to adjust dimension weights. Use the sliders to shift weight between dimensions (they must total 100%). Click **Save**, then recalculate existing scores to apply the new weights.',
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Weight customization',
-      text: 'Adjust weights to match your organization\'s priorities. For example, increase the Security weight if your primary concern is vulnerability management, or increase Data sovereignty if data residency is a regulatory requirement.',
+      text: 'Set weights to match what matters most to your organization. For example, bump Security if vulnerability management is the priority, or increase Data sovereignty if data residency is a regulatory concern.',
     },
     {
       type: 'article-links',

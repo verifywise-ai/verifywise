@@ -44,140 +44,50 @@ Create migration in `Servers/database/migrations/`:
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    const [tenants] = await queryInterface.sequelize.query(
-      `SELECT schema_name FROM information_schema.schemata
-       WHERE schema_name LIKE 'tenant_%'`
-    );
+    // All tables created once in verifywise schema
+    // Tenant-scoped tables include organization_id column
 
-    for (const tenant of tenants) {
-      const schema = tenant.schema_name;
+    // Categories table (struct — shared, no org_id)
+    await queryInterface.sequelize.query(`
+      CREATE TABLE verifywise.soc2_categories (
+        id SERIAL PRIMARY KEY,
+        category_id VARCHAR(50) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        order_no INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
 
-      // Categories table
-      await queryInterface.createTable(
-        { tableName: "soc2_categories", schema },
-        {
-          id: {
-            type: Sequelize.INTEGER,
-            primaryKey: true,
-            autoIncrement: true,
-          },
-          category_id: {
-            type: Sequelize.STRING(50),
-            allowNull: false,
-          },
-          name: {
-            type: Sequelize.STRING(255),
-            allowNull: false,
-          },
-          description: {
-            type: Sequelize.TEXT,
-          },
-          order_no: {
-            type: Sequelize.INTEGER,
-            defaultValue: 0,
-          },
-          created_at: {
-            type: Sequelize.DATE,
-            defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
-          },
-        }
+    // Controls table (tenant-scoped — with org_id)
+    await queryInterface.sequelize.query(`
+      CREATE TABLE verifywise.soc2_controls (
+        id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
+        control_id VARCHAR(50) NOT NULL,
+        category_id INTEGER REFERENCES verifywise.soc2_categories(id),
+        title VARCHAR(500) NOT NULL,
+        description TEXT,
+        status VARCHAR(20) DEFAULT 'Not started',
+        owner VARCHAR(255),
+        implementation_notes TEXT,
+        evidence_links JSONB DEFAULT '[]',
+        order_no INTEGER DEFAULT 0,
+        project_framework_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-
-      // Controls table
-      await queryInterface.createTable(
-        { tableName: "soc2_controls", schema },
-        {
-          id: {
-            type: Sequelize.INTEGER,
-            primaryKey: true,
-            autoIncrement: true,
-          },
-          control_id: {
-            type: Sequelize.STRING(50),
-            allowNull: false,
-          },
-          category_id: {
-            type: Sequelize.INTEGER,
-            references: {
-              model: { tableName: "soc2_categories", schema },
-              key: "id",
-            },
-          },
-          title: {
-            type: Sequelize.STRING(500),
-            allowNull: false,
-          },
-          description: {
-            type: Sequelize.TEXT,
-          },
-          status: {
-            type: Sequelize.ENUM(
-              "Not started",
-              "In progress",
-              "Compliant",
-              "Non-compliant",
-              "Not applicable"
-            ),
-            defaultValue: "Not started",
-          },
-          owner: {
-            type: Sequelize.STRING(255),
-          },
-          implementation_notes: {
-            type: Sequelize.TEXT,
-          },
-          evidence_links: {
-            type: Sequelize.JSONB,
-            defaultValue: [],
-          },
-          order_no: {
-            type: Sequelize.INTEGER,
-            defaultValue: 0,
-          },
-          project_framework_id: {
-            type: Sequelize.INTEGER,
-          },
-          created_at: {
-            type: Sequelize.DATE,
-            defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
-          },
-          updated_at: {
-            type: Sequelize.DATE,
-            defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
-          },
-        }
-      );
-
-      // Create indexes
-      await queryInterface.addIndex(
-        { tableName: "soc2_controls", schema },
-        ["category_id"],
-        { name: `${schema}_soc2_controls_category_idx` }
-      );
-      await queryInterface.addIndex(
-        { tableName: "soc2_controls", schema },
-        ["project_framework_id"],
-        { name: `${schema}_soc2_controls_pf_idx` }
-      );
-    }
+      CREATE INDEX idx_soc2_controls_org ON verifywise.soc2_controls(organization_id);
+      CREATE INDEX idx_soc2_controls_category ON verifywise.soc2_controls(category_id);
+      CREATE INDEX idx_soc2_controls_pf ON verifywise.soc2_controls(project_framework_id);
+    `);
   },
 
   async down(queryInterface, Sequelize) {
-    const [tenants] = await queryInterface.sequelize.query(
-      `SELECT schema_name FROM information_schema.schemata
-       WHERE schema_name LIKE 'tenant_%'`
-    );
-
-    for (const tenant of tenants) {
-      await queryInterface.dropTable({
-        tableName: "soc2_controls",
-        schema: tenant.schema_name,
-      });
-      await queryInterface.dropTable({
-        tableName: "soc2_categories",
-        schema: tenant.schema_name,
-      });
-    }
+    await queryInterface.sequelize.query(`
+      DROP TABLE IF EXISTS verifywise.soc2_controls;
+      DROP TABLE IF EXISTS verifywise.soc2_categories;
+    `);
   },
 };
 ```
@@ -207,49 +117,28 @@ Create seed file in `Servers/database/seeders/`:
 // soc2-framework-seed.js
 module.exports = {
   async up(queryInterface, Sequelize) {
-    const [tenants] = await queryInterface.sequelize.query(
-      `SELECT schema_name FROM information_schema.schemata
-       WHERE schema_name LIKE 'tenant_%'`
+    // Seed shared struct data (no org_id needed)
+    await queryInterface.bulkInsert(
+      "soc2_categories",
+      [
+        {
+          category_id: "CC",
+          name: "Common Criteria",
+          description: "Common Criteria related to...",
+          order_no: 1,
+        },
+        {
+          category_id: "A",
+          name: "Availability",
+          description: "Availability criteria...",
+          order_no: 2,
+        },
+        // ... more categories
+      ]
     );
 
-    for (const tenant of tenants) {
-      const schema = tenant.schema_name;
-
-      // Seed categories
-      await queryInterface.bulkInsert(
-        { tableName: "soc2_categories", schema },
-        [
-          {
-            category_id: "CC",
-            name: "Common Criteria",
-            description: "Common Criteria related to...",
-            order_no: 1,
-          },
-          {
-            category_id: "A",
-            name: "Availability",
-            description: "Availability criteria...",
-            order_no: 2,
-          },
-          // ... more categories
-        ]
-      );
-
-      // Seed controls
-      await queryInterface.bulkInsert(
-        { tableName: "soc2_controls", schema },
-        [
-          {
-            control_id: "CC1.1",
-            category_id: 1,
-            title: "COSO Principle 1",
-            description: "The entity demonstrates a commitment to integrity...",
-            order_no: 1,
-          },
-          // ... more controls
-        ]
-      );
-    }
+    // Note: Tenant-scoped controls are created per-project
+    // when a project subscribes to this framework, not in the seeder.
   },
 };
 ```
@@ -343,9 +232,9 @@ Create utils in `Servers/utils/`:
 import { sequelize } from "../config/database";
 import { QueryTypes, Transaction } from "sequelize";
 
-export const getSOC2CategoriesQuery = async (tenant: string) => {
+export const getSOC2CategoriesQuery = async () => {
   const query = `
-    SELECT * FROM "${tenant}".soc2_categories
+    SELECT * FROM soc2_categories
     ORDER BY order_no
   `;
   return sequelize.query(query, { type: QueryTypes.SELECT });
@@ -353,29 +242,30 @@ export const getSOC2CategoriesQuery = async (tenant: string) => {
 
 export const getSOC2ControlsQuery = async (
   projectFrameworkId: number,
-  tenant: string
+  organizationId: number
 ) => {
   const query = `
     SELECT c.*, cat.name as category_name
-    FROM "${tenant}".soc2_controls c
-    JOIN "${tenant}".soc2_categories cat ON c.category_id = cat.id
+    FROM soc2_controls c
+    JOIN soc2_categories cat ON c.category_id = cat.id
     WHERE c.project_framework_id = :projectFrameworkId
+      AND c.organization_id = :organizationId
     ORDER BY cat.order_no, c.order_no
   `;
   return sequelize.query(query, {
     type: QueryTypes.SELECT,
-    replacements: { projectFrameworkId },
+    replacements: { projectFrameworkId, organizationId },
   });
 };
 
 export const updateSOC2ControlQuery = async (
   id: number,
   data: Partial<any>,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ) => {
   const setClauses: string[] = [];
-  const replacements: Record<string, any> = { id };
+  const replacements: Record<string, any> = { id, organizationId };
 
   if (data.status !== undefined) {
     setClauses.push("status = :status");
@@ -396,9 +286,9 @@ export const updateSOC2ControlQuery = async (
   setClauses.push("updated_at = NOW()");
 
   const query = `
-    UPDATE "${tenant}".soc2_controls
+    UPDATE soc2_controls
     SET ${setClauses.join(", ")}
-    WHERE id = :id
+    WHERE id = :id AND organization_id = :organizationId
     RETURNING *
   `;
   return sequelize.query(query, {
@@ -410,20 +300,20 @@ export const updateSOC2ControlQuery = async (
 
 export const createSOC2ControlsForProjectQuery = async (
   projectFrameworkId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ) => {
   // Copy template controls to project-specific records
   const query = `
-    INSERT INTO "${tenant}".soc2_controls
-      (control_id, category_id, title, description, status, order_no, project_framework_id)
-    SELECT control_id, category_id, title, description, 'Not started', order_no, :pfId
-    FROM "${tenant}".soc2_controls
-    WHERE project_framework_id IS NULL
+    INSERT INTO soc2_controls
+      (organization_id, control_id, category_id, title, description, status, order_no, project_framework_id)
+    SELECT :organizationId, control_id, category_id, title, description, 'Not started', order_no, :pfId
+    FROM soc2_controls
+    WHERE project_framework_id IS NULL AND organization_id = :organizationId
   `;
   return sequelize.query(query, {
     type: QueryTypes.INSERT,
-    replacements: { pfId: projectFrameworkId },
+    replacements: { pfId: projectFrameworkId, organizationId },
     transaction,
   });
 };
@@ -518,15 +408,16 @@ Add to `dataCollector.ts`:
 private async collectSOC2Controls(): Promise<SOC2SectionData> {
   const query = `
     SELECT c.*, cat.name as category_name
-    FROM "${this.tenantId}".soc2_controls c
-    JOIN "${this.tenantId}".soc2_categories cat ON c.category_id = cat.id
+    FROM soc2_controls c
+    JOIN soc2_categories cat ON c.category_id = cat.id
     WHERE c.project_framework_id = :pfId
+      AND c.organization_id = :organizationId
     ORDER BY cat.order_no, c.order_no
   `;
 
   const controls = await sequelize.query(query, {
     type: QueryTypes.SELECT,
-    replacements: { pfId: this.projectFrameworkId },
+    replacements: { pfId: this.projectFrameworkId, organizationId: this.organizationId },
   });
 
   const grouped = this.groupByCategory(controls);
@@ -600,7 +491,7 @@ Add to `approvalRequest.utils.ts` for automatic framework creation on approval:
 ```typescript
 // In createFrameworkRecords function
 case 5: // SOC 2
-  await createSOC2ControlsForProjectQuery(projectFrameworkId, tenant, transaction);
+  await createSOC2ControlsForProjectQuery(projectFrameworkId, organizationId, transaction);
   break;
 ```
 

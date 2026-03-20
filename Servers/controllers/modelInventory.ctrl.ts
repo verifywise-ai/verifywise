@@ -24,7 +24,7 @@ import logger, { logStructured } from "../utils/logger/fileLogger";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM public.users WHERE id = :userId`,
+    `SELECT name, surname FROM users WHERE id = :userId`,
     { replacements: { userId }, type: QueryTypes.SELECT }
   );
   if (result[0]) {
@@ -44,7 +44,7 @@ export async function getAllModelInventories(req: Request, res: Response) {
 
   try {
     const modelInventories = (await getAllModelInventoriesQuery(
-      req.tenantId!
+      req.organizationId!
     )) as unknown as ModelInventoryModel[];
     if (modelInventories && modelInventories.length > 0) {
       logStructured(
@@ -97,7 +97,7 @@ export async function getModelInventoryById(req: Request, res: Response) {
   try {
     const modelInventory = (await getModelInventoryByIdQuery(
       modelInventoryId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as ModelInventoryModel;
     if (modelInventory) {
       logStructured(
@@ -149,7 +149,7 @@ export async function getModelByProjectId(req: Request, res: Response) {
   try {
     const modelInventories = (await getModelByProjectIdQuery(
       projectId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as ModelInventoryModel[];
 
     logStructured(
@@ -193,7 +193,7 @@ export async function getModelByFrameworkId(req: Request, res: Response) {
   try {
     const modelInventories = (await getModelByFrameworkIdQuery(
       frameworkId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as ModelInventoryModel[];
 
     logStructured(
@@ -276,7 +276,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
     transaction = await sequelize.transaction();
     const savedModelInventory = await createNewModelInventoryQuery(
       modelInventory,
-      req.tenantId!,
+      req.organizationId!,
       projects || [],
       frameworks || [],
       transaction
@@ -286,7 +286,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
     await recordModelInventoryCreation(
       savedModelInventory.id!,
       req.userId!,
-      req.tenantId!,
+      req.organizationId!,
       modelInventory,
       transaction
     );
@@ -305,7 +305,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
       ].filter(Boolean).join(" | ");
 
       notifyUserAssigned(
-        req.tenantId!,
+        req.organizationId!,
         approver,
         {
           entityType: "Model Inventory",
@@ -360,7 +360,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
   try {
     (await getModelInventoryByIdQuery(
       modelInventoryId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as ModelInventoryModel;
   } catch (error) {
     // Continue without existing data if query fails
@@ -402,7 +402,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
     // Get existing model inventory (re-fetch to ensure it exists)
     const currentModelInventory = (await getModelInventoryByIdQuery(
       modelInventoryId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as ModelInventoryModel;
 
     if (!currentModelInventory) {
@@ -467,7 +467,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       frameworks || [],
       deleteProjects || false,
       deleteFrameworks || false,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -476,7 +476,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       await recordMultipleFieldChanges(
         modelInventoryId,
         req.userId!,
-        req.tenantId!,
+        req.organizationId!,
         changes,
         transaction
       );
@@ -497,7 +497,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       ].filter(Boolean).join(" | ");
 
       notifyUserAssigned(
-        req.tenantId!,
+        req.organizationId!,
         approver,
         {
           entityType: "Model Inventory",
@@ -563,7 +563,7 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
     // Check if model inventory exists
     const existingModelInventory = (await getModelInventoryByIdQuery(
       modelInventoryId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as ModelInventoryModel;
 
     if (!existingModelInventory) {
@@ -585,14 +585,14 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
     await recordModelInventoryDeletion(
       modelInventoryId,
       req.userId!,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
     await deleteModelInventoryByIdQuery(
       modelInventoryId,
       deleteRisks,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
     await transaction.commit();

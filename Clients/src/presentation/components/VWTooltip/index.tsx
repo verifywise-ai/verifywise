@@ -30,6 +30,7 @@
 
 import React from "react";
 import { Tooltip, TooltipProps, Box, Typography } from "@mui/material";
+import { background } from "../../themes/palette";
 
 interface VWTooltipProps {
   /** Optional header text displayed at the top (15px font) */
@@ -74,7 +75,7 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
                 fontWeight: 600,
                 lineHeight: 1.5,
                 marginBottom: "8px",
-                color: "#FFFFFF",
+                color: `${background.main}`,
                 wordBreak: "break-word",
                 whiteSpace: "normal",
                 overflow: "visible",
@@ -88,7 +89,7 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
             sx={{
               fontSize: "13px",
               lineHeight: 1.5,
-              color: "#FFFFFF",
+              color: `${background.main}`,
               "& p": {
                 margin: 0,
                 marginBottom: "8px",

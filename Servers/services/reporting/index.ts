@@ -90,12 +90,12 @@ function getRequestedSections(reportType: string | string[]): string[] {
 export async function generateReport(
   request: ReportGenerationRequest,
   userId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<ReportGenerationResult> {
   try {
     // Create data collector
     const dataCollector = createDataCollector(
-      tenantId,
+      organizationId,
       request.projectId,
       request.frameworkId,
       request.projectFrameworkId,
@@ -114,7 +114,7 @@ export async function generateReport(
         const { generateAISummaries } = await import("./aiSummarizer");
         reportData.aiSummaries = await generateAISummaries(
           reportData,
-          reportData.metadata.tenantId,
+          reportData.metadata.organizationId,
           request.llmKeyId
         );
       } catch (error) {
@@ -173,10 +173,10 @@ export async function generateReport(
 export async function getReportData(
   request: Omit<ReportGenerationRequest, "format">,
   userId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<ReportData> {
   const dataCollector = createDataCollector(
-    tenantId,
+    organizationId,
     request.projectId,
     request.frameworkId,
     request.projectFrameworkId,

@@ -599,7 +599,7 @@ export const validateCurrentRiskLevel = (
  */
 export const validateFrameworksAndProjectsBusinessRules = async (
   data: any,
-  tenant: string
+  organizationId: number
 ): Promise<ValidationError[]> => {
   const errors: ValidationError[] = [];
 
@@ -656,7 +656,7 @@ export const validateFrameworksAndProjectsBusinessRules = async (
 
       const isValidProject = await validateRiskProjectsQuery(
         data.projects,
-        tenant
+        organizationId
       );
       if (!isValidProject) {
         errors.push({
@@ -676,13 +676,13 @@ export const validateFrameworksAndProjectsBusinessRules = async (
  */
 export const validateCompleteRiskWithBusinessRules = async (
   data: any,
-  tenant: string
+  organizationId: number
 ): Promise<ValidationError[]> => {
   const errors = validateCompleteRisk(data);
 
   // Add frameworks and projects business rule validation
   const frameworksProjectsErrors =
-    await validateFrameworksAndProjectsBusinessRules(data, tenant);
+    await validateFrameworksAndProjectsBusinessRules(data, organizationId);
   errors.push(...frameworksProjectsErrors);
 
   // Add business rule validations if basic validation passes
@@ -761,7 +761,7 @@ export const validateCompleteRiskWithBusinessRules = async (
  */
 export const validateUpdateRiskWithBusinessRules = async (
   data: any,
-  tenant: string,
+  organizationId: number,
   currentRisk?: any
 ): Promise<ValidationError[]> => {
   const errors = validateUpdateRisk(data);
@@ -779,7 +779,7 @@ export const validateUpdateRiskWithBusinessRules = async (
           : currentRisk?.projects || [],
     };
     const frameworksProjectsErrors =
-      await validateFrameworksAndProjectsBusinessRules(updateData, tenant);
+      await validateFrameworksAndProjectsBusinessRules(updateData, organizationId);
     errors.push(...frameworksProjectsErrors);
   }
 

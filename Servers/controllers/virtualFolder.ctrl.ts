@@ -67,7 +67,7 @@ export const getAllFolders = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const folders = await getAllFoldersQuery(req.tenantId!);
+    const folders = await getAllFoldersQuery(req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](folders));
   } catch (error) {
     console.error("Error getting folders:", error);
@@ -84,7 +84,7 @@ export const getFolderTree = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const tree = await getFolderTreeQuery(req.tenantId!);
+    const tree = await getFolderTreeQuery(req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](tree));
   } catch (error) {
     console.error("Error getting folder tree:", error);
@@ -106,7 +106,7 @@ export const getFolderById = async (
       return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
     }
 
-    const folder = await getFolderByIdQuery(req.tenantId!, folderId);
+    const folder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!folder) {
       return res.status(404).json(STATUS_CODE[404]("Folder not found"));
     }
@@ -132,7 +132,7 @@ export const getFolderPath = async (
       return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
     }
 
-    const path = await getFolderPathQuery(req.tenantId!, folderId);
+    const path = await getFolderPathQuery(req.organizationId!, folderId);
     return res.status(200).json(STATUS_CODE[200](path));
   } catch (error) {
     console.error("Error getting folder path:", error);
@@ -173,7 +173,7 @@ export const createFolder = async (
 
     // Check for duplicate name in same parent
     const exists = await checkFolderNameExistsQuery(
-      req.tenantId!,
+      req.organizationId!,
       name,
       parent_id || null
     );
@@ -186,7 +186,7 @@ export const createFolder = async (
 
     // Verify parent folder exists if specified
     if (parent_id) {
-      const parentFolder = await getFolderByIdQuery(req.tenantId!, parent_id);
+      const parentFolder = await getFolderByIdQuery(req.organizationId!, parent_id);
       if (!parentFolder) {
         await transaction.rollback();
         return res.status(400).json(STATUS_CODE[400]("Parent folder not found"));
@@ -196,7 +196,7 @@ export const createFolder = async (
     const folder = await createFolderQuery(
       { name, description, parent_id, color, icon },
       req.userId!,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -235,7 +235,7 @@ export const updateFolder = async (
       req.body as IVirtualFolderUpdate;
 
     // Check folder exists
-    const existingFolder = await getFolderByIdQuery(req.tenantId!, folderId);
+    const existingFolder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!existingFolder) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Folder not found"));
@@ -257,7 +257,7 @@ export const updateFolder = async (
     if (name && name.trim() !== existingFolder.name) {
       const targetParentId = parent_id !== undefined ? parent_id : existingFolder.parent_id;
       const exists = await checkFolderNameExistsQuery(
-        req.tenantId!,
+        req.organizationId!,
         name,
         targetParentId || null,
         folderId
@@ -274,7 +274,7 @@ export const updateFolder = async (
     if (parent_id !== undefined && parent_id !== existingFolder.parent_id) {
       if (parent_id !== null) {
         // Verify new parent exists
-        const parentFolder = await getFolderByIdQuery(req.tenantId!, parent_id);
+        const parentFolder = await getFolderByIdQuery(req.organizationId!, parent_id);
         if (!parentFolder) {
           await transaction.rollback();
           return res.status(400).json(STATUS_CODE[400]("Parent folder not found"));
@@ -282,7 +282,7 @@ export const updateFolder = async (
 
         // Check for circular reference
         const wouldBeCircular = await wouldCreateCircularReferenceQuery(
-          req.tenantId!,
+          req.organizationId!,
           folderId,
           parent_id
         );
@@ -298,7 +298,7 @@ export const updateFolder = async (
     const folder = await updateFolderByIdQuery(
       folderId,
       { name, description, parent_id, color, icon },
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -339,7 +339,7 @@ export const deleteFolder = async (
     }
 
     // Check folder exists
-    const existingFolder = await getFolderByIdQuery(req.tenantId!, folderId);
+    const existingFolder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!existingFolder) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Folder not found"));
@@ -351,7 +351,7 @@ export const deleteFolder = async (
       return res.status(403).json(STATUS_CODE[403]("System folders cannot be deleted"));
     }
 
-    const deleted = await deleteFolderByIdQuery(req.tenantId!, folderId, transaction);
+    const deleted = await deleteFolderByIdQuery(req.organizationId!, folderId, transaction);
     if (!deleted) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Folder not found"));
@@ -385,12 +385,12 @@ export const getFilesInFolder = async (
     }
 
     // Verify folder exists
-    const folder = await getFolderByIdQuery(req.tenantId!, folderId);
+    const folder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!folder) {
       return res.status(404).json(STATUS_CODE[404]("Folder not found"));
     }
 
-    const files = await getFilesInFolderQuery(req.tenantId!, folderId);
+    const files = await getFilesInFolderQuery(req.organizationId!, folderId);
     return res.status(200).json(STATUS_CODE[200](files));
   } catch (error) {
     console.error("Error getting files in folder:", error);
@@ -407,7 +407,7 @@ export const getUncategorizedFiles = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const files = await getUncategorizedFilesQuery(req.tenantId!);
+    const files = await getUncategorizedFilesQuery(req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](files));
   } catch (error) {
     console.error("Error getting uncategorized files:", error);
@@ -444,14 +444,14 @@ export const assignFilesToFolder = async (
     }
 
     // Verify folder exists
-    const folder = await getFolderByIdQuery(req.tenantId!, folderId);
+    const folder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!folder) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Folder not found"));
     }
 
     const assignedCount = await assignFilesToFolderQuery(
-      req.tenantId!,
+      req.organizationId!,
       folderId,
       file_ids,
       req.userId!,
@@ -491,7 +491,7 @@ export const removeFileFromFolder = async (
     }
 
     const removed = await removeFileFromFolderQuery(
-      req.tenantId!,
+      req.organizationId!,
       folderId,
       fileId,
       transaction
@@ -520,7 +520,7 @@ export const getFileFolders = async (
       return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
     }
 
-    const folders = await getFileFoldersQuery(req.tenantId!, fileId);
+    const folders = await getFileFoldersQuery(req.organizationId!, fileId);
     return res.status(200).json(STATUS_CODE[200](folders));
   } catch (error) {
     console.error("Error getting file folders:", error);
@@ -557,14 +557,14 @@ export const updateFileFolders = async (
     }
 
     await bulkUpdateFileFoldersQuery(
-      req.tenantId!,
+      req.organizationId!,
       fileId,
       folder_ids,
       req.userId!,
       transaction
     );
 
-    const updatedFolders = await getFileFoldersQuery(req.tenantId!, fileId);
+    const updatedFolders = await getFileFoldersQuery(req.organizationId!, fileId);
 
     await transaction.commit();
     return res.status(200).json(STATUS_CODE[200](updatedFolders));

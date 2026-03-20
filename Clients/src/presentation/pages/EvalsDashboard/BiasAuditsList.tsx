@@ -14,10 +14,11 @@ import {
   TableContainer,
   Box,
 } from "@mui/material";
-import { Trash2, Eye, ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { Trash2, Eye, ChevronsUpDown, ChevronUp, ChevronDown, Scale, Users, BarChart3, FileText } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import SearchBox from "../../components/Search/SearchBox";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
@@ -226,9 +227,26 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
         </Box>
       ) : sortedAudits.length === 0 ? (
         <EmptyState
-          message="No bias audits yet. Create your first bias audit to get started."
+          icon={Scale}
+          message="No bias audits yet. Audit your models for fairness across demographic groups."
           showBorder
-        />
+        >
+          <EmptyStateTip
+            icon={Users}
+            title="Define demographic groups"
+            description="Specify which groups to test: gender, age, ethnicity, language, or custom categories relevant to your application."
+          />
+          <EmptyStateTip
+            icon={BarChart3}
+            title="Measure disparate impact"
+            description="The audit calculates performance differences across groups. See pass rates, accuracy gaps, and statistical significance scores."
+          />
+          <EmptyStateTip
+            icon={FileText}
+            title="Generate audit reports"
+            description="Export detailed bias audit reports for compliance documentation. Results can be attached as evidence to your governance framework."
+          />
+        </EmptyState>
       ) : (
         <TableContainer sx={{ overflowX: "auto" }}>
           <Table sx={singleTheme.tableStyles.primary.frame}>

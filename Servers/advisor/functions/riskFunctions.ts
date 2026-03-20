@@ -34,7 +34,7 @@ export interface FetchRisksParams {
 
 const fetchRisks = async (
   params: FetchRisksParams,
-  tenant: string,
+  organizationId: number,
 ): Promise<Partial<IRisk>[]> => {
   let risks: IRisk[] = [];
 
@@ -43,19 +43,19 @@ const fetchRisks = async (
     if (params.projectId) {
       const result = await getRisksByProjectQuery(
         params.projectId,
-        tenant,
+        organizationId,
         "active",
       );
       risks = result || [];
     } else if (params.frameworkId) {
       const result = await getRisksByFrameworkQuery(
         params.frameworkId,
-        tenant,
+        organizationId,
         "active",
       );
       risks = result || [];
     } else {
-      risks = await getAllRisksQuery(tenant, "active");
+      risks = await getAllRisksQuery(organizationId, "active");
     }
 
     // Apply filters
@@ -143,13 +143,13 @@ export interface RiskAnalytics {
 
 const getRiskAnalytics = async (
   params: { projectId?: number },
-  tenant: string,
+  organizationId: number,
 ): Promise<RiskAnalytics> => {
   try {
     // Fetch risks for analysis
     const risks = params.projectId
-      ? (await getRisksByProjectQuery(params.projectId, tenant, "active")) || []
-      : await getAllRisksQuery(tenant, "active");
+      ? (await getRisksByProjectQuery(params.projectId, organizationId, "active")) || []
+      : await getAllRisksQuery(organizationId, "active");
 
     const totalRisks = risks.length;
 
@@ -266,13 +266,13 @@ export interface ExecutiveSummary {
 
 const getExecutiveSummary = async (
   params: { projectId?: number },
-  tenant: string,
+  organizationId: number,
 ): Promise<ExecutiveSummary> => {
   try {
     // Fetch risks
     const risks = params.projectId
-      ? (await getRisksByProjectQuery(params.projectId, tenant, "active")) || []
-      : await getAllRisksQuery(tenant, "active");
+      ? (await getRisksByProjectQuery(params.projectId, organizationId, "active")) || []
+      : await getAllRisksQuery(organizationId, "active");
 
     const totalActiveRisks = risks.length;
 
@@ -383,7 +383,7 @@ export interface TimeseriesDataPoint {
 
 const getRiskHistoryTimeseries = async (
   params: RiskHistoryTimeseriesParams,
-  tenant: string,
+  organizationId: number,
 ): Promise<TimeseriesDataPoint[]> => {
   try {
     const { parameter, timeframe } = params;
@@ -392,7 +392,7 @@ const getRiskHistoryTimeseries = async (
     const timeseriesData = await getTimeseriesForTimeframe(
       parameter,
       timeframe,
-      tenant,
+      organizationId,
     );
 
     return timeseriesData;

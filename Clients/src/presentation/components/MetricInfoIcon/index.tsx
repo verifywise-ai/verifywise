@@ -1,6 +1,7 @@
 import React from "react";
 import { IconButton, Box } from "@mui/material";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
+import { text } from "../../themes/palette";
 
 interface MetricInfoIconProps {
   onClick: () => void;
@@ -16,7 +17,7 @@ const MetricInfoIcon = React.forwardRef<HTMLDivElement, MetricInfoIconProps>(({ 
         aria-label="Open help information"
         size={size}
         sx={{
-          color: "#9CA3AF", // Lighter gray
+          color: `${text.disabled}`, // Lighter gray
           backgroundColor: "transparent",
           padding: "4px", // Smaller padding for smaller icon
           "&:hover": {

@@ -1,13 +1,14 @@
 // style.ts for Tasks page
 import { SxProps, Theme } from "@mui/material";
+import { background, border as borderPalette } from "../../themes/palette";
 
 export const searchBoxStyle: SxProps<Theme> = {
   display: "flex",
   alignItems: "center",
-  border: "1px solid #eaecf0",
+  border: `1px solid ${borderPalette.light}`,
   borderRadius: 1,
   p: "4px 6px",
-  bgcolor: "#fff",
+  bgcolor: `${background.main}`,
   flex: 1,
   mr: 2,
   height: "34px",
@@ -28,5 +29,5 @@ export const toggleLabelStyle: SxProps<Theme> = {
 export const toggleContainerStyle: SxProps<Theme> = {
   flexDirection: "row",
   alignItems: "center",
-  gap: 1,
+  gap: "8px",
 };

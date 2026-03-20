@@ -1,15 +1,16 @@
 import type { CSSProperties } from 'react';
 import { SxProps, Theme } from '@mui/material';
+import { brand, text, border as borderPalette, status } from "../../themes/palette";
 
 // Design system colors (from CLAUDE.md)
 const COLORS = {
-  primary: '#13715B',
+  primary: `${brand.primary}`,
   primaryLight: '#f0fdf4',
-  border: '#d0d5dd',
-  borderLight: '#e5e7eb',
-  textPrimary: '#344054',
-  textSecondary: '#667085',
-  textTertiary: '#9ca3af',
+  border: `${borderPalette.dark}`,
+  borderLight: `${status.default.border}`,
+  textPrimary: `${text.secondary}`,
+  textSecondary: `${text.icon}`,
+  textTertiary: `${text.disabled}`,
   background: '#fafafa',
 } as const;
 

@@ -15,11 +15,11 @@ import { NormalizedShadowAiEvent } from "../domain.layer/interfaces/i.shadowAi";
 const INSERT_CHUNK_SIZE = 500;
 
 /**
- * Insert a batch of events into the tenant's shadow_ai_events table.
+ * Insert a batch of events into the shadow_ai_events table.
  * Large batches are automatically chunked to prevent oversized SQL statements.
  */
 export async function insertEventsQuery(
-  tenant: string,
+  organizationId: number,
   events: Array<{
     user_email: string;
     destination: string;
@@ -40,14 +40,14 @@ export async function insertEventsQuery(
   // Process in chunks to avoid oversized SQL statements
   for (let start = 0; start < events.length; start += INSERT_CHUNK_SIZE) {
     const chunk = events.slice(start, start + INSERT_CHUNK_SIZE);
-    await insertEventChunk(tenant, chunk, transaction);
+    await insertEventChunk(organizationId, chunk, transaction);
   }
 
   return events.length;
 }
 
 async function insertEventChunk(
-  tenant: string,
+  organizationId: number,
   events: Array<{
     user_email: string;
     destination: string;
@@ -64,11 +64,11 @@ async function insertEventChunk(
   transaction?: Transaction
 ): Promise<void> {
   const values: string[] = [];
-  const replacements: Record<string, any> = {};
+  const replacements: Record<string, any> = { organizationId };
 
   events.forEach((evt, i) => {
     values.push(
-      `(:user_email_${i}, :destination_${i}, :uri_path_${i}, :http_method_${i},
+      `(:organizationId, :user_email_${i}, :destination_${i}, :uri_path_${i}, :http_method_${i},
         :action_${i}, :detected_tool_id_${i}, :detected_model_${i},
         :event_timestamp_${i}, :department_${i}, :job_title_${i}, :manager_email_${i})`
     );
@@ -86,8 +86,8 @@ async function insertEventChunk(
   });
 
   const sql = `
-    INSERT INTO "${tenant}".shadow_ai_events
-      (user_email, destination, uri_path, http_method, action,
+    INSERT INTO shadow_ai_events
+      (organization_id, user_email, destination, uri_path, http_method, action,
        detected_tool_id, detected_model, event_timestamp,
        department, job_title, manager_email)
     VALUES ${values.join(",\n")}
@@ -104,13 +104,14 @@ async function insertEventChunk(
  * Used by the rules engine to detect "new_tool_detected" triggers.
  */
 export async function getNewlyDetectedToolIds(
-  tenant: string,
+  organizationId: number,
   sinceMinutes: number = 5
 ): Promise<number[]> {
   const [rows] = await sequelize.query(
-    `SELECT id FROM "${tenant}".shadow_ai_tools
-     WHERE first_detected_at > NOW() - INTERVAL '1 minute' * :sinceMinutes`,
-    { replacements: { sinceMinutes } }
+    `SELECT id FROM shadow_ai_tools
+     WHERE organization_id = :organizationId
+       AND first_detected_at > NOW() - INTERVAL '1 minute' * :sinceMinutes`,
+    { replacements: { organizationId, sinceMinutes } }
   );
 
   return (rows as any[]).map((r) => r.id);

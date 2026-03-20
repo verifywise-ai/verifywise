@@ -42,6 +42,7 @@ import TabBar from "../../TabBar";
 import { CustomizableButton } from "../../button/customizable-button";
 import Alert from "../../Alert";
 import StandardModal from "../../Modals/StandardModal";
+import { text } from "../../../themes/palette";
 
 // Lazy-loaded components
 const LinkedRisksPopup = lazy(() => import("../../LinkedRisks").then(m => ({ default: m.LinkedRisksPopup })));
@@ -869,7 +870,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 600,
+          width: 850,
           margin: 0,
           "& .MuiDrawer-paper": {
             margin: 0,
@@ -880,7 +881,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
       >
         <Stack
           sx={{
-            width: 600,
+            width: 850,
             height: "100%",
             display: "flex",
             justifyContent: "center",
@@ -905,10 +906,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 600,
+          width: 850,
           margin: 0,
           "& .MuiDrawer-paper": {
-            width: 600,
+            width: 850,
             margin: 0,
             borderRadius: 0,
             overflowX: "hidden",
@@ -918,7 +919,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
       >
         <Stack
           className="eu-ai-act-question-drawer-dialog-content"
-          sx={{ width: 600 }}
+          sx={{ width: 850, minHeight: "100vh" }}
         >
           {/* HEADER */}
           <Stack
@@ -1076,6 +1077,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                     Answer:
                   </Typography>
                   <RichTextEditor
+                    toolbar="full"
                     key={`answer-editor-${displayQuestion?.answer_id}-${editorKey}`}
                     onContentChange={handleAnswerChange}
                     initialContent={formData.answer}
@@ -1096,10 +1098,8 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                 </Stack>
               </Stack>
 
-              <Divider sx={{ my: 2 }} />
-
               {/* Status */}
-              <Stack gap="24px">
+              <Stack gap="24px" sx={{ mt: "8px" }}>
                 <Select
                   id="status"
                   label="Status:"
@@ -1263,7 +1263,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                                 <Typography
                                   sx={{
                                     fontSize: 11,
-                                    color: "#6B7280",
+                                    color: "status.default.text",
                                     mt: 0.25,
                                   }}
                                 >
@@ -1456,7 +1456,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                               sx={{
                                 color: "#4C7BF4",
                                 "&:hover": {
-                                  color: "#D32F2F",
+                                  color: "status.error.text",
                                   backgroundColor: "rgba(211, 47, 47, 0.08)",
                                 },
                               }}
@@ -1485,7 +1485,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       No evidence files uploaded yet
                     </Typography>
-                    <Typography variant="caption" color="#9CA3AF">
+                    <Typography variant="caption" color={text.disabled}>
                       Click "Add evidence files" to upload documentation for
                       this question
                     </Typography>
@@ -1651,7 +1651,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       No risks linked yet
                     </Typography>
-                    <Typography variant="caption" color="#9CA3AF">
+                    <Typography variant="caption" color={text.disabled}>
                       Click "Add/remove risks" to link risks from your risk
                       database
                     </Typography>
@@ -1691,8 +1691,6 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
               </Suspense>
             </TabPanel>
           </TabContext>
-
-          <Divider />
 
           {/* FOOTER - SAVE BUTTON */}
           <Stack

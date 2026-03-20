@@ -41,7 +41,7 @@ const MetricSection: FC<MetricSectionProps> = ({
         component="div"
         sx={{
           pb: 8.5,
-          color: "#1A1919",
+          color: "text.primary",
           fontSize: 16,
           fontWeight: 600,
         }}

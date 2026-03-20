@@ -53,7 +53,7 @@ export const emptyData = ( theme:any ) => ({
 export const styles = {
   textBase : {
     fontSize: "13px",
-    color: "#9CA3AF",
+    color: "text.disabled",
     fontWeight: 400
   }
 }

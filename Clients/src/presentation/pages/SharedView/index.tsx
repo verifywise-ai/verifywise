@@ -110,11 +110,11 @@ const SharedView: React.FC = () => {
           justifyContent: "center",
           alignItems: "center",
           minHeight: "100vh",
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "background.surface",
         }}
       >
         <Box sx={{ textAlign: "center" }}>
-          <CircularProgress size={48} sx={{ color: "#13715B", mb: 2 }} />
+          <CircularProgress size={48} sx={{ color: "brand.primary", mb: 2 }} />
           <Typography variant="body1" color="textSecondary">
             Loading shared view...
           </Typography>
@@ -131,7 +131,7 @@ const SharedView: React.FC = () => {
           justifyContent: "center",
           alignItems: "center",
           minHeight: "100vh",
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "background.surface",
           p: 3,
         }}
       >
@@ -237,7 +237,7 @@ const SharedView: React.FC = () => {
         Rejected: { bg: "#FFEBEE", text: "#C62828" },
         "Under Review": { bg: "#E3F2FD", text: "#1565C0" },
       };
-      const colorScheme = statusColors[value] || { bg: "#F5F5F5", text: "#666" };
+      const colorScheme = statusColors[value] || { bg: "background.surface", text: "#666" };
       return (
         <Box
           component="span"
@@ -285,7 +285,7 @@ const SharedView: React.FC = () => {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", backgroundColor: "#f5f5f5", py: 4 }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "background.surface", py: 4 }}>
       <Box sx={{ mx: "auto", px: 3 }}>
         {/* Header */}
         <Paper sx={{ p: 3, mb: 3 }}>
@@ -297,7 +297,7 @@ const SharedView: React.FC = () => {
             }}
           >
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: "#13715B", mb: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: "brand.primary", mb: 1 }}>
                 Shared {share_link.resource_type.charAt(0).toUpperCase() + share_link.resource_type.slice(1)} {isTableView ? "List" : "View"}
               </Typography>
               <Typography variant="body2" color="textSecondary">
@@ -310,8 +310,8 @@ const SharedView: React.FC = () => {
                   <IconButton
                     onClick={handleExport}
                     sx={{
-                      color: "#13715B",
-                      border: "1px solid #13715B",
+                      color: "brand.primary",
+                      border: "1px solid brand.primary",
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },
@@ -344,7 +344,7 @@ const SharedView: React.FC = () => {
                 <>
                   {/* Table View: Display rows of data */}
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                    <TableRow sx={{ backgroundColor: "background.surface" }}>
                       {tableColumns.map((key) => (
                         <TableCell key={key} sx={{ fontWeight: 600, textTransform: "uppercase", fontSize: "12px" }}>
                           {key
@@ -381,7 +381,7 @@ const SharedView: React.FC = () => {
                 <>
                   {/* Single Record View: Display key-value pairs */}
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                    <TableRow sx={{ backgroundColor: "background.surface" }}>
                       <TableCell sx={{ fontWeight: 600, width: "30%" }}>
                         Field
                       </TableCell>
@@ -431,7 +431,7 @@ const SharedView: React.FC = () => {
               href="https://verifywise.ai"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "#13715B", textDecoration: "none", fontWeight: 600 }}
+              style={{ color: "brand.primary", textDecoration: "none", fontWeight: 600 }}
             >
               VerifyWise
             </a>

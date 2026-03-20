@@ -4,6 +4,7 @@ import { X, Filter, Plus } from 'lucide-react';
 import Select from '../Inputs/Select';
 import Field from '../Inputs/Field';
 import { VWLink } from '../Link/VWLink';
+import { brand, status } from "../../themes/palette";
 
 // Column type determines available operators and value input type
 export type FilterColumnType = 'select' | 'text' | 'date';
@@ -231,7 +232,7 @@ const FilterByHeader: React.FC<{
   onClose: () => void;
 }> = ({ onClose }) => (
   <Stack direction="row" justifyContent="space-between" alignItems="center">
-    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: 'status.default.text', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
       FILTER BY
     </Typography>
     <Box
@@ -243,7 +244,7 @@ const FilterByHeader: React.FC<{
         '&:hover': { opacity: 0.7 }
       }}
     >
-      <X size={16} color="#6b7280" />
+      <X size={16} color={status.default.text} />
     </Box>
   </Stack>
 );
@@ -378,7 +379,7 @@ const FilterRow: React.FC<{
           '&:hover': showRemove ? { opacity: 0.7 } : {},
         }}
       >
-        <X size={16} color="#6b7280" />
+        <X size={16} color={status.default.text} />
       </Box>
     </Stack>
   );
@@ -504,12 +505,12 @@ export const FilterBy: React.FC<FilterByProps> = ({
           padding: '6px 12px',
           textTransform: 'none',
           color: '#374151',
-          borderColor: '#d0d5dd',
+          borderColor: 'border.dark',
           height: '34px',
           minWidth: activeFilterCount > 0 ? '100px' : '80px',
           backgroundColor: open ? '#eff6ff' : 'transparent',
           '&:hover': {
-            borderColor: '#98a2b3',
+            borderColor: 'text.muted',
             backgroundColor: '#eff6ff',
           },
         }}
@@ -566,7 +567,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
           {/* Add filter link - aligned with the first dropdown (after WHERE/AND/OR) */}
           {canAddMore && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: '4px', ml: `calc(${LOGIC_CONTROL_WIDTH} + 12px)` }}>
-              <Plus size={14} color="#13715B" />
+              <Plus size={14} color={brand.primary} />
               <VWLink onClick={handleAddFilter} showUnderline={false}>
                 Add filter
               </VWLink>
@@ -583,8 +584,8 @@ export const FilterBy: React.FC<FilterByProps> = ({
               mt: '12px',
               mx: '-16px',
               mb: '-16px',
-              backgroundColor: '#f9fafb',
-              borderTop: '1px solid #e5e7eb',
+              backgroundColor: 'background.accent',
+              borderTop: '1px solid status.default.border',
               borderRadius: '0 0 4px 4px',
             }}
           >
@@ -593,7 +594,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
               sx={{
                 fontSize: '9px',
                 fontWeight: 600,
-                color: '#6b7280',
+                color: 'status.default.text',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
                 cursor: 'pointer',

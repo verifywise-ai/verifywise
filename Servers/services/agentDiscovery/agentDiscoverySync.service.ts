@@ -1,4 +1,3 @@
-import { getTenantHash } from "../../tools/getTenantHash";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 import { getInstalledPlugins } from "../../utils/pluginInstallation.utils";
 import {
@@ -132,14 +131,14 @@ function categorizePermissions(permissions: string[]): string[] {
  * Called by the manual trigger endpoint and by the scheduled job.
  */
 export async function runAgentDiscoverySyncForTenant(
-  tenantId: string,
+  organizationId: number,
   triggeredBy: string = "manual"
 ): Promise<{ synced: string[]; errors: string[] }> {
   const synced: string[] = [];
   const errors: string[] = [];
 
   try {
-    const installations = await getInstalledPlugins(tenantId);
+    const installations = await getInstalledPlugins(organizationId);
 
     // For each installed plugin, check if it's an agent_discovery plugin
     for (const installation of installations) {
@@ -159,15 +158,14 @@ export async function runAgentDiscoverySyncForTenant(
       // Create sync log
       const syncLog = await createSyncLogQuery(
         { source_system: pluginKey, triggered_by: triggeredBy },
-        tenantId
+        organizationId
       );
 
       try {
         // Build context and forward to plugin's discover route
         const context: PluginRouteContext = {
-          tenantId,
+          organizationId,
           userId: 0, // system-level call
-          organizationId: 0,
           method: "GET",
           path: "/discover",
           params: {},
@@ -217,11 +215,11 @@ export async function runAgentDiscoverySyncForTenant(
         // Upsert primitives
         const { created, updated } = await upsertAgentPrimitivesQuery(
           normalizedPrimitives,
-          tenantId
+          organizationId
         );
 
         // Flag stale agents (inactive > 30 days)
-        const staleFlagged = await flagStaleAgentsQuery(pluginKey, tenantId);
+        const staleFlagged = await flagStaleAgentsQuery(pluginKey, organizationId);
 
         // Update sync log with success
         await updateSyncLogQuery(syncLog.id!, {
@@ -230,7 +228,7 @@ export async function runAgentDiscoverySyncForTenant(
           primitives_created: created,
           primitives_updated: updated,
           primitives_stale_flagged: typeof staleFlagged === "number" ? staleFlagged : 0,
-        }, tenantId);
+        }, organizationId);
 
         synced.push(pluginKey);
         logger.info(
@@ -241,13 +239,13 @@ export async function runAgentDiscoverySyncForTenant(
         await updateSyncLogQuery(syncLog.id!, {
           status: "failed",
           error_message: errMsg,
-        }, tenantId);
+        }, organizationId);
         errors.push(`${pluginKey}: ${errMsg}`);
         logger.error(`[AgentDiscoverySync] Error syncing ${pluginKey}: ${errMsg}`);
       }
     }
   } catch (error) {
-    logger.error(`[AgentDiscoverySync] Error for tenant ${tenantId}: ${(error as Error).message}`);
+    logger.error(`[AgentDiscoverySync] Error for tenant ${organizationId}: ${(error as Error).message}`);
     errors.push((error as Error).message);
   }
 
@@ -264,9 +262,8 @@ export async function runAgentDiscoverySync(): Promise<void> {
   const organizations = await getAllOrganizationsQuery();
 
   for (const org of organizations) {
-    const tenantHash = getTenantHash(org.id!);
     try {
-      await runAgentDiscoverySyncForTenant(tenantHash, "scheduled");
+      await runAgentDiscoverySyncForTenant(org.id!, "scheduled");
     } catch (error) {
       logger.error(
         `[AgentDiscoverySync] Failed for org ${org.id}: ${(error as Error).message}`

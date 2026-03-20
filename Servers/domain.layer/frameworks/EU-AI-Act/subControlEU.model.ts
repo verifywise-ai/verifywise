@@ -29,8 +29,7 @@ export type SubcontrolEU = {
   implementation_details?: string; // won't get any values, will be filled by user
   evidence_description?: string; // won't get any values, will be filled by user
   feedback_description?: string; // won't get any values, will be filled by user
-  evidence_files?: Object[]; // fill be filed automatically when a file is uploaded
-  feedback_files?: Object[]; // fill be filed automatically when a file is uploaded
+  // NOTE: evidence_files and feedback_files are now stored in file_entity_links table
   control_id: number; // when control is created, its id will be stored and assign here as FK
   subcontrol_meta_id: number;
   created_at?: Date;
@@ -100,27 +99,7 @@ export class SubcontrolEUModel extends Model<SubcontrolEU> {
   })
   feedback_description?: string;
 
-  @Column({
-    type: DataType.JSONB,
-  })
-  evidence_files?: {
-    id: string;
-    fileName: string;
-    project_id: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[];
-
-  @Column({
-    type: DataType.JSONB,
-  })
-  feedback_files?: {
-    id: string;
-    fileName: string;
-    project_id: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[];
+  // NOTE: evidence_files and feedback_files are now stored in file_entity_links table
 
   @ForeignKey(() => ControlStructEUModel)
   @Column({

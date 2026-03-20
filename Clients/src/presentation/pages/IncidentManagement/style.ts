@@ -1,5 +1,6 @@
 import { Theme, SxProps } from "@mui/material/styles";
 import { AIIncidentManagementApprovalStatus } from "../../../domain/enums/aiIncidentManagement.enum";
+import { brand } from "../../themes/palette";
 
 // Main page styles (index.tsx)
 export const incidentMainStack = {
@@ -24,8 +25,8 @@ export const incidentStatusSelect = {
 };
 
 export const addNewIncidentButton = {
-    backgroundColor: "#13715B",
-    border: "1px solid #13715B",
+    backgroundColor: `${brand.primary}`,
+    border: `1px solid ${brand.primary}`,
     gap: "8px",
 };
 
@@ -72,7 +73,7 @@ export const incidentStatusBadge = (
     const statusStyles = {
         [AIIncidentManagementApprovalStatus.APPROVED]: {
             bg: "#E6F4EA",
-            color: "#138A5E",
+            color: "status.success.text",
         },
         [AIIncidentManagementApprovalStatus.REJECTED]: {
             bg: "#FFF8E1",
@@ -84,7 +85,7 @@ export const incidentStatusBadge = (
         },
         [AIIncidentManagementApprovalStatus.NOT_REQUIRED]: {
             bg: "#FFD6D6",
-            color: "#D32F2F",
+            color: "status.error.text",
         },
     };
 
@@ -104,8 +105,8 @@ export const incidentStatusBadge = (
 
 export const incidentSeverityBadge = (isCritical: boolean) => {
     const style = isCritical
-        ? { bg: "#FFD6D6", color: "#D32F2F" }
-        : { bg: "#E6F4EA", color: "#138A5E" };
+        ? { bg: "#FFD6D6", color: "status.error.text" }
+        : { bg: "#E6F4EA", color: "status.success.text" };
 
     return {
         backgroundColor: style.bg,
@@ -127,7 +128,7 @@ export const incidentTagContainer = {
 export const incidentTag = {
     fontSize: 11,
     height: "20px",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "background.surface",
     borderRadius: 4,
     color: "#666",
     margin: 0,
@@ -151,7 +152,7 @@ export const incidentRowHover = {
 
 export const incidentRowDisabled = {
     opacity: 0.6,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "background.surface",
 };
 
 // Empty / Loading states
@@ -172,7 +173,7 @@ export const incidentEmptyContainer = () => ({
 
 export const incidentEmptyText = {
     fontSize: 13,
-    color: "#475467",
+    color: "text.tertiary",
     margin: 0,
     fontWeight: 400,
 };
@@ -248,7 +249,7 @@ export const incidentSearchBox =
         border: `1px solid ${theme.palette.border.dark}`,
         borderRadius: theme.shape.borderRadius,
         p: "1px 1px",
-        backgroundColor: "#fff",
+        backgroundColor: "background.main",
         width: isVisible ? "50%" : "auto",
         transition: "all 0.3s ease",
         mb: 9,
@@ -281,8 +282,8 @@ export const incidentManagementCard = {
     cursor: "default",
     minWidth: { xs: "120px", sm: "140px" },
     width: { xs: "120px", sm: "140px" },
-    backgroundColor: "#FFFFFF",
-    border: "1px solid #E5E7EB",
+    backgroundColor: "background.main",
+    border: "1px solid status.default.border",
     borderRadius: 2,
   };
   
@@ -297,5 +298,5 @@ export const incidentManagementCard = {
 
   export const incidentTableRowDeletingStyle = {
     opacity: 0.6,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "background.surface",
   };

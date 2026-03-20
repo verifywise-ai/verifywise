@@ -2,7 +2,7 @@
  * @fileoverview AI Detection Database Utils
  *
  * Database query functions for AI Detection scans and findings.
- * Follows the established pattern for multi-tenant database operations.
+ * Follows the established pattern for shared-schema multi-tenant database operations.
  *
  * @module utils/aiDetection
  */
@@ -21,19 +21,18 @@ import {
 import { ICreateModelSecurityFindingInput } from "../domain.layer/interfaces/i.modelSecurity";
 
 // ============================================================================
-// Tenant ID Validation (Defense-in-depth for SQL injection prevention)
+// Organization ID Validation
 // ============================================================================
 
 /**
- * Validates tenant ID format to prevent SQL injection.
- * Tenant IDs from getTenantHash() should only contain alphanumeric chars and underscores.
+ * Validates organization ID is a positive integer.
  *
- * @param tenantId - The tenant schema identifier
- * @throws Error if tenant ID format is invalid
+ * @param organizationId - The organization identifier
+ * @throws Error if organization ID is invalid
  */
-function validateTenantId(tenantId: string): void {
-  if (!tenantId || !/^[a-zA-Z0-9_]+$/.test(tenantId)) {
-    throw new Error(`Invalid tenant identifier format: ${tenantId}`);
+function validateOrganizationId(organizationId: number): void {
+  if (!organizationId || !Number.isInteger(organizationId) || organizationId <= 0) {
+    throw new Error(`Invalid organization identifier: ${organizationId}`);
   }
 }
 
@@ -45,18 +44,19 @@ function validateTenantId(tenantId: string): void {
  * Create a new scan record
  *
  * @param input - Scan creation input
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param transaction - Database transaction
  * @returns Created scan record
  */
 export async function createScanQuery(
   input: ICreateScanInput,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<IScan> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    INSERT INTO "${tenantId}".ai_detection_scans (
+    INSERT INTO ai_detection_scans (
+      organization_id,
       repository_url,
       repository_owner,
       repository_name,
@@ -67,6 +67,7 @@ export async function createScanQuery(
       created_at,
       updated_at
     ) VALUES (
+      :organizationId,
       :repository_url,
       :repository_owner,
       :repository_name,
@@ -82,6 +83,7 @@ export async function createScanQuery(
 
   const [results] = await sequelize.query(query, {
     replacements: {
+      organizationId,
       repository_url: input.repository_url,
       repository_owner: input.repository_owner,
       repository_name: input.repository_name,
@@ -100,22 +102,22 @@ export async function createScanQuery(
  * Get scan by ID
  *
  * @param scanId - Scan ID
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @returns Scan record or null
  */
 export async function getScanByIdQuery(
   scanId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<IScan | null> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
     SELECT *
-    FROM "${tenantId}".ai_detection_scans
-    WHERE id = :scanId;
+    FROM ai_detection_scans
+    WHERE id = :scanId AND organization_id = :organizationId;
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { scanId },
+    replacements: { scanId, organizationId },
     type: QueryTypes.SELECT,
   });
 
@@ -126,14 +128,14 @@ export async function getScanByIdQuery(
  * Get scan with user info
  *
  * @param scanId - Scan ID
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @returns Scan with triggered_by user info
  */
 export async function getScanWithUserQuery(
   scanId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<(IScan & { triggered_by_user: { id: number; name: string; surname?: string } }) | null> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
     SELECT
       s.*,
@@ -142,13 +144,13 @@ export async function getScanWithUserQuery(
         'name', u.name,
         'surname', u.surname
       ) as triggered_by_user
-    FROM "${tenantId}".ai_detection_scans s
-    LEFT JOIN public.users u ON s.triggered_by = u.id
-    WHERE s.id = :scanId;
+    FROM ai_detection_scans s
+    LEFT JOIN users u ON s.triggered_by = u.id
+    WHERE s.id = :scanId AND s.organization_id = :organizationId;
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { scanId },
+    replacements: { scanId, organizationId },
     type: QueryTypes.SELECT,
   });
 
@@ -160,20 +162,20 @@ export async function getScanWithUserQuery(
  *
  * @param scanId - Scan ID
  * @param input - Update input
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param transaction - Optional transaction
  * @returns Updated scan or null
  */
 export async function updateScanProgressQuery(
   scanId: number,
   input: IUpdateScanProgressInput,
-  tenantId: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IScan | null> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   // Build SET clause dynamically based on provided fields
   const setClauses: string[] = ["updated_at = NOW()"];
-  const replacements: Record<string, unknown> = { scanId };
+  const replacements: Record<string, unknown> = { scanId, organizationId };
 
   if (input.status !== undefined) {
     setClauses.push("status = :status");
@@ -213,9 +215,9 @@ export async function updateScanProgressQuery(
   }
 
   const query = `
-    UPDATE "${tenantId}".ai_detection_scans
+    UPDATE ai_detection_scans
     SET ${setClauses.join(", ")}
-    WHERE id = :scanId
+    WHERE id = :scanId AND organization_id = :organizationId
     RETURNING *;
   `;
 
@@ -231,23 +233,23 @@ export async function updateScanProgressQuery(
 /**
  * Get scans list with pagination
  *
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param page - Page number (1-indexed)
  * @param limit - Items per page
  * @param status - Optional status filter
  * @returns Scans and total count
  */
 export async function getScansListQuery(
-  tenantId: string,
+  organizationId: number,
   page: number = 1,
   limit: number = 20,
   status?: ScanStatus,
   repositoryId?: number
 ): Promise<{ scans: (IScan & { triggered_by_user: { id: number; name: string; surname?: string } })[]; total: number }> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const offset = (page - 1) * limit;
-  const replacements: Record<string, unknown> = { limit, offset };
-  const conditions: string[] = [];
+  const replacements: Record<string, unknown> = { limit, offset, organizationId };
+  const conditions: string[] = ["s.organization_id = :organizationId"];
 
   if (status) {
     conditions.push("s.status = :status");
@@ -259,11 +261,11 @@ export async function getScansListQuery(
     replacements.repositoryId = repositoryId;
   }
 
-  const whereClause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+  const whereClause = "WHERE " + conditions.join(" AND ");
 
   const countQuery = `
     SELECT COUNT(*) as total
-    FROM "${tenantId}".ai_detection_scans s
+    FROM ai_detection_scans s
     ${whereClause};
   `;
 
@@ -275,8 +277,8 @@ export async function getScansListQuery(
         'name', u.name,
         'surname', u.surname
       ) as triggered_by_user
-    FROM "${tenantId}".ai_detection_scans s
-    LEFT JOIN public.users u ON s.triggered_by = u.id
+    FROM ai_detection_scans s
+    LEFT JOIN users u ON s.triggered_by = u.id
     ${whereClause}
     ORDER BY s.created_at DESC
     LIMIT :limit OFFSET :offset;
@@ -297,24 +299,24 @@ export async function getScansListQuery(
  * Delete scan and all related findings
  *
  * @param scanId - Scan ID
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param transaction - Database transaction
  * @returns True if deleted
  */
 export async function deleteScanQuery(
   scanId: number,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<boolean> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   // Findings are deleted via CASCADE
   const query = `
-    DELETE FROM "${tenantId}".ai_detection_scans
-    WHERE id = :scanId;
+    DELETE FROM ai_detection_scans
+    WHERE id = :scanId AND organization_id = :organizationId;
   `;
 
   await sequelize.query(query, {
-    replacements: { scanId },
+    replacements: { scanId, organizationId },
     type: QueryTypes.DELETE,
     transaction,
   });
@@ -327,27 +329,28 @@ export async function deleteScanQuery(
  *
  * @param repoOwner - Repository owner
  * @param repoName - Repository name
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @returns Active scan or null
  */
 export async function getActiveScanForRepoQuery(
   repoOwner: string,
   repoName: string,
-  tenantId: string
+  organizationId: number
 ): Promise<IScan | null> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
     SELECT *
-    FROM "${tenantId}".ai_detection_scans
+    FROM ai_detection_scans
     WHERE repository_owner = :repoOwner
       AND repository_name = :repoName
+      AND organization_id = :organizationId
       AND status IN ('pending', 'cloning', 'scanning')
     ORDER BY created_at DESC
     LIMIT 1;
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { repoOwner, repoName },
+    replacements: { repoOwner, repoName, organizationId },
     type: QueryTypes.SELECT,
   });
 
@@ -362,18 +365,19 @@ export async function getActiveScanForRepoQuery(
  * Create a new finding record
  *
  * @param input - Finding creation input
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param transaction - Database transaction
  * @returns Created finding record
  */
 export async function createFindingQuery(
   input: ICreateFindingInput,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<IFinding> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    INSERT INTO "${tenantId}".ai_detection_findings (
+    INSERT INTO ai_detection_findings (
+      organization_id,
       scan_id,
       finding_type,
       category,
@@ -386,6 +390,7 @@ export async function createFindingQuery(
       file_paths,
       created_at
     ) VALUES (
+      :organizationId,
       :scan_id,
       :finding_type,
       :category,
@@ -406,6 +411,7 @@ export async function createFindingQuery(
 
   const [results] = await sequelize.query(query, {
     replacements: {
+      organizationId,
       scan_id: input.scan_id,
       finding_type: input.finding_type,
       category: input.category,
@@ -427,16 +433,16 @@ export async function createFindingQuery(
  * Create multiple findings in batch
  *
  * @param inputs - Array of finding inputs
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param transaction - Database transaction
  * @returns Number of findings created
  */
 export async function createFindingsBatchQuery(
   inputs: ICreateFindingInput[],
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<number> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   if (inputs.length === 0) return 0;
 
   // Final deduplication safety check - PostgreSQL ON CONFLICT fails if same row appears twice in batch
@@ -462,6 +468,7 @@ export async function createFindingsBatchQuery(
   // Use single INSERT with multiple VALUES
   const values = deduplicatedInputs.map((_input, index) => {
     return `(
+      :organizationId,
       :scan_id_${index},
       :finding_type_${index},
       :category_${index},
@@ -481,7 +488,7 @@ export async function createFindingsBatchQuery(
     )`;
   });
 
-  const replacements: Record<string, unknown> = {};
+  const replacements: Record<string, unknown> = { organizationId };
   deduplicatedInputs.forEach((input, index) => {
     replacements[`scan_id_${index}`] = input.scan_id;
     replacements[`finding_type_${index}`] = input.finding_type;
@@ -501,7 +508,8 @@ export async function createFindingsBatchQuery(
   });
 
   const query = `
-    INSERT INTO "${tenantId}".ai_detection_findings (
+    INSERT INTO ai_detection_findings (
+      organization_id,
       scan_id,
       finding_type,
       category,
@@ -525,14 +533,70 @@ export async function createFindingsBatchQuery(
       license_id = COALESCE(EXCLUDED.license_id, ai_detection_findings.license_id),
       license_name = COALESCE(EXCLUDED.license_name, ai_detection_findings.license_name),
       license_risk = COALESCE(EXCLUDED.license_risk, ai_detection_findings.license_risk),
-      license_source = COALESCE(EXCLUDED.license_source, ai_detection_findings.license_source);
+      license_source = COALESCE(EXCLUDED.license_source, ai_detection_findings.license_source)
+    RETURNING id, name, provider;
   `;
 
-  await sequelize.query(query, {
+  const [insertedRows] = await sequelize.query(query, {
     replacements,
     type: QueryTypes.INSERT,
     transaction,
   });
+
+  // Insert vulnerability details into separate table for findings that have them
+  const vulnInputs = deduplicatedInputs.filter(
+    (input) => input.mitigation || input.data_flow_summary || input.vulnerability_details
+  );
+
+  if (vulnInputs.length > 0 && Array.isArray(insertedRows) && insertedRows.length > 0) {
+    // Build a lookup from (name, provider) -> finding_id using RETURNING results
+    const findingIdMap = new Map<string, number>();
+    for (const row of insertedRows as { id: number; name: string; provider: string | null }[]) {
+      const key = `${row.name}::${row.provider || "NULL"}`;
+      findingIdMap.set(key, row.id);
+    }
+
+    const vulnValues: string[] = [];
+    const vulnReplacements: Record<string, unknown> = { organizationId };
+
+    vulnInputs.forEach((input, index) => {
+      const key = `${input.name}::${input.provider || "NULL"}`;
+      const findingId = findingIdMap.get(key);
+      if (!findingId) return;
+
+      vulnValues.push(`(
+        :organizationId,
+        :finding_id_${index},
+        :mitigation_${index},
+        :data_flow_summary_${index},
+        :vulnerability_details_${index},
+        NOW()
+      )`);
+      vulnReplacements[`finding_id_${index}`] = findingId;
+      vulnReplacements[`mitigation_${index}`] = input.mitigation || null;
+      vulnReplacements[`data_flow_summary_${index}`] = input.data_flow_summary || null;
+      vulnReplacements[`vulnerability_details_${index}`] = input.vulnerability_details
+        ? JSON.stringify(input.vulnerability_details) : null;
+    });
+
+    if (vulnValues.length > 0) {
+      const vulnQuery = `
+        INSERT INTO ai_detection_vulnerability_details (
+          organization_id, finding_id, mitigation, data_flow_summary, vulnerability_details, created_at
+        ) VALUES ${vulnValues.join(", ")}
+        ON CONFLICT (finding_id) DO UPDATE SET
+          mitigation = COALESCE(EXCLUDED.mitigation, ai_detection_vulnerability_details.mitigation),
+          data_flow_summary = COALESCE(EXCLUDED.data_flow_summary, ai_detection_vulnerability_details.data_flow_summary),
+          vulnerability_details = COALESCE(EXCLUDED.vulnerability_details, ai_detection_vulnerability_details.vulnerability_details);
+      `;
+
+      await sequelize.query(vulnQuery, {
+        replacements: vulnReplacements,
+        type: QueryTypes.INSERT,
+        transaction,
+      });
+    }
+  }
 
   return deduplicatedInputs.length;
 }
@@ -552,16 +616,16 @@ export async function createFindingsBatchQuery(
  * Create model security findings in batch
  *
  * @param inputs - Array of model security finding inputs
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param transaction - Database transaction
  * @returns Number of findings created
  */
 export async function createModelSecurityFindingsBatchQuery(
   inputs: ICreateModelSecurityFindingInput[],
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<number> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   if (inputs.length === 0) return 0;
 
   // Deduplication safety check - PostgreSQL ON CONFLICT fails if same row appears twice in batch
@@ -586,6 +650,7 @@ export async function createModelSecurityFindingsBatchQuery(
   // Use single INSERT with multiple VALUES
   const values = deduplicatedInputs.map((_input, index) => {
     return "("+
+      ":organizationId, " +
       ":scan_id_" + index + ", " +
       ":finding_type_" + index + ", " +
       ":category_" + index + ", " +
@@ -608,7 +673,7 @@ export async function createModelSecurityFindingsBatchQuery(
     ")";
   });
 
-  const replacements: Record<string, unknown> = {};
+  const replacements: Record<string, unknown> = { organizationId };
   deduplicatedInputs.forEach((input, index) => {
     replacements["scan_id_" + index] = input.scan_id;
     replacements["finding_type_" + index] = input.finding_type;
@@ -631,8 +696,8 @@ export async function createModelSecurityFindingsBatchQuery(
   });
 
   const query =
-    'INSERT INTO "' + tenantId + '".ai_detection_findings (' +
-      "scan_id, finding_type, category, name, provider, confidence, " +
+    "INSERT INTO ai_detection_findings (" +
+      "organization_id, scan_id, finding_type, category, name, provider, confidence, " +
       "description, documentation_url, file_count, file_paths, " +
       "severity, cwe_id, cwe_name, owasp_ml_id, owasp_ml_name, " +
       "threat_type, operator_name, module_name, created_at" +
@@ -651,45 +716,46 @@ export async function createModelSecurityFindingsBatchQuery(
 }
 export async function getFindingsForScanQuery(
   scanId: number,
-  tenantId: string,
+  organizationId: number,
   page: number = 1,
   limit: number = 50,
   confidence?: string,
   findingType?: string
 ): Promise<{ findings: IFinding[]; total: number }> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const offset = (page - 1) * limit;
-  const replacements: Record<string, unknown> = { scanId, limit, offset };
-  let whereClause = "WHERE scan_id = :scanId";
+  const replacements: Record<string, unknown> = { scanId, organizationId, limit, offset };
+  let whereClause = "WHERE f.scan_id = :scanId AND f.organization_id = :organizationId";
 
   if (confidence) {
-    whereClause += " AND confidence = :confidence";
+    whereClause += " AND f.confidence = :confidence";
     replacements.confidence = confidence;
   }
 
   if (findingType) {
-    whereClause += " AND finding_type = :findingType";
+    whereClause += " AND f.finding_type = :findingType";
     replacements.findingType = findingType;
   }
 
   const countQuery = `
     SELECT COUNT(*) as total
-    FROM "${tenantId}".ai_detection_findings
+    FROM ai_detection_findings f
     ${whereClause};
   `;
 
   const dataQuery = `
-    SELECT *
-    FROM "${tenantId}".ai_detection_findings
+    SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details
+    FROM ai_detection_findings f
+    LEFT JOIN ai_detection_vulnerability_details vd ON vd.finding_id = f.id AND vd.organization_id = f.organization_id
     ${whereClause}
     ORDER BY
-      CASE confidence
+      CASE f.confidence
         WHEN 'high' THEN 1
         WHEN 'medium' THEN 2
         WHEN 'low' THEN 3
       END,
-      file_count DESC,
-      name ASC
+      f.file_count DESC,
+      f.name ASC
     LIMIT :limit OFFSET :offset;
   `;
 
@@ -721,23 +787,23 @@ const MAX_EXPORT_FINDINGS = 10000;
  * Use this for exports (AI-BOM, dependency graph) instead of hardcoded limits.
  *
  * @param scanId - Scan ID
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param excludeTypes - Optional finding types to exclude (e.g., ['secret', 'model_security'])
  * @returns All findings for the scan
  */
 export async function getAllFindingsForExportQuery(
   scanId: number,
-  tenantId: string,
+  organizationId: number,
   excludeTypes?: string[]
 ): Promise<IFinding[]> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
 
   // First, get the total count
-  let whereClause = "WHERE scan_id = :scanId";
-  const replacements: Record<string, unknown> = { scanId };
+  let whereClause = "WHERE f.scan_id = :scanId AND f.organization_id = :organizationId";
+  const replacements: Record<string, unknown> = { scanId, organizationId };
 
   if (excludeTypes && excludeTypes.length > 0) {
-    whereClause += ` AND finding_type NOT IN (${excludeTypes.map((_, i) => `:excludeType${i}`).join(", ")})`;
+    whereClause += ` AND f.finding_type NOT IN (${excludeTypes.map((_, i) => `:excludeType${i}`).join(", ")})`;
     excludeTypes.forEach((type, i) => {
       replacements[`excludeType${i}`] = type;
     });
@@ -745,7 +811,7 @@ export async function getAllFindingsForExportQuery(
 
   const countQuery = `
     SELECT COUNT(*) as total
-    FROM "${tenantId}".ai_detection_findings
+    FROM ai_detection_findings f
     ${whereClause};
   `;
 
@@ -769,17 +835,18 @@ export async function getAllFindingsForExportQuery(
 
   while (offset < total) {
     const batchQuery = `
-      SELECT *
-      FROM "${tenantId}".ai_detection_findings
+      SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details
+      FROM ai_detection_findings f
+      LEFT JOIN ai_detection_vulnerability_details vd ON vd.finding_id = f.id AND vd.organization_id = f.organization_id
       ${whereClause}
       ORDER BY
-        CASE confidence
+        CASE f.confidence
           WHEN 'high' THEN 1
           WHEN 'medium' THEN 2
           WHEN 'low' THEN 3
         END,
-        file_count DESC,
-        name ASC
+        f.file_count DESC,
+        f.name ASC
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -799,12 +866,12 @@ export async function getAllFindingsForExportQuery(
  * Get findings summary for a scan
  *
  * @param scanId - Scan ID
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @returns Summary with counts by confidence, provider, and finding type
  */
 export async function getFindingsSummaryQuery(
   scanId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<{
   total: number;
   by_confidence: { high: number; medium: number; low: number };
@@ -819,13 +886,13 @@ export async function getFindingsSummaryQuery(
     agent: number;
   };
 }> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const confidenceQuery = `
     SELECT
       confidence,
       COUNT(*) as count
-    FROM "${tenantId}".ai_detection_findings
-    WHERE scan_id = :scanId
+    FROM ai_detection_findings
+    WHERE scan_id = :scanId AND organization_id = :organizationId
     GROUP BY confidence;
   `;
 
@@ -833,8 +900,8 @@ export async function getFindingsSummaryQuery(
     SELECT
       COALESCE(provider, 'Unknown') as provider,
       COUNT(*) as count
-    FROM "${tenantId}".ai_detection_findings
-    WHERE scan_id = :scanId
+    FROM ai_detection_findings
+    WHERE scan_id = :scanId AND organization_id = :organizationId
     GROUP BY provider;
   `;
 
@@ -842,22 +909,22 @@ export async function getFindingsSummaryQuery(
     SELECT
       finding_type,
       COUNT(*) as count
-    FROM "${tenantId}".ai_detection_findings
-    WHERE scan_id = :scanId
+    FROM ai_detection_findings
+    WHERE scan_id = :scanId AND organization_id = :organizationId
     GROUP BY finding_type;
   `;
 
   const [confidenceResults, providerResults, findingTypeResults] = await Promise.all([
     sequelize.query(confidenceQuery, {
-      replacements: { scanId },
+      replacements: { scanId, organizationId },
       type: QueryTypes.SELECT,
     }),
     sequelize.query(providerQuery, {
-      replacements: { scanId },
+      replacements: { scanId, organizationId },
       type: QueryTypes.SELECT,
     }),
     sequelize.query(findingTypeQuery, {
-      replacements: { scanId },
+      replacements: { scanId, organizationId },
       type: QueryTypes.SELECT,
     }),
   ]);
@@ -905,22 +972,22 @@ export async function getFindingsSummaryQuery(
  * Delete all findings for a scan
  *
  * @param scanId - Scan ID
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param transaction - Database transaction
  */
 export async function deleteFindingsForScanQuery(
   scanId: number,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<void> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    DELETE FROM "${tenantId}".ai_detection_findings
-    WHERE scan_id = :scanId;
+    DELETE FROM ai_detection_findings
+    WHERE scan_id = :scanId AND organization_id = :organizationId;
   `;
 
   await sequelize.query(query, {
-    replacements: { scanId },
+    replacements: { scanId, organizationId },
     type: QueryTypes.DELETE,
     transaction,
   });
@@ -933,28 +1000,29 @@ export async function deleteFindingsForScanQuery(
 /**
  * Get scans with cache paths for cleanup
  *
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param olderThanDays - Scans older than this many days
  * @returns Scans with cache paths
  */
 export async function getScansWithCacheQuery(
-  tenantId: string,
+  organizationId: number,
   olderThanDays: number = 7
 ): Promise<{ id: number; cache_path: string }[]> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   // Validate olderThanDays to prevent SQL injection
   const sanitizedDays = Math.max(1, Math.min(365, Math.floor(Number(olderThanDays) || 7)));
 
   const query = `
     SELECT id, cache_path
-    FROM "${tenantId}".ai_detection_scans
-    WHERE cache_path IS NOT NULL
+    FROM ai_detection_scans
+    WHERE organization_id = :organizationId
+      AND cache_path IS NOT NULL
       AND created_at < NOW() - INTERVAL '1 day' * :olderThanDays
       AND status IN ('completed', 'failed', 'cancelled');
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { olderThanDays: sanitizedDays },
+    replacements: { organizationId, olderThanDays: sanitizedDays },
     type: QueryTypes.SELECT,
   });
 
@@ -965,21 +1033,21 @@ export async function getScansWithCacheQuery(
  * Clear cache path after cleanup
  *
  * @param scanId - Scan ID
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  */
 export async function clearScanCachePathQuery(
   scanId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<void> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    UPDATE "${tenantId}".ai_detection_scans
+    UPDATE ai_detection_scans
     SET cache_path = NULL, updated_at = NOW()
-    WHERE id = :scanId;
+    WHERE id = :scanId AND organization_id = :organizationId;
   `;
 
   await sequelize.query(query, {
-    replacements: { scanId },
+    replacements: { scanId, organizationId },
     type: QueryTypes.UPDATE,
   });
 }
@@ -995,7 +1063,7 @@ export async function clearScanCachePathQuery(
  * @param scanId - Scan ID (for verification)
  * @param governanceStatus - New governance status (or null to clear)
  * @param userId - User making the update
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @returns Updated finding or null if not found
  */
 export async function updateFindingGovernanceStatusQuery(
@@ -1003,16 +1071,16 @@ export async function updateFindingGovernanceStatusQuery(
   scanId: number,
   governanceStatus: GovernanceStatus | null,
   userId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<IFinding | null> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    UPDATE "${tenantId}".ai_detection_findings
+    UPDATE ai_detection_findings
     SET
       governance_status = :governance_status,
       governance_updated_at = NOW(),
       governance_updated_by = :user_id
-    WHERE id = :finding_id AND scan_id = :scan_id
+    WHERE id = :finding_id AND scan_id = :scan_id AND organization_id = :organizationId
     RETURNING *;
   `;
 
@@ -1022,6 +1090,7 @@ export async function updateFindingGovernanceStatusQuery(
       scan_id: scanId,
       governance_status: governanceStatus,
       user_id: userId,
+      organizationId,
     },
     type: QueryTypes.UPDATE,
   });
@@ -1033,12 +1102,12 @@ export async function updateFindingGovernanceStatusQuery(
  * Get governance status summary for a scan
  *
  * @param scanId - Scan ID
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @returns Summary with counts by governance status
  */
 export async function getGovernanceSummaryQuery(
   scanId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<{
   total: number;
   reviewed: number;
@@ -1046,7 +1115,7 @@ export async function getGovernanceSummaryQuery(
   flagged: number;
   unreviewed: number;
 }> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
     SELECT
       COUNT(*) as total,
@@ -1054,12 +1123,12 @@ export async function getGovernanceSummaryQuery(
       COUNT(*) FILTER (WHERE governance_status = 'approved') as approved,
       COUNT(*) FILTER (WHERE governance_status = 'flagged') as flagged,
       COUNT(*) FILTER (WHERE governance_status IS NULL) as unreviewed
-    FROM "${tenantId}".ai_detection_findings
-    WHERE scan_id = :scanId;
+    FROM ai_detection_findings
+    WHERE scan_id = :scanId AND organization_id = :organizationId;
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { scanId },
+    replacements: { scanId, organizationId },
     type: QueryTypes.SELECT,
   });
 
@@ -1102,26 +1171,27 @@ export interface IAIDetectionStats {
 /**
  * Get overall AI Detection statistics
  *
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @returns Aggregated statistics
  */
 export async function getAIDetectionStatsQuery(
-  tenantId: string
+  organizationId: number
 ): Promise<IAIDetectionStats> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   // Total and completed scans
   const scansQuery = `
     SELECT
       COUNT(*) as total_scans,
       COUNT(*) FILTER (WHERE status = 'completed') as completed_scans
-    FROM "${tenantId}".ai_detection_scans;
+    FROM ai_detection_scans
+    WHERE organization_id = :organizationId;
   `;
 
   // Unique repositories
   const reposQuery = `
     SELECT COUNT(DISTINCT repository_owner || '/' || repository_name) as unique_repos
-    FROM "${tenantId}".ai_detection_scans
-    WHERE status = 'completed';
+    FROM ai_detection_scans
+    WHERE organization_id = :organizationId AND status = 'completed';
   `;
 
   // Total findings, by confidence, and by type
@@ -1135,25 +1205,25 @@ export async function getAIDetectionStatsQuery(
       COUNT(*) FILTER (WHERE finding_type = 'api_call') as api_call_count,
       COUNT(*) FILTER (WHERE finding_type = 'dependency') as dependency_count,
       COUNT(*) FILTER (WHERE finding_type = 'secret') as secret_count
-    FROM "${tenantId}".ai_detection_findings f
-    JOIN "${tenantId}".ai_detection_scans s ON f.scan_id = s.id
-    WHERE s.status = 'completed';
+    FROM ai_detection_findings f
+    JOIN ai_detection_scans s ON f.scan_id = s.id
+    WHERE s.organization_id = :organizationId AND s.status = 'completed';
   `;
 
   // Security findings count (from model_security_findings table)
   const securityQuery = `
     SELECT COUNT(*) as security_count
-    FROM "${tenantId}".ai_detection_model_security_findings msf
-    JOIN "${tenantId}".ai_detection_scans s ON msf.scan_id = s.id
-    WHERE s.status = 'completed';
+    FROM ai_detection_model_security_findings msf
+    JOIN ai_detection_scans s ON msf.scan_id = s.id
+    WHERE s.organization_id = :organizationId AND s.status = 'completed';
   `;
 
   // Top providers (top 5)
   const providersQuery = `
     SELECT provider, COUNT(*) as count
-    FROM "${tenantId}".ai_detection_findings f
-    JOIN "${tenantId}".ai_detection_scans s ON f.scan_id = s.id
-    WHERE s.status = 'completed' AND provider IS NOT NULL AND provider != ''
+    FROM ai_detection_findings f
+    JOIN ai_detection_scans s ON f.scan_id = s.id
+    WHERE s.organization_id = :organizationId AND s.status = 'completed' AND provider IS NOT NULL AND provider != ''
     GROUP BY provider
     ORDER BY count DESC
     LIMIT 5;
@@ -1165,21 +1235,23 @@ export async function getAIDetectionStatsQuery(
       DATE(s.created_at) as date,
       COUNT(DISTINCT s.id) as scans,
       COALESCE(SUM(s.findings_count), 0) as findings
-    FROM "${tenantId}".ai_detection_scans s
-    WHERE s.created_at >= CURRENT_DATE - INTERVAL '7 days'
+    FROM ai_detection_scans s
+    WHERE s.organization_id = :organizationId
+      AND s.created_at >= CURRENT_DATE - INTERVAL '7 days'
       AND s.status = 'completed'
     GROUP BY DATE(s.created_at)
     ORDER BY date DESC;
   `;
 
+  const replacements = { organizationId };
   const [scansResults, reposResults, findingsResults, securityResults, providersResults, activityResults] =
     await Promise.all([
-      sequelize.query(scansQuery, { type: QueryTypes.SELECT }),
-      sequelize.query(reposQuery, { type: QueryTypes.SELECT }),
-      sequelize.query(findingsQuery, { type: QueryTypes.SELECT }),
-      sequelize.query(securityQuery, { type: QueryTypes.SELECT }).catch(() => [{ security_count: "0" }]),
-      sequelize.query(providersQuery, { type: QueryTypes.SELECT }),
-      sequelize.query(activityQuery, { type: QueryTypes.SELECT }),
+      sequelize.query(scansQuery, { replacements, type: QueryTypes.SELECT }),
+      sequelize.query(reposQuery, { replacements, type: QueryTypes.SELECT }),
+      sequelize.query(findingsQuery, { replacements, type: QueryTypes.SELECT }),
+      sequelize.query(securityQuery, { replacements, type: QueryTypes.SELECT }).catch(() => [{ security_count: "0" }]),
+      sequelize.query(providersQuery, { replacements, type: QueryTypes.SELECT }),
+      sequelize.query(activityQuery, { replacements, type: QueryTypes.SELECT }),
     ]);
 
   const scansRow = scansResults[0] as { total_scans: string; completed_scans: string };
@@ -1236,26 +1308,27 @@ export async function getAIDetectionStatsQuery(
  * This handles cases where the server crashed/restarted mid-scan, leaving
  * scans permanently stuck in pending/cloning/scanning status.
  *
- * @param tenantId - Tenant schema hash
+ * @param organizationId - Organization ID for multi-tenancy
  * @param timeoutMinutes - Minutes after which an active scan is considered stale (default: 30)
  * @returns Number of scans marked as failed
  */
 export async function markStaleScansFailed(
-  tenantId: string,
+  organizationId: number,
   timeoutMinutes: number = 30
 ): Promise<number> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
 
   const results = await sequelize.query<{ id: number }>(
-    `UPDATE "${tenantId}".ai_detection_scans
+    `UPDATE ai_detection_scans
      SET status = 'failed',
          error_message = 'Scan timed out after ' || CAST(:timeoutMinutes AS TEXT) || ' minutes (server may have restarted)',
          updated_at = NOW()
-     WHERE status IN ('pending', 'cloning', 'scanning')
+     WHERE organization_id = :organizationId
+       AND status IN ('pending', 'cloning', 'scanning')
        AND updated_at < NOW() - INTERVAL '1 minute' * :timeoutMinutes
      RETURNING id`,
     {
-      replacements: { timeoutMinutes },
+      replacements: { organizationId, timeoutMinutes },
       type: QueryTypes.SELECT,
     }
   );

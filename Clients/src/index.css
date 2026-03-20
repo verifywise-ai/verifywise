@@ -1,3 +1,120 @@
 :root {
   font-family: "Geist", system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
+
+/* Thin auto-hiding scrollbar for all scrollable areas */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* CSS-filter dark mode (experimental) */
+html.dark-mode {
+  filter: invert(0.93) hue-rotate(180deg);
+  background-color: #fff;
+}
+
+/* Sidebar: slightly lighter than main content in dark mode */
+html.dark-mode .sidebar-menu {
+  background-color: #f5f5f5 !important;
+}
+
+/* Sidebar active row: more visible in dark mode */
+html.dark-mode .sidebar-menu .selected-path {
+  background: linear-gradient(135deg, #e4e4e4 0%, #dedede 100%) !important;
+  border-color: #d0d0d0 !important;
+}
+
+/* Counter-invert photos/videos so they render normally */
+html.dark-mode img:not(.dark-mode-keep-inverted),
+html.dark-mode video,
+html.dark-mode canvas,
+html.dark-mode svg image {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* MUI Tooltips: counter-invert so they keep dark background in dark mode */
+html.dark-mode .MuiTooltip-popper {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* PageTour (react-joyride): counter-invert so dark tooltips stay dark */
+html.dark-mode .__floater,
+html.dark-mode .react-joyride__tooltip {
+  filter: invert(1) hue-rotate(180deg) drop-shadow(0 8px 32px rgba(255,255,255,0.15)) !important;
+}
+
+/* PageTour beacon: counter-invert so green pulsing dot stays visible in dark mode */
+html.dark-mode .react-joyride__beacon {
+  filter: invert(1) hue-rotate(180deg) !important;
+}
+
+
+/* All modals/dialogs: subtle light glow in dark mode (not drawers) */
+html.dark-mode .MuiModal-root:not(.MuiDrawer-root) > :not(.MuiBackdrop-root),
+html.dark-mode .MuiDialog-paper,
+html.dark-mode [role="dialog"] {
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Modal backdrops: use white so it inverts to dark overlay */
+html.dark-mode .MuiBackdrop-root,
+html.dark-mode .confirmation-backdrop {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* User guide code blocks: counter-invert so dark code blocks stay dark */
+html.dark-mode .user-guide-code-block {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Command palette (Wise Search): backdrop + glow + welcome banner */
+html.dark-mode .command-dialog {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html.dark-mode .command-dialog-content {
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Wise Search welcome banner: counter-invert so dark card stays dark */
+html.dark-mode .wise-search-banner {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Start Here: counter-invert Getting Started cards so colorful overlays stay vivid */
+html.dark-mode .gs-card {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Feature videos: counter-invert so rendered compositions keep original colors */
+html.dark-mode .feature-video-player {
+  filter: invert(1) hue-rotate(180deg);
+}

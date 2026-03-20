@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useState, useMemo } from "react";
 import { Box, Stack, Typography } from "@mui/material";
-import { RisksCard } from "../Cards/RisksCard";
+import { StatusTileCards, StatusTileItem } from "../Cards/StatusTileCards";
 import RiskVisualizationTabs from "../RiskVisualization/RiskVisualizationTabs";
 import RiskFilters from "../RiskVisualization/RiskFilters";
 import VWProjectRisksTable from "../Table/VWProjectRisksTable";
@@ -212,7 +212,18 @@ const RisksView = ({
         )}
         {isLoading.loading && <CustomizableToast title={isLoading.message} />}
         <Stack className="risks-row" sx={rowStyle}>
-          <RisksCard risksSummary={risksSummary} />
+          <StatusTileCards
+            items={[
+              { key: "Total", label: "Total", count: risksSummary.total, color: "#4B5563" },
+              { key: "Very high", label: "Very high", count: risksSummary.veryHighRisks, color: "#C63622" },
+              { key: "High", label: "High", count: risksSummary.highRisks, color: "#D68B61" },
+              { key: "Medium", label: "Medium", count: risksSummary.mediumRisks, color: "#D6B971" },
+              { key: "Low", label: "Low", count: risksSummary.lowRisks, color: "#52AB43" },
+              { key: "Very low", label: "Very low", count: risksSummary.veryLowRisks, color: "#B8D39C" },
+            ] satisfies StatusTileItem[]}
+            entityName="risk"
+            size="small"
+          />
         </Stack>
         <br />
 
@@ -235,7 +246,7 @@ const RisksView = ({
             mb: 10,
           }}
         >
-          <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#1A1919" }}>
+          <Typography sx={{ fontSize: 16, fontWeight: 600, color: "text.primary" }}>
             {title}
           </Typography>
 

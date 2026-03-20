@@ -122,7 +122,7 @@ CREATE TABLE intake_forms (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   -- Constraints
-  UNIQUE(slug)  -- Unique within tenant schema
+  UNIQUE(slug)  -- Unique within organization
 );
 
 CREATE INDEX idx_intake_forms_status ON intake_forms(status);

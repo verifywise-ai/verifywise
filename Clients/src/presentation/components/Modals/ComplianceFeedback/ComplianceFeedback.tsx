@@ -14,6 +14,7 @@ import { AlertProps } from "../../../types/alert.types";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { FileData } from "../../../../domain/types/File";
 import { IAuditorFeedbackProps } from "../../../types/interfaces/i.editor";
+import { text, background, border as borderPalette } from "../../../themes/palette";
 
 const parseFileData = (file: FileData | string): FileData => {
   if (typeof file === "string") {
@@ -109,6 +110,7 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
           </Typography>
 
           <RichTextEditor
+            toolbar="full"
             initialContent={feedback}
             onContentChange={handleContentChange}
             isEditable={!readOnly}
@@ -125,12 +127,12 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
             minWidth: 155, // minimum width
             height: 25,
             fontSize: 11,
-            border: "1px solid #D0D5DD",
+            border: `1px solid ${borderPalette.dark}`,
             backgroundColor: "white",
-            color: "#344054",
+            color: `${text.secondary}`,
             "&:hover": {
-              backgroundColor: "#F9FAFB",
-              border: "1px solid #D0D5DD",
+              backgroundColor: `${background.accent}`,
+              border: `1px solid ${borderPalette.dark}`,
             },
           }}
           disableRipple={
@@ -145,7 +147,7 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
           <Typography
             sx={{
               fontSize: 11,
-              color: "#344054",
+              color: `${text.secondary}`,
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
@@ -160,7 +162,7 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
             <Typography
               sx={{
                 fontSize: 11,
-                color: "#344054",
+                color: "text.secondary",
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",

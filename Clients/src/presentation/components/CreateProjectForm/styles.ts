@@ -1,4 +1,5 @@
 import { Theme } from "@mui/material/styles";
+import { background } from "../../themes/palette";
 
 export const createProjectFormStyles = {
   formContainer: {
@@ -81,7 +82,7 @@ export const createProjectFormStyles = {
             paddingRight: "9px",
           },
           "& .MuiAutocomplete-option.Mui-focused": {
-            background: "#f9fafb",
+            background: `${background.accent}`,
           },
         },
         "& .MuiAutocomplete-noOptions": {

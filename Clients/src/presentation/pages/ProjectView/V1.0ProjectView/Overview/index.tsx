@@ -2,7 +2,7 @@ import { Divider, Stack, Typography } from "@mui/material";
 import { columnStyle, rowStyle } from "./style";
 import { GroupStatsCard } from "../../../../components/Cards/GroupStatsCard";
 import { projectRiskSection } from "../style";
-import { RisksCard } from "../../../../components/Cards/RisksCard";
+import { StatusTileCards, StatusTileItem } from "../../../../components/Cards/StatusTileCards";
 import { InfoCard } from "../../../../components/Cards/InfoCard";
 import { DescriptionCard } from "../../../../components/Cards/DescriptionCard";
 import { TeamCard } from "../../../../components/Cards/TeamCard";
@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { PluginSlot } from "../../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../../domain/constants/pluginSlots";
+import { brand } from "../../../../themes/palette";
 
 const VWProjectOverview = ({ project }: { project?: Project }) => {
   const [projectFrameworkId, setProjectFrameworkId] = useState<number | null>(
@@ -294,7 +295,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
                     completed={completedEuActNumbers}
                     total={totalEuActNumbers}
                     title={titleEuAct}
-                    progressbarColor="#13715B"
+                    progressbarColor={brand.primary}
                   />
                 </Stack>
               )}
@@ -307,7 +308,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
                     completed={completedIso42001Numbers}
                     total={totalIso42001Numbers}
                     title={titleIso42001}
-                    progressbarColor="#13715B"
+                    progressbarColor={brand.primary}
                   />
                 </Stack>
               )}
@@ -341,7 +342,18 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
           {project ? (
             <>
               <Typography sx={projectRiskSection}>Use case risks</Typography>
-              <RisksCard risksSummary={projectRisksSummary} />
+              <StatusTileCards
+                items={[
+                  { key: "Total", label: "Total", count: projectRisksSummary.total, color: "#4B5563" },
+                  { key: "Very high", label: "Very high", count: projectRisksSummary.veryHighRisks, color: "#C63622" },
+                  { key: "High", label: "High", count: projectRisksSummary.highRisks, color: "#D68B61" },
+                  { key: "Medium", label: "Medium", count: projectRisksSummary.mediumRisks, color: "#D6B971" },
+                  { key: "Low", label: "Low", count: projectRisksSummary.lowRisks, color: "#52AB43" },
+                  { key: "Very low", label: "Very low", count: projectRisksSummary.veryLowRisks, color: "#B8D39C" },
+                ] satisfies StatusTileItem[]}
+                entityName="risk"
+                size="small"
+              />
             </>
           ) : (
             <>

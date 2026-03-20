@@ -17,6 +17,7 @@ import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { User } from "../../../../domain/types/User";
 import Chip from "../../Chip";
 import ProjectRiskLinkedPolicies from "../../../components/ProjectRiskMitigation/ProjectRiskLinkedPolicies";
+import { text } from "../../../themes/palette";
 
 function getDummyEvent() {
   const realEvent = new Event("click", { bubbles: true, cancelable: true });
@@ -56,7 +57,10 @@ const VWProjectRisksTableBody = ({
   onDeleteRisk,
   flashRow,
   sortConfig,
+  visibleColumns,
 }: IVWProjectRisksTableRow) => {
+  const isColVisible = (colId: string) =>
+    !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
   const { setInputValues } = useContext(VerifyWiseContext);
   const { userRoleName } = useAuth();
@@ -169,98 +173,126 @@ const VWProjectRisksTableBody = ({
                       : row.risk_name
                     : "-"}
                 </TableCell>
-                <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: flashRow === row.id
-                      ? singleTheme.flashColors.background
-                      : sortConfig.key === "risk_owner"
-                      ? "#f5f5f5"
-                      : "",
-                  }}
-                >
-                  {row.risk_owner
-                    ? displayUserFullName(Number(row.risk_owner))
-                    : "-"}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: flashRow === row.id
-                      ? singleTheme.flashColors.background
-                      : sortConfig.key === "severity"
-                      ? "#f5f5f5"
-                      : "",
-                  }}
-                >
-                  {row.severity ? (
-                    <Chip label={row.severity} />
-                  ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: flashRow === row.id
-                      ? singleTheme.flashColors.background
-                      : sortConfig.key === "mitigation_status"
-                      ? "#f5f5f5"
-                      : "",
-                  }}
-                >
-                  {row.mitigation_status ? (
-                    <Chip label={row.mitigation_status} />
-                  ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: flashRow === row.id
-                      ? singleTheme.flashColors.background
-                      : sortConfig.key === "risk_level_autocalculated"
-                      ? "#f5f5f5"
-                      : "",
-                  }}
-                >
-                  {row.risk_level_autocalculated ? (
-                    <Chip label={row.risk_level_autocalculated} />
-                  ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: flashRow === row.id
-                      ? singleTheme.flashColors.background
-                      : sortConfig.key === "deadline"
-                      ? "#f5f5f5"
-                      : "",
-                  }}
-                >
-                  {row.deadline ? displayFormattedDate(row.deadline.toString()) : "NA"}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: flashRow === row.id
-                      ? singleTheme.flashColors.background
-                      : sortConfig.key === "controls_mapping"
-                      ? "#f5f5f5"
-                      : "",
-                  }}
-                >
-                  <VWLink
-                    onClick={(e: React.MouseEvent<HTMLElement>) =>
-                      toggleMitigations(row, e)
-                    }
+                {isColVisible("risk_owner") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor: flashRow === row.id
+                        ? singleTheme.flashColors.background
+                        : sortConfig.key === "risk_owner"
+                        ? "background.surface"
+                        : "",
+                    }}
                   >
-                    View controls
-                  </VWLink>
-                </TableCell>
+                    {row.risk_owner
+                      ? displayUserFullName(Number(row.risk_owner))
+                      : "-"}
+                  </TableCell>
+                )}
+                {isColVisible("severity") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor: flashRow === row.id
+                        ? singleTheme.flashColors.background
+                        : sortConfig.key === "severity"
+                        ? "background.surface"
+                        : "",
+                    }}
+                  >
+                    {row.severity ? (
+                      <Chip label={row.severity} />
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
+                )}
+                {isColVisible("ale_estimate") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor: flashRow === row.id
+                        ? singleTheme.flashColors.background
+                        : sortConfig.key === "ale_estimate"
+                        ? "background.surface"
+                        : "",
+                    }}
+                  >
+                    {row.ale_estimate != null
+                      ? `$${Number(row.ale_estimate).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+                      : "-"}
+                  </TableCell>
+                )}
+                {isColVisible("mitigation_status") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor: flashRow === row.id
+                        ? singleTheme.flashColors.background
+                        : sortConfig.key === "mitigation_status"
+                        ? "background.surface"
+                        : "",
+                    }}
+                  >
+                    {row.mitigation_status ? (
+                      <Chip label={row.mitigation_status} />
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
+                )}
+                {isColVisible("risk_level_autocalculated") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor: flashRow === row.id
+                        ? singleTheme.flashColors.background
+                        : sortConfig.key === "risk_level_autocalculated"
+                        ? "background.surface"
+                        : "",
+                    }}
+                  >
+                    {row.risk_level_autocalculated ? (
+                      <Chip label={row.risk_level_autocalculated} />
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
+                )}
+                {isColVisible("deadline") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor: flashRow === row.id
+                        ? singleTheme.flashColors.background
+                        : sortConfig.key === "deadline"
+                        ? "background.surface"
+                        : "",
+                    }}
+                  >
+                    {row.deadline ? displayFormattedDate(row.deadline.toString()) : "NA"}
+                  </TableCell>
+                )}
+                {isColVisible("controls_mapping") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor: flashRow === row.id
+                        ? singleTheme.flashColors.background
+                        : sortConfig.key === "controls_mapping"
+                        ? "background.surface"
+                        : "",
+                    }}
+                  >
+                    <VWLink
+                      onClick={(e: React.MouseEvent<HTMLElement>) =>
+                        toggleMitigations(row, e)
+                      }
+                    >
+                      View controls
+                    </VWLink>
+                  </TableCell>
+                )}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
@@ -268,7 +300,7 @@ const VWProjectRisksTableBody = ({
                     backgroundColor: flashRow === row.id
                       ? singleTheme.flashColors.background
                       : sortConfig.key === "actions"
-                      ? "#f5f5f5"
+                      ? "background.surface"
                       : "",
                   }}
                 >
@@ -289,10 +321,10 @@ const VWProjectRisksTableBody = ({
                         warningTitle="Delete this project risk?"
                         warningMessage={
                           <Stack gap={2}>
-                            <Typography fontSize={13} color="#344054">
+                            <Typography fontSize={13} color={text.secondary}>
                               Are you sure you want to delete this project risk?
                             </Typography>
-                            <Typography fontSize={13} color="#344054">
+                            <Typography fontSize={13} color={text.secondary}>
                               This action is non-recoverable.
                             </Typography>
                           </Stack>

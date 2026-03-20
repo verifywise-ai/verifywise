@@ -1,6 +1,6 @@
 import { FC, memo } from "react";
 import { Stack, Tooltip, Box, Typography, useTheme } from "@mui/material";
-import { Shield, FlaskConical, ScanSearch, Eye } from "lucide-react";
+import { Shield, FlaskConical, ScanSearch, Eye, Router } from "lucide-react";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import "./index.css";
 
@@ -41,6 +41,12 @@ const modules: ModuleItem[] = [
     icon: <Eye size={16} strokeWidth={1.5} />,
     label: "Shadow AI",
     description: "Detect and govern unauthorized AI tool usage across your organization",
+  },
+  {
+    id: "ai-gateway",
+    icon: <Router size={16} strokeWidth={1.5} />,
+    label: "AI Gateway",
+    description: "Proxy, monitor, and control LLM API usage across providers",
   },
 ];
 

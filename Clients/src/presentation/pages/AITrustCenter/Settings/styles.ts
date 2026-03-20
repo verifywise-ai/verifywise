@@ -88,7 +88,7 @@ export const useStyles = () => {
       borderRadius: 2,
       border: `1px solid ${theme.palette.border.light}`,
       padding: '0 10px',
-      background: '#fff',
+      background: 'background.main',
       marginRight: theme.spacing(1),
     },
     customColorCircle: (color: string) => ({

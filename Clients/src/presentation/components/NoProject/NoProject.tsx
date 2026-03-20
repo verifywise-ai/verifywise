@@ -1,5 +1,6 @@
 import { NoProjectBox } from "../../pages/Home/styles";
 import { EmptyState } from "../EmptyState";
+import { FolderOpen } from "lucide-react";
 
 interface NoProjectProps {
   message: string;
@@ -19,7 +20,7 @@ const NoProject = ({ message }: NoProjectProps) => {
 
   return (
     <NoProjectBox>
-      <EmptyState message={message} />
+      <EmptyState icon={FolderOpen} message={message} />
     </NoProjectBox>
   );
 };

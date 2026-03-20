@@ -25,6 +25,7 @@ const DatasetSummary: React.FC<DatasetSummaryProps> = ({
   return (
     <StatusTileCards
       items={items}
+      size="small"
       entityName="dataset"
       onCardClick={onCardClick}
       selectedKey={selectedStatus}

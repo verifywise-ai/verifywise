@@ -46,6 +46,8 @@ interface FieldProps extends OriginalFieldProps {
   InputProps?: TextFieldProps["InputProps"];
   formHelperTextProps?: TextFieldProps["FormHelperTextProps"];
   autoFocus?: boolean;
+  multiline?: boolean;
+  minRows?: number;
 }
 
 const Field = forwardRef(
@@ -77,6 +79,8 @@ const Field = forwardRef(
       formHelperTextProps,
       min,
       max,
+      multiline: multilineProp,
+      minRows,
     }: FieldProps,
     ref: ForwardedRef<HTMLInputElement>
   ) => {
@@ -135,8 +139,9 @@ const Field = forwardRef(
           autoComplete={autoComplete}
           autoFocus={autoFocus}
           placeholder={placeholder}
-          multiline={type === "description" || (rows !== undefined && rows > 1)}
-          rows={type === "description" ? (rows || 4) : (rows || 1)}
+          multiline={multilineProp || type === "description" || (rows !== undefined && rows > 1)}
+          minRows={minRows}
+          rows={multilineProp ? undefined : (type === "description" ? (rows || 4) : (rows || 1))}
           value={value}
           onInput={onInput as React.FormEventHandler<HTMLDivElement>}
           onChange={onChange}

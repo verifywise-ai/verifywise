@@ -2,7 +2,7 @@
 
 ## Overview
 
-VerifyWise uses PostgreSQL with Sequelize ORM. The database implements a schema-per-tenant architecture with shared data in the `public` schema and tenant-specific data in isolated schemas. There are 60+ Sequelize models covering users, organizations, projects, vendors, risks, approvals, and compliance frameworks.
+VerifyWise uses PostgreSQL with Sequelize ORM. All data lives in a single `verifywise` schema, with tenant isolation enforced via `organization_id` columns on tenant-scoped tables. There are 60+ Sequelize models covering users, organizations, projects, vendors, risks, approvals, and compliance frameworks.
 
 ## Schema Architecture
 
@@ -11,18 +11,19 @@ VerifyWise uses PostgreSQL with Sequelize ORM. The database implements a schema-
 │                              PostgreSQL Database                              │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  PUBLIC SCHEMA (Shared)                                                      │
+│  VERIFYWISE SCHEMA (All data)                                                │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │  users          │  organizations  │  roles         │  frameworks       │ │
-│  │  subscriptions  │  tiers          │                │                   │ │
+│  │  Shared tables (no organization_id):                                   │ │
+│  │  organizations  │  users          │  roles         │  frameworks       │ │
+│  │  subscriptions  │  tiers          │  *_struct_*                        │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  Tenant-scoped tables (with organization_id):                          │ │
+│  │  projects       │  vendors        │  risks         │  files            │ │
+│  │  model_inventories │  tasks       │  approvals     │  assessments      │ │
+│  │  policy_manager │  automations    │  datasets      │  ...30+ more      │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
 │                                                                              │
-│  TENANT SCHEMAS (Isolated per Organization)                                  │
-│  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │  projects       │  vendors        │  risks         │  files            │ │
-│  │  model_files    │  tasks          │  approvals     │  assessments      │ │
-│  │  event_logs     │  pmm_*          │  ...30+ more                       │ │
-│  └────────────────────────────────────────────────────────────────────────┘ │
+│  PUBLIC SCHEMA (Extensions only: uuid-ossp, pgcrypto)                        │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -82,7 +83,7 @@ VerifyWise uses PostgreSQL with Sequelize ORM. The database implements a schema-
 
 ### Users
 
-**Table:** `public.users`
+**Table:** `users` (verifywise schema)
 
 ```sql
 CREATE TABLE users (
@@ -115,7 +116,7 @@ CREATE TABLE users (
 
 ### Organizations
 
-**Table:** `public.organizations`
+**Table:** `organizations` (verifywise schema, shared)
 
 ```sql
 CREATE TABLE organizations (
@@ -136,7 +137,7 @@ CREATE TABLE organizations (
 
 ### Roles
 
-**Table:** `public.roles`
+**Table:** `roles` (verifywise schema, shared)
 
 ```sql
 CREATE TABLE roles (
@@ -161,7 +162,7 @@ CREATE TABLE roles (
 
 ### Projects
 
-**Table:** `{tenant}.projects`
+**Table:** `projects`
 
 ```sql
 CREATE TABLE projects (
@@ -205,7 +206,7 @@ CREATE TABLE projects (
 
 ### Project Members (Junction Table)
 
-**Table:** `{tenant}.project_members`
+**Table:** `project_members`
 
 ```sql
 CREATE TABLE project_members (
@@ -220,7 +221,7 @@ CREATE TABLE project_members (
 
 ### Vendors
 
-**Table:** `{tenant}.vendors`
+**Table:** `vendors`
 
 ```sql
 CREATE TABLE vendors (
@@ -271,7 +272,7 @@ CREATE TABLE vendors (
 
 ### Vendor Risks
 
-**Table:** `{tenant}.vendor_risks`
+**Table:** `vendor_risks`
 
 ```sql
 CREATE TABLE vendor_risks (
@@ -298,7 +299,7 @@ CREATE TABLE vendor_risks (
 
 ### Project Risks
 
-**Table:** `{tenant}.project_risks`
+**Table:** `project_risks`
 
 ```sql
 CREATE TABLE project_risks (
@@ -379,7 +380,7 @@ CREATE TABLE project_risks (
 
 ### Files
 
-**Table:** `{tenant}.files`
+**Table:** `files`
 
 ```sql
 CREATE TABLE files (
@@ -425,7 +426,7 @@ CREATE TABLE files (
 
 ### Frameworks
 
-**Table:** `public.frameworks`
+**Table:** `frameworks` (verifywise schema, shared)
 
 ```sql
 CREATE TABLE frameworks (
@@ -448,7 +449,7 @@ CREATE TABLE frameworks (
 
 ### Model Inventories
 
-**Table:** `{tenant}.model_inventories`
+**Table:** `model_inventories`
 
 ```sql
 CREATE TABLE model_inventories (
@@ -482,7 +483,7 @@ CREATE TABLE model_inventories (
 
 ### Tasks
 
-**Table:** `{tenant}.tasks`
+**Table:** `tasks`
 
 ```sql
 CREATE TABLE tasks (
@@ -518,7 +519,7 @@ CREATE TABLE tasks (
 
 ### Approval Workflows
 
-**Table:** `{tenant}.approval_workflows`
+**Table:** `approval_workflows`
 
 ```sql
 CREATE TABLE approval_workflows (
@@ -535,7 +536,7 @@ CREATE TABLE approval_workflows (
 
 ### Approval Workflow Steps
 
-**Table:** `{tenant}.approval_workflow_steps`
+**Table:** `approval_workflow_steps`
 
 ```sql
 CREATE TABLE approval_workflow_steps (
@@ -551,7 +552,7 @@ CREATE TABLE approval_workflow_steps (
 
 ### Approval Step Approvers
 
-**Table:** `{tenant}.approval_step_approvers`
+**Table:** `approval_step_approvers`
 
 ```sql
 CREATE TABLE approval_step_approvers (
@@ -564,7 +565,7 @@ CREATE TABLE approval_step_approvers (
 
 ### Approval Requests
 
-**Table:** `{tenant}.approval_requests`
+**Table:** `approval_requests`
 
 ```sql
 CREATE TABLE approval_requests (
@@ -594,7 +595,7 @@ CREATE TABLE approval_requests (
 
 ### PMM Configurations
 
-**Table:** `{tenant}.post_market_monitoring_configs`
+**Table:** `post_market_monitoring_configs`
 
 ```sql
 CREATE TABLE post_market_monitoring_configs (
@@ -616,7 +617,7 @@ CREATE TABLE post_market_monitoring_configs (
 
 ### PMM Questions
 
-**Table:** `{tenant}.post_market_monitoring_questions`
+**Table:** `post_market_monitoring_questions`
 
 ```sql
 CREATE TABLE post_market_monitoring_questions (
@@ -637,7 +638,7 @@ CREATE TABLE post_market_monitoring_questions (
 
 ### PMM Cycles
 
-**Table:** `{tenant}.post_market_monitoring_cycles`
+**Table:** `post_market_monitoring_cycles`
 
 ```sql
 CREATE TABLE post_market_monitoring_cycles (
@@ -835,7 +836,7 @@ module.exports = {
 | `Servers/database/db.ts` | Sequelize instance and model registration |
 | `Servers/database/migrations/` | Schema migrations |
 | `Servers/domain.layer/models/` | Sequelize model definitions |
-| `Servers/scripts/createNewTenant.ts` | Tenant schema creation |
+| `Servers/database/db.ts` | Sequelize instance, search_path hook |
 | `Servers/utils/*.utils.ts` | Database query functions |
 
 ## Related Documentation

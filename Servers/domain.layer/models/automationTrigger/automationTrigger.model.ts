@@ -4,7 +4,6 @@ import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "automation_triggers",
-  schema: "public",
   timestamps: true,
   underscored: true,
 })

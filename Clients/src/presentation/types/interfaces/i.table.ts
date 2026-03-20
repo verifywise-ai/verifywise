@@ -9,6 +9,9 @@ import { IUser } from "../../../domain/interfaces/i.user";
 import { EventModel } from "../../../domain/models/Common/evenTracker/eventTracker.model";
 import { CustomSelectOptionWithIcon } from "../../../domain/types/widget.types";
 import { FileColumn } from "../../../application/hooks/useFileColumnVisibility";
+import { ApprovalWorkflowModel } from "src/domain/models/Common/approvalWorkflow/approvalWorkflow.model";
+import { TrainingRegistarModel } from "src/domain/models/Common/trainingRegistar/trainingRegistar.model";
+import { AIIncidentManagementModel } from "src/domain/models/Common/incidentManagement/incidentManagement.model";
 
 export interface IAITrustCenterTableColumn {
   id: string;
@@ -63,12 +66,12 @@ export interface IEvaluationRow {
   prompts?: number;
   date?: string;
   status:
-    | "In Progress"
-    | "Completed"
-    | "Failed"
-    | "Pending"
-    | "Running"
-    | "Available";
+  | "In Progress"
+  | "Completed"
+  | "Failed"
+  | "Pending"
+  | "Running"
+  | "Available";
 }
 
 export interface IEvaluationTableBodyProps {
@@ -204,6 +207,7 @@ export interface IReportTableProps {
     key: string;
     direction: "asc" | "desc" | null;
   };
+  visibleColumns?: Set<string>;
 }
 
 export interface IReportTablePropsExtended {
@@ -213,6 +217,7 @@ export interface IReportTablePropsExtended {
   page: number;
   setCurrentPagingation: (pageNo: number) => void;
   hidePagination?: boolean;
+  visibleColumns?: Set<string>;
 }
 
 export interface IRiskTableProps {
@@ -223,6 +228,7 @@ export interface IRiskTableProps {
   onEdit: (riskId: number) => void;
   isDeletingAllowed?: boolean;
   hidePagination?: boolean;
+  visibleColumns?: Set<string>;
 }
 
 export interface ITasksTableProps {
@@ -253,4 +259,45 @@ export interface ITableWithPlaceholderProps {
   onEdit: (vendorId?: number) => void;
   hidePagination?: boolean;
   vendorRisks?: VendorRisk[];
+  visibleColumns?: Set<string>;
+}
+
+export interface TrainingTableProps {
+  data: TrainingRegistarModel[];
+  isLoading?: boolean;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  paginated?: boolean;
+  hidePagination?: boolean;
+  visibleColumns?: Set<string>;
+}
+
+export interface TrainingTableProps {
+  data: TrainingRegistarModel[];
+  isLoading?: boolean;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  paginated?: boolean;
+  hidePagination?: boolean;
+  visibleColumns?: Set<string>;
+}
+
+export interface IncidentTableProps {
+  data: AIIncidentManagementModel[];
+  isLoading?: boolean;
+  onEdit?: (id: string, mode: string) => void;
+  onView?: (id: string, mode: string) => void;
+  onArchive?: (id: string, mode: string) => void;
+  paginated?: boolean;
+  archivedId?: string | null;
+  hidePagination?: boolean;
+  visibleColumns?: Set<string>;
+}
+export interface ApprovalWorkflowTableProps {
+  data: ApprovalWorkflowModel[];
+  isLoading?: boolean;
+  onEdit?: (id: string) => void;
+  onArchive?: (id: string) => void;
+  archivedId?: string | null;
+  visibleColumns?: Set<string>;
 }

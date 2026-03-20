@@ -129,7 +129,7 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
         </CustomizableButton>
         <CustomizableButton
           variant="contained"
-          sx={{ backgroundColor: "#13715B", border: "1px solid #13715B" }}
+          sx={{ backgroundColor: "brand.primary", border: "1px solid brand.primary" }}
           onClick={handleSubmit}
           isDisabled={isSubmitting || !selectedModelId}
         >

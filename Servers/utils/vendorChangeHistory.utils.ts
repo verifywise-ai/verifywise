@@ -34,7 +34,7 @@ export const recordVendorChange = async (
   vendorId: number,
   action: "created" | "updated" | "deleted",
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
@@ -45,7 +45,7 @@ export const recordVendorChange = async (
     vendorId,
     action,
     changedByUserId,
-    tenant,
+    organizationId,
     fieldName,
     oldValue,
     newValue,
@@ -60,7 +60,7 @@ export const recordVendorChange = async (
 export const recordMultipleFieldChanges = async (
   vendorId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -68,7 +68,7 @@ export const recordMultipleFieldChanges = async (
     "vendor",
     vendorId,
     changedByUserId,
-    tenant,
+    organizationId,
     changes,
     transaction
   );
@@ -80,14 +80,14 @@ export const recordMultipleFieldChanges = async (
  */
 export const getVendorChangeHistory = async (
   vendorId: number,
-  tenant: string,
+  organizationId: number,
   limit: number = 100,
   offset: number = 0
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
   return getEntityChangeHistory(
     "vendor",
     vendorId,
-    tenant,
+    organizationId,
     limit,
     offset
   );
@@ -111,7 +111,7 @@ export const trackVendorChanges = async (
 export const recordVendorCreation = async (
   vendorId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   vendorData: Partial<VendorModel>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -119,7 +119,7 @@ export const recordVendorCreation = async (
     "vendor",
     vendorId,
     changedByUserId,
-    tenant,
+    organizationId,
     vendorData,
     transaction
   );
@@ -132,14 +132,14 @@ export const recordVendorCreation = async (
 export const recordVendorDeletion = async (
   vendorId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   return recordEntityDeletion(
     "vendor",
     vendorId,
     changedByUserId,
-    tenant,
+    organizationId,
     transaction
   );
 };

@@ -21,6 +21,7 @@ import {
   ColumnConfig,
   FileColumn,
 } from "../../../../../application/hooks/useFileColumnVisibility";
+import { brand, text, background, border as borderPalette } from "../../../../themes/palette";
 
 interface ColumnSelectorProps {
   columns: ColumnConfig[];
@@ -60,15 +61,15 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
           minWidth: 100,
           padding: "6px 12px",
           borderRadius: "4px",
-          border: "1px solid #D0D5DD",
+          border: `1px solid ${borderPalette.dark}`,
           backgroundColor: "white",
-          color: "#344054",
+          color: `${text.secondary}`,
           fontSize: 13,
           fontWeight: 500,
           textTransform: "none",
           "&:hover": {
-            backgroundColor: "#F9FAFB",
-            borderColor: "#98A2B3",
+            backgroundColor: `${background.accent}`,
+            borderColor: `${text.muted}`,
           },
         }}
       >
@@ -112,7 +113,7 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
           <Typography
             sx={{
               fontSize: 12,
-              color: "#667085",
+              color: `${text.icon}`,
             }}
           >
             Select which columns to display in the table
@@ -139,7 +140,7 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                 "&:hover": {
                   backgroundColor: column.alwaysVisible
                     ? "transparent"
-                    : "#F9FAFB",
+                    : `${background.accent}`,
                 },
               }}
             >
@@ -156,19 +157,19 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                 sx={{
                   padding: 0,
                   marginRight: 1.5,
-                  color: "#D0D5DD",
+                  color: `${borderPalette.dark}`,
                   "&.Mui-checked": {
-                    color: "#13715B",
+                    color: `${brand.primary}`,
                   },
                   "&.Mui-disabled": {
-                    color: "#D0D5DD",
+                    color: `${borderPalette.dark}`,
                   },
                 }}
               />
               <Typography
                 sx={{
                   fontSize: 13,
-                  color: "#344054",
+                  color: `${text.secondary}`,
                 }}
               >
                 {column.label}
@@ -177,7 +178,7 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                 <Typography
                   sx={{
                     fontSize: 11,
-                    color: "#98A2B3",
+                    color: `${text.muted}`,
                     ml: "auto",
                   }}
                 >
@@ -200,13 +201,13 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
             sx={{
               fontSize: 13,
               fontWeight: 500,
-              color: "#667085",
+              color: `${text.icon}`,
               textTransform: "none",
               padding: "6px 12px",
               borderRadius: "4px",
               "&:hover": {
-                backgroundColor: "#F9FAFB",
-                color: "#344054",
+                backgroundColor: `${background.accent}`,
+                color: `${text.secondary}`,
               },
             }}
           >

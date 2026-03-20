@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["streamlit>=1.40", "pandas>=2.0", "pytest>=8.0"]
+dev = ["streamlit>=1.40", "pandas>=2.0", "pyarrow>=14.0", "pytest>=8.0"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

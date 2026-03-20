@@ -57,3 +57,23 @@ spec:
       port: 8000          # Service port
       targetPort: 8000    # Container port
       nodePort: 30800     # External port (accessible via <NodeIP>:30800)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-gateway-nodeport
+  labels:
+    app: verifywise
+    component: ai-gateway
+    service-type: nodeport
+spec:
+  type: NodePort
+  selector:
+    app: verifywise
+    component: ai-gateway
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8100          # Service port
+      targetPort: 8100    # Container port
+      nodePort: 30810     # External port (accessible via <NodeIP>:30810)

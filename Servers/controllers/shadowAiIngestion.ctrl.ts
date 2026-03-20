@@ -80,16 +80,16 @@ export async function ingestEvents(req: Request, res: Response) {
       .json(STATUS_CODE[401]("Missing X-API-Key header"));
   }
 
-  // Validate API key and resolve tenant
-  let tenant: string | null;
+  // Validate API key and resolve organization
+  let organizationId: number | null;
   try {
-    tenant = await validateApiKeyWithCache(apiKey);
+    organizationId = await validateApiKeyWithCache(apiKey);
   } catch (error) {
     logger.error("❌ API key validation error:", error);
     return res.status(500).json(STATUS_CODE[500]("Key validation failed"));
   }
 
-  if (!tenant) {
+  if (!organizationId) {
     return res
       .status(401)
       .json(STATUS_CODE[401]("Invalid or revoked API key"));
@@ -117,10 +117,10 @@ export async function ingestEvents(req: Request, res: Response) {
       );
   }
 
-  // Check rate limit from tenant settings
+  // Check rate limit from organization settings
   try {
-    const settings = await getSettingsQuery(tenant);
-    if (!checkRateLimit(tenant, settings.rate_limit_max_events_per_hour, body.events.length)) {
+    const settings = await getSettingsQuery(organizationId);
+    if (!checkRateLimit(String(organizationId), settings.rate_limit_max_events_per_hour, body.events.length)) {
       return res
         .status(429)
         .json(
@@ -219,7 +219,7 @@ export async function ingestEvents(req: Request, res: Response) {
 
       if (registryMatch) {
         const { id: toolId, isNew } = await ensureTenantTool(
-          tenant,
+          organizationId,
           registryMatch,
           transaction
         );
@@ -274,7 +274,7 @@ export async function ingestEvents(req: Request, res: Response) {
 
     // Batch insert all events
     const insertedCount = await insertEventsQuery(
-      tenant,
+      organizationId,
       processedEvents,
       transaction
     );
@@ -282,7 +282,7 @@ export async function ingestEvents(req: Request, res: Response) {
     // Update tool counters
     for (const [toolId, count] of toolEventCounts.entries()) {
       await updateToolCounters(
-        tenant,
+        organizationId,
         toolId,
         count,
         toolUserSets.get(toolId) || new Set(),
@@ -293,11 +293,11 @@ export async function ingestEvents(req: Request, res: Response) {
     await transaction.commit();
 
     logger.debug(
-      `✅ Ingested ${insertedCount} shadow AI events for tenant ${tenant.substring(0, 4)}...`
+      `✅ Ingested ${insertedCount} shadow AI events for organization ${organizationId}`
     );
 
     // Evaluate alert rules asynchronously (don't block the response)
-    evaluateRulesForBatch(tenant, {
+    evaluateRulesForBatch(organizationId, {
       newToolIds,
       newToolNames,
       toolEventCounts,

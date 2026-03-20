@@ -1,5 +1,7 @@
 """
 CRUD operations for DeepEval models (saved model configurations).
+
+Shared-schema multi-tenancy: All data is in the public schema with organization_id column.
 """
 
 from typing import List, Dict, Any, Optional
@@ -8,40 +10,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def list_models(
-    tenant: str,
+    organization_id: int,
     db: AsyncSession,
-    org_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
-    List saved models for a tenant (optionally filtered by org_id).
+    List saved models for an organization.
     """
-
-    params: Dict[str, Any] = {}
-
-    # Build WHERE clause - org_id filter is optional
-    if org_id:
-        where_clause = "WHERE org_id = :org_id"
-        params["org_id"] = org_id
-    else:
-        where_clause = ""
 
     result = await db.execute(
         text(
-            f'''
+            '''
             SELECT id,
-                   org_id,
+                   organization_id,
                    name,
                    provider,
                    endpoint_url,
                    created_at,
                    updated_at,
                    created_by
-            FROM "{tenant}".llm_evals_models
-            {where_clause}
+            FROM llm_evals_models
+            WHERE organization_id = :organization_id
             ORDER BY created_at DESC
             '''
         ),
-        params if params else {},
+        {"organization_id": organization_id},
     )
 
     rows = result.mappings().all()
@@ -50,7 +42,7 @@ async def list_models(
         models.append(
             {
                 "id": row["id"],
-                "orgId": row["org_id"],
+                "orgId": str(row["organization_id"]) if row["organization_id"] else None,
                 "name": row["name"],
                 "provider": row["provider"],
                 "endpointUrl": row["endpoint_url"],
@@ -65,11 +57,10 @@ async def list_models(
 async def create_model(
     model_id: str,
     *,
-    org_id: Optional[str],
+    organization_id: int,
     name: str,
     provider: str,
     endpoint_url: Optional[str],
-    tenant: str,
     created_by: Optional[str],
     db: AsyncSession,
 ) -> Optional[Dict[str, Any]]:
@@ -79,17 +70,17 @@ async def create_model(
 
     result = await db.execute(
         text(
-            f'''
-            INSERT INTO "{tenant}".llm_evals_models
-            (id, org_id, name, provider, endpoint_url, created_by)
+            '''
+            INSERT INTO llm_evals_models
+            (id, organization_id, name, provider, endpoint_url, created_by)
             VALUES
-            (:id, :org_id, :name, :provider, :endpoint_url, :created_by)
-            RETURNING id, org_id, name, provider, endpoint_url, created_at, updated_at, created_by
+            (:id, :organization_id, :name, :provider, :endpoint_url, :created_by)
+            RETURNING id, organization_id, name, provider, endpoint_url, created_at, updated_at, created_by
             '''
         ),
         {
             "id": model_id,
-            "org_id": org_id,
+            "organization_id": organization_id,
             "name": name,
             "provider": provider,
             "endpoint_url": endpoint_url,
@@ -103,7 +94,7 @@ async def create_model(
 
     return {
         "id": row["id"],
-        "orgId": row["org_id"],
+        "orgId": str(row["organization_id"]) if row["organization_id"] else None,
         "name": row["name"],
         "provider": row["provider"],
         "endpointUrl": row["endpoint_url"],
@@ -116,7 +107,7 @@ async def create_model(
 async def update_model(
     model_id: str,
     *,
-    tenant: str,
+    organization_id: int,
     name: Optional[str] = None,
     provider: Optional[str] = None,
     endpoint_url: Optional[str] = None,
@@ -127,7 +118,7 @@ async def update_model(
     """
 
     updates = []
-    params: Dict[str, Any] = {"id": model_id}
+    params: Dict[str, Any] = {"id": model_id, "organization_id": organization_id}
 
     if name is not None:
         updates.append("name = :name")
@@ -143,10 +134,10 @@ async def update_model(
         # Nothing to update, just return current row
         result = await db.execute(
             text(
-                f'''
-                SELECT id, org_id, name, provider, endpoint_url, created_at, updated_at, created_by
-                FROM "{tenant}".llm_evals_models
-                WHERE id = :id
+                '''
+                SELECT id, organization_id, name, provider, endpoint_url, created_at, updated_at, created_by
+                FROM llm_evals_models
+                WHERE organization_id = :organization_id AND id = :id
                 '''
             ),
             params,
@@ -156,10 +147,10 @@ async def update_model(
         result = await db.execute(
             text(
                 f'''
-                UPDATE "{tenant}".llm_evals_models
+                UPDATE llm_evals_models
                 SET {", ".join(updates)}
-                WHERE id = :id
-                RETURNING id, org_id, name, provider, endpoint_url, created_at, updated_at, created_by
+                WHERE organization_id = :organization_id AND id = :id
+                RETURNING id, organization_id, name, provider, endpoint_url, created_at, updated_at, created_by
                 '''
             ),
             params,
@@ -171,7 +162,7 @@ async def update_model(
 
     return {
         "id": row["id"],
-        "orgId": row["org_id"],
+        "orgId": str(row["organization_id"]) if row["organization_id"] else None,
         "name": row["name"],
         "provider": row["provider"],
         "endpointUrl": row["endpoint_url"],
@@ -184,7 +175,7 @@ async def update_model(
 async def get_model_by_id(
     model_id: str,
     *,
-    tenant: str,
+    organization_id: int,
     db: AsyncSession,
 ) -> Optional[Dict[str, Any]]:
     """
@@ -193,20 +184,20 @@ async def get_model_by_id(
 
     result = await db.execute(
         text(
-            f'''
+            '''
             SELECT id,
-                   org_id,
+                   organization_id,
                    name,
                    provider,
                    endpoint_url,
                    created_at,
                    updated_at,
                    created_by
-            FROM "{tenant}".llm_evals_models
-            WHERE id = :id
+            FROM llm_evals_models
+            WHERE organization_id = :organization_id AND id = :id
             '''
         ),
-        {"id": model_id},
+        {"organization_id": organization_id, "id": model_id},
     )
 
     row = result.mappings().first()
@@ -215,7 +206,7 @@ async def get_model_by_id(
 
     return {
         "id": row["id"],
-        "orgId": row["org_id"],
+        "orgId": str(row["organization_id"]) if row["organization_id"] else None,
         "name": row["name"],
         "provider": row["provider"],
         "endpointUrl": row["endpoint_url"],
@@ -228,7 +219,7 @@ async def get_model_by_id(
 async def delete_model(
     model_id: str,
     *,
-    tenant: str,
+    organization_id: int,
     db: AsyncSession,
 ) -> bool:
     """
@@ -237,13 +228,13 @@ async def delete_model(
 
     result = await db.execute(
         text(
-            f'''
-            DELETE FROM "{tenant}".llm_evals_models
-            WHERE id = :id
+            '''
+            DELETE FROM llm_evals_models
+            WHERE organization_id = :organization_id AND id = :id
             RETURNING id
             '''
         ),
-        {"id": model_id},
+        {"organization_id": organization_id, "id": model_id},
     )
 
     row = result.fetchone()
@@ -251,42 +242,32 @@ async def delete_model(
 
 
 async def get_latest_model(
-    tenant: str,
+    organization_id: int,
     db: AsyncSession,
-    org_id: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Get the most recently added/updated model.
     Used for auto-populating experiment forms.
     """
 
-    params: Dict[str, Any] = {}
-
-    # Build WHERE clause - org_id filter is optional
-    if org_id:
-        where_clause = "WHERE org_id = :org_id"
-        params["org_id"] = org_id
-    else:
-        where_clause = ""
-
     result = await db.execute(
         text(
-            f'''
+            '''
             SELECT id,
-                   org_id,
+                   organization_id,
                    name,
                    provider,
                    endpoint_url,
                    created_at,
                    updated_at,
                    created_by
-            FROM "{tenant}".llm_evals_models
-            {where_clause}
+            FROM llm_evals_models
+            WHERE organization_id = :organization_id
             ORDER BY updated_at DESC NULLS LAST
             LIMIT 1
             '''
         ),
-        params if params else {},
+        {"organization_id": organization_id},
     )
 
     row = result.mappings().first()
@@ -295,7 +276,7 @@ async def get_latest_model(
 
     return {
         "id": row["id"],
-        "orgId": row["org_id"],
+        "orgId": str(row["organization_id"]) if row["organization_id"] else None,
         "name": row["name"],
         "provider": row["provider"],
         "endpointUrl": row["endpoint_url"],

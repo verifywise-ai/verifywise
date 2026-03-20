@@ -27,9 +27,10 @@ import {
 } from "@mui/material";
 import Chip from "../../components/Chip";
 import Alert from "../../components/Alert";
-import { Trash2, ChevronsUpDown, Clock, ChevronUp, ChevronDown } from "lucide-react";
+import { Trash2, ChevronsUpDown, Clock, ChevronUp, ChevronDown, Scan as ScanIcon, GitBranch, Search, BarChart3 } from "lucide-react";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import TablePaginationActions from "../../components/TablePagination";
 import singleTheme from "../../themes/v1SingleTheme";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
@@ -52,7 +53,7 @@ function getGradeColor(grade: string | null | undefined): string {
     case "C":
       return palette.status.warning.text;
     case "D":
-      return "#E65100";
+      return palette.accent.orange.text;
     case "F":
       return palette.status.error.text;
     default:
@@ -527,7 +528,7 @@ export default function HistoryPage() {
       id: "repository",
       label: "REPOSITORY",
       render: (scan: Scan) => (
-        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+        <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>
           {scan.repository_owner}/{scan.repository_name}
         </Typography>
       ),
@@ -545,7 +546,7 @@ export default function HistoryPage() {
       render: (scan: Scan) => {
         if (scan.status !== "completed" || scan.risk_score == null) {
           return (
-            <Typography variant="body2" sx={{ color: palette.text.accent }}>
+            <Typography sx={{ fontSize: "13px", color: palette.text.accent }}>
               -
             </Typography>
           );
@@ -553,7 +554,7 @@ export default function HistoryPage() {
         const grade = scan.risk_score_grade;
         const color = getGradeColor(grade);
         return (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Box
               sx={{
                 px: 0.75,
@@ -567,7 +568,7 @@ export default function HistoryPage() {
                 {grade}
               </Typography>
             </Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, fontFamily: "monospace" }}>
+            <Typography sx={{ fontSize: "13px", fontWeight: 500, fontFamily: "monospace" }}>
               {Math.round(scan.risk_score)}
             </Typography>
           </Box>
@@ -578,7 +579,7 @@ export default function HistoryPage() {
       id: "findings",
       label: "FINDINGS",
       render: (scan: Scan) => (
-        <Typography variant="body2">
+        <Typography sx={{ fontSize: "13px" }}>
           {scan.status === "completed" ? scan.findings_count : "-"}
         </Typography>
       ),
@@ -587,7 +588,7 @@ export default function HistoryPage() {
       id: "files",
       label: "FILES SCANNED",
       render: (scan: Scan) => (
-        <Typography variant="body2">
+        <Typography sx={{ fontSize: "13px" }}>
           {scan.status === "completed" ? scan.files_scanned : "-"}
         </Typography>
       ),
@@ -598,7 +599,7 @@ export default function HistoryPage() {
       render: (scan: Scan) => (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <Clock size={14} color={palette.text.tertiary} />
-          <Typography variant="body2" sx={{ color: palette.text.tertiary, fontFamily: "monospace" }}>
+          <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, fontFamily: "monospace" }}>
             {scan.status === "completed" ? formatDuration(scan.duration_ms) : "-"}
           </Typography>
         </Box>
@@ -608,7 +609,7 @@ export default function HistoryPage() {
       id: "triggered_by",
       label: "TRIGGERED BY",
       render: (scan: Scan) => (
-        <Typography variant="body2">
+        <Typography sx={{ fontSize: "13px" }}>
           {scan.triggered_by.name}
           {scan.triggered_by.surname ? ` ${scan.triggered_by.surname}` : ""}
         </Typography>
@@ -670,7 +671,7 @@ export default function HistoryPage() {
         helpArticlePath="ai-detection/history"
       >
         <Box sx={{ textAlign: "center" }}>
-          <Typography variant="body1" sx={{ color: palette.text.tertiary }}>
+          <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
             Loading scan results...
           </Typography>
         </Box>
@@ -686,9 +687,26 @@ export default function HistoryPage() {
         helpArticlePath="ai-detection/history"
       >
         <EmptyState
-          message="No scans yet. Start your first scan to detect AI/ML libraries in a repository."
+          icon={ScanIcon}
+          message="No scans yet. Scan your repositories to detect AI and ML libraries."
           showBorder
-        />
+        >
+          <EmptyStateTip
+            icon={GitBranch}
+            title="Add a repository first"
+            description="Go to the Repositories tab and add a GitHub repository URL. Once added, you can run scans to detect AI/ML usage."
+          />
+          <EmptyStateTip
+            icon={Search}
+            title="What gets detected?"
+            description="AI/ML libraries (TensorFlow, PyTorch, scikit-learn), LLM SDKs (OpenAI, Anthropic), model files, ML pipelines, and containerized AI workloads."
+          />
+          <EmptyStateTip
+            icon={BarChart3}
+            title="Track changes over time"
+            description="Each scan creates a snapshot. Compare scans to see what AI components were added, removed, or changed across your codebase."
+          />
+        </EmptyState>
       </PageHeaderExtended>
     );
   }

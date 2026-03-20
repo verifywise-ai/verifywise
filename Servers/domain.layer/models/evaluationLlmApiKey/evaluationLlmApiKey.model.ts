@@ -119,9 +119,9 @@ export class EvaluationLlmApiKeyModel extends Model<EvaluationLlmApiKeyModel> im
   @Column({
     type: DataType.TEXT,
     allowNull: false,
-    field: 'encrypted_api_key',
+    field: 'api_key_encrypted',
   })
-  encrypted_api_key!: string;
+  api_key_encrypted!: string;
 
   @Column({
     type: DataType.DATE,

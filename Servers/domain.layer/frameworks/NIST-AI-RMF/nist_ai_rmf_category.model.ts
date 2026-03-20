@@ -1,14 +1,16 @@
 import {
   Column,
   DataType,
-  ForeignKey,
   Model,
   Table,
 } from "sequelize-typescript";
-import { NISTAIMRFFunctionModel } from "./nist_ai_rmf_function.model";
 
+/**
+ * NIST AI RMF Category Model
+ * Maps to nist_ai_rmf_categories_struct table in public schema
+ */
 @Table({
-  tableName: "nist_ai_rmf_categories",
+  tableName: "nist_ai_rmf_categories_struct",
   timestamps: false,
 })
 export class NISTAIMRFCategoryModel extends Model<NISTAIMRFCategoryModel> {
@@ -20,24 +22,36 @@ export class NISTAIMRFCategoryModel extends Model<NISTAIMRFCategoryModel> {
   id?: number;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.INTEGER,
+    allowNull: false,
   })
-  title?: string;
+  framework_id?: number;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.STRING(20),
+    allowNull: false,
+  })
+  function?: string;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+  })
+  category_id?: number;
+
+  @Column({
+    type: DataType.TEXT,
   })
   description?: string;
 
-  @ForeignKey(() => NISTAIMRFFunctionModel)
   @Column({
     type: DataType.INTEGER,
   })
-  function_id?: number;
+  order_no?: number;
 
   @Column({
-    type: DataType.INTEGER,
-    allowNull: true,
+    type: DataType.BOOLEAN,
+    defaultValue: false,
   })
-  index?: number;
+  is_demo?: boolean;
 }

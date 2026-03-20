@@ -34,13 +34,13 @@ const mapNotificationType = (type: Notification["type"]): NotificationType => {
  * This ensures notifications are persisted and can be viewed later, even if user is offline
  */
 export const sendNotification = async (
-  tenantId: string,
+  organizationId: number,
   userId: number,
   notification: Notification
 ): Promise<void> => {
   try {
     console.log(`📤 Sending notification (DB + Redis):`, {
-      tenantId,
+      organizationId,
       userId,
       type: notification.type,
       title: notification.title
@@ -56,7 +56,7 @@ export const sendNotification = async (
 
     // Use sendInAppNotification which stores in DB AND publishes to Redis
     await sendInAppNotification(
-      tenantId,
+      organizationId,
       {
         user_id: userId,
         type: mapNotificationType(notification.type),
@@ -90,14 +90,14 @@ export const sendNotification = async (
  * Used when we have all the context needed for rich email templates
  */
 export const sendNotificationWithContext = async (
-  tenantId: string,
+  organizationId: number,
   userId: number,
   notification: Notification,
   templateVariables: Record<string, string>
 ): Promise<void> => {
   try {
     console.log(`📤 Sending notification with context (DB + Redis):`, {
-      tenantId,
+      organizationId,
       userId,
       type: notification.type,
       title: notification.title
@@ -113,7 +113,7 @@ export const sendNotificationWithContext = async (
 
     // Use sendInAppNotification which stores in DB AND publishes to Redis
     await sendInAppNotification(
-      tenantId,
+      organizationId,
       {
         user_id: userId,
         type: mapNotificationType(notification.type),
@@ -154,24 +154,25 @@ interface ApprovalContext {
  * Get all approvers for a specific workflow step with their names
  */
 const getApproversForStep = async (
-  tenantId: string,
+  organizationId: number,
   requestId: number,
   stepNumber: number
 ): Promise<ApproverInfo[]> => {
-  console.log(`🔍 Fetching approvers for step ${stepNumber}, request ${requestId}, tenant ${tenantId}`);
+  console.log(`🔍 Fetching approvers for step ${stepNumber}, request ${requestId}, tenant ${organizationId}`);
 
   const approvers = (await sequelize.query(
     `SELECT DISTINCT asa.approver_id, u.name as approver_name
-     FROM "${tenantId}".approval_step_approvers asa
-     INNER JOIN "${tenantId}".approval_workflow_steps aws
-       ON asa.workflow_step_id = aws.id
-     INNER JOIN "${tenantId}".approval_requests ar
-       ON aws.workflow_id = ar.workflow_id
+     FROM approval_step_approvers asa
+     INNER JOIN approval_workflow_steps aws
+       ON asa.workflow_step_id = aws.id AND aws.organization_id = asa.organization_id
+     INNER JOIN approval_requests ar
+       ON aws.workflow_id = ar.workflow_id AND ar.organization_id = aws.organization_id
      INNER JOIN users u ON asa.approver_id = u.id
-     WHERE ar.id = :requestId
+     WHERE asa.organization_id = :organizationId
+       AND ar.id = :requestId
        AND aws.step_number = :stepNumber`,
     {
-      replacements: { requestId, stepNumber },
+      replacements: { organizationId, requestId, stepNumber },
       type: QueryTypes.SELECT,
     }
   )) as ApproverInfo[];
@@ -184,21 +185,21 @@ const getApproversForStep = async (
  * Get approval context (requester info, workflow info, etc.)
  */
 const getApprovalContext = async (
-  tenantId: string,
+  organizationId: number,
   requestId: number
 ): Promise<ApprovalContext | null> => {
   const result = (await sequelize.query(
     `SELECT
        u.name as requester_name,
        aw.workflow_title as workflow_name,
-       (SELECT COUNT(*) FROM "${tenantId}".approval_workflow_steps WHERE workflow_id = ar.workflow_id) as total_steps,
+       (SELECT COUNT(*) FROM approval_workflow_steps WHERE organization_id = ar.organization_id AND workflow_id = ar.workflow_id) as total_steps,
        ar.request_name as use_case_name
-     FROM "${tenantId}".approval_requests ar
+     FROM approval_requests ar
      INNER JOIN users u ON ar.requester_id = u.id
-     INNER JOIN "${tenantId}".approval_workflows aw ON ar.workflow_id = aw.id
-     WHERE ar.id = :requestId`,
+     INNER JOIN approval_workflows aw ON ar.workflow_id = aw.id AND aw.organization_id = ar.organization_id
+     WHERE ar.organization_id = :organizationId AND ar.id = :requestId`,
     {
-      replacements: { requestId },
+      replacements: { organizationId, requestId },
       type: QueryTypes.SELECT,
     }
   )) as ApprovalContext[];
@@ -210,29 +211,29 @@ const getApprovalContext = async (
  * Notify all approvers for a specific step of an approval workflow
  */
 export const notifyStepApprovers = async (
-  tenantId: string,
+  organizationId: number,
   requestId: number,
   stepNumber: number,
   requestName: string
 ): Promise<void> => {
   try {
     // Get approvers for this step (with names)
-    const approvers = await getApproversForStep(tenantId, requestId, stepNumber);
+    const approvers = await getApproversForStep(organizationId, requestId, stepNumber);
 
     // Get approval context (requester name, workflow name, total steps)
-    const context = await getApprovalContext(tenantId, requestId);
+    const context = await getApprovalContext(organizationId, requestId);
 
     console.log(
       `Notifying ${approvers.length} approvers for Step ${stepNumber} of request: ${requestName}`
     );
 
     // Build approval URL
-    const baseUrl = process.env.FRONTEND_URL || "https://app.verifywise.ai";
+    const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
     const approvalUrl = `${baseUrl}/approval-requests/${requestId}`;
 
     // Send notification to each approver with full context
     const notificationPromises = approvers.map((approver) =>
-      sendNotificationWithContext(tenantId, approver.approver_id, {
+      sendNotificationWithContext(organizationId, approver.approver_id, {
         title: "New Approval Request",
         message: `${requestName} - You are an approver for Step ${stepNumber}`,
         type: "approval_request",
@@ -260,7 +261,7 @@ export const notifyStepApprovers = async (
  * Notify the requester when their request is fully approved
  */
 export const notifyRequesterApproved = async (
-  tenantId: string,
+  organizationId: number,
   requesterId: number,
   requestId: number,
   requestName: string,
@@ -275,17 +276,17 @@ export const notifyRequesterApproved = async (
     let totalSteps = context?.total_steps || 1;
 
     if (!context) {
-      const fetchedContext = await getApprovalContext(tenantId, requestId);
+      const fetchedContext = await getApprovalContext(organizationId, requestId);
       if (fetchedContext) {
         requesterName = fetchedContext.requester_name;
         totalSteps = fetchedContext.total_steps;
       }
     }
 
-    const baseUrl = process.env.FRONTEND_URL || "https://app.verifywise.ai";
+    const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
     const useCaseUrl = `${baseUrl}/approval-requests/${requestId}`;
 
-    await sendNotificationWithContext(tenantId, requesterId, {
+    await sendNotificationWithContext(organizationId, requesterId, {
       title: "Request Approved",
       message: `Your request "${requestName}" has been approved`,
       type: "approval_complete",
@@ -306,7 +307,7 @@ export const notifyRequesterApproved = async (
  * Notify the requester when their request is rejected
  */
 export const notifyRequesterRejected = async (
-  tenantId: string,
+  organizationId: number,
   requesterId: number,
   requestId: number,
   requestName: string,
@@ -321,16 +322,16 @@ export const notifyRequesterRejected = async (
     let requesterName = context?.requester_name || "User";
 
     if (!context?.requester_name) {
-      const fetchedContext = await getApprovalContext(tenantId, requestId);
+      const fetchedContext = await getApprovalContext(organizationId, requestId);
       if (fetchedContext) {
         requesterName = fetchedContext.requester_name;
       }
     }
 
-    const baseUrl = process.env.FRONTEND_URL || "https://app.verifywise.ai";
+    const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
     const requestUrl = `${baseUrl}/approval-requests/${requestId}`;
 
-    await sendNotificationWithContext(tenantId, requesterId, {
+    await sendNotificationWithContext(organizationId, requesterId, {
       title: "Request Rejected",
       message: `Your request "${requestName}" has been rejected`,
       type: "approval_rejected",
@@ -352,7 +353,7 @@ export const notifyRequesterRejected = async (
  * Notify the requester when a step in their approval request is completed
  */
 export const notifyRequesterStepCompleted = async (
-  tenantId: string,
+  organizationId: number,
   requesterId: number,
   requestId: number,
   requestName: string,
@@ -367,17 +368,17 @@ export const notifyRequesterStepCompleted = async (
   try {
     // Fetch requester name if not available
     let requesterName = "User";
-    const fetchedContext = await getApprovalContext(tenantId, requestId);
+    const fetchedContext = await getApprovalContext(organizationId, requestId);
     if (fetchedContext) {
       requesterName = fetchedContext.requester_name;
     }
 
-    const baseUrl = process.env.FRONTEND_URL || "https://app.verifywise.ai";
+    const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
     const requestUrl = `${baseUrl}/approval-requests/${requestId}`;
 
     // Use sendInAppNotification directly with the step completion template
     await sendInAppNotification(
-      tenantId,
+      organizationId,
       {
         user_id: requesterId,
         type: NotificationType.APPROVAL_APPROVED,

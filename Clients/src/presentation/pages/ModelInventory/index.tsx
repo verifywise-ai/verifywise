@@ -88,12 +88,78 @@ import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import { ColumnSelector } from "../../components/Table/ColumnSelector";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { palette } from "../../themes/palette";
 
 const Alert = React.lazy(() => import("../../components/Alert"));
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
+
+// Column visibility management for Models tab
+type ModelInventoryColumn =
+  | "provider"
+  | "model"
+  | "version"
+  | "approver"
+  | "security_assessment"
+  | "risks"
+  | "status"
+  | "status_date"
+  | "actions";
+
+const MODEL_INVENTORY_COLUMNS: ColumnConfig<ModelInventoryColumn>[] = [
+  { key: "provider", label: "Provider", defaultVisible: true, alwaysVisible: true },
+  { key: "model", label: "Model", defaultVisible: true, alwaysVisible: true },
+  { key: "version", label: "Version", defaultVisible: true },
+  { key: "approver", label: "Approver", defaultVisible: true },
+  { key: "security_assessment", label: "Assessment", defaultVisible: true },
+  { key: "risks", label: "Risks", defaultVisible: true },
+  { key: "status", label: "Status", defaultVisible: true },
+  { key: "status_date", label: "Status date", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
+
+// Column visibility management for Model Risks tab
+type ModelRiskColumn =
+  | "risk_name"
+  | "model_name"
+  | "risk_level"
+  | "status"
+  | "owner"
+  | "target_date"
+  | "actions";
+
+const MODEL_RISK_COLUMNS: ColumnConfig<ModelRiskColumn>[] = [
+  { key: "risk_name", label: "Risk name", defaultVisible: true, alwaysVisible: true },
+  { key: "model_name", label: "Model name", defaultVisible: true },
+  { key: "risk_level", label: "Risk level", defaultVisible: true },
+  { key: "status", label: "Status", defaultVisible: true },
+  { key: "owner", label: "Owner", defaultVisible: true },
+  { key: "target_date", label: "Next review date", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
+
+// Column visibility management for Evidence Hub tab
+type EvidenceHubColumn =
+  | "evidence_name"
+  | "evidence_type"
+  | "mapped_models"
+  | "uploaded_by"
+  | "uploaded_on"
+  | "expiry_date"
+  | "actions";
+
+const EVIDENCE_HUB_COLUMNS: ColumnConfig<EvidenceHubColumn>[] = [
+  { key: "evidence_name", label: "Evidence name", defaultVisible: true, alwaysVisible: true },
+  { key: "evidence_type", label: "Type", defaultVisible: true },
+  { key: "mapped_models", label: "Mapped models", defaultVisible: true },
+  { key: "uploaded_by", label: "Uploaded by", defaultVisible: true },
+  { key: "uploaded_on", label: "Uploaded on", defaultVisible: true },
+  { key: "expiry_date", label: "Expiry", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
 
 const ModelInventory: React.FC = () => {
   const location = useLocation();
@@ -161,6 +227,36 @@ const ModelInventory: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
+  const {
+    visibleColumns: modelVisibleColumns,
+    allColumns: modelAllColumns,
+    toggleColumn: modelToggleColumn,
+    resetToDefaults: modelResetToDefaults,
+  } = useColumnVisibility<ModelInventoryColumn>({
+    tableId: "model-inventory-table",
+    columns: MODEL_INVENTORY_COLUMNS,
+  });
+
+  const {
+    visibleColumns: riskVisibleColumns,
+    allColumns: riskAllColumns,
+    toggleColumn: riskToggleColumn,
+    resetToDefaults: riskResetToDefaults,
+  } = useColumnVisibility<ModelRiskColumn>({
+    tableId: "model-risks-table",
+    columns: MODEL_RISK_COLUMNS,
+  });
+
+  const {
+    visibleColumns: evidenceVisibleColumns,
+    allColumns: evidenceAllColumns,
+    toggleColumn: evidenceToggleColumn,
+    resetToDefaults: evidenceResetToDefaults,
+  } = useColumnVisibility<EvidenceHubColumn>({
+    tableId: "evidence-hub-table",
+    columns: EVIDENCE_HUB_COLUMNS,
+  });
 
   // GroupBy state - models tab
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
@@ -2087,6 +2183,13 @@ const ModelInventory: React.FC = () => {
                   onGroupChange={handleGroupChange}
                 />
 
+                <ColumnSelector
+                  columns={modelAllColumns}
+                  visibleColumns={modelVisibleColumns}
+                  onToggleColumn={modelToggleColumn}
+                  onResetToDefaults={modelResetToDefaults}
+                />
+
                 {/* Search */}
                 <Box data-joyride-id="model-search">
                   <SearchBox
@@ -2161,6 +2264,7 @@ const ModelInventory: React.FC = () => {
                   hidePagination={options?.hidePagination}
                   modelRisks={modelRisksData}
                   flashRowId={flashRowId}
+                  visibleColumns={modelVisibleColumns}
                 />
               )}
             />
@@ -2191,6 +2295,12 @@ const ModelInventory: React.FC = () => {
                     { id: "owner", label: "Owner" },
                   ]}
                   onGroupChange={handleGroupChangeRisk}
+                />
+                <ColumnSelector
+                  columns={riskAllColumns}
+                  visibleColumns={riskVisibleColumns}
+                  onToggleColumn={riskToggleColumn}
+                  onResetToDefaults={riskResetToDefaults}
                 />
                 <SelectComponent
                   id="risk-status-filter"
@@ -2243,6 +2353,7 @@ const ModelInventory: React.FC = () => {
                   users={users}
                   models={modelInventoryData}
                   hidePagination={options?.hidePagination}
+                  visibleColumns={riskVisibleColumns}
                 />
               )}
             />
@@ -2282,6 +2393,12 @@ const ModelInventory: React.FC = () => {
                     { id: "model", label: "Model" },
                   ]}
                   onGroupChange={handleGroupChangeEvidence}
+                />
+                <ColumnSelector
+                  columns={evidenceAllColumns}
+                  visibleColumns={evidenceVisibleColumns}
+                  onToggleColumn={evidenceToggleColumn}
+                  onResetToDefaults={evidenceResetToDefaults}
                 />
                 {/* Search */}
                 <Box data-joyride-id="evidence-search">
@@ -2331,6 +2448,7 @@ const ModelInventory: React.FC = () => {
                   modelInventoryData={modelInventoryData}
                   deletingId={deletingEvidenceId}
                   hidePagination={options?.hidePagination}
+                  visibleColumns={evidenceVisibleColumns}
                 />
               )}
             />

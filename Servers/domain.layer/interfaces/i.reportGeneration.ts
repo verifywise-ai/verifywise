@@ -21,7 +21,7 @@ export interface ReportMetadata {
   projectFrameworkId: number;
   generatedAt: Date;
   generatedBy: string;
-  tenantId: string;
+  organizationId: number;
   isOrganizational: boolean;
 }
 

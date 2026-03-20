@@ -65,7 +65,7 @@ export async function getAllProjects(
     functionName: "getAllProjects",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -76,7 +76,7 @@ export async function getAllProjects(
 
     const projects = (await getAllProjectsQuery(
       { userId, role },
-      req.tenantId!
+      req.organizationId!
     )) as IProjectAttributes[];
 
     // Add approval status fields to each project
@@ -89,14 +89,14 @@ export async function getAllProjects(
           const hasPendingApproval = await hasPendingApprovalQuery(
             project.id,
             "use_case",
-            req.tenantId!
+            req.organizationId!
           );
 
           // Get the approval status (pending, rejected, or null)
           const approvalStatus = await getApprovalStatusQuery(
             project.id,
             "use_case",
-            req.tenantId!
+            req.organizationId!
           );
 
           // Add approval status to project response
@@ -111,7 +111,7 @@ export async function getAllProjects(
     try {
       const pluginUseCases = await PluginService.getDataFromProviders(
         "use-cases",
-        req.tenantId!,
+        req.organizationId!,
         sequelize
       );
       if (pluginUseCases.length > 0) {
@@ -129,7 +129,7 @@ export async function getAllProjects(
       functionName: "getAllProjects",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](allProjects));
@@ -141,7 +141,7 @@ export async function getAllProjects(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -159,18 +159,18 @@ export async function getProjectById(
     functionName: "getProjectById",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const project = await getProjectByIdQuery(projectId, req.tenantId!);
+    const project = await getProjectByIdQuery(projectId, req.organizationId!);
 
     if (project) {
       // Check if project has a pending approval request
       const hasPendingApproval = await hasPendingApprovalQuery(
         projectId,
         "use_case",
-        req.tenantId!
+        req.organizationId!
       );
 
       // Get the approval status (pending, rejected, or null)
@@ -178,7 +178,7 @@ export async function getProjectById(
       const approvalStatus = await getApprovalStatusQuery(
         projectId,
         "use_case",
-        req.tenantId!
+        req.organizationId!
       );
 
       // Add approval status to project response
@@ -192,7 +192,7 @@ export async function getProjectById(
         functionName: "getProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(STATUS_CODE[200](project));
@@ -204,7 +204,7 @@ export async function getProjectById(
       functionName: "getProjectById",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](project));
@@ -216,7 +216,7 @@ export async function getProjectById(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -235,7 +235,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
     functionName: "createProject",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -249,7 +249,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       newProject,
       newProject.members ?? [],
       newProject.framework,
-      req.tenantId!,
+      req.organizationId!,
       req.userId!,
       transaction
     );
@@ -264,7 +264,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           const eu = await createEUFrameworkQuery(
             createdProject.id!,
             newProject.enable_ai_data_insertion,
-            req.tenantId!,
+            req.organizationId!,
             transaction
           );
           frameworks["eu"] = eu;
@@ -272,7 +272,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           const iso42001 = await createISOFrameworkQuery(
             createdProject.id!,
             newProject.enable_ai_data_insertion,
-            req.tenantId!,
+            req.organizationId!,
             transaction
           );
           frameworks["iso42001"] = iso42001;
@@ -280,7 +280,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           const iso27001 = await createISO27001FrameworkQuery(
             createdProject.id!,
             newProject.enable_ai_data_insertion,
-            req.tenantId!,
+            req.organizationId!,
             transaction
           );
           frameworks["iso27001"] = iso27001;
@@ -288,7 +288,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           const nist = await createNISTAI_RMFFrameworkQuery(
             createdProject.id!,
             newProject.enable_ai_data_insertion,
-            req.tenantId!,
+            req.organizationId!,
             transaction
           );
           frameworks["nist_ai_rmf"] = nist;
@@ -307,7 +307,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         await recordUseCaseCreation(
           createdProject.id,
           req.userId,
-          req.tenantId!,
+          req.organizationId!,
           {
             project_title: createdProject.project_title,
             owner: createdProject.owner,
@@ -336,7 +336,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
 
         const workflow = await getApprovalWorkflowByIdQuery(
           createdProject.approval_workflow_id,
-          req.tenantId!,
+          req.organizationId!,
           transaction
         );
 
@@ -369,7 +369,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           const createdApprovalRequest = await createApprovalRequestQuery(
             approvalRequestData,
             workflowSteps,
-            req.tenantId!,
+            req.organizationId!,
             transaction
           );
           console.log("Approval request created successfully!");
@@ -406,13 +406,13 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         functionName: "createProject",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       // SSE notifications disabled for now - can be re-enabled later if needed
       // if ((createdProject as any)._approvalRequestId) {
       //   notifyStepApprovers(
-      //     req.tenantId!,
+      //     req.organizationId!,
       //     (createdProject as any)._approvalRequestId,
       //     1, // Step 1
       //     (createdProject as any)._approvalRequestName
@@ -426,7 +426,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         projectId: createdProject.id!,
         projectName: createdProject.project_title,
         adminId: createdProject.owner,
-        tenantId: req.tenantId!,
+        organizationId: req.organizationId!,
         userId: req.userId!,
       }).catch(async (emailError) => {
         // Log the email error but don't fail the project creation
@@ -437,7 +437,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           fileName: "project.ctrl.ts",
           error: emailError as Error,
           userId: req.userId!,
-          tenantId: req.tenantId!,
+          organizationId: req.organizationId!,
         });
       });
 
@@ -460,7 +460,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           fileName: "project.ctrl.ts",
           error: slackError as Error,
           userId: req.userId!,
-          tenantId: req.tenantId!,
+          tenantId: req.organizationId!,
         });
       });
 
@@ -469,7 +469,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       if (createdProject.owner) {
         const assignerName = `${actor.name} ${actor.surname}`.trim();
         notifyUserAssigned(
-          req.tenantId!,
+          req.organizationId!,
           createdProject.owner,
           {
             entityType: "project",
@@ -497,7 +497,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       functionName: "createProject",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(503).json(STATUS_CODE[503]({}));
@@ -512,7 +512,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         fileName: "project.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -525,7 +525,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         fileName: "project.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -537,7 +537,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -557,7 +557,7 @@ export async function updateProjectById(
     functionName: "updateProjectById",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -570,13 +570,13 @@ export async function updateProjectById(
         fileName: "project.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     // Find existing project
-    const existingProject = await getProjectByIdQuery(projectId, req.tenantId!);
+    const existingProject = await getProjectByIdQuery(projectId, req.organizationId!);
 
     if (!existingProject) {
       await logSuccess({
@@ -585,7 +585,7 @@ export async function updateProjectById(
         functionName: "updateProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
     }
@@ -610,7 +610,7 @@ export async function updateProjectById(
     // Get current members before update to identify newly added ones
     const currentMembers = await getCurrentProjectMembers(
       projectId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -618,7 +618,7 @@ export async function updateProjectById(
       projectId,
       updatedProject,
       members,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -633,7 +633,7 @@ export async function updateProjectById(
           await recordMultipleFieldChanges(
             projectId,
             req.userId,
-            req.tenantId!,
+            req.organizationId!,
             changes,
             transaction
           );
@@ -648,7 +648,7 @@ export async function updateProjectById(
         functionName: "updateProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       // Send owner assignment notification if owner changed
@@ -659,7 +659,7 @@ export async function updateProjectById(
         const assigner = await getUserByIdQuery(userId);
         const assignerName = assigner ? `${assigner.name} ${assigner.surname}`.trim() : "Someone";
         notifyUserAssigned(
-          req.tenantId!,
+          req.organizationId!,
           newOwner,
           {
             entityType: "project",
@@ -701,7 +701,7 @@ export async function updateProjectById(
                   `Invalid role_id type: ${typeof memberUser.role_id}`
                 ),
                 userId: req.userId!,
-                tenantId: req.tenantId!,
+                tenantId: req.organizationId!,
               });
               continue;
             }
@@ -723,7 +723,7 @@ export async function updateProjectById(
                 adminId: req.userId!,
                 userId: memberId,
                 role: role,
-                tenantId: req.tenantId!,
+                organizationId: req.organizationId!,
               }).catch(async (emailError) => {
                 await logFailure({
                   eventType: "Update",
@@ -732,7 +732,7 @@ export async function updateProjectById(
                   fileName: "project.ctrl.ts",
                   error: emailError as Error,
                   userId: req.userId!,
-                  tenantId: req.tenantId!,
+                  organizationId: req.organizationId!,
                 });
               });
             } else {
@@ -743,7 +743,7 @@ export async function updateProjectById(
                 fileName: "project.ctrl.ts",
                 error: new Error(`Unmapped role_id: ${memberUser.role_id}`),
                 userId: req.userId!,
-                tenantId: req.tenantId!,
+                tenantId: req.organizationId!,
               });
             }
           }
@@ -755,7 +755,7 @@ export async function updateProjectById(
             fileName: "project.ctrl.ts",
             error: userLookupError as Error,
             userId: req.userId!,
-            tenantId: req.tenantId!,
+            tenantId: req.organizationId!,
           });
         }
       }
@@ -769,7 +769,7 @@ export async function updateProjectById(
       functionName: "updateProjectById",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -784,7 +784,7 @@ export async function updateProjectById(
         fileName: "project.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -797,7 +797,7 @@ export async function updateProjectById(
         fileName: "project.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -809,7 +809,7 @@ export async function updateProjectById(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -828,7 +828,7 @@ export async function deleteProjectById(
     functionName: "deleteProjectById",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -836,7 +836,7 @@ export async function deleteProjectById(
     const pendingApprovalRequestId = await getPendingApprovalRequestIdQuery(
       projectId,
       "use_case",
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -844,7 +844,7 @@ export async function deleteProjectById(
       console.log(`Withdrawing approval request ${pendingApprovalRequestId} for project ${projectId} before deletion`);
       await withdrawApprovalRequestQuery(
         pendingApprovalRequestId,
-        req.tenantId!,
+        req.organizationId!,
         transaction
       );
       console.log(`Approval request ${pendingApprovalRequestId} withdrawn successfully`);
@@ -856,14 +856,14 @@ export async function deleteProjectById(
       await recordUseCaseDeletion(
         projectId,
         req.userId,
-        req.tenantId!,
+        req.organizationId!,
         transaction
       );
     }
 
     const deletedProject = await deleteProjectByIdQuery(
       projectId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -876,7 +876,7 @@ export async function deleteProjectById(
         functionName: "deleteProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(202).json(STATUS_CODE[202](deletedProject));
@@ -888,7 +888,7 @@ export async function deleteProjectById(
       functionName: "deleteProjectById",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -902,7 +902,7 @@ export async function deleteProjectById(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -920,11 +920,11 @@ export async function getProjectStatsById(
     functionName: "getProjectStatsById",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const project: any = await getProjectByIdQuery(projectId, req.tenantId!);
+    const project: any = await getProjectByIdQuery(projectId, req.organizationId!);
     const project_owner = project.owner;
     const ownerUser: any = getUserByIdQuery(project_owner);
     const project_last_updated = project.last_updated;
@@ -947,7 +947,7 @@ export async function getProjectStatsById(
       functionName: "getProjectStatsById",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(202).json(STATUS_CODE[202](overviewDetails));
@@ -959,7 +959,7 @@ export async function getProjectStatsById(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -977,13 +977,13 @@ export async function getProjectRisksCalculations(
     functionName: "getProjectRisksCalculations",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     const projectRisksCalculations = await calculateProjectRisks(
       projectId,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -992,7 +992,7 @@ export async function getProjectRisksCalculations(
       functionName: "getProjectRisksCalculations",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res
@@ -1010,7 +1010,7 @@ export async function getProjectRisksCalculations(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -1028,13 +1028,13 @@ export async function getVendorRisksCalculations(
     functionName: "getVendorRisksCalculations",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     const vendorRisksCalculations = await calculateVendirRisks(
       projectId,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -1043,7 +1043,7 @@ export async function getVendorRisksCalculations(
       functionName: "getVendorRisksCalculations",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res
@@ -1061,7 +1061,7 @@ export async function getVendorRisksCalculations(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -1076,27 +1076,27 @@ export async function getCompliances(req: Request, res: Response) {
     functionName: "getCompliances",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const project = await getProjectByIdQuery(projectId, req.tenantId!);
+    const project = await getProjectByIdQuery(projectId, req.organizationId!);
     if (project) {
       const controlCategories = (await getControlCategoryByProjectIdQuery(
         project.id!,
-        req.tenantId!
+        req.organizationId!
       )) as IControlCategory[];
       for (const category of controlCategories) {
         if (category) {
           const controls = (await getAllControlsByControlGroupQuery(
             category.id,
-            req.tenantId!
+            req.organizationId!
           )) as IControl[];
           for (const control of controls) {
             if (control && control.id) {
               const subControls = await getAllSubcontrolsByControlIdQuery(
                 control.id,
-                req.tenantId!
+                req.organizationId!
               );
               control.numberOfSubcontrols = subControls.length;
               control.numberOfDoneSubcontrols = subControls.filter(
@@ -1115,7 +1115,7 @@ export async function getCompliances(req: Request, res: Response) {
         functionName: "getCompliances",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(STATUS_CODE[200](controlCategories));
@@ -1127,7 +1127,7 @@ export async function getCompliances(req: Request, res: Response) {
       functionName: "getCompliances",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](project));
@@ -1139,7 +1139,7 @@ export async function getCompliances(req: Request, res: Response) {
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -1154,14 +1154,14 @@ export async function projectComplianceProgress(req: Request, res: Response) {
     functionName: "projectComplianceProgress",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const project = await getProjectByIdQuery(projectId, req.tenantId!);
+    const project = await getProjectByIdQuery(projectId, req.organizationId!);
     if (project) {
       const { totalSubcontrols, doneSubcontrols } =
-        await countSubControlsByProjectId(project.id!, req.tenantId!);
+        await countSubControlsByProjectId(project.id!, req.organizationId!);
 
       await logSuccess({
         eventType: "Read",
@@ -1169,7 +1169,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
         functionName: "projectComplianceProgress",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1186,7 +1186,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
       functionName: "projectComplianceProgress",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](project));
@@ -1198,7 +1198,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -1213,14 +1213,14 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
     functionName: "projectAssessmentProgress",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const project = await getProjectByIdQuery(projectId, req.tenantId!);
+    const project = await getProjectByIdQuery(projectId, req.organizationId!);
     if (project) {
       const { totalAssessments, answeredAssessments } =
-        await countAnswersByProjectId(project.id!, req.tenantId!);
+        await countAnswersByProjectId(project.id!, req.organizationId!);
 
       await logSuccess({
         eventType: "Read",
@@ -1228,7 +1228,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
         functionName: "projectAssessmentProgress",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1245,7 +1245,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
       functionName: "projectAssessmentProgress",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](project));
@@ -1257,7 +1257,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -1275,7 +1275,7 @@ export async function allProjectsComplianceProgress(
     functionName: "allProjectsComplianceProgress",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -1284,12 +1284,12 @@ export async function allProjectsComplianceProgress(
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const projects = await getAllProjectsQuery({ userId, role }, req.tenantId!);
+    const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
     if (projects && projects.length > 0) {
       await Promise.all(
         projects.map(async (project) => {
           const { totalSubcontrols, doneSubcontrols } =
-            await countSubControlsByProjectId(project.id!, req.tenantId!);
+            await countSubControlsByProjectId(project.id!, req.organizationId!);
           totalNumberOfSubcontrols += parseInt(totalSubcontrols);
           totalNumberOfDoneSubcontrols += parseInt(doneSubcontrols);
         })
@@ -1301,7 +1301,7 @@ export async function allProjectsComplianceProgress(
         functionName: "allProjectsComplianceProgress",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1318,7 +1318,7 @@ export async function allProjectsComplianceProgress(
       functionName: "allProjectsComplianceProgress",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](projects));
@@ -1330,7 +1330,7 @@ export async function allProjectsComplianceProgress(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -1348,7 +1348,7 @@ export async function allProjectsAssessmentProgress(
     functionName: "allProjectsAssessmentProgress",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -1357,12 +1357,12 @@ export async function allProjectsAssessmentProgress(
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const projects = await getAllProjectsQuery({ userId, role }, req.tenantId!);
+    const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
     if (projects && projects.length > 0) {
       await Promise.all(
         projects.map(async (project) => {
           const { totalAssessments, answeredAssessments } =
-            await countAnswersByProjectId(project.id!, req.tenantId!);
+            await countAnswersByProjectId(project.id!, req.organizationId!);
           totalNumberOfQuestions += parseInt(totalAssessments);
           totalNumberOfAnsweredQuestions += parseInt(answeredAssessments);
         })
@@ -1374,7 +1374,7 @@ export async function allProjectsAssessmentProgress(
         functionName: "allProjectsAssessmentProgress",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1391,7 +1391,7 @@ export async function allProjectsAssessmentProgress(
       functionName: "allProjectsAssessmentProgress",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](projects));
@@ -1403,7 +1403,7 @@ export async function allProjectsAssessmentProgress(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -1423,12 +1423,12 @@ export async function updateProjectStatus(
     functionName: "updateProjectStatus",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     // Check if project exists
-    const existingProject = await getProjectByIdQuery(projectId, req.tenantId!);
+    const existingProject = await getProjectByIdQuery(projectId, req.organizationId!);
     if (!existingProject) {
       await logSuccess({
         eventType: "Update",
@@ -1436,7 +1436,7 @@ export async function updateProjectStatus(
         functionName: "updateProjectStatus",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(404).json(STATUS_CODE[404]({}));
@@ -1447,7 +1447,7 @@ export async function updateProjectStatus(
       projectId,
       { status, last_updated: new Date(), last_updated_by: req.userId! },
       [], // no members update
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -1457,7 +1457,7 @@ export async function updateProjectStatus(
         await recordMultipleFieldChanges(
           projectId,
           req.userId,
-          req.tenantId!,
+          req.organizationId!,
           [
             {
               fieldName: "status",
@@ -1477,7 +1477,7 @@ export async function updateProjectStatus(
         functionName: "updateProjectStatus",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(STATUS_CODE[200](updatedProject));
@@ -1497,7 +1497,7 @@ export async function updateProjectStatus(
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

@@ -124,6 +124,17 @@ export async function scheduleShadowAiJobs() {
       removeOnFail: false,
     },
   );
+
+  // AI Gateway: monthly budget reset (runs at 00:05 on the 1st of each month)
+  await automationQueue.add(
+    "ai_gateway_budget_reset",
+    { type: "ai_gateway" },
+    {
+      repeat: { pattern: "5 0 1 * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
 }
 
 export async function scheduleAgentDiscoverySync() {
@@ -148,6 +159,34 @@ export async function scheduleAiDetectionScanCheck() {
     { type: "ai_detection" },
     {
       repeat: { pattern: "*/5 * * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
+export async function scheduleAiGatewayRiskDetection() {
+  logger.info("Adding AI Gateway risk detection jobs to the queue...");
+  // Daily risk detection at 6 AM
+  await automationQueue.add(
+    "ai_gateway_risk_detection",
+    { type: "ai_gateway_risk" },
+    {
+      repeat: { pattern: "0 6 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
+export async function scheduleAiGatewayCacheCleanup() {
+  logger.info("Adding AI Gateway cache cleanup jobs to the queue...");
+  // Daily cache cleanup at 3 AM — purge expired entries
+  await automationQueue.add(
+    "ai_gateway_cache_cleanup",
+    { type: "ai_gateway_cache" },
+    {
+      repeat: { pattern: "0 3 * * *" },
       removeOnComplete: true,
       removeOnFail: false,
     },

@@ -8,11 +8,9 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { IShareLinkCreate, IShareLinkUpdate } from "../domain.layer/interfaces/i.shareLink";
 import crypto from "crypto";
 import {
-  isValidTenantHash,
   isValidResourceType,
   isValidShareToken,
   sanitizeErrorMessage,
-  safeSQLIdentifier,
 } from "../utils/security.utils";
 import { logProcessing, logSuccess } from "../utils/logger/logHelper";
 
@@ -23,17 +21,12 @@ import { logProcessing, logSuccess } from "../utils/logger/logHelper";
 export const createShareLink = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
   const { resource_type, resource_id, settings, expires_at }: IShareLinkCreate = req.body;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logStructured('processing', `starting share link creation`, 'createShareLink', 'shareLink.ctrl.ts');
-  logger.debug(`🛠️ Creating share link in tenant ${tenantId}`);
+  logger.debug(`🛠️ Creating share link for organization ${organizationId}`);
 
   try {
-    // Validate tenant hash format
-    if (!isValidTenantHash(tenantId)) {
-      throw new ValidationException("Invalid tenant identifier");
-    }
-
     // Validate required fields
     if (!resource_type || resource_id === undefined || resource_id === null) {
       throw new ValidationException("resource_type and resource_id are required");
@@ -62,19 +55,17 @@ export const createShareLink = async (req: Request, res: Response) => {
 
     const finalSettings = settings || defaultSettings;
 
-    // Validate and sanitize tenant ID before using in SQL
-    const safeTenantId = safeSQLIdentifier(tenantId);
-
-    // Create the share link using raw SQL with tenant schema
+    // Create the share link using raw SQL with organization_id filter
     const createQuery = `
-      INSERT INTO "${safeTenantId}".share_links
-      (share_token, resource_type, resource_id, created_by, settings, is_enabled, expires_at, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      INSERT INTO share_links
+      (organization_id, share_token, resource_type, resource_id, created_by, settings, is_enabled, expires_at, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
       RETURNING *;
     `;
 
     const result = await sequelize.query(createQuery, {
       bind: [
+        organizationId,
         share_token,
         resource_type,
         resource_id,
@@ -115,11 +106,11 @@ export const createShareLink = async (req: Request, res: Response) => {
     await transaction.rollback();
     if (error instanceof ValidationException) {
       logStructured('error', `validation failed: ${error.message}`, 'createShareLink', 'shareLink.ctrl.ts');
-      await logEvent('Error', `Validation error during share link creation: ${error.message}`, req.userId!, req.tenantId!);
+      await logEvent('Error', `Validation error during share link creation: ${error.message}`, req.userId!, req.organizationId!);
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
     logStructured('error', `unexpected error creating share link`, 'createShareLink', 'shareLink.ctrl.ts');
-    await logEvent('Error', `Unexpected error during share link creation: ${(error as Error).message}`, req.userId!, req.tenantId!);
+    await logEvent('Error', `Unexpected error during share link creation: ${(error as Error).message}`, req.userId!, req.organizationId!);
     logger.error('❌ Error in createShareLink:', error);
 
     // Sanitize error message before sending to client
@@ -135,17 +126,12 @@ export const createShareLink = async (req: Request, res: Response) => {
 export const getShareLinksForResource = async (req: Request, res: Response) => {
   const resourceType = Array.isArray(req.params.resourceType) ? req.params.resourceType[0] : req.params.resourceType;
   const resourceId = Array.isArray(req.params.resourceId) ? req.params.resourceId[0] : req.params.resourceId;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logStructured('processing', `fetching share links`, 'getShareLinksForResource', 'shareLink.ctrl.ts');
-  logger.debug(`🛠️ Fetching share links in tenant ${tenantId}`);
+  logger.debug(`🛠️ Fetching share links for organization ${organizationId}`);
 
   try {
-    // Validate tenant hash
-    if (!isValidTenantHash(tenantId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid tenant identifier"));
-    }
-
     // Validate resource type
     if (!isValidResourceType(resourceType)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid resource type"));
@@ -157,16 +143,14 @@ export const getShareLinksForResource = async (req: Request, res: Response) => {
       return res.status(400).json(STATUS_CODE[400]("Invalid resource ID"));
     }
 
-    const safeTenantId = safeSQLIdentifier(tenantId);
-
     const query = `
-      SELECT * FROM "${safeTenantId}".share_links
-      WHERE resource_type = $1 AND resource_id = $2
+      SELECT * FROM share_links
+      WHERE organization_id = $1 AND resource_type = $2 AND resource_id = $3
       ORDER BY created_at DESC;
     `;
 
     const shareLinks = await sequelize.query(query, {
-      bind: [resourceType, parseInt(resourceId)],
+      bind: [organizationId, resourceType, parseInt(resourceId)],
       type: QueryTypes.SELECT,
     }) as any[];
 
@@ -196,7 +180,7 @@ export const getShareLinksForResource = async (req: Request, res: Response) => {
     return res.status(200).json(STATUS_CODE[200](response));
   } catch (error) {
     logStructured('error', `unexpected error fetching share links`, 'getShareLinksForResource', 'shareLink.ctrl.ts');
-    await logEvent('Error', `Unexpected error fetching share links: ${(error as Error).message}`, req.userId!, req.tenantId!);
+    await logEvent('Error', `Unexpected error fetching share links: ${(error as Error).message}`, req.userId!, req.organizationId!);
     logger.error('❌ Error in getShareLinksForResource:', error);
     const safeMessage = sanitizeErrorMessage(error as Error, "Failed to fetch share links");
     return res.status(500).json(STATUS_CODE[500](safeMessage));
@@ -205,7 +189,7 @@ export const getShareLinksForResource = async (req: Request, res: Response) => {
 
 /**
  * Get a share link by token (public endpoint - no auth required)
- * Searches across all tenant schemas to find the share link
+ * Searches the shared share_links table to find the share link
  * GET /api/shares/token/:token
  */
 export const getShareLinkByToken = async (req: Request, res: Response) => {
@@ -220,40 +204,19 @@ export const getShareLinkByToken = async (req: Request, res: Response) => {
       return res.status(400).json(STATUS_CODE[400]({ message: "Invalid share link format" }));
     }
 
-    // Get all tenant schemas
-    const schemasQuery = `
-      SELECT schema_name
-      FROM information_schema.schemata
-      WHERE schema_name NOT IN ('public', 'information_schema', 'pg_catalog', 'pg_toast')
-        AND schema_name NOT LIKE 'pg_%';
+    // Search for the share link in the shared table
+    const query = `
+      SELECT * FROM share_links
+      WHERE share_token = $1
+      LIMIT 1;
     `;
 
-    const schemas = await sequelize.query(schemasQuery, {
+    const result = await sequelize.query(query, {
+      bind: [token],
       type: QueryTypes.SELECT,
-    }) as { schema_name: string }[];
+    }) as any[];
 
-    let shareLink: any = null;
-    let tenantSchema: string | null = null;
-
-    // Search for the share link across all tenant schemas
-    for (const schema of schemas) {
-      const query = `
-        SELECT * FROM "${schema.schema_name}".share_links
-        WHERE share_token = $1
-        LIMIT 1;
-      `;
-
-      const result = await sequelize.query(query, {
-        bind: [token],
-        type: QueryTypes.SELECT,
-      }) as any[];
-
-      if (result.length > 0) {
-        shareLink = result[0];
-        tenantSchema = schema.schema_name;
-        break;
-      }
-    }
+    const shareLink = result.length > 0 ? result[0] : null;
 
     if (!shareLink) {
       logStructured('error', `share link not found`, 'getShareLinkByToken', 'shareLink.ctrl.ts');
@@ -269,7 +232,7 @@ export const getShareLinkByToken = async (req: Request, res: Response) => {
     }
 
     logStructured('successful', `fetched share link ${shareLink.id}`, 'getShareLinkByToken', 'shareLink.ctrl.ts');
-    logger.debug(`✅ Fetched share link: ${shareLink.id} from tenant ${tenantSchema}`);
+    logger.debug(`✅ Fetched share link: ${shareLink.id} for organization ${shareLink.organization_id}`);
 
     const response = {
       id: shareLink.id,
@@ -287,7 +250,7 @@ export const getShareLinkByToken = async (req: Request, res: Response) => {
     return res.status(200).json(STATUS_CODE[200](response));
   } catch (error) {
     logStructured('error', `unexpected error fetching share link`, 'getShareLinkByToken', 'shareLink.ctrl.ts');
-    await logEvent('Error', `Unexpected error fetching share link: ${(error as Error).message}`, req.userId!, req.tenantId!);
+    await logEvent('Error', `Unexpected error fetching share link: ${(error as Error).message}`, req.userId!, req.organizationId!);
     logger.error('❌ Error in getShareLinkByToken:', error);
     const safeMessage = sanitizeErrorMessage(error as Error, "An error occurred");
     return res.status(500).json(STATUS_CODE[500](safeMessage));
@@ -302,37 +265,29 @@ export const updateShareLink = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { settings, is_enabled, expires_at }: IShareLinkUpdate = req.body;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logStructured('processing', `updating share link ${id} with body: ${JSON.stringify(req.body)}`, 'updateShareLink', 'shareLink.ctrl.ts');
-  logger.debug(`🛠️ Updating share link: ${id} in tenant ${tenantId}`);
+  logger.debug(`🛠️ Updating share link: ${id} for organization ${organizationId}`);
   logProcessing({
     description: `UPDATE DEBUG | ID=${id}, is_enabled=${is_enabled} (type=${typeof is_enabled}), settings=${JSON.stringify(settings)}`,
     functionName: 'updateShareLink',
     fileName: 'shareLink.ctrl.ts',
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
 
   try {
-    // Validate tenant hash format
-    if (!isValidTenantHash(tenantId)) {
-      await transaction.rollback();
-      throw new ValidationException("Invalid tenant identifier");
-    }
-
-    const safeTenantId = safeSQLIdentifier(tenantId);
-
     // First, fetch the share link to verify ownership
     const selectQuery = `
-      SELECT * FROM "${safeTenantId}".share_links
-      WHERE id = $1
+      SELECT * FROM share_links
+      WHERE id = $1 AND organization_id = $2
       LIMIT 1;
     `;
 
     const result = await sequelize.query(selectQuery, {
-      bind: [parseInt(id)],
+      bind: [parseInt(id), organizationId],
       transaction,
       type: QueryTypes.SELECT,
     }) as any[];
@@ -349,7 +304,7 @@ export const updateShareLink = async (req: Request, res: Response) => {
       functionName: 'updateShareLink',
       fileName: 'shareLink.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // Check if user owns this share link
@@ -386,11 +341,12 @@ export const updateShareLink = async (req: Request, res: Response) => {
 
     updates.push(`updated_at = NOW()`);
     binds.push(parseInt(id));
+    binds.push(organizationId);
 
     const updateQuery = `
-      UPDATE "${safeTenantId}".share_links
+      UPDATE share_links
       SET ${updates.join(', ')}
-      WHERE id = $${bindIndex}
+      WHERE id = $${bindIndex} AND organization_id = $${bindIndex + 1}
       RETURNING *;
     `;
 
@@ -408,7 +364,7 @@ export const updateShareLink = async (req: Request, res: Response) => {
       functionName: 'updateShareLink',
       fileName: 'shareLink.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     logStructured('successful', `updated share link ${id} - new is_enabled: ${updatedLink.is_enabled}`, 'updateShareLink', 'shareLink.ctrl.ts');
     logger.debug(`✅ Updated share link: ${id}`);
@@ -437,7 +393,7 @@ export const updateShareLink = async (req: Request, res: Response) => {
   } catch (error) {
     await transaction.rollback();
     logStructured('error', `unexpected error updating share link ${id}`, 'updateShareLink', 'shareLink.ctrl.ts');
-    await logEvent('Error', `Unexpected error updating share link: ${(error as Error).message}`, req.userId!, req.tenantId!);
+    await logEvent('Error', `Unexpected error updating share link: ${(error as Error).message}`, req.userId!, req.organizationId!);
     logger.error('❌ Error in updateShareLink:', error);
     const safeMessage = sanitizeErrorMessage(error as Error, "An error occurred");
     return res.status(500).json(STATUS_CODE[500](safeMessage));
@@ -451,29 +407,21 @@ export const updateShareLink = async (req: Request, res: Response) => {
 export const deleteShareLink = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logStructured('processing', `deleting share link ${id}`, 'deleteShareLink', 'shareLink.ctrl.ts');
-  logger.debug(`🛠️ Deleting share link: ${id} in tenant ${tenantId}`);
+  logger.debug(`🛠️ Deleting share link: ${id} for organization ${organizationId}`);
 
   try {
-    // Validate tenant hash format
-    if (!isValidTenantHash(tenantId)) {
-      await transaction.rollback();
-      throw new ValidationException("Invalid tenant identifier");
-    }
-
-    const safeTenantId = safeSQLIdentifier(tenantId);
-
     // First, fetch the share link to verify ownership
     const selectQuery = `
-      SELECT * FROM "${safeTenantId}".share_links
-      WHERE id = $1
+      SELECT * FROM share_links
+      WHERE id = $1 AND organization_id = $2
       LIMIT 1;
     `;
 
     const result = await sequelize.query(selectQuery, {
-      bind: [parseInt(id)],
+      bind: [parseInt(id), organizationId],
       transaction,
       type: QueryTypes.SELECT,
     }) as any[];
@@ -495,12 +443,12 @@ export const deleteShareLink = async (req: Request, res: Response) => {
 
     // Delete the share link
     const deleteQuery = `
-      DELETE FROM "${safeTenantId}".share_links
-      WHERE id = $1;
+      DELETE FROM share_links
+      WHERE id = $1 AND organization_id = $2;
     `;
 
     await sequelize.query(deleteQuery, {
-      bind: [parseInt(id)],
+      bind: [parseInt(id), organizationId],
       transaction,
       type: QueryTypes.DELETE,
     });
@@ -513,7 +461,7 @@ export const deleteShareLink = async (req: Request, res: Response) => {
   } catch (error) {
     await transaction.rollback();
     logStructured('error', `unexpected error deleting share link ${id}`, 'deleteShareLink', 'shareLink.ctrl.ts');
-    await logEvent('Error', `Unexpected error deleting share link: ${(error as Error).message}`, req.userId!, req.tenantId!);
+    await logEvent('Error', `Unexpected error deleting share link: ${(error as Error).message}`, req.userId!, req.organizationId!);
     logger.error('❌ Error in deleteShareLink:', error);
     const safeMessage = sanitizeErrorMessage(error as Error, "An error occurred");
     return res.status(500).json(STATUS_CODE[500](safeMessage));
@@ -532,45 +480,27 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
   logger.debug(`🛠️ Fetching shared data by token`);
 
   try {
-    // First, get the share link metadata (reuse existing logic)
-    const schemasQuery = `
-      SELECT schema_name
-      FROM information_schema.schemata
-      WHERE schema_name NOT IN ('public', 'information_schema', 'pg_catalog', 'pg_toast')
-        AND schema_name NOT LIKE 'pg_%';
+    // First, get the share link metadata from the shared table
+    const shareLinkQuery = `
+      SELECT * FROM share_links
+      WHERE share_token = $1
+      LIMIT 1;
     `;
 
-    const schemas = await sequelize.query(schemasQuery, {
+    const shareLinkResult = await sequelize.query(shareLinkQuery, {
+      bind: [token],
       type: QueryTypes.SELECT,
-    }) as { schema_name: string }[];
+    }) as any[];
 
-    let shareLink: any = null;
-    let tenantSchema: string | null = null;
-
-    // Search for the share link across all tenant schemas
-    for (const schema of schemas) {
-      const query = `
-        SELECT * FROM "${schema.schema_name}".share_links
-        WHERE share_token = $1
-        LIMIT 1;
-      `;
-
-      const result = await sequelize.query(query, {
-        bind: [token],
-        type: QueryTypes.SELECT,
-      }) as any[];
-
-      if (result.length > 0) {
-        shareLink = result[0];
-        tenantSchema = schema.schema_name;
-        break;
-      }
-    }
+    const shareLink = shareLinkResult.length > 0 ? shareLinkResult[0] : null;
 
     if (!shareLink) {
       logStructured('error', `share link not found`, 'getSharedDataByToken', 'shareLink.ctrl.ts');
       return res.status(404).json(STATUS_CODE[404]({ message: "Share link not found" }));
     }
+
+    // Get the organization_id from the share link for filtering resource data
+    const shareLinkOrgId = shareLink.organization_id;
 
     // Log share link details for debugging
     logStructured('processing', `validating share link: id=${shareLink.id}, is_enabled=${shareLink.is_enabled} (type: ${typeof shareLink.is_enabled}), expires_at=${shareLink.expires_at}`, 'getSharedDataByToken', 'shareLink.ctrl.ts');
@@ -622,20 +552,23 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
               NULLIF(TRIM(CONCAT(COALESCE(u.name, ''), ' ', COALESCE(u.surname, ''))), ''),
               NULL
             ) as approver_name
-          FROM "${tenantSchema}".${tableName} mi
-          LEFT JOIN public.users u ON mi.approver = u.id
+          FROM ${tableName} mi
+          LEFT JOIN users u ON mi.approver = u.id
+          WHERE mi.organization_id = $1
           ORDER BY mi.id DESC
           LIMIT 100;
         `;
       } else {
         resourceQuery = `
-          SELECT * FROM "${tenantSchema}".${tableName}
+          SELECT * FROM ${tableName}
+          WHERE organization_id = $1
           ORDER BY id DESC
           LIMIT 100;
         `;
       }
 
       resourceResult = await sequelize.query(resourceQuery, {
+        bind: [shareLinkOrgId],
         type: QueryTypes.SELECT,
       }) as any[];
 
@@ -648,13 +581,13 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
     } else {
       // Fetch single record
       resourceQuery = `
-        SELECT * FROM "${tenantSchema}".${tableName}
-        WHERE id = $1
+        SELECT * FROM ${tableName}
+        WHERE id = $1 AND organization_id = $2
         LIMIT 1;
       `;
 
       resourceResult = await sequelize.query(resourceQuery, {
-        bind: [resourceId],
+        bind: [resourceId, shareLinkOrgId],
         type: QueryTypes.SELECT,
       }) as any[];
 
@@ -674,7 +607,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: 'getSharedDataByToken',
       fileName: 'shareLink.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     logProcessing({
@@ -682,7 +615,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: 'getSharedDataByToken',
       fileName: 'shareLink.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     logProcessing({
@@ -691,7 +624,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: 'getSharedDataByToken',
       fileName: 'shareLink.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // If shareAllFields is false, filter fields shown
@@ -704,7 +637,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
         functionName: 'getSharedDataByToken',
         fileName: 'shareLink.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       })
       filteredData = resourceData;
     } else {
@@ -714,7 +647,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
         functionName: 'getSharedDataByToken',
         fileName: 'shareLink.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       const getEssentialFields = (record: any, resourceType: string) => {
         // Resource-specific essential fields
@@ -777,7 +710,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: 'getSharedDataByToken',
       fileName: 'shareLink.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     logProcessing({
@@ -787,7 +720,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: 'getSharedDataByToken',
       fileName: 'shareLink.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // Post-process: For models, consolidate provider_model and replace approver ID
@@ -839,12 +772,12 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
         functionName: 'getSharedDataByToken',
         fileName: 'shareLink.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
     }
 
     logStructured('successful', `fetched shared data for ${resourceType} ${resourceId}`, 'getSharedDataByToken', 'shareLink.ctrl.ts');
-    logger.debug(`✅ Fetched shared data from tenant ${tenantSchema}`);
+    logger.debug(`✅ Fetched shared data for organization ${shareLinkOrgId}`);
 
     const response = {
       share_link: {
@@ -861,7 +794,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
     return res.status(200).json(STATUS_CODE[200](response));
   } catch (error) {
     logStructured('error', `unexpected error fetching shared data`, 'getSharedDataByToken', 'shareLink.ctrl.ts');
-    await logEvent('Error', `Unexpected error fetching shared data: ${(error as Error).message}`, req.userId!, req.tenantId!);
+    await logEvent('Error', `Unexpected error fetching shared data: ${(error as Error).message}`, req.userId!, req.organizationId!);
     logger.error('❌ Error in getSharedDataByToken:', error);
     const safeMessage = sanitizeErrorMessage(error as Error, "An error occurred");
     return res.status(500).json(STATUS_CODE[500](safeMessage));

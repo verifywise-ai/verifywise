@@ -219,7 +219,7 @@ export interface SMTPConfig {
 export interface ExchangeOnlineConfig {
   user: string;
   pass: string;
-  tenantId?: string; // Optional for enhanced security
+  organizationId?: string; // Optional for enhanced security
 }
 
 export interface OnPremisesExchangeConfig {

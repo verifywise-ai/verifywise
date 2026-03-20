@@ -6,7 +6,6 @@ import { AutomationActionModel } from "../automationAction/automationAction.mode
 
 @Table({
   tableName: "automation_triggers_actions",
-  schema: "public",
   timestamps: true,
   underscored: true,
 })

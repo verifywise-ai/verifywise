@@ -59,4 +59,29 @@ export interface IRisk {
   recommendations?: string;
   deletedLinkedProject?: boolean;
   deletedLinkedFrameworks?: boolean;
+
+  // Quantitative risk assessment (FAIR) fields
+  event_frequency_min?: number | null;
+  event_frequency_likely?: number | null;
+  event_frequency_max?: number | null;
+  loss_regulatory_min?: number | null;
+  loss_regulatory_likely?: number | null;
+  loss_regulatory_max?: number | null;
+  loss_operational_min?: number | null;
+  loss_operational_likely?: number | null;
+  loss_operational_max?: number | null;
+  loss_litigation_min?: number | null;
+  loss_litigation_likely?: number | null;
+  loss_litigation_max?: number | null;
+  loss_reputational_min?: number | null;
+  loss_reputational_likely?: number | null;
+  loss_reputational_max?: number | null;
+  total_loss_likely?: number | null;
+  ale_estimate?: number | null;
+  control_effectiveness?: number | null;
+  residual_ale?: number | null;
+  mitigation_cost_annual?: number | null;
+  roi_percentage?: number | null;
+  benchmark_id?: number | null;
+  currency?: string | null;
 }

@@ -21,17 +21,17 @@ jobs:
           ref: develop
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Clients image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Clients/Dockerfile
@@ -43,8 +43,11 @@ jobs:
             VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
             VITE_APP_VERSION=develop
 
+      - name: Copy version.json into Servers context
+        run: cp version.json Servers/version.json
+
       - name: Build and push Servers image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./Servers
           platforms: linux/amd64
@@ -54,13 +57,23 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push EvalServer image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./EvalServer/Dockerfile
           platforms: linux/amd64
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push AIGateway image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./AIGateway
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

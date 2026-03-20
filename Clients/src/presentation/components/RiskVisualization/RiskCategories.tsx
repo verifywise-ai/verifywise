@@ -145,15 +145,15 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
         sx={{
           p: 4,
           textAlign: "center",
-          backgroundColor: "#F9FAFB",
+          backgroundColor: "background.accent",
           borderRadius: 2,
-          border: "1px solid #E5E7EB",
+          border: "1px solid status.default.border",
         }}
       >
-        <Typography variant="h6" sx={{ color: "#6B7280", mb: 1 }}>
+        <Typography variant="h6" sx={{ color: "status.default.text", mb: 1 }}>
           No Category Data Available
         </Typography>
-        <Typography variant="body2" sx={{ color: "#9CA3AF" }}>
+        <Typography variant="body2" sx={{ color: "text.disabled" }}>
           Risk category data will appear here as risks are categorized.
         </Typography>
       </Box>
@@ -202,7 +202,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
               <Paper
                 elevation={0}
                 sx={{
-                  border: "1px solid #E5E7EB",
+                  border: "1px solid status.default.border",
                   borderRadius: 2,
                   overflow: "hidden",
                   borderLeft: `4px solid ${criticalLevel.color}`,
@@ -213,7 +213,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
                     p: 2,
                     cursor: "pointer",
                     "&:hover": {
-                      backgroundColor: "#F9FAFB",
+                      backgroundColor: "background.accent",
                     },
                   }}
                   onClick={() => toggleCategory(category.name)}
@@ -233,15 +233,15 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
                       >
                         {category.name}
                       </Typography>
-                      <Typography variant="body2" sx={{ color: "#6B7280" }}>
+                      <Typography variant="body2" sx={{ color: "status.default.text" }}>
                         {category.count} risk{category.count !== 1 ? "s" : ""}
                       </Typography>
                     </Box>
 
                     {isExpanded ? (
-                      <ExpandLessIcon size={16} style={{ color: "#6B7280" }} />
+                      <ExpandLessIcon size={16} style={{ color: "status.default.text" }} />
                     ) : (
-                      <ExpandMoreIcon size={16} style={{ color: "#6B7280" }} />
+                      <ExpandMoreIcon size={16} style={{ color: "status.default.text" }} />
                     )}
                   </Box>
 
@@ -315,23 +315,23 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
                 </Box>
 
                 <Collapse in={isExpanded}>
-                  <Box sx={{ p: 2, pt: 0, borderTop: "1px solid #E5E7EB" }}>
+                  <Box sx={{ p: 2, pt: 0, borderTop: "1px solid status.default.border" }}>
                     <Stack spacing={1}>
                       {category.risks.map((risk) => (
                         <Box
                           key={risk.id}
                           sx={{
                             p: 2,
-                            backgroundColor: "#F9FAFB",
+                            backgroundColor: "background.accent",
                             borderRadius: 1,
                             border:
                               selectedRisk?.id === risk.id
                                 ? `2px solid ${criticalLevel.color}`
-                                : "1px solid #E5E7EB",
+                                : "1px solid status.default.border",
                             cursor: onRiskSelect ? "pointer" : "default",
                             "&:hover": onRiskSelect
                               ? {
-                                  backgroundColor: "#F3F4F6",
+                                  backgroundColor: "background.hover",
                                 }
                               : {},
                           }}
@@ -369,7 +369,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
                             {risk.risk_owner && (
                               <Typography
                                 variant="caption"
-                                sx={{ color: "#6B7280" }}
+                                sx={{ color: "status.default.text" }}
                               >
                                 Owner:{" "}
                                 {getUserNameById(risk.risk_owner.toString())}
@@ -379,7 +379,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
                           {risk.risk_description && (
                             <Typography
                               variant="caption"
-                              sx={{ color: "#6B7280", display: "block" }}
+                              sx={{ color: "status.default.text", display: "block" }}
                             >
                               {risk.risk_description.length > 100
                                 ? `${risk.risk_description.substring(

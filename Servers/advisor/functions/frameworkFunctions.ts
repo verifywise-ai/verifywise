@@ -7,10 +7,10 @@ export interface FetchFrameworksParams {
 
 const fetchFrameworks = async (
   params: FetchFrameworksParams,
-  tenant: string
+  organizationId: number
 ): Promise<any[]> => {
   try {
-    let frameworks = await getAllFrameworksQuery(tenant);
+    let frameworks = await getAllFrameworksQuery(organizationId);
 
     // Limit results
     if (params.limit && params.limit > 0) {
@@ -37,10 +37,10 @@ const fetchFrameworks = async (
 
 const getFrameworkAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const frameworks = await getAllFrameworksQuery(tenant);
+    const frameworks = await getAllFrameworksQuery(organizationId);
     const total = frameworks.length;
 
     // Framework adoption (project count per framework)

@@ -15,12 +15,12 @@ export interface FetchVendorsParams {
 
 const fetchVendors = async (
   params: FetchVendorsParams,
-  tenant: string,
+  organizationId: number,
 ): Promise<Partial<IVendor>[]> => {
   let vendors: IVendor[] = [];
 
   try {
-    vendors = await getAllVendorsQuery(tenant);
+    vendors = await getAllVendorsQuery(organizationId);
 
     // Apply filters
     if (params.review_status) {
@@ -77,12 +77,12 @@ export interface FetchVendorRisksParams {
 
 const fetchVendorRisks = async (
   params: FetchVendorRisksParams,
-  tenant: string,
+  organizationId: number,
 ): Promise<Partial<IVendorRisk>[]> => {
   let risks: IVendorRisk[] = [];
 
   try {
-    risks = await getAllVendorRisksAllProjectsQuery(tenant, "active") as IVendorRisk[];
+    risks = await getAllVendorRisksAllProjectsQuery(organizationId, "active") as IVendorRisk[];
 
     // Apply filters
     if (params.vendorId) {
@@ -151,11 +151,11 @@ export interface VendorAnalytics {
 
 const getVendorAnalytics = async (
   _params: Record<string, never>,
-  tenant: string,
+  organizationId: number,
 ): Promise<VendorAnalytics> => {
   try {
-    const vendors = await getAllVendorsQuery(tenant);
-    const vendorRisks = await getAllVendorRisksAllProjectsQuery(tenant, "active") as IVendorRisk[];
+    const vendors = await getAllVendorsQuery(organizationId);
+    const vendorRisks = await getAllVendorRisksAllProjectsQuery(organizationId, "active") as IVendorRisk[];
 
     const totalVendors = vendors.length;
     const totalVendorRisks = vendorRisks.length;
@@ -304,11 +304,11 @@ export interface VendorExecutiveSummary {
 
 const getVendorExecutiveSummary = async (
   _params: Record<string, never>,
-  tenant: string,
+  organizationId: number,
 ): Promise<VendorExecutiveSummary> => {
   try {
-    const vendors = await getAllVendorsQuery(tenant);
-    const vendorRisks = await getAllVendorRisksAllProjectsQuery(tenant, "active") as IVendorRisk[];
+    const vendors = await getAllVendorsQuery(organizationId);
+    const vendorRisks = await getAllVendorRisksAllProjectsQuery(organizationId, "active") as IVendorRisk[];
 
     const totalVendors = vendors.length;
 

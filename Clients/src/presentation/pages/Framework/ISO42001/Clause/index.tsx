@@ -435,7 +435,7 @@ const ISO42001Clause = ({
         filteredClauses.map((clause: any) => {
           const count = filteredSubClausesCountMemo[clause.id ?? 0];
           const chipColor = count !== undefined && count > 0
-            ? { bg: "#E6F4EA", color: "#138A5E" }
+            ? { bg: "#E6F4EA", color: "status.success.text" }
             : { bg: "#FFF8E1", color: "#795548" };
           return (
             <Stack key={clause.id} sx={styles.container}>

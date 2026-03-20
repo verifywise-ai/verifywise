@@ -1,25 +1,17 @@
 import { createTheme } from "@mui/material/styles";
+import {
+  text,
+  background,
+  border,
+  status,
+  brand,
+} from "./palette";
 
 declare module "@mui/material/Button" {
   interface ButtonPropsVariantOverrides {
     group: true;
   }
 }
-
-const text = {
-  primary: "#1c2130",
-  secondary: "#344054",
-  tertiary: "#475467",
-  accent: "#838c99",
-};
-
-const background = {
-  main: "#FFFFFF",      // General background for forms, fields, etc.
-  alt: "#FCFCFD",       // Alternative background
-  modal: "#FCFCFD",     // Dedicated background for all modals
-  fill: "#E6F0EC",
-  accent: "#f9fafb",
-};
 
 const fontFamilyDefault =
   "'Geist', system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif";
@@ -31,52 +23,58 @@ const light = createTheme({
   typography: { fontFamily: fontFamilyDefault, fontSize: 13 },
   spacing: 2,
   palette: {
-    primary: { main: "#13715B" },
-    secondary: { main: "#F4F4F4", dark: "#e3e3e3", contrastText: "#475467" },
+    primary: { main: brand.primary },
+    secondary: { main: "#F4F4F4", dark: "#e3e3e3", contrastText: text.tertiary },
     text: text,
     background: background,
     border: {
-      light: "#eaecf0",
-      dark: "#d0d5dd",
+      light: border.light,
+      dark: border.dark,
     },
     status: {
       info: {
-        text: "#1565C0",
-        main: "#1565C0",
-        bg: "#E3F2FD",
-        light: "#BBDEFB",
-        border: "#BBDEFB",
+        text: status.info.text,
+        main: status.info.text,
+        bg: status.info.bg,
+        light: status.info.border,
+        border: status.info.border,
       },
       success: {
-        text: "#138A5E",
-        main: "#138A5E",
-        light: "#C8E6D0",
-        bg: "#E6F4EA",
-        border: "#C8E6D0",
+        text: status.success.text,
+        main: status.success.text,
+        light: status.success.border,
+        bg: status.success.bg,
+        border: status.success.border,
       },
       error: {
-        text: "#D32F2F",
-        main: "#D32F2F",
-        light: "#F5B8B8",
-        bg: "#FFD6D6",
-        border: "#F5B8B8",
+        text: status.error.text,
+        main: status.error.text,
+        light: status.error.border,
+        bg: status.error.bg,
+        border: status.error.border,
       },
       warning: {
-        text: "#795548",
-        main: "#795548",
-        light: "#F5E6B8",
-        bg: "#FFF8E1",
-        border: "#F5E6B8",
+        text: status.warning.text,
+        main: status.warning.text,
+        light: status.warning.border,
+        bg: status.warning.bg,
+        border: status.warning.border,
       },
     },
     other: {
-      icon: "#667085",
+      icon: text.icon,
       line: "#d6d9dd",
       fill: "#e3e3e3",
       grid: "#a2a3a3",
     },
+    brand: {
+      primary: brand.primary,
+      primaryHover: brand.primaryHover,
+      primaryLight: brand.primaryLight,
+      primaryDark: brand.primaryDark,
+    },
     unresolved: { main: "#4e5ba6", light: "#e2eaf7", bg: "#f2f4f7" },
-    divider: "#d0d5dd",
+    divider: border.dark,
   },
   shape: {
     borderRadius: 2,
@@ -86,6 +84,16 @@ const light = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {},
+        // Remove blue focus outline on mouse click; preserve for keyboard navigation
+        "*, *::before, *::after": {
+          "&:focus:not(:focus-visible)": {
+            outline: "none",
+          },
+        },
+        // Remove focus outline on Recharts SVG containers and all SVG elements
+        ".recharts-wrapper, .recharts-surface, svg, svg *": {
+          outline: "none !important",
+        },
       },
     },
     MuiButton: {
@@ -156,7 +164,7 @@ const light = createTheme({
           marginTop: 4,
           border: 1,
           borderStyle: "solid",
-          borderColor: "#eaecf0",
+          borderColor: border.light,
           borderRadius: 4,
           boxShadow: shadow,
           backgroundColor: background.main,
@@ -204,14 +212,14 @@ const light = createTheme({
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderBottomColor: "#eaecf0",
+          borderBottomColor: border.light,
         },
       },
     },
     MuiTableHead: {
       styleOverrides: {
         root: {
-          background: "linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%)",
+          background: `linear-gradient(180deg, ${background.accent} 0%, ${background.hover} 100%)`,
         },
       },
     },
@@ -221,7 +229,7 @@ const light = createTheme({
           backgroundColor: background.main,
           border: 1,
           borderStyle: "solid",
-          borderColor: "#eaecf0",
+          borderColor: border.light,
           "& button": {
             color: text.tertiary,
             borderRadius: 4,
@@ -229,7 +237,7 @@ const light = createTheme({
           "& li:first-of-type button, & li:last-of-type button": {
             border: 1,
             borderStyle: "solid",
-            borderColor: "#eaecf0",
+            borderColor: border.light,
           },
         },
       },
@@ -272,14 +280,14 @@ const light = createTheme({
             backgroundColor: background.main,
             borderRadius: 2,
             "& .MuiOutlinedInput-notchedOutline": {
-              borderColor: "#d0d5dd",
+              borderColor: border.dark,
               borderWidth: "1px",
             },
             "&:hover .MuiOutlinedInput-notchedOutline": {
-              borderColor: "#d0d5dd",
+              borderColor: border.dark,
             },
             "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-              borderColor: "#d0d5dd",
+              borderColor: border.dark,
               borderWidth: "1px",
             },
           },
@@ -292,14 +300,14 @@ const light = createTheme({
           backgroundColor: background.main,
           borderRadius: 2,
           "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#d0d5dd",
+            borderColor: border.dark,
             borderWidth: "1px",
           },
           "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#d0d5dd",
+            borderColor: border.dark,
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#d0d5dd",
+            borderColor: border.dark,
             borderWidth: "1px",
           },
         },
@@ -323,12 +331,12 @@ const light = createTheme({
       styleOverrides: {
         tooltip: {
           fontSize: '13px',
-          backgroundColor: '#1F2937',
+          backgroundColor: "#1F2937",
           padding: '8px 12px',
           borderRadius: '4px',
         },
         arrow: {
-          color: '#1F2937',
+          color: "#1F2937",
         },
       },
     },

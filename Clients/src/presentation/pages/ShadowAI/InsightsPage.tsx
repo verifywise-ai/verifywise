@@ -14,23 +14,12 @@ import {
   SelectChangeEvent,
 } from "@mui/material";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import {
   AppWindow,
   Users,
   AlertTriangle,
   Building2,
 } from "lucide-react";
+import { VWBarChart, VWDonutChart } from "../../components/Charts/VWCharts";
 import {
   getInsightsSummary,
   getToolsByEvents,
@@ -205,32 +194,16 @@ export default function InsightsPage() {
               <Skeleton variant="rectangular" height={250} sx={{ borderRadius: "4px" }} />
             ) : departments.length > 0 ? (
               <Stack direction="row" alignItems="center" justifyContent="center" gap="24px">
-                <Box sx={{ width: 200, height: 200 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={departments}
-                        dataKey="user_count"
-                        nameKey="department"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}
-                        innerRadius={0}
-                      >
-                        {departments.map((_dept, index) => (
-                          <Cell
-                            key={index}
-                            fill={DEPT_COLORS[index % DEPT_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ fontSize: 12, borderRadius: 4 }}
-                        formatter={(value: number | undefined, name: string | undefined) => [value, name]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Box>
+                <VWDonutChart
+                  data={departments}
+                  dataKey="user_count"
+                  nameKey="department"
+                  colors={DEPT_COLORS}
+                  size={200}
+                  innerRadius={0}
+                  outerRadius={90}
+                  tooltipFormatter={(value, name) => [String(value), name]}
+                />
                 <Stack gap="8px">
                   {departments.map((dept, index) => (
                     <Stack key={dept.department} direction="row" alignItems="center" gap="8px">
@@ -264,46 +237,16 @@ export default function InsightsPage() {
               <Skeleton variant="rectangular" height={260} sx={{ borderRadius: "4px" }} />
             ) : toolsByEvents.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart
-                    data={toolsByEvents}
-                    layout="vertical"
-                    margin={{ left: 8, right: 24, top: 8, bottom: 8 }}
-                    barCategoryGap="20%"
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke={palette.background.hover} horizontal={false} />
-                    <XAxis
-                      type="number"
-                      tick={{ fontSize: 11, fill: palette.text.disabled }}
-                      axisLine={{ stroke: palette.border.light }}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="tool_name"
-                      tick={{ fontSize: 12, fill: palette.text.secondary }}
-                      width={90}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        fontSize: 12,
-                        borderRadius: 6,
-                        border: `1px solid ${palette.border.light}`,
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                      }}
-                      formatter={(value: number | undefined) => [value != null ? value.toLocaleString() : value, "Events"]}
-                      cursor={{ fill: "rgba(19, 113, 91, 0.04)" }}
-                    />
-                    <Bar
-                      dataKey="event_count"
-                      fill={palette.brand.primary}
-                      radius={[0, 4, 4, 0]}
-                      maxBarSize={28}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                <VWBarChart
+                  data={toolsByEvents}
+                  series={[{ dataKey: "event_count" }]}
+                  categoryKey="tool_name"
+                  layout="vertical"
+                  height={260}
+                  barCategoryGap="20%"
+                  hideHorizontalGrid
+                  tooltipFormatter={(value) => [typeof value === "number" ? value.toLocaleString() : String(value), "Events"]}
+                />
                 <VWLink
                   onClick={() => navigate("/shadow-ai/tools")}
                   showIcon={false}
@@ -322,46 +265,16 @@ export default function InsightsPage() {
             {loading ? (
               <Skeleton variant="rectangular" height={260} sx={{ borderRadius: "4px" }} />
             ) : toolsByUsers.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart
-                  data={toolsByUsers}
-                  layout="vertical"
-                  margin={{ left: 8, right: 24, top: 8, bottom: 8 }}
-                  barCategoryGap="20%"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={palette.background.hover} horizontal={false} />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 11, fill: palette.text.disabled }}
-                    axisLine={{ stroke: palette.border.light }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="tool_name"
-                    tick={{ fontSize: 12, fill: palette.text.secondary }}
-                    width={90}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      fontSize: 12,
-                      borderRadius: 6,
-                      border: `1px solid ${palette.border.light}`,
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                    }}
-                    formatter={(value: number | undefined) => [value != null ? value.toLocaleString() : value, "Users"]}
-                    cursor={{ fill: "rgba(19, 113, 91, 0.04)" }}
-                  />
-                  <Bar
-                    dataKey="user_count"
-                    fill={palette.brand.primary}
-                    radius={[0, 4, 4, 0]}
-                    maxBarSize={28}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <VWBarChart
+                data={toolsByUsers}
+                series={[{ dataKey: "user_count" }]}
+                categoryKey="tool_name"
+                layout="vertical"
+                height={260}
+                barCategoryGap="20%"
+                hideHorizontalGrid
+                tooltipFormatter={(value) => [typeof value === "number" ? value.toLocaleString() : String(value), "Users"]}
+              />
             ) : (
               <NoChartData />
             )}

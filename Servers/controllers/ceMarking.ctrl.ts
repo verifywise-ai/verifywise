@@ -27,13 +27,13 @@ export const getCEMarking = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
     const userId = (req as any).userId;
-    const tenantId = (req as any).tenantId;
 
     // Validate that project exists and user has access to it
+    const organizationId = (req as any).organizationId;
     const projectResult = await sequelize.query(
-      `SELECT id FROM "${tenantId}".projects WHERE id = :projectId`,
+      `SELECT id FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
       {
-        replacements: { projectId },
+        replacements: { projectId, organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -46,9 +46,9 @@ export const getCEMarking = async (req: Request, res: Response) => {
 
     // Check if CE Marking record exists
     let ceMarkingResult = await sequelize.query(
-      `SELECT * FROM "${tenantId}".ce_markings WHERE project_id = :projectId`,
+      `SELECT * FROM ce_markings WHERE project_id = :projectId AND organization_id = :organizationId`,
       {
-        replacements: { projectId },
+        replacements: { projectId, organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -61,8 +61,9 @@ export const getCEMarking = async (req: Request, res: Response) => {
       try {
         // Create CE Marking record
         const createResult = await sequelize.query(
-          `INSERT INTO "${tenantId}".ce_markings (
+          `INSERT INTO ce_markings (
             project_id,
+            organization_id,
             is_high_risk_ai_system,
             role_in_product,
             annex_iii_category,
@@ -70,10 +71,10 @@ export const getCEMarking = async (req: Request, res: Response) => {
             registration_status,
             created_by,
             updated_by
-          ) VALUES (:projectId, false, 'standalone', 'annex_iii_5', 'draft', 'not_registered', :userId, :userId)
+          ) VALUES (:projectId, :organizationId, false, 'standalone', 'annex_iii_5', 'draft', 'not_registered', :userId, :userId)
           RETURNING *`,
           {
-            replacements: { projectId, userId },
+            replacements: { projectId, organizationId, userId },
             type: QueryTypes.INSERT,
             transaction,
           }
@@ -84,15 +85,17 @@ export const getCEMarking = async (req: Request, res: Response) => {
         // Create default conformity steps
         for (const step of DEFAULT_CONFORMITY_STEPS) {
           await sequelize.query(
-            `INSERT INTO "${tenantId}".ce_marking_conformity_steps (
+            `INSERT INTO ce_marking_conformity_steps (
               ce_marking_id,
+              organization_id,
               step_number,
               step_name,
               status
-            ) VALUES (:ceMarkingId, :stepNumber, :stepName, 'Not started')`,
+            ) VALUES (:ceMarkingId, :organizationId, :stepNumber, :stepName, 'Not started')`,
             {
               replacements: {
                 ceMarkingId: ceMarking.id,
+                organizationId,
                 stepNumber: step.step_number,
                 stepName: step.step_name,
               },
@@ -104,16 +107,17 @@ export const getCEMarking = async (req: Request, res: Response) => {
 
         // Log creation to audit trail
         await sequelize.query(
-          `INSERT INTO "${tenantId}".ce_marking_audit_trail (
+          `INSERT INTO ce_marking_audit_trail (
             ce_marking_id,
+            organization_id,
             field_name,
             old_value,
             new_value,
             changed_by,
             change_type
-          ) VALUES (:ceMarkingId, 'record', NULL, 'created', :userId, 'create')`,
+          ) VALUES (:ceMarkingId, :organizationId, 'record', NULL, 'created', :userId, 'create')`,
           {
-            replacements: { ceMarkingId: ceMarking.id, userId },
+            replacements: { ceMarkingId: ceMarking.id, organizationId, userId },
             type: QueryTypes.INSERT,
             transaction,
           }
@@ -128,41 +132,41 @@ export const getCEMarking = async (req: Request, res: Response) => {
 
     // Get conformity steps
     const conformitySteps = await sequelize.query(
-      `SELECT * FROM "${tenantId}".ce_marking_conformity_steps
-       WHERE ce_marking_id = :ceMarkingId
+      `SELECT * FROM ce_marking_conformity_steps
+       WHERE ce_marking_id = :ceMarkingId AND organization_id = :organizationId
        ORDER BY step_number`,
       {
-        replacements: { ceMarkingId: ceMarking.id },
+        replacements: { ceMarkingId: ceMarking.id, organizationId },
         type: QueryTypes.SELECT,
       }
     );
 
     // Get linked policies
     const linkedPolicies = await sequelize.query(
-      `SELECT policy_id FROM "${tenantId}".ce_marking_policies
-       WHERE ce_marking_id = :ceMarkingId`,
+      `SELECT policy_id FROM ce_marking_policies
+       WHERE ce_marking_id = :ceMarkingId AND organization_id = :organizationId`,
       {
-        replacements: { ceMarkingId: ceMarking.id },
+        replacements: { ceMarkingId: ceMarking.id, organizationId },
         type: QueryTypes.SELECT,
       }
     );
 
     // Get linked evidences
     const linkedEvidences = await sequelize.query(
-      `SELECT file_id FROM "${tenantId}".ce_marking_evidences
-       WHERE ce_marking_id = :ceMarkingId`,
+      `SELECT file_id FROM ce_marking_evidences
+       WHERE ce_marking_id = :ceMarkingId AND organization_id = :organizationId`,
       {
-        replacements: { ceMarkingId: ceMarking.id },
+        replacements: { ceMarkingId: ceMarking.id, organizationId },
         type: QueryTypes.SELECT,
       }
     );
 
     // Get linked incidents
     const linkedIncidents = await sequelize.query(
-      `SELECT incident_id FROM "${tenantId}".ce_marking_incidents
-       WHERE ce_marking_id = :ceMarkingId`,
+      `SELECT incident_id FROM ce_marking_incidents
+       WHERE ce_marking_id = :ceMarkingId AND organization_id = :organizationId`,
       {
-        replacements: { ceMarkingId: ceMarking.id },
+        replacements: { ceMarkingId: ceMarking.id, organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -182,7 +186,7 @@ export const getCEMarking = async (req: Request, res: Response) => {
       // Get the EU AI Act framework ID (projects_frameworks.id) for this project
       // First, get the framework_id for "EU AI Act"
       const euAiActFrameworkResult = await sequelize.query(
-        `SELECT id FROM public.frameworks WHERE name = 'EU AI Act'`,
+        `SELECT id FROM frameworks WHERE name = 'EU AI Act'`,
         {
           type: QueryTypes.SELECT,
         }
@@ -192,10 +196,10 @@ export const getCEMarking = async (req: Request, res: Response) => {
         const euAiActFrameworkId = (euAiActFrameworkResult[0] as any).id;
 
         const frameworkResult = await sequelize.query(
-          `SELECT id FROM "${tenantId}".projects_frameworks
-           WHERE project_id = :projectId AND framework_id = :frameworkId`,
+          `SELECT id FROM projects_frameworks
+           WHERE project_id = :projectId AND framework_id = :frameworkId AND organization_id = :organizationId`,
           {
-            replacements: { projectId, frameworkId: euAiActFrameworkId },
+            replacements: { projectId, frameworkId: euAiActFrameworkId, organizationId },
             type: QueryTypes.SELECT,
           }
         );
@@ -206,14 +210,14 @@ export const getCEMarking = async (req: Request, res: Response) => {
           // Use the same utility functions as the Overview tab
           // Count compliance/controls (subcontrols_eu)
           const { totalSubcontrols, doneSubcontrols } =
-            await countSubControlsEUByProjectId(projectFrameworkId, tenantId);
+            await countSubControlsEUByProjectId(projectFrameworkId, req.organizationId!);
 
           controlsTotal = parseInt(totalSubcontrols) || 0;
           controlsCompleted = parseInt(doneSubcontrols) || 0;
 
           // Count assessments (answers_eu)
           const { totalAssessments, answeredAssessments } =
-            await countAnswersEUByProjectId(projectFrameworkId, tenantId);
+            await countAnswersEUByProjectId(projectFrameworkId, req.organizationId!);
 
           assessmentsTotal = parseInt(totalAssessments) || 0;
           assessmentsCompleted = parseInt(answeredAssessments) || 0;
@@ -282,7 +286,7 @@ export const getCEMarking = async (req: Request, res: Response) => {
       "Error",
       `Failed to get CE Marking data: ${(error as Error).message}`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     return res
       .status(500)
@@ -301,14 +305,14 @@ export const updateCEMarking = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
     const userId = (req as any).userId;
-    const tenantId = (req as any).tenantId;
     const updates = req.body;
 
     // Validate that project exists and user has access to it
+    const organizationId = (req as any).organizationId;
     const projectResult = await sequelize.query(
-      `SELECT id FROM "${tenantId}".projects WHERE id = :projectId`,
+      `SELECT id FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
       {
-        replacements: { projectId },
+        replacements: { projectId, organizationId },
         type: QueryTypes.SELECT,
         transaction,
       }
@@ -323,9 +327,9 @@ export const updateCEMarking = async (req: Request, res: Response) => {
 
     // Get existing CE Marking record
     const existingResult = await sequelize.query(
-      `SELECT * FROM "${tenantId}".ce_markings WHERE project_id = :projectId`,
+      `SELECT * FROM ce_markings WHERE project_id = :projectId AND organization_id = :organizationId`,
       {
-        replacements: { projectId },
+        replacements: { projectId, organizationId },
         type: QueryTypes.SELECT,
         transaction,
       }
@@ -404,10 +408,11 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       setClauseParts.push("updated_at = NOW()");
       setClauseParts.push("updated_by = :userId");
 
+      replacements.organizationId = organizationId;
       await sequelize.query(
-        `UPDATE "${tenantId}".ce_markings
+        `UPDATE ce_markings
          SET ${setClauseParts.join(", ")}
-         WHERE project_id = :projectId`,
+         WHERE project_id = :projectId AND organization_id = :organizationId`,
         {
           replacements,
           type: QueryTypes.UPDATE,
@@ -418,17 +423,19 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       // Create audit trail entries
       for (const entry of auditEntries) {
         await sequelize.query(
-          `INSERT INTO "${tenantId}".ce_marking_audit_trail (
+          `INSERT INTO ce_marking_audit_trail (
             ce_marking_id,
+            organization_id,
             field_name,
             old_value,
             new_value,
             changed_by,
             change_type
-          ) VALUES (:ceMarkingId, :field, :oldValue, :newValue, :userId, 'update')`,
+          ) VALUES (:ceMarkingId, :organizationId, :field, :oldValue, :newValue, :userId, 'update')`,
           {
             replacements: {
               ceMarkingId: existing.id,
+              organizationId,
               field: entry.field,
               oldValue: entry.oldValue,
               newValue: entry.newValue,
@@ -445,9 +452,9 @@ export const updateCEMarking = async (req: Request, res: Response) => {
     if (updates.linkedPolicies && Array.isArray(updates.linkedPolicies)) {
       // Remove existing linked policies
       await sequelize.query(
-        `DELETE FROM "${tenantId}".ce_marking_policies WHERE ce_marking_id = :ceMarkingId`,
+        `DELETE FROM ce_marking_policies WHERE ce_marking_id = :ceMarkingId AND organization_id = :organizationId`,
         {
-          replacements: { ceMarkingId: existing.id },
+          replacements: { ceMarkingId: existing.id, organizationId },
           type: QueryTypes.DELETE,
           transaction,
         }
@@ -456,10 +463,10 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       // Add new linked policies
       for (const policyId of updates.linkedPolicies) {
         await sequelize.query(
-          `INSERT INTO "${tenantId}".ce_marking_policies (ce_marking_id, policy_id, linked_by, linked_at)
-           VALUES (:ceMarkingId, :policyId, :userId, NOW())`,
+          `INSERT INTO ce_marking_policies (ce_marking_id, organization_id, policy_id, linked_by, linked_at)
+           VALUES (:ceMarkingId, :organizationId, :policyId, :userId, NOW())`,
           {
-            replacements: { ceMarkingId: existing.id, policyId, userId },
+            replacements: { ceMarkingId: existing.id, organizationId, policyId, userId },
             type: QueryTypes.INSERT,
             transaction,
           }
@@ -468,12 +475,13 @@ export const updateCEMarking = async (req: Request, res: Response) => {
 
       // Audit trail for policies change
       await sequelize.query(
-        `INSERT INTO "${tenantId}".ce_marking_audit_trail (
-          ce_marking_id, field_name, old_value, new_value, changed_by, change_type
-        ) VALUES (:ceMarkingId, 'linked_policies', :oldValue, :newValue, :userId, 'update')`,
+        `INSERT INTO ce_marking_audit_trail (
+          ce_marking_id, organization_id, field_name, old_value, new_value, changed_by, change_type
+        ) VALUES (:ceMarkingId, :organizationId, 'linked_policies', :oldValue, :newValue, :userId, 'update')`,
         {
           replacements: {
             ceMarkingId: existing.id,
+            organizationId,
             oldValue: existing.policies_linked?.toString() || "0",
             newValue: updates.linkedPolicies.length.toString(),
             userId,
@@ -488,9 +496,9 @@ export const updateCEMarking = async (req: Request, res: Response) => {
     if (updates.linkedEvidences && Array.isArray(updates.linkedEvidences)) {
       // Remove existing linked evidence
       await sequelize.query(
-        `DELETE FROM "${tenantId}".ce_marking_evidences WHERE ce_marking_id = :ceMarkingId`,
+        `DELETE FROM ce_marking_evidences WHERE ce_marking_id = :ceMarkingId AND organization_id = :organizationId`,
         {
-          replacements: { ceMarkingId: existing.id },
+          replacements: { ceMarkingId: existing.id, organizationId },
           type: QueryTypes.DELETE,
           transaction,
         }
@@ -499,10 +507,10 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       // Add new linked evidence
       for (const fileId of updates.linkedEvidences) {
         await sequelize.query(
-          `INSERT INTO "${tenantId}".ce_marking_evidences (ce_marking_id, file_id, linked_by, linked_at)
-           VALUES (:ceMarkingId, :fileId, :userId, NOW())`,
+          `INSERT INTO ce_marking_evidences (ce_marking_id, organization_id, file_id, linked_by, linked_at)
+           VALUES (:ceMarkingId, :organizationId, :fileId, :userId, NOW())`,
           {
-            replacements: { ceMarkingId: existing.id, fileId, userId },
+            replacements: { ceMarkingId: existing.id, organizationId, fileId, userId },
             type: QueryTypes.INSERT,
             transaction,
           }
@@ -511,12 +519,13 @@ export const updateCEMarking = async (req: Request, res: Response) => {
 
       // Audit trail for evidence change
       await sequelize.query(
-        `INSERT INTO "${tenantId}".ce_marking_audit_trail (
-          ce_marking_id, field_name, old_value, new_value, changed_by, change_type
-        ) VALUES (:ceMarkingId, 'linked_evidence', :oldValue, :newValue, :userId, 'update')`,
+        `INSERT INTO ce_marking_audit_trail (
+          ce_marking_id, organization_id, field_name, old_value, new_value, changed_by, change_type
+        ) VALUES (:ceMarkingId, :organizationId, 'linked_evidence', :oldValue, :newValue, :userId, 'update')`,
         {
           replacements: {
             ceMarkingId: existing.id,
+            organizationId,
             oldValue: existing.evidence_linked?.toString() || "0",
             newValue: updates.linkedEvidences.length.toString(),
             userId,
@@ -531,9 +540,9 @@ export const updateCEMarking = async (req: Request, res: Response) => {
     if (updates.linkedIncidents && Array.isArray(updates.linkedIncidents)) {
       // Remove existing linked incidents
       await sequelize.query(
-        `DELETE FROM "${tenantId}".ce_marking_incidents WHERE ce_marking_id = :ceMarkingId`,
+        `DELETE FROM ce_marking_incidents WHERE ce_marking_id = :ceMarkingId AND organization_id = :organizationId`,
         {
-          replacements: { ceMarkingId: existing.id },
+          replacements: { ceMarkingId: existing.id, organizationId },
           type: QueryTypes.DELETE,
           transaction,
         }
@@ -542,10 +551,10 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       // Add new linked incidents
       for (const incidentId of updates.linkedIncidents) {
         await sequelize.query(
-          `INSERT INTO "${tenantId}".ce_marking_incidents (ce_marking_id, incident_id, linked_by, linked_at)
-           VALUES (:ceMarkingId, :incidentId, :userId, NOW())`,
+          `INSERT INTO ce_marking_incidents (ce_marking_id, organization_id, incident_id, linked_by, linked_at)
+           VALUES (:ceMarkingId, :organizationId, :incidentId, :userId, NOW())`,
           {
-            replacements: { ceMarkingId: existing.id, incidentId, userId },
+            replacements: { ceMarkingId: existing.id, organizationId, incidentId, userId },
             type: QueryTypes.INSERT,
             transaction,
           }
@@ -554,12 +563,13 @@ export const updateCEMarking = async (req: Request, res: Response) => {
 
       // Audit trail for incidents change
       await sequelize.query(
-        `INSERT INTO "${tenantId}".ce_marking_audit_trail (
-          ce_marking_id, field_name, old_value, new_value, changed_by, change_type
-        ) VALUES (:ceMarkingId, 'linked_incidents', :oldValue, :newValue, :userId, 'update')`,
+        `INSERT INTO ce_marking_audit_trail (
+          ce_marking_id, organization_id, field_name, old_value, new_value, changed_by, change_type
+        ) VALUES (:ceMarkingId, :organizationId, 'linked_incidents', :oldValue, :newValue, :userId, 'update')`,
         {
           replacements: {
             ceMarkingId: existing.id,
+            organizationId,
             oldValue: existing.total_incidents?.toString() || "0",
             newValue: updates.linkedIncidents.length.toString(),
             userId,
@@ -576,9 +586,9 @@ export const updateCEMarking = async (req: Request, res: Response) => {
         if (step.id) {
           // Get existing step
           const existingStepResult = await sequelize.query(
-            `SELECT * FROM "${tenantId}".ce_marking_conformity_steps WHERE id = :stepId`,
+            `SELECT * FROM ce_marking_conformity_steps WHERE id = :stepId AND organization_id = :organizationId`,
             {
-              replacements: { stepId: step.id },
+              replacements: { stepId: step.id, organizationId },
               type: QueryTypes.SELECT,
               transaction,
             }
@@ -617,17 +627,19 @@ export const updateCEMarking = async (req: Request, res: Response) => {
 
                   // Audit trail for step changes
                   await sequelize.query(
-                    `INSERT INTO "${tenantId}".ce_marking_audit_trail (
+                    `INSERT INTO ce_marking_audit_trail (
                       ce_marking_id,
+                      organization_id,
                       field_name,
                       old_value,
                       new_value,
                       changed_by,
                       change_type
-                    ) VALUES (:ceMarkingId, :fieldName, :oldValue, :newValue, :userId, 'update')`,
+                    ) VALUES (:ceMarkingId, :organizationId, :fieldName, :oldValue, :newValue, :userId, 'update')`,
                     {
                       replacements: {
                         ceMarkingId: existing.id,
+                        organizationId,
                         fieldName: `step_${existingStep.step_number}_${dbField}`,
                         oldValue: oldValue?.toString() || null,
                         newValue: newValue?.toString() || null,
@@ -667,10 +679,11 @@ export const updateCEMarking = async (req: Request, res: Response) => {
               // Add updated_at field
               stepSetClauseParts.push("updated_at = NOW()");
 
+              stepReplacements.organizationId = organizationId;
               await sequelize.query(
-                `UPDATE "${tenantId}".ce_marking_conformity_steps
+                `UPDATE ce_marking_conformity_steps
                  SET ${stepSetClauseParts.join(", ")}
-                 WHERE id = :stepId`,
+                 WHERE id = :stepId AND organization_id = :organizationId`,
                 {
                   replacements: stepReplacements,
                   type: QueryTypes.UPDATE,
@@ -695,7 +708,7 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       "Error",
       `Failed to update CE Marking data: ${(error as Error).message}`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     return res
       .status(500)

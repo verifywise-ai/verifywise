@@ -31,7 +31,7 @@ import AddNewRisk from "../../components/Modals/NewRisk";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import CustomizableSkeleton from "../../components/Skeletons";
 import CustomizableToast from "../../components/Toast";
-import { RisksCard } from "../../components/Cards/RisksCard";
+import { StatusTileCards, StatusTileItem } from "../../components/Cards/StatusTileCards";
 import useVendorRisks from "../../../application/hooks/useVendorRisks";
 import Select from "../../components/Inputs/Select";
 import allowedRoles from "../../../application/constants/permissions";
@@ -56,16 +56,41 @@ import {
 } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
+import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import {
   FilterBy,
   FilterColumn,
   FilterCondition,
 } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { Project } from "../../../domain/types/Project";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
+
+type VendorColumnKey = "vendor_name" | "assignee" | "review_status" | "risk" | "scorecard" | "review_date" | "actions";
+type VendorRiskColumnKey = "risk_description" | "vendor_name" | "project_titles" | "action_owner" | "risk_severity" | "risk_level" | "actions";
+
+const VENDOR_TABLE_COLUMNS: ColumnConfig<VendorColumnKey>[] = [
+  { key: "vendor_name", label: "Name", defaultVisible: true, alwaysVisible: true },
+  { key: "assignee", label: "Assignee", defaultVisible: true },
+  { key: "review_status", label: "Status", defaultVisible: true },
+  { key: "risk", label: "Risks", defaultVisible: true },
+  { key: "scorecard", label: "Scorecard", defaultVisible: true },
+  { key: "review_date", label: "Review date", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
+
+const VENDOR_RISKS_TABLE_COLUMNS: ColumnConfig<VendorRiskColumnKey>[] = [
+  { key: "risk_description", label: "Risk description", defaultVisible: true, alwaysVisible: true },
+  { key: "vendor_name", label: "Vendor", defaultVisible: true },
+  { key: "project_titles", label: "Use case", defaultVisible: true },
+  { key: "action_owner", label: "Action owner", defaultVisible: true },
+  { key: "risk_severity", label: "Risk severity", defaultVisible: true },
+  { key: "risk_level", label: "Risk level", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
 
 const Vendors = () => {
   const theme = useTheme();
@@ -101,6 +126,26 @@ const Vendors = () => {
     groupSortOrder: groupSortOrderRisk,
     handleGroupChange: handleGroupChangeRisk,
   } = useGroupByState();
+
+  const {
+    visibleColumns: vendorVisibleColumns,
+    allColumns: allVendorColumns,
+    toggleColumn: toggleVendorColumn,
+    resetToDefaults: resetVendorColumns,
+  } = useColumnVisibility({
+    tableId: "vendors-table",
+    columns: VENDOR_TABLE_COLUMNS,
+  });
+
+  const {
+    visibleColumns: vendorRiskVisibleColumns,
+    allColumns: allVendorRiskColumns,
+    toggleColumn: toggleVendorRiskColumn,
+    resetToDefaults: resetVendorRiskColumns,
+  } = useColumnVisibility({
+    tableId: "vendor-risks-table",
+    columns: VENDOR_RISKS_TABLE_COLUMNS,
+  });
 
   // Selected risk level for card filtering
   const [selectedRiskLevel, setSelectedRiskLevel] = useState<string | null>(null);
@@ -1032,10 +1077,25 @@ const Vendors = () => {
             height={100}
           />
         ) : (
-          <RisksCard
-            risksSummary={vendorRisksSummary}
-            onCardClick={handleRiskCardClick}
-            selectedLevel={selectedRiskLevel}
+          <StatusTileCards
+            items={[
+              { key: "Total", label: "Total", count: vendorRisksSummary.total, color: "#4B5563" },
+              { key: "Very high", label: "Very high", count: vendorRisksSummary.veryHighRisks, color: "#C63622" },
+              { key: "High", label: "High", count: vendorRisksSummary.highRisks, color: "#D68B61" },
+              { key: "Medium", label: "Medium", count: vendorRisksSummary.mediumRisks, color: "#D6B971" },
+              { key: "Low", label: "Low", count: vendorRisksSummary.lowRisks, color: "#52AB43" },
+              { key: "Very low", label: "Very low", count: vendorRisksSummary.veryLowRisks, color: "#B8D39C" },
+            ] satisfies StatusTileItem[]}
+            onCardClick={(key) => {
+              if (key === "Total" || key === selectedRiskLevel) {
+                handleRiskCardClick("");
+              } else {
+                handleRiskCardClick(key);
+              }
+            }}
+            selectedKey={selectedRiskLevel}
+            entityName="risk"
+            size="small"
           />
         ))
       }
@@ -1120,6 +1180,12 @@ const Vendors = () => {
                       ]}
                       onGroupChange={handleGroupChange}
                     />
+                    <ColumnSelector
+                      columns={allVendorColumns}
+                      visibleColumns={vendorVisibleColumns}
+                      onToggleColumn={toggleVendorColumn}
+                      onResetToDefaults={resetVendorColumns}
+                    />
                     <SearchBox
                       placeholder="Search vendors..."
                       value={searchQuery}
@@ -1139,8 +1205,8 @@ const Vendors = () => {
                         variant="contained"
                         text="Add new vendor"
                         sx={{
-                          backgroundColor: "#13715B",
-                          border: "1px solid #13715B",
+                          backgroundColor: "brand.primary",
+                          border: "1px solid brand.primary",
                           gap: 2,
                         }}
                         icon={<AddCircleOutlineIcon size={16} />}
@@ -1201,6 +1267,12 @@ const Vendors = () => {
                       ]}
                       onGroupChange={handleGroupChangeRisk}
                     />
+                    <ColumnSelector
+                      columns={allVendorRiskColumns}
+                      visibleColumns={vendorRiskVisibleColumns}
+                      onToggleColumn={toggleVendorRiskColumn}
+                      onResetToDefaults={resetVendorRiskColumns}
+                    />
                     <SearchBox
                       placeholder="Search risks..."
                       value={risksSearchTerm}
@@ -1221,8 +1293,8 @@ const Vendors = () => {
                         variant="contained"
                         text="Add new risk"
                         sx={{
-                          backgroundColor: "#13715B",
-                          border: "1px solid #13715B",
+                          backgroundColor: "brand.primary",
+                          border: "1px solid brand.primary",
                           gap: 2,
                         }}
                         icon={<AddCircleOutlineIcon size={16} />}
@@ -1261,6 +1333,7 @@ const Vendors = () => {
                     onEdit={handleEditVendor}
                     hidePagination={options?.hidePagination}
                     vendorRisks={vendorRisks}
+                    visibleColumns={vendorVisibleColumns}
                   />
                 )}
               />
@@ -1289,6 +1362,7 @@ const Vendors = () => {
                     onEdit={handleEditRisk}
                     isDeletingAllowed={isDeletingAllowed}
                     hidePagination={options?.hidePagination}
+                    visibleColumns={vendorRiskVisibleColumns}
                   />
                 )}
               />

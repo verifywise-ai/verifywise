@@ -8,7 +8,7 @@ import { FileList } from "../../domain.layer/models/file/file.model";
 const getUserFilesMetaDataQuery = async (
   role: string,
   userId: number,
-  tenant: string,
+  organizationId: number,
   options?: { limit?: number; offset?: number }
 ): Promise<FileList[]> => {
   const { limit, offset } = options ?? {};
@@ -21,31 +21,31 @@ const getUserFilesMetaDataQuery = async (
         : "";
 
   let query = null;
-  const replacements: Record<string, number> = {};
+  const replacements: Record<string, number> = { organizationId };
 
   // Show all files regardless of approval status - UI handles display
   if (role === "Admin") {
     query = `
       SELECT f.id, f.filename, f.project_id, f.uploaded_time, f.source, f.review_status,
         p.project_title, u.name AS uploader_name, u.surname AS uploader_surname
-      FROM "${tenant}".files f JOIN "${tenant}".projects p ON p.id = f.project_id
-      JOIN public.users u ON f.uploaded_by = u.id
-      WHERE f.source::TEXT NOT ILIKE '%report%'
+      FROM files f JOIN projects p ON p.id = f.project_id AND p.organization_id = :organizationId
+      JOIN users u ON f.uploaded_by = u.id
+      WHERE f.organization_id = :organizationId AND f.source::TEXT NOT ILIKE '%report%'
       ORDER BY f.uploaded_time DESC
       ${paginationClause};
     `;
   } else {
     query = `
       WITH projects_of_user AS (
-        SELECT DISTINCT project_id FROM "${tenant}".projects_members WHERE user_id = :userId
+        SELECT DISTINCT project_id FROM projects_members WHERE organization_id = :organizationId AND user_id = :userId
         UNION ALL
-        SELECT id AS project_id FROM "${tenant}".projects WHERE owner = :userId
+        SELECT id AS project_id FROM projects WHERE organization_id = :organizationId AND owner = :userId
       ) SELECT f.id, f.filename, f.project_id, f.uploaded_time, f.source, f.review_status,
           p.project_title, u.name AS uploader_name, u.surname AS uploader_surname
-        FROM "${tenant}".files f JOIN projects_of_user pu ON f.project_id = pu.project_id
-        JOIN "${tenant}".projects p ON p.id = pu.project_id
-        JOIN public.users u ON f.uploaded_by = u.id
-        WHERE f.source::TEXT NOT ILIKE '%report%'
+        FROM files f JOIN projects_of_user pu ON f.project_id = pu.project_id
+        JOIN projects p ON p.id = pu.project_id AND p.organization_id = :organizationId
+        JOIN users u ON f.uploaded_by = u.id
+        WHERE f.organization_id = :organizationId AND f.source::TEXT NOT ILIKE '%report%'
         ORDER BY f.uploaded_time DESC
       ${paginationClause};`;
     replacements.userId = userId;
@@ -67,11 +67,11 @@ const getUserFilesMetaDataQuery = async (
       // Use IN clause with array spread for Sequelize compatibility
       const linksQuery = `
         SELECT file_id, framework_type, entity_type, entity_id, link_type
-        FROM "${tenant}".file_entity_links
-        WHERE file_id IN (:fileIds)`;
+        FROM file_entity_links
+        WHERE organization_id = :organizationId AND file_id IN (:fileIds)`;
 
       const linksResult = (await sequelize.query(linksQuery, {
-        replacements: { fileIds },
+        replacements: { organizationId, fileIds },
       })) as [any[], number];
 
       const linksMap = new Map<number, any[]>();
@@ -107,11 +107,11 @@ const getUserFilesMetaDataQuery = async (
             // EU AI Act subcontrol - get parent control
             const parentQuery = `
               SELECT c.control_meta_id as parent_id
-              FROM "${tenant}".subcontrols_eu s
-              JOIN "${tenant}".controls_eu c ON s.control_id = c.id
-              WHERE s.id = :entityId`;
+              FROM subcontrols_eu s
+              JOIN controls_eu c ON s.control_id = c.id AND c.organization_id = :organizationId
+              WHERE s.organization_id = :organizationId AND s.id = :entityId`;
             const parentResult = (await sequelize.query(parentQuery, {
-              replacements: { entityId: link.entity_id },
+              replacements: { organizationId, entityId: link.entity_id },
             })) as [any[], number];
             if (parentResult[0][0]) {
               result.parent_id = parentResult[0][0].parent_id;
@@ -122,13 +122,13 @@ const getUserFilesMetaDataQuery = async (
             // EU AI Act assessment answer - get topic/subtopic
             const parentQuery = `
               SELECT topic.id AS topic_id, subtopic.id AS subtopic_id
-              FROM "${tenant}".answers_eu ans
-              JOIN public.questions_struct_eu question ON question.id = ans.question_id
-              JOIN public.subtopics_struct_eu subtopic ON subtopic.id = question.subtopic_id
-              JOIN public.topics_struct_eu topic ON topic.id = subtopic.topic_id
-              WHERE ans.id = :entityId`;
+              FROM answers_eu ans
+              JOIN questions_struct_eu question ON question.id = ans.question_id
+              JOIN subtopics_struct_eu subtopic ON subtopic.id = question.subtopic_id
+              JOIN topics_struct_eu topic ON topic.id = subtopic.topic_id
+              WHERE ans.organization_id = :organizationId AND ans.id = :entityId`;
             const parentResult = (await sequelize.query(parentQuery, {
-              replacements: { entityId: link.entity_id },
+              replacements: { organizationId, entityId: link.entity_id },
             })) as [any[], number];
             if (parentResult[0][0]) {
               result.parent_id = parentResult[0][0].topic_id;
@@ -146,11 +146,11 @@ const getUserFilesMetaDataQuery = async (
               : 'subclauses_struct_iso';
             const parentQuery = `
               SELECT scs.clause_id as clause_id
-              FROM "${tenant}".${table} sc
-              JOIN public.${structTable} scs ON scs.id = sc.subclause_meta_id
-              WHERE sc.id = :entityId`;
+              FROM ${table} sc
+              JOIN ${structTable} scs ON scs.id = sc.subclause_meta_id
+              WHERE sc.organization_id = :organizationId AND sc.id = :entityId`;
             const parentResult = (await sequelize.query(parentQuery, {
-              replacements: { entityId: link.entity_id },
+              replacements: { organizationId, entityId: link.entity_id },
             })) as [any[], number];
             if (parentResult[0][0]) {
               result.parent_id = parentResult[0][0].clause_id;
@@ -161,11 +161,11 @@ const getUserFilesMetaDataQuery = async (
             // ISO 27001 annex control - get parent annex
             const parentQuery = `
               SELECT acs.annex_id as annex_id
-              FROM "${tenant}".annexcontrols_iso27001 ac
-              JOIN public.annexcontrols_struct_iso27001 acs ON acs.id = ac.annexcontrol_meta_id
-              WHERE ac.id = :entityId`;
+              FROM annexcontrols_iso27001 ac
+              JOIN annexcontrols_struct_iso27001 acs ON acs.id = ac.annexcontrol_meta_id
+              WHERE ac.organization_id = :organizationId AND ac.id = :entityId`;
             const parentResult = (await sequelize.query(parentQuery, {
-              replacements: { entityId: link.entity_id },
+              replacements: { organizationId, entityId: link.entity_id },
             })) as [any[], number];
             if (parentResult[0][0]) {
               result.parent_id = parentResult[0][0].annex_id;
@@ -176,11 +176,11 @@ const getUserFilesMetaDataQuery = async (
             // ISO 42001 annex category - get parent annex
             const parentQuery = `
               SELECT acs.annex_id as annex_id
-              FROM "${tenant}".annexcategories_iso ac
-              JOIN public.annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
-              WHERE ac.id = :entityId`;
+              FROM annexcategories_iso ac
+              JOIN annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
+              WHERE ac.organization_id = :organizationId AND ac.id = :entityId`;
             const parentResult = (await sequelize.query(parentQuery, {
-              replacements: { entityId: link.entity_id },
+              replacements: { organizationId, entityId: link.entity_id },
             })) as [any[], number];
             if (parentResult[0][0]) {
               result.parent_id = parentResult[0][0].annex_id;

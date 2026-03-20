@@ -224,12 +224,12 @@ export const commentTextStyle = {
 export const commentFieldStyle = {
   '& .MuiOutlinedInput-root': {
     fontSize: '14px',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'background.main',
     '&:hover fieldset': {
-      borderColor: '#D0D5DD',
+      borderColor: 'border.dark',
     },
     '&.Mui-focused fieldset': {
-      borderColor: '#13715B',
+      borderColor: 'brand.primary',
     },
   },
 }
@@ -250,16 +250,16 @@ export const stepDetailFieldStack = {
 export const stepDetailLabelStyle = {
   fontWeight: 600,
   fontSize: 14,
-  color: "#344054"
+  color: "text.secondary"
 }
 
 export const stepDetailValueStyle = {
   fontSize: 14,
-  color: "#475467"
+  color: "text.tertiary"
 }
 
 export const stepDetailValueWithWrapStyle = {
   fontSize: 14,
-  color: "#475467",
+  color: "text.tertiary",
   whiteSpace: "pre-wrap" as const
 }

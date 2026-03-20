@@ -272,7 +272,7 @@ Note: VerifyWise does not currently have a dedicated health check endpoint. Moni
 
 ## Multi-tenancy configuration
 
-VerifyWise supports multi-tenant deployments with schema-per-tenant isolation:
+VerifyWise supports multi-tenant deployments with shared-schema isolation:
 
 ```bash
 # Enable multi-tenancy
@@ -280,9 +280,9 @@ MULTI_TENANCY_ENABLED=true
 ```
 
 When enabled:
-- Each organization gets its own PostgreSQL schema
-- Data is isolated between tenants
-- Tenant context is derived from JWT token
+- All data lives in a single `verifywise` PostgreSQL schema
+- Data is isolated between organizations via `organization_id` columns
+- Organization context is derived from JWT token (`req.organizationId`)
 
 ---
 

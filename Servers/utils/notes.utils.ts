@@ -2,8 +2,7 @@
  * @fileoverview Notes Utility Functions
  *
  * Data access layer for notes operations.
- * Uses raw SQL queries with tenant-specific schema isolation.
- * All queries are prefixed with tenant schema hash for multi-tenancy.
+ * Uses raw SQL queries with shared-schema multi-tenancy (organization_id column).
  *
  * Functions:
  * - createNewNoteQuery: Create and persist a new note
@@ -20,98 +19,21 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 
 /**
- * Ensure notes table exists in tenant schema
- *
- * Creates the notes table and indexes if they don't exist.
- * Useful for existing tenants that were created before the notes feature was added.
- *
- * @async
- * @param {string} tenantSchema - Tenant schema name for multi-tenancy
- * @returns {Promise<void>}
- * @throws {Error} If database operation fails
- *
- * @example
- * await ensureNotesTableExists(req.tenantId);
- */
-export async function ensureNotesTableExists(
-  tenantSchema: string
-): Promise<void> {
-  try {
-    // Check if table exists
-    const tableExists = await sequelize.query(
-      `SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = :schema
-        AND table_name = 'notes'
-      )`,
-      {
-        replacements: { schema: tenantSchema },
-        type: QueryTypes.SELECT,
-      }
-    );
-
-    if ((tableExists as any[])[0]?.exists) {
-      return; // Table already exists
-    }
-
-    // Create notes table
-    await sequelize.query(
-      `CREATE TABLE "${tenantSchema}".notes (
-        id SERIAL PRIMARY KEY,
-        content TEXT NOT NULL,
-        author_id INTEGER NOT NULL,
-        attached_to VARCHAR(50) NOT NULL,
-        attached_to_id VARCHAR(255) NOT NULL,
-        organization_id INTEGER NOT NULL,
-        is_edited BOOLEAN DEFAULT false,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE CASCADE,
-        FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE
-      )`
-    );
-
-    // Create indexes
-    await sequelize.query(
-      `CREATE INDEX IF NOT EXISTS idx_notes_entity_${tenantSchema.replace(/[^a-z0-9]/g, "_")}
-       ON "${tenantSchema}".notes(attached_to, attached_to_id, organization_id)`
-    );
-
-    await sequelize.query(
-      `CREATE INDEX IF NOT EXISTS idx_notes_author_${tenantSchema.replace(/[^a-z0-9]/g, "_")}
-       ON "${tenantSchema}".notes(author_id)`
-    );
-
-    await sequelize.query(
-      `CREATE INDEX IF NOT EXISTS idx_notes_organization_${tenantSchema.replace(/[^a-z0-9]/g, "_")}
-       ON "${tenantSchema}".notes(organization_id)`
-    );
-  } catch (error) {
-    throw new Error(
-      `Failed to ensure notes table exists: ${(error as Error).message}`
-    );
-  }
-}
-
-/**
  * Create and persist a new note to the database
  *
  * @async
  * @param {NotesModel} note - NotesModel instance to save
- * @param {string} tenantSchema - Tenant schema name for multi-tenancy
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<NotesModel>} Saved note instance from database
  * @throws {Error} If database operation fails
- *
- * @example
- * const savedNote = await createNewNoteQuery(note, req.tenantId);
  */
 export async function createNewNoteQuery(
   note: NotesModel,
-  tenantSchema: string
+  organizationId: number
 ): Promise<NotesModel> {
   try {
     const result = await sequelize.query(
-      `INSERT INTO "${tenantSchema}".notes
+      `INSERT INTO notes
         (content, author_id, attached_to, attached_to_id, organization_id, is_edited, created_at, updated_at)
        VALUES (:content, :author_id, :attached_to, :attached_to_id, :organization_id, :is_edited, :created_at, :updated_at)
        RETURNING id`,
@@ -121,7 +43,7 @@ export async function createNewNoteQuery(
           author_id: note.author_id,
           attached_to: note.attached_to,
           attached_to_id: note.attached_to_id,
-          organization_id: note.organization_id,
+          organization_id: organizationId,
           is_edited: note.is_edited || false,
           created_at: new Date(),
           updated_at: new Date(),
@@ -146,7 +68,7 @@ export async function createNewNoteQuery(
 
     // If we have the ID, fetch the complete note with author information
     if (noteId) {
-      return getNoteByIdQuery(noteId, tenantSchema).then((fetchedNote) => {
+      return getNoteByIdQuery(noteId, organizationId).then((fetchedNote) => {
         if (fetchedNote) {
           return fetchedNote;
         }
@@ -169,24 +91,20 @@ export async function createNewNoteQuery(
  * @async
  * @param {string} attachedTo - Entity type (e.g., NIST_SUBCATEGORY)
  * @param {string} attachedToId - Entity ID
- * @param {number} organizationId - Organization ID for scoping
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<NotesModel[]>} Array of notes
  * @throws {Error} If database operation fails
- *
- * @example
- * const notes = await getNotesByEntityQuery('NIST_SUBCATEGORY', 'sub-123', 456);
  */
 export async function getNotesByEntityQuery(
   attachedTo: string,
   attachedToId: string,
-  organizationId: number,
-  tenantSchema: string
+  organizationId: number
 ): Promise<NotesModel[]> {
   try {
     const notes = await sequelize.query(
       `SELECT n.*, u.id as "author.id", u.name as "author.name", u.surname as "author.surname", u.email as "author.email"
-       FROM "${tenantSchema}".notes n
-       LEFT JOIN public.users u ON n.author_id = u.id
+       FROM notes n
+       LEFT JOIN users u ON n.author_id = u.id
        WHERE n.attached_to = :attached_to
          AND n.attached_to_id = :attached_to_id
          AND n.organization_id = :organization_id
@@ -234,26 +152,24 @@ export async function getNotesByEntityQuery(
  * Fetch a single note by ID
  *
  * @async
- * @param {string} noteId - Note UUID
+ * @param {number} noteId - Note ID
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<NotesModel | null>} Note instance or null if not found
  * @throws {Error} If database operation fails
- *
- * @example
- * const note = await getNoteByIdQuery('uuid-123');
  */
 export async function getNoteByIdQuery(
   noteId: number,
-  tenantSchema: string
+  organizationId: number
 ): Promise<NotesModel | null> {
   try {
     const result = await sequelize.query(
       `SELECT n.*, u.id as "author.id", u.name as "author.name", u.surname as "author.surname", u.email as "author.email"
-       FROM "${tenantSchema}".notes n
-       LEFT JOIN public.users u ON n.author_id = u.id
-       WHERE n.id = :id
+       FROM notes n
+       LEFT JOIN users u ON n.author_id = u.id
+       WHERE n.id = :id AND n.organization_id = :organization_id
        LIMIT 1`,
       {
-        replacements: { id: noteId },
+        replacements: { id: noteId, organization_id: organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -292,39 +208,38 @@ export async function getNoteByIdQuery(
  * Update note content in the database
  *
  * @async
- * @param {string} noteId - Note UUID
+ * @param {number} noteId - Note ID
  * @param {NotesModel} note - Updated NotesModel instance
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<NotesModel>} Updated note instance from database
  * @throws {Error} If database operation fails
- *
- * @example
- * const updatedNote = await updateNoteContentQuery('uuid-123', note);
  */
 export async function updateNoteContentQuery(
   noteId: number,
   note: NotesModel,
-  tenantSchema: string
+  organizationId: number
 ): Promise<NotesModel> {
   try {
     const updatedAt = new Date();
 
     await sequelize.query(
-      `UPDATE "${tenantSchema}".notes
+      `UPDATE notes
        SET content = :content, is_edited = :is_edited, updated_at = :updated_at
-       WHERE id = :id`,
+       WHERE id = :id AND organization_id = :organization_id`,
       {
         replacements: {
           id: noteId,
           content: note.content,
           is_edited: true,
           updated_at: updatedAt,
+          organization_id: organizationId,
         },
         type: QueryTypes.UPDATE,
       }
     );
 
     // Fetch the complete updated note with author information
-    const updatedNote = await getNoteByIdQuery(noteId, tenantSchema);
+    const updatedNote = await getNoteByIdQuery(noteId, organizationId);
     if (updatedNote) {
       return updatedNote;
     }
@@ -342,23 +257,23 @@ export async function updateNoteContentQuery(
  * Delete a note from the database
  *
  * @async
- * @param {string} noteId - Note UUID
+ * @param {number} noteId - Note ID
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<number>} Number of rows affected (0 or 1)
  * @throws {Error} If database operation fails
- *
- * @example
- * const deleted = await deleteNoteByIdQuery('uuid-123');
  */
 export async function deleteNoteByIdQuery(
   noteId: number,
-  tenantSchema: string
+  organizationId: number
 ): Promise<number> {
   try {
     // Use RETURNING to get the deleted row and check if deletion was successful
     const result = await sequelize.query(
-      `DELETE FROM "${tenantSchema}".notes WHERE id = :id RETURNING id`,
+      `DELETE FROM notes
+       WHERE id = :id AND organization_id = :organization_id
+       RETURNING id`,
       {
-        replacements: { id: noteId },
+        replacements: { id: noteId, organization_id: organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -378,23 +293,19 @@ export async function deleteNoteByIdQuery(
  * @async
  * @param {string} attachedTo - Entity type
  * @param {string} attachedToId - Entity ID
- * @param {number} organizationId - Organization ID
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<number>} Count of notes
  * @throws {Error} If database operation fails
- *
- * @example
- * const count = await getNoteCountByEntityQuery('NIST_SUBCATEGORY', 'sub-123', 456);
  */
 export async function getNoteCountByEntityQuery(
   attachedTo: string,
   attachedToId: string,
-  organizationId: number,
-  tenantSchema: string
+  organizationId: number
 ): Promise<number> {
   try {
     const result = await sequelize.query(
       `SELECT COUNT(*) as count
-       FROM "${tenantSchema}".notes
+       FROM notes
        WHERE attached_to = :attached_to
          AND attached_to_id = :attached_to_id
          AND organization_id = :organization_id`,
@@ -421,23 +332,19 @@ export async function getNoteCountByEntityQuery(
  *
  * @async
  * @param {number} authorId - User ID of note author
- * @param {number} organizationId - Organization ID
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<NotesModel[]>} Array of notes
  * @throws {Error} If database operation fails
- *
- * @example
- * const notes = await getNotesByAuthorQuery(123, 456);
  */
 export async function getNotesByAuthorQuery(
   authorId: number,
-  organizationId: number,
-  tenantSchema: string
+  organizationId: number
 ): Promise<NotesModel[]> {
   try {
     const notes = await sequelize.query(
       `SELECT n.*, u.id as "author.id", u.name as "author.name", u.surname as "author.surname", u.email as "author.email"
-       FROM "${tenantSchema}".notes n
-       LEFT JOIN public.users u ON n.author_id = u.id
+       FROM notes n
+       LEFT JOIN users u ON n.author_id = u.id
        WHERE n.author_id = :author_id
          AND n.organization_id = :organization_id
        ORDER BY n.created_at DESC`,
@@ -482,33 +389,33 @@ export async function getNotesByAuthorQuery(
 }
 
 /**
- * Delete all notes for an entity in a specific tenant schema
+ * Delete all notes for an entity
  *
  * Used for cleanup when an entity is deleted.
  *
  * @async
  * @param {string} attachedTo - Entity type
  * @param {string} attachedToId - Entity ID
- * @param {string} tenantSchema - Tenant schema name for multi-tenancy
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<number>} Number of notes deleted
  * @throws {Error} If database operation fails
- *
- * @example
- * await deleteNotesByEntityQuery('NIST_SUBCATEGORY', 'sub-123', req.tenantId);
  */
 export async function deleteNotesByEntityQuery(
   attachedTo: string,
   attachedToId: string,
-  tenantSchema: string
+  organizationId: number
 ): Promise<number> {
   try {
     const result = (await sequelize.query(
-      `DELETE FROM "${tenantSchema}".notes
-       WHERE attached_to = :attached_to AND attached_to_id = :attached_to_id`,
+      `DELETE FROM notes
+       WHERE attached_to = :attached_to
+         AND attached_to_id = :attached_to_id
+         AND organization_id = :organization_id`,
       {
         replacements: {
           attached_to: attachedTo,
           attached_to_id: attachedToId,
+          organization_id: organizationId,
         },
         type: QueryTypes.DELETE,
       }

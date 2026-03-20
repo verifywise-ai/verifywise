@@ -15,6 +15,7 @@ import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
 import AiOrNotScreening from "../../../components/Modals/AiOrNotScreening";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
+import { brand } from "../../../themes/palette";
 
 const Home = () => {
   const location = useLocation();
@@ -90,7 +91,7 @@ const Home = () => {
       title="Use cases"
       description="Use case is a real-world scenario describing how an AI system is applied within an organization to achieve a defined purpose or outcome."
 
-      helpArticlePath="reporting/dashboard-analytics"
+      helpArticlePath="ai-governance/use-cases"
       tipBoxEntity="overview"
     >
       {/* Projects List */}
@@ -103,8 +104,8 @@ const Home = () => {
               variant="contained"
               text="New use case"
               sx={{
-                backgroundColor: "#13715B",
-                border: "1px solid #13715B",
+                backgroundColor: `${brand.primary}`,
+                border: `1px solid ${brand.primary}`,
                 gap: 2,
               }}
               icon={<AddCircleOutlineIcon size={16} />}

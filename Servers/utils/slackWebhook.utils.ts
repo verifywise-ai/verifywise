@@ -7,7 +7,7 @@ export const getAllSlackWebhooksQuery = async (
   userId: string
 ): Promise<ISlackWebhook[]> => {
   const slackWebhooks = await sequelize.query(
-    `SELECT * FROM public.slack_webhooks WHERE user_id = :userId ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM slack_webhooks WHERE user_id = :userId ORDER BY created_at DESC, id ASC`,
     {
       replacements: { userId },
       mapToModel: true,
@@ -22,7 +22,7 @@ export const getSlackWebhookByIdAndChannelQuery = async (
   channel: string
 ): Promise<ISlackWebhook[]> => {
   const result = await sequelize.query(
-    `SELECT * FROM public.slack_webhooks WHERE user_id = :id AND channel = :channel`,
+    `SELECT * FROM slack_webhooks WHERE user_id = :id AND channel = :channel`,
     {
       replacements: { id, channel: `${channel}` },
       mapToModel: true,
@@ -37,7 +37,7 @@ export const getSlackWebhookByIdAndRoutingType = async (
   routing_type: string
 ): Promise<ISlackWebhook[]> => {
   const result = await sequelize.query(
-    `SELECT * FROM public.slack_webhooks WHERE user_id = :id AND routing_type && :routing_type`,
+    `SELECT * FROM slack_webhooks WHERE user_id = :id AND routing_type && :routing_type`,
     {
       replacements: { id, routing_type: `{${routing_type}}` },
       mapToModel: true,
@@ -52,7 +52,7 @@ export const createNewSlackWebhookQuery = async (
   transaction: Transaction
 ): Promise<SlackWebhookModel> => {
   const result = await sequelize.query(
-    `INSERT INTO public.slack_webhooks (
+    `INSERT INTO slack_webhooks (
       access_token, access_token_iv, scope, user_id, team_name, team_id, channel, channel_id,
       configuration_url, url, url_iv, is_active
     ) VALUES (
@@ -112,7 +112,7 @@ export const updateSlackWebhookByIdQuery = async (
     })
     .join(", ");
 
-  const query = `UPDATE public.slack_webhooks SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE slack_webhooks SET ${setClause} WHERE id = :id RETURNING *;`;
 
   updateSlackWebhookData.id = id;
 
@@ -131,7 +131,7 @@ export const deleteSlackWebhookByIdQuery = async (
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM public.slack_webhooks WHERE id = :id RETURNING *`,
+    `DELETE FROM slack_webhooks WHERE id = :id RETURNING *`,
     {
       replacements: { id },
       mapToModel: true,

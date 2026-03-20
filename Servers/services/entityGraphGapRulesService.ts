@@ -18,7 +18,6 @@ import {
   GapRule,
 } from "../domain.layer/models/entityGraphGapRules/entityGraphGapRules.model";
 import {
-  ensureGapRulesTableExists,
   getGapRulesByUserQuery,
   getGapRulesByIdQuery,
   upsertGapRulesQuery,
@@ -50,22 +49,20 @@ export class EntityGraphGapRulesService {
    * @param {GapRule[]} rules - Array of gap rules
    * @param {number} userId - User ID
    * @param {number} organizationId - Organization ID
-   * @param {string} tenantId - Tenant schema ID
    * @returns {Promise<EntityGraphGapRulesModel>} Saved gap rules
    * @throws {ValidationException} If validation fails
    */
   static async saveGapRules(
     rules: GapRule[],
     userId: number,
-    organizationId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<EntityGraphGapRulesModel> {
     logProcessing({
       description: "Starting EntityGraphGapRulesService.saveGapRules",
       functionName: "saveGapRules",
       fileName: "entityGraphGapRulesService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
@@ -147,9 +144,6 @@ export class EntityGraphGapRulesService {
         );
       }
 
-      // Ensure table exists
-      await ensureGapRulesTableExists(tenantId);
-
       // Create gap rules model
       const gapRules = await EntityGraphGapRulesModel.createGapRules(
         userId,
@@ -158,7 +152,7 @@ export class EntityGraphGapRulesService {
       );
 
       // Upsert to database
-      const savedGapRules = await upsertGapRulesQuery(gapRules, tenantId);
+      const savedGapRules = await upsertGapRulesQuery(gapRules, organizationId);
 
       await logSuccess({
         eventType: "Create",
@@ -166,7 +160,7 @@ export class EntityGraphGapRulesService {
         functionName: "saveGapRules",
         fileName: "entityGraphGapRulesService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return savedGapRules;
@@ -178,7 +172,7 @@ export class EntityGraphGapRulesService {
         fileName: "entityGraphGapRulesService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -192,26 +186,23 @@ export class EntityGraphGapRulesService {
    * @static
    * @async
    * @param {number} userId - User ID
-   * @param {string} tenantId - Tenant schema ID
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<{ rules: GapRule[]; isDefault: boolean }>} Gap rules and default flag
    */
   static async getGapRules(
     userId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<{ rules: GapRule[]; isDefault: boolean; id?: number }> {
     logProcessing({
       description: "Starting EntityGraphGapRulesService.getGapRules",
       functionName: "getGapRules",
       fileName: "entityGraphGapRulesService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
-      // Ensure table exists
-      await ensureGapRulesTableExists(tenantId);
-
-      const gapRules = await getGapRulesByUserQuery(userId, tenantId);
+      const gapRules = await getGapRulesByUserQuery(userId, organizationId);
 
       if (gapRules) {
         await logSuccess({
@@ -220,7 +211,7 @@ export class EntityGraphGapRulesService {
           functionName: "getGapRules",
           fileName: "entityGraphGapRulesService.ts",
           userId: userId,
-          tenantId: tenantId,
+          organizationId: organizationId,
         });
 
         return {
@@ -237,7 +228,7 @@ export class EntityGraphGapRulesService {
         functionName: "getGapRules",
         fileName: "entityGraphGapRulesService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return {
@@ -252,7 +243,7 @@ export class EntityGraphGapRulesService {
         fileName: "entityGraphGapRulesService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -266,31 +257,28 @@ export class EntityGraphGapRulesService {
    * @static
    * @async
    * @param {number} userId - User ID
-   * @param {string} tenantId - Tenant schema ID
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<{ rules: GapRule[]; isDefault: boolean }>} Default rules
    */
   static async resetToDefaults(
     userId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<{ rules: GapRule[]; isDefault: boolean }> {
     logProcessing({
       description: "Starting EntityGraphGapRulesService.resetToDefaults",
       functionName: "resetToDefaults",
       fileName: "entityGraphGapRulesService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
-      // Ensure table exists
-      await ensureGapRulesTableExists(tenantId);
-
       // Get existing rules to find the ID
-      const existingRules = await getGapRulesByUserQuery(userId, tenantId);
+      const existingRules = await getGapRulesByUserQuery(userId, organizationId);
 
       if (existingRules && existingRules.id) {
         // Delete user's custom rules
-        await deleteGapRulesQuery(existingRules.id, tenantId);
+        await deleteGapRulesQuery(existingRules.id, organizationId);
       }
 
       await logSuccess({
@@ -299,7 +287,7 @@ export class EntityGraphGapRulesService {
         functionName: "resetToDefaults",
         fileName: "entityGraphGapRulesService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return {
@@ -314,7 +302,7 @@ export class EntityGraphGapRulesService {
         fileName: "entityGraphGapRulesService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -327,29 +315,26 @@ export class EntityGraphGapRulesService {
    * @async
    * @param {number} gapRulesId - Gap rules ID
    * @param {number} userId - User ID attempting deletion
-   * @param {string} tenantId - Tenant schema ID
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<boolean>} True if deleted successfully
    * @throws {BusinessLogicException} If user lacks permission
    */
   static async deleteGapRules(
     gapRulesId: number,
     userId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<boolean> {
     logProcessing({
       description: `Starting EntityGraphGapRulesService.deleteGapRules for ID ${gapRulesId}`,
       functionName: "deleteGapRules",
       fileName: "entityGraphGapRulesService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
-      // Ensure table exists
-      await ensureGapRulesTableExists(tenantId);
-
       // Fetch existing gap rules
-      const gapRules = await getGapRulesByIdQuery(gapRulesId, tenantId);
+      const gapRules = await getGapRulesByIdQuery(gapRulesId, organizationId);
 
       if (!gapRules) {
         throw new Error(`Gap rules with ID ${gapRulesId} not found`);
@@ -365,7 +350,7 @@ export class EntityGraphGapRulesService {
       }
 
       // Delete from database
-      const deleteCount = await deleteGapRulesQuery(gapRulesId, tenantId);
+      const deleteCount = await deleteGapRulesQuery(gapRulesId, organizationId);
 
       if (deleteCount === 0) {
         throw new Error(`Failed to delete gap rules with ID ${gapRulesId}`);
@@ -377,7 +362,7 @@ export class EntityGraphGapRulesService {
         functionName: "deleteGapRules",
         fileName: "entityGraphGapRulesService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return true;
@@ -389,7 +374,7 @@ export class EntityGraphGapRulesService {
         fileName: "entityGraphGapRulesService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }

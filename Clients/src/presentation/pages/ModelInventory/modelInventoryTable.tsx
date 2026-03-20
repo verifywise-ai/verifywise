@@ -24,10 +24,11 @@ import PluginSlot from "../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
 import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronsUpDown, ChevronUp, ChevronDown, Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { ModelInventoryTableProps } from "../../../domain/interfaces/i.modelInventory";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
@@ -144,6 +145,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   hidePagination = false,
   modelRisks = [],
   flashRowId,
+  visibleColumns,
 }) => {
   const theme = useTheme();
   const { userRoleName } = useAuth();
@@ -193,6 +195,21 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       console.error("Error fetching users:", error);
     }
   };
+
+  // Filter TABLE_COLUMNS based on visibleColumns
+  const visibleTableColumns = useMemo(() => {
+    if (!visibleColumns || visibleColumns.size === 0) return TABLE_COLUMNS;
+    return TABLE_COLUMNS.filter((col) => visibleColumns.has(col.id));
+  }, [visibleColumns]);
+
+  // Helper to check if a column is visible
+  const isColVisible = useCallback(
+    (columnId: string) => {
+      if (!visibleColumns || visibleColumns.size === 0) return true;
+      return visibleColumns.has(columnId);
+    },
+    [visibleColumns]
+  );
 
   // Create a mapping of user IDs to user names
   const userMap = useMemo(() => {
@@ -343,7 +360,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
         }}
       >
         <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-          {TABLE_COLUMNS.map((column) => (
+          {visibleTableColumns.map((column) => (
             <TableCell
               component={"td"}
               className="model-inventory-table-header-cel"
@@ -396,7 +413,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
         </TableRow>
       </TableHead>
     ),
-    [sortConfig, handleSort, theme]
+    [sortConfig, handleSort, theme, visibleTableColumns]
   );
 
   const tableBody = useMemo(
@@ -435,111 +452,124 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                   }
                 }}
               >
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "provider" ? singleTheme.tableColors.sortedColumnFirst : undefined,
-                  }}
-                >
-                  <TooltipCell value={modelInventory.provider} />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "model" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <TooltipCell value={modelInventory.model} />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "version" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <TooltipCell value={modelInventory.version} />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "approver" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <TooltipCell
-                    value={userMap.get(modelInventory.approver?.toString() ?? "")}
-                  />
-                </TableCell>
-                {/* <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  <CapabilitiesChips capabilities={modelInventory.capabilities} />
-                </TableCell> */}
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "security_assessment" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <SecurityAssessmentBadge
-                    assessment={modelInventory.security_assessment}
-                  />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "risks" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  {(() => {
-                    const riskCount = getModelRiskCount(modelInventory.id || 0);
-                    return riskCount > 0 ? (
-                      <VWLink
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openModelRisksDialog(
-                            modelInventory.id || 0,
-                            modelInventory.model || ""
-                          );
-                        }}
-                        showIcon={false}
-                      >
-                        {riskCount} risk{riskCount !== 1 ? "s" : ""}
-                      </VWLink>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: palette.text.disabled }}>
-                        No risks
-                      </Typography>
-                    );
-                  })()}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "status" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <StatusBadge status={modelInventory.status} />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "status_date" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <TooltipCell
-                    value={
-                      modelInventory.status_date
-                        ? displayFormattedDate(modelInventory.status_date)
-                        : "-"
-                    }
-                  />
-                </TableCell>
+                {isColVisible("provider") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "provider" ? singleTheme.tableColors.sortedColumnFirst : undefined,
+                    }}
+                  >
+                    <TooltipCell value={modelInventory.provider} />
+                  </TableCell>
+                )}
+                {isColVisible("model") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "model" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <TooltipCell value={modelInventory.model} />
+                  </TableCell>
+                )}
+                {isColVisible("version") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "version" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <TooltipCell value={modelInventory.version} />
+                  </TableCell>
+                )}
+                {isColVisible("approver") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "approver" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <TooltipCell
+                      value={userMap.get(modelInventory.approver?.toString() ?? "")}
+                    />
+                  </TableCell>
+                )}
+                {isColVisible("security_assessment") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "security_assessment" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <SecurityAssessmentBadge
+                      assessment={modelInventory.security_assessment}
+                    />
+                  </TableCell>
+                )}
+                {isColVisible("risks") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "risks" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    {(() => {
+                      const riskCount = getModelRiskCount(modelInventory.id || 0);
+                      return riskCount > 0 ? (
+                        <VWLink
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openModelRisksDialog(
+                              modelInventory.id || 0,
+                              modelInventory.model || ""
+                            );
+                          }}
+                          showIcon={false}
+                        >
+                          {riskCount} risk{riskCount !== 1 ? "s" : ""}
+                        </VWLink>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: palette.text.disabled }}>
+                          No risks
+                        </Typography>
+                      );
+                    })()}
+                  </TableCell>
+                )}
+                {isColVisible("status") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "status" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <StatusBadge status={modelInventory.status} />
+                  </TableCell>
+                )}
+                {isColVisible("status_date") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "status_date" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <TooltipCell
+                      value={
+                        modelInventory.status_date
+                          ? displayFormattedDate(modelInventory.status_date)
+                          : "-"
+                      }
+                    />
+                  </TableCell>
+                )}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
@@ -603,7 +633,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
         ) : (
           <TableRow>
             <TableCell
-              colSpan={TABLE_COLUMNS.length}
+              colSpan={visibleTableColumns.length}
               align="center"
               sx={{ py: 4 }}
             >
@@ -628,6 +658,8 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       hidePagination,
       openModelRisksDialog,
       flashRowId,
+      isColVisible,
+      visibleTableColumns,
     ]
   );
 
@@ -644,7 +676,25 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   }
 
   if (!data || data.length === 0) {
-    return <EmptyState message="There is currently no data in this table." />;
+    return (
+      <EmptyState icon={Cpu} message="No models registered yet. Maintain a complete inventory of all AI models your organization uses.">
+        <EmptyStateTip
+          icon={Layers}
+          title="What counts as a model?"
+          description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
+        />
+        <EmptyStateTip
+          icon={BarChart3}
+          title="Track model status"
+          description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
+        />
+        <EmptyStateTip
+          icon={Link2}
+          title="Link to vendors and risks"
+          description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
+        />
+      </EmptyState>
+    );
   }
 
   return (

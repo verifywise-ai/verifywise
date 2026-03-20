@@ -10,7 +10,6 @@
 import { Request, Response } from "express";
 import { logProcessing, logSuccess, logFailure as logError } from "../utils/logger/logHelper";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { getTenantHash } from "../tools/getTenantHash";
 import {
   getGitHubTokenStatusQuery,
   saveGitHubTokenQuery,
@@ -20,22 +19,6 @@ import {
 } from "../utils/githubToken.utils";
 
 const FILE_NAME = "githubToken.ctrl.ts";
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Build service context from request
- */
-function getContext(req: Request): { userId: number; tenantId: string } {
-  return {
-    userId: (req as unknown as { userId: number }).userId,
-    tenantId: getTenantHash(
-      (req as unknown as { organizationId: number }).organizationId
-    ),
-  };
-}
 
 // ============================================================================
 // Controller Functions
@@ -55,12 +38,11 @@ export async function getGitHubTokenStatusController(
     functionName: "getGitHubTokenStatusController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const { tenantId } = getContext(req);
-    const status = await getGitHubTokenStatusQuery(tenantId);
+    const status = await getGitHubTokenStatusQuery(req.organizationId!);
 
     return res.status(200).json(STATUS_CODE[200](status));
   } catch (error) {
@@ -71,7 +53,7 @@ export async function getGitHubTokenStatusController(
       functionName: "getGitHubTokenStatusController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return res.status(500).json(STATUS_CODE[500](errorMessage));
@@ -93,7 +75,7 @@ export async function saveGitHubTokenController(
     functionName: "saveGitHubTokenController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -109,8 +91,7 @@ export async function saveGitHubTokenController(
       return res.status(400).json(STATUS_CODE[400](formatError));
     }
 
-    const { userId, tenantId } = getContext(req);
-    await saveGitHubTokenQuery(token, userId, tenantId, token_name);
+    await saveGitHubTokenQuery(token, req.userId!, req.organizationId!, token_name);
 
     await logSuccess({
       eventType: "Create",
@@ -118,11 +99,11 @@ export async function saveGitHubTokenController(
       functionName: "saveGitHubTokenController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // Return status (not the token itself)
-    const status = await getGitHubTokenStatusQuery(tenantId);
+    const status = await getGitHubTokenStatusQuery(req.organizationId!);
     return res.status(201).json(STATUS_CODE[201](status));
   } catch (error) {
     await logError({
@@ -132,7 +113,7 @@ export async function saveGitHubTokenController(
       functionName: "saveGitHubTokenController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return res.status(500).json(STATUS_CODE[500](errorMessage));
@@ -153,12 +134,11 @@ export async function deleteGitHubTokenController(
     functionName: "deleteGitHubTokenController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const { tenantId } = getContext(req);
-    const deleted = await deleteGitHubTokenQuery(tenantId);
+    const deleted = await deleteGitHubTokenQuery(req.organizationId!);
 
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404]("No GitHub token found"));
@@ -170,7 +150,7 @@ export async function deleteGitHubTokenController(
       functionName: "deleteGitHubTokenController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200]({ message: "GitHub token deleted successfully" }));
@@ -182,7 +162,7 @@ export async function deleteGitHubTokenController(
       functionName: "deleteGitHubTokenController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return res.status(500).json(STATUS_CODE[500](errorMessage));
@@ -204,7 +184,7 @@ export async function testGitHubTokenController(
     functionName: "testGitHubTokenController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {

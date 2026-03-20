@@ -3,6 +3,7 @@ import { CustomizableButton } from "../button/customizable-button";
 import { AuditRiskTable } from "../Table/AuditRiskTable/AuditRiskTable";
 import { useState } from "react";
 import { IAuditRiskModalProps } from "../../../domain/interfaces/i.riskForm";
+import { brand, text, background } from "../../themes/palette";
 
 export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
   onClose,
@@ -52,7 +53,7 @@ export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
           <Typography
             sx={{
               fontSize: 16,
-              color: "#344054",
+              color: `${text.secondary}`,
               fontWeight: "bold",
             }}
           >
@@ -68,7 +69,7 @@ export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
           <Typography
             sx={{
               fontSize: "14px",
-              color: "#475467",
+              color: `${text.tertiary}`,
             }}
           >
             This section has been been marked as done, but there's still a risk
@@ -96,7 +97,7 @@ export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
           <Typography
             sx={{
               fontSize: "14px",
-              color: "#475467",
+              color: `${text.tertiary}`,
             }}
           >
             Marking it as done doesn't automatically resolve this risk. What
@@ -114,9 +115,9 @@ export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
       >
         <CustomizableButton
           sx={{
-            backgroundColor: "#13715B",
-            color: "#fff",
-            border: "1px solid #13715B",
+            backgroundColor: `${brand.primary}`,
+            color: `${background.main}`,
+            border: `1px solid ${brand.primary}`,
           }}
           variant="contained"
           text="Keep risk as is"
@@ -124,9 +125,9 @@ export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
         />
         <CustomizableButton
           sx={{
-            backgroundColor: "#13715B",
-            color: "#fff",
-            border: "1px solid #13715B",
+            backgroundColor: `${brand.primary}`,
+            color: `${background.main}`,
+            border: `1px solid ${brand.primary}`,
           }}
           variant="contained"
           text="Unlink risk"

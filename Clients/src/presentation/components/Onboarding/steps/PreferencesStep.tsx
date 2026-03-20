@@ -3,6 +3,7 @@ import { Box, Typography, Stack, FormControl, RadioGroup, FormControlLabel, Radi
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { OnboardingUseCase } from "../../../../domain/enums/onboarding.enum";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
+import { brand, text, background, border as borderPalette } from "../../../themes/palette";
 
 const PreferencesStep: React.FC<OnboardingStepProps> = ({
   preferences,
@@ -41,7 +42,7 @@ const PreferencesStep: React.FC<OnboardingStepProps> = ({
             left: "50px",
             fontWeight: 600,
             fontSize: "24px",
-            color: "#FFFFFF",
+            color: `${background.main}`,
           }}
         >
           Tell us about yourself
@@ -52,7 +53,7 @@ const PreferencesStep: React.FC<OnboardingStepProps> = ({
         <Typography
           sx={{
             fontSize: "14px",
-            color: "#667085",
+            color: `${text.icon}`,
             marginBottom: 3,
           }}
         >
@@ -67,7 +68,7 @@ const PreferencesStep: React.FC<OnboardingStepProps> = ({
             sx={{
               fontSize: "13px",
               fontWeight: 500,
-              color: "#344054",
+              color: `${text.secondary}`,
               marginBottom: 2,
             }}
           >
@@ -84,15 +85,15 @@ const PreferencesStep: React.FC<OnboardingStepProps> = ({
                 control={
                   <Radio
                     sx={{
-                      color: "#D0D5DD",
+                      color: `${borderPalette.dark}`,
                       "&.Mui-checked": {
-                        color: "#13715B",
+                        color: `${brand.primary}`,
                       },
                     }}
                   />
                 }
                 label={
-                  <Typography sx={{ fontSize: "13px", color: "#344054" }}>
+                  <Typography sx={{ fontSize: "13px", color: `${text.secondary}` }}>
                     {useCase}
                   </Typography>
                 }

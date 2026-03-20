@@ -33,6 +33,7 @@ import { Command as CommandType, CommandContext } from '../../../application/com
 import { useWiseSearch, getEntityDisplayName } from '../../../application/hooks/useWiseSearch'
 import { SearchResult } from '../../../application/types/search.types'
 import './styles.css'
+import { background } from "../../themes/palette";
 
 interface CommandPaletteProps {
   open: boolean
@@ -65,6 +66,7 @@ const ENTITY_ICONS: Record<string, LucideIcon> = {
 function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
   return (
   <Box
+    className="wise-search-banner"
     sx={{
       background: 'linear-gradient(135deg, #1a1a1f 0%, #252530 100%)',
       borderRadius: '8px',
@@ -95,7 +97,7 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
           sx={{
             fontSize: '15px',
             fontWeight: 600,
-            color: '#ffffff',
+            color: `${background.main}`,
             letterSpacing: '-0.01em',
             mb: 2,
           }}
@@ -120,7 +122,7 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
             size="small"
             sx={{
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              color: '#ffffff',
+              color: `${background.main}`,
               fontSize: '12px',
               fontWeight: 500,
               padding: '6px 16px',
@@ -151,7 +153,7 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
           color: 'rgba(255, 255, 255, 0.5)',
           '&:hover': {
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            color: '#ffffff',
+            color: `${background.main}`,
           },
         }}
         aria-label="Dismiss welcome message"
@@ -501,7 +503,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 padding: '3px 8px',
                 cursor: 'pointer',
                 fontSize: '12px',
-                color: reviewStatus ? '#13715B' : '#666',
+                color: reviewStatus ? 'brand.primary' : '#666',
                 fontWeight: reviewStatus ? 500 : 400,
                 whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease',
@@ -535,7 +537,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   top: '100%',
                   left: 0,
                   marginTop: '4px',
-                  background: 'var(--dropdown-bg, #ffffff)',
+                  background: 'var(--dropdown-bg, background.main)',
                   border: '1px solid var(--filter-border, #e5e5e5)',
                   borderRadius: '6px',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
@@ -567,7 +569,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         : 'transparent',
                       cursor: 'pointer',
                       fontSize: '13px',
-                      color: reviewStatus === option.value ? '#13715B' : '#666',
+                      color: reviewStatus === option.value ? 'brand.primary' : '#666',
                       fontWeight: reviewStatus === option.value ? 500 : 400,
                       textAlign: 'left',
                       transition: 'all 0.1s ease',
@@ -628,7 +630,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           {/* Loading state for search */}
           {isSearching && (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 3 }}>
-              <CircularProgress size={20} sx={{ color: '#13715B' }} />
+              <CircularProgress size={20} sx={{ color: 'brand.primary' }} />
               <Typography sx={{ ml: 2, color: '#666' }}>Searching...</Typography>
             </Box>
           )}
@@ -658,7 +660,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <Typography variant="caption" sx={{ color: '#999', fontWeight: 400 }}>
                   {actualTotalCount} result{actualTotalCount !== 1 ? 's' : ''} found
                   {reviewStatus && (
-                    <Typography component="span" variant="caption" sx={{ color: '#13715B', fontWeight: 500, ml: 0.5 }}>
+                    <Typography component="span" variant="caption" sx={{ color: 'brand.primary', fontWeight: 500, ml: 0.5 }}>
                       &middot; Filtered by: {REVIEW_STATUS_OPTIONS.find(o => o.value === reviewStatus)?.label}
                     </Typography>
                   )}

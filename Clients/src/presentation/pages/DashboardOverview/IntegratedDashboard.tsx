@@ -4,7 +4,6 @@ import {
   Typography,
   Stack,
   IconButton,
-  useTheme,
   Fade,
 } from "@mui/material";
 import {
@@ -20,8 +19,6 @@ import useNavigateSearch from "../../../application/hooks/useNavigateSearch";
 import { useDashboard } from "../../../application/hooks/useDashboard";
 import { useDashboardMetrics, hasDashboardCache } from "../../../application/hooks/useDashboardMetrics";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { getUserById } from "../../../application/repository/user.repository";
-import { getTimeBasedGreeting } from "../../../application/utils/greetings";
 import { formatRelativeDate } from "../../../application/utils/dateFormatter";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import PageTour from "../../components/PageTour";
@@ -42,14 +39,18 @@ import {
   ModelLifecycleCard,
 } from "../../components/Charts/NewMetricsCards";
 import { GovernanceScoreCard } from "../../components/Charts/GovernanceScoreCard";
+import { PortfolioExposureCard } from "../../components/Charts/PortfolioExposureCard";
+import { PortfolioTrendChart } from "../../components/Charts/PortfolioTrendChart";
+import { LossCategoryBreakdown } from "../../components/Charts/LossCategoryBreakdown";
 import UseCasesTable from "../../components/Table/UseCasesTable";
 import { EmptyStateMessage } from "../../components/EmptyStateMessage";
 import ActivityItem from "../../components/ActivityItem";
 import { ButtonToggle } from "../../components/button-toggle";
 import { StepProgressDialog } from "../../components/StepProgressDialog";
 import { OrganizationalFrameworkData } from "../../../application/hooks/useDashboardMetrics";
+import { useRiskAssessmentMode } from "../../../application/hooks/useRiskAssessmentMode";
+import { useOrgPortfolio, usePortfolioTrend } from "../../../application/hooks/useQuantitativeRisk";
 import {
-  COLORS,
   navIconButtonSx,
   getRiskLevelData,
   getVendorRiskData,
@@ -57,13 +58,13 @@ import {
   getNistStatusData,
   getCompletionData,
 } from "./constants";
+import { text } from "../../themes/palette";
 
 type DashboardView = "executive" | "operations";
 
 const DASHBOARD_VIEW_KEY = "dashboard_view_preference";
 
 const IntegratedDashboard: React.FC = () => {
-  const theme = useTheme();
   const navigateSearch = useNavigateSearch();
   const { dashboard, loading: dashboardLoading, fetchDashboard } = useDashboard();
 
@@ -104,6 +105,10 @@ const IntegratedDashboard: React.FC = () => {
     progressSteps,
   } = useDashboardMetrics();
 
+  const { isQuantitative } = useRiskAssessmentMode();
+  const { portfolio } = useOrgPortfolio();
+  const { snapshots: trendSnapshots } = usePortfolioTrend(90);
+
   const loading = dashboardLoading || metricsLoading;
 
   // Mark content ready once loading completes
@@ -113,38 +118,16 @@ const IntegratedDashboard: React.FC = () => {
     }
   }, [loading]);
 
-  const { userToken, userId } = useAuth();
+  const { userId } = useAuth();
 
-  const [userName, setUserName] = useState<string>("");
   const [showOrgNameModal, setShowOrgNameModal] = useState(false);
   const [currentOrgName, setCurrentOrgName] = useState("");
   const [organizationId, setOrganizationId] = useState<number>(-1);
-
-  // Generate time-based greeting
-  const greeting = useMemo(() => {
-    return getTimeBasedGreeting(userName, userToken);
-  }, [userName, userToken]);
 
   useEffect(() => {
     fetchDashboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Fetch user name
-  useEffect(() => {
-    const fetchUserName = async () => {
-      if (!userId) return;
-      try {
-        const userData = await getUserById({ userId });
-        const actualUserData = userData?.data || userData;
-        setUserName(actualUserData?.name || "");
-      } catch (error) {
-        console.error("Failed to fetch user name:", error);
-        setUserName(userToken?.name || "");
-      }
-    };
-    fetchUserName();
-  }, [userId, userToken?.name]);
 
   // Check for first login and show organization name modal
   useEffect(() => {
@@ -331,27 +314,9 @@ const IntegratedDashboard: React.FC = () => {
 
       {/* Header */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 400, fontSize: "20px" }}>
-            <Box component="span" sx={{ color: COLORS.primary }}>
-              {greeting.greetingText}
-            </Box>
-            <Box component="span" sx={{ color: theme.palette.text.primary }}>
-              , {greeting.text.split(", ")[1]}
-            </Box>
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              color: theme.palette.text.secondary,
-              fontSize: 13,
-              fontWeight: 400,
-              mt: 0.5,
-            }}
-          >
-            Here is an overview of your AI governance platform
-          </Typography>
-        </Box>
+        <Typography variant="h5" sx={{ fontWeight: 600, fontSize: 20, fontFamily: "'Red Hat Display', 'Geist', sans-serif" }}>
+          Dashboard
+        </Typography>
 
         <Stack direction="row" alignItems="center" gap="16px">
           <ButtonToggle
@@ -462,7 +427,7 @@ const IntegratedDashboard: React.FC = () => {
                             sx={{
                               fontSize: 13,
                               fontWeight: 500,
-                              color: "#667085",
+                              color: `${text.icon}`,
                               minWidth: 55,
                               textAlign: "center",
                             }}
@@ -537,7 +502,29 @@ const IntegratedDashboard: React.FC = () => {
             </DashboardCard>
           </Box>
 
-          {/* Executive Row 4: Recent activity + Recent use cases */}
+          {/* Executive Row 4b: Quantitative risk portfolio (conditional) */}
+          {isQuantitative && portfolio && portfolio.risk_count > 0 && (
+            <Box
+              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", mb: "16px" }}
+            >
+              <DashboardCard title="AI portfolio exposure" navigateTo="/risk-management">
+                <PortfolioExposureCard portfolio={portfolio} />
+              </DashboardCard>
+              <DashboardCard title="Exposure trend (90 days)">
+                <PortfolioTrendChart snapshots={trendSnapshots} height={200} />
+              </DashboardCard>
+              <DashboardCard title="Loss category breakdown">
+                <LossCategoryBreakdown
+                  regulatory={portfolio.loss_regulatory}
+                  operational={portfolio.loss_operational}
+                  litigation={portfolio.loss_litigation}
+                  reputational={portfolio.loss_reputational}
+                />
+              </DashboardCard>
+            </Box>
+          )}
+
+          {/* Executive Row 5: Recent activity + Recent use cases */}
           <Box
             sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", mb: "16px" }}
           >
@@ -1071,7 +1058,7 @@ const IntegratedDashboard: React.FC = () => {
                             sx={{
                               fontSize: 13,
                               fontWeight: 500,
-                              color: "#667085",
+                              color: "text.icon",
                               minWidth: 55,
                               textAlign: "center",
                             }}

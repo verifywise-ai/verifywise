@@ -52,13 +52,13 @@ VerifyWise is a full-stack AI governance platform built with a modern JavaScript
 ┌─────────────────────┐                   ┌─────────────────────┐
 │     PostgreSQL      │                   │       Redis         │
 │  ┌───────────────┐  │                   │  ┌───────────────┐  │
-│  │ public schema │  │                   │  │  Job Queues   │  │
-│  │ (shared data) │  │                   │  │  (BullMQ)     │  │
-│  ├───────────────┤  │                   │  ├───────────────┤  │
-│  │ tenant_abc    │  │                   │  │  Pub/Sub      │  │
-│  │ tenant_xyz    │  │                   │  │  (Notifs)     │  │
-│  │ (per-org)     │  │                   │  ├───────────────┤  │
-│  └───────────────┘  │                   │  │  Cache        │  │
+│  │  verifywise   │  │                   │  │  Job Queues   │  │
+│  │  schema       │  │                   │  │  (BullMQ)     │  │
+│  │  (all data,   │  │                   │  ├───────────────┤  │
+│  │  org_id       │  │                   │  │  Pub/Sub      │  │
+│  │  isolation)   │  │                   │  │  (Notifs)     │  │
+│  └───────────────┘  │                   │  ├───────────────┤  │
+│                      │                   │  │  Cache        │  │
 └─────────────────────┘                   │  └───────────────┘  │
                                           └─────────────────────┘
 ```
@@ -215,9 +215,9 @@ Clients/src/
 ## Key Architectural Patterns
 
 ### 1. Multi-Tenancy
-- Schema-per-tenant isolation in PostgreSQL
-- Tenant context propagated via middleware
-- Shared `public` schema for cross-tenant data (users, organizations)
+- Single `verifywise` schema with `organization_id` column on tenant-scoped tables
+- `req.organizationId` propagated via auth middleware
+- All queries include `WHERE organization_id = :organizationId`
 - See: [Multi-tenancy Documentation](./multi-tenancy.md)
 
 ### 2. Clean Architecture (Frontend)
@@ -288,8 +288,7 @@ JWT_SECRET=****
 REFRESH_TOKEN_SECRET=****
 
 # Multi-tenancy
-TENANT_HASH_SALT=****
-TENANT_ENTROPY_SOURCE=****
+MULTI_TENANCY_ENABLED=true
 
 # Encryption
 ENCRYPTION_KEY=****

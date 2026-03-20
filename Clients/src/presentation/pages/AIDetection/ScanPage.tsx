@@ -291,8 +291,8 @@ export default function ScanPage() {
           sx={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "8px",
-            mb: "16px",
+            gap: 1,
+            mb: 2,
           }}
         >
           <StatCard
@@ -346,8 +346,8 @@ export default function ScanPage() {
           sx={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "8px",
-            mb: "16px",
+            gap: 1,
+            mb: 2,
           }}
         >
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -355,7 +355,7 @@ export default function ScanPage() {
               key={i}
               variant="rectangular"
               height={90}
-              sx={{ borderRadius: "8px" }}
+              sx={{ borderRadius: "4px" }}
             />
           ))}
         </Box>
@@ -375,7 +375,7 @@ export default function ScanPage() {
             backgroundColor: palette.background.main,
             border: `1px solid ${palette.border.dark}`,
             borderRadius: "4px",
-            p: "16px",
+            p: 2,
           }}
         >
           <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
@@ -383,30 +383,42 @@ export default function ScanPage() {
               <Typography sx={{ fontSize: "13px", fontWeight: 600, mb: 0.5 }}>
                 Repository URL
               </Typography>
-              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, mb: "8px" }}>
-                Configure a GitHub token in Settings to scan private repositories.{" "}
-                Try these examples:{" "}
-                {[
-                  "Shubhamsaboo/awesome-llm-apps",
-                  "langchain-ai/chat-langchain",
-                  "GitGuardian/sample_secrets",
-                  "nomic-ai/gpt4all",
-                ].map((repo, idx, arr) => (
-                  <span key={repo}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, mb: "4px" }}>
+                Configure a GitHub token in Settings to scan private repositories.
+                Try these examples:
+              </Typography>
+              <Box component="ul" sx={{ m: 0, pl: "20px", mb: "8px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                {([
+                  {
+                    repo: "Shubhamsaboo/awesome-llm-apps",
+                    description: "Curated LLM apps — detects AI libraries, API calls, and provider dependencies",
+                  },
+                  {
+                    repo: "langchain-ai/chat-langchain",
+                    description: "LangChain chatbot — reveals RAG components, agent patterns, and model references",
+                  },
+                  {
+                    repo: "verifywise-ai/llm-security-tester",
+                    description: "Intentionally vulnerable — triggers prompt injection, PII exposure, excessive agency, and jailbreak findings",
+                  },
+                ] as const).map(({ repo, description }) => (
+                  <Box component="li" key={repo} sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                     <span
                       onClick={() => setRepositoryUrl(repo)}
                       style={{
                         color: palette.brand.primary,
                         cursor: "pointer",
                         textDecoration: "underline",
+                        fontWeight: 500,
                       }}
                     >
                       {repo}
                     </span>
-                    {idx < arr.length - 1 && ", "}
-                  </span>
+                    {" — "}
+                    {description}
+                  </Box>
                 ))}
-              </Typography>
+              </Box>
               <Field
                 id="repository-url"
                 placeholder="e.g., https://github.com/owner/repo or owner/repo"
@@ -447,7 +459,7 @@ export default function ScanPage() {
               }}
             >
               <AlertCircle size={16} color={palette.status.error.text} />
-              <Typography variant="body2" sx={{ color: palette.status.error.text }}>
+              <Typography sx={{ fontSize: "13px", color: palette.status.error.text }}>
                 {error}
               </Typography>
             </Box>
@@ -466,7 +478,7 @@ export default function ScanPage() {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-            <Typography variant="body1" sx={{ fontWeight: 500, fontSize: "13px" }}>
+            <Typography sx={{ fontWeight: 500, fontSize: "13px" }}>
               {progress.status === "cloning"
                 ? "Cloning repository..."
                 : `Scanning files... (${progress.files_scanned}${
@@ -491,16 +503,16 @@ export default function ScanPage() {
           />
 
           <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
-            <Typography variant="caption" sx={{ color: palette.text.tertiary }}>
+            <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
               {progress.current_file || "Processing..."}
             </Typography>
-            <Typography variant="caption" sx={{ color: palette.text.tertiary }}>
+            <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
               {progress.progress}%
             </Typography>
           </Box>
 
           {progress.findings_count > 0 && (
-            <Typography variant="body2" sx={{ mt: 2, color: palette.brand.primary }}>
+            <Typography sx={{ fontSize: "13px", mt: 2, color: palette.brand.primary }}>
               Found {progress.findings_count} AI/ML {progress.findings_count === 1 ? "library" : "libraries"} so far
             </Typography>
           )}
@@ -529,10 +541,10 @@ export default function ScanPage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
             <CheckCircle2 size={24} color={palette.status.success.text} />
             <Box>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+              <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>
                 Scan completed
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 {result.scan.repository_owner}/{result.scan.repository_name}
               </Typography>
             </Box>
@@ -555,10 +567,10 @@ export default function ScanPage() {
                 textAlign: "center",
               }}
             >
-              <Typography variant="h4" sx={{ fontWeight: 600, color: palette.text.primary }}>
+              <Typography sx={{ fontSize: "20px", fontWeight: 600, color: palette.text.primary }}>
                 {result.summary.total}
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 Total findings
               </Typography>
             </Box>
@@ -570,10 +582,10 @@ export default function ScanPage() {
                 textAlign: "center",
               }}
             >
-              <Typography variant="h4" sx={{ fontWeight: 600, color: palette.status.error.text }}>
+              <Typography sx={{ fontSize: "20px", fontWeight: 600, color: palette.status.error.text }}>
                 {result.summary.by_confidence.high}
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 High confidence
               </Typography>
             </Box>
@@ -585,17 +597,17 @@ export default function ScanPage() {
                 textAlign: "center",
               }}
             >
-              <Typography variant="h4" sx={{ fontWeight: 600, color: palette.text.primary }}>
+              <Typography sx={{ fontSize: "20px", fontWeight: 600, color: palette.text.primary }}>
                 {result.scan.files_scanned}
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 Files scanned
               </Typography>
             </Box>
           </Box>
 
           {/* Actions */}
-          <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: "16px" }}>
+          <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: 2 }}>
             <CustomizableButton
               text="Scan another"
               onClick={handleReset}
@@ -624,10 +636,10 @@ export default function ScanPage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
             <XCircle size={24} color={palette.status.error.text} />
             <Box>
-              <Typography variant="body1" sx={{ fontWeight: 500, color: palette.status.error.text }}>
+              <Typography sx={{ fontSize: "13px", fontWeight: 500, color: palette.status.error.text }}>
                 Scan failed
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 {error || "An error occurred during the scan"}
               </Typography>
             </Box>

@@ -3,6 +3,7 @@ import { welcomeContent } from './getting-started/welcome';
 import { installingContent } from './getting-started/installing';
 import { dashboardContent } from './getting-started/dashboard';
 import { quickStartContent } from './getting-started/quick-start';
+import { useCasesContent } from './ai-governance/use-cases';
 import { intakeFormsContent } from './ai-governance/intake-forms';
 import { modelInventoryContent } from './ai-governance/model-inventory';
 import { modelLifecycleContent } from './ai-governance/model-lifecycle';
@@ -12,6 +13,7 @@ import { evidenceCollectionContent } from './ai-governance/evidence-collection';
 import { watchtowerContent } from './ai-governance/watchtower';
 import { aiTrustCenterContent } from './ai-governance/ai-trust-center';
 import { riskAssessmentContent } from './risk-management/risk-assessment';
+import { quantitativeRiskAssessmentContent } from './risk-management/quantitative-risk-assessment';
 import { riskMitigationContent } from './risk-management/risk-mitigation';
 import { vendorManagementContent } from './risk-management/vendor-management';
 import { vendorRisksContent } from './risk-management/vendor-risks';
@@ -51,6 +53,15 @@ import { userActivityContent } from './shadow-ai/user-activity';
 import { rulesContent } from './shadow-ai/rules';
 import { settingsContent as shadowAiSettingsContent } from './shadow-ai/settings';
 import { integrationGuideContent } from './shadow-ai/integration-guide';
+import { gettingStartedContent as aiGatewayGettingStartedContent } from './ai-gateway/getting-started';
+import { analyticsContent as aiGatewayAnalyticsContent } from './ai-gateway/analytics';
+import { endpointsContent as aiGatewayEndpointsContent } from './ai-gateway/endpoints';
+import { playgroundContent as aiGatewayPlaygroundContent } from './ai-gateway/playground';
+import { guardrailsContent as aiGatewayGuardrailsContent } from './ai-gateway/guardrails';
+import { aiGatewaySettingsContent } from './ai-gateway/settings';
+import { virtualKeysContent as aiGatewayVirtualKeysContent } from './ai-gateway/virtual-keys';
+import { logsContent as aiGatewayLogsContent } from './ai-gateway/logs';
+import { promptsContent as aiGatewayPromptsContent } from './ai-gateway/prompts';
 
 // Map of article IDs to their content
 // Format: 'collectionId/articleId': ArticleContent
@@ -61,6 +72,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'getting-started/dashboard': dashboardContent,
   'getting-started/quick-start': quickStartContent,
   // AI Governance
+  'ai-governance/use-cases': useCasesContent,
   'ai-governance/intake-forms': intakeFormsContent,
   'ai-governance/model-inventory': modelInventoryContent,
   'ai-governance/model-lifecycle': modelLifecycleContent,
@@ -71,6 +83,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-governance/ai-trust-center': aiTrustCenterContent,
   // Risk Management
   'risk-management/risk-assessment': riskAssessmentContent,
+  'risk-management/quantitative-risk-assessment': quantitativeRiskAssessmentContent,
   'risk-management/risk-mitigation': riskMitigationContent,
   'risk-management/vendor-management': vendorManagementContent,
   'risk-management/vendor-risks': vendorRisksContent,
@@ -119,6 +132,16 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'shadow-ai/rules': rulesContent,
   'shadow-ai/settings': shadowAiSettingsContent,
   'shadow-ai/integration-guide': integrationGuideContent,
+  // AI Gateway
+  'ai-gateway/getting-started': aiGatewayGettingStartedContent,
+  'ai-gateway/analytics': aiGatewayAnalyticsContent,
+  'ai-gateway/endpoints': aiGatewayEndpointsContent,
+  'ai-gateway/playground': aiGatewayPlaygroundContent,
+  'ai-gateway/guardrails': aiGatewayGuardrailsContent,
+  'ai-gateway/settings': aiGatewaySettingsContent,
+  'ai-gateway/virtual-keys': aiGatewayVirtualKeysContent,
+  'ai-gateway/logs': aiGatewayLogsContent,
+  'ai-gateway/prompts': aiGatewayPromptsContent,
 };
 
 // Helper to get article content

@@ -4,7 +4,7 @@ import { RefreshCw, CirclePlus } from "lucide-react";
 import { SearchBox } from "../../components/Search";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { getAllEntities } from "../../../application/repository/entity.repository";
-import AgentStatusCards from "./AgentStatusCards";
+import { StatusTileCards } from "../../components/Cards/StatusTileCards";
 import ReviewAgentModal from "../../components/Modals/AgentDiscovery/ReviewAgentModal";
 import ManualAgentModal from "../../components/Modals/AgentDiscovery/ManualAgentModal";
 import {
@@ -331,7 +331,19 @@ const AgentDiscovery: React.FC = () => {
       title="Agent discovery"
       description="Automatically discover and inventory AI agents across your organization. Review discovered agents, confirm or reject them, and link them to your model inventory for governance tracking."
       helpArticlePath="ai-governance/agent-discovery"
-      summaryCards={<AgentStatusCards stats={stats} />}
+      summaryCards={
+        <StatusTileCards
+          items={[
+            { key: "total", label: "Total", color: "#1976D2", count: stats.total },
+            { key: "unreviewed", label: "Unreviewed", color: "#F9A825", count: stats.unreviewed },
+            { key: "confirmed", label: "Confirmed", color: "#2E7D32", count: stats.confirmed },
+            { key: "rejected", label: "Rejected", color: "#D32F2F", count: stats.rejected },
+            { key: "stale", label: "Stale", color: "#455A64", count: stats.stale },
+          ]}
+          entityName="agent"
+          size="small"
+        />
+      }
       alert={
         showAlert && alert ? (
           <Fade in={showAlert}>

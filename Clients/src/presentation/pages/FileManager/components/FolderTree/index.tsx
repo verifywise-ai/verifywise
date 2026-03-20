@@ -26,6 +26,7 @@ import {
   SelectedFolder,
 } from "../../../../../domain/interfaces/i.virtualFolder";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
+import { brand, text } from "../../../../themes/palette";
 
 interface FolderTreeProps {
   folders: IFolderTreeNode[];
@@ -140,9 +141,9 @@ const FolderItem: React.FC<FolderItemProps> = ({
         >
           {hasChildren && (
             isExpanded ? (
-              <ChevronDownIcon size={14} color="#667085" />
+              <ChevronDownIcon size={14} color={text.icon} />
             ) : (
-              <ChevronRightIcon size={14} color="#667085" />
+              <ChevronRightIcon size={14} color={text.icon} />
             )
           )}
         </Box>
@@ -153,7 +154,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
             marginRight: "8px",
             display: "flex",
             alignItems: "center",
-            color: folder.color || "#13715B",
+            color: folder.color || brand.primary,
           }}
         >
           {isExpanded ? (
@@ -169,7 +170,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
             flex: 1,
             fontSize: 13,
             fontWeight: isSelected ? 500 : 400,
-            color: isSelected ? "#13715B" : "#344054",
+            color: isSelected ? "brand.primary" : "text.secondary",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -182,7 +183,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
         <Typography
           sx={{
             fontSize: 12,
-            color: "#98A2B3",
+            color: "text.muted",
             marginLeft: "4px",
             flexShrink: 0,
           }}
@@ -203,7 +204,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               title="Create subfolder"
               aria-label={`Create subfolder in ${folder.name}`}
             >
-              <PlusIcon size={12} color="#667085" />
+              <PlusIcon size={12} color={text.icon} />
             </IconButton>
             <IconButton
               size="small"
@@ -215,7 +216,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               title="Edit folder"
               aria-label={`Edit folder ${folder.name}`}
             >
-              <EditIcon size={12} color="#667085" />
+              <EditIcon size={12} color={text.icon} />
             </IconButton>
             <IconButton
               size="small"
@@ -321,7 +322,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
             title="Expand sidebar"
             aria-label="Expand folder sidebar"
           >
-            <PanelLeftOpenIcon size={16} color="#667085" />
+            <PanelLeftOpenIcon size={16} color={text.icon} />
           </IconButton>
         ) : (
           <>
@@ -336,13 +337,13 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                 title="Collapse sidebar"
                 aria-label="Collapse folder sidebar"
               >
-                <PanelLeftCloseIcon size={14} color="#667085" />
+                <PanelLeftCloseIcon size={14} color={text.icon} />
               </IconButton>
               <Typography
                 sx={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: "#667085",
+                  color: "text.icon",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px",
                 }}
@@ -361,7 +362,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                 title="Create folder"
                 aria-label="Create new folder"
               >
-                <PlusIcon size={14} color="#13715B" />
+                <PlusIcon size={14} color={brand.primary} />
               </IconButton>
             )}
           </>
@@ -377,7 +378,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
             padding: "12px 0",
           }}
         >
-          <FolderIcon size={16} color="#667085" />
+          <FolderIcon size={16} color={text.icon} />
         </Box>
       )}
 
@@ -394,7 +395,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
             <Typography
               sx={{
                 fontSize: 13,
-                color: "#98A2B3",
+                color: "text.muted",
                 padding: "12px",
                 textAlign: "center",
               }}
@@ -420,7 +421,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                 }}
               >
                 <Box sx={{ width: 20 }} />
-                <Box sx={{ marginRight: "8px", display: "flex", color: "#667085" }}>
+                <Box sx={{ marginRight: "8px", display: "flex", color: "text.icon" }}>
                   <FilesIcon size={16} />
                 </Box>
                 <Typography
@@ -428,7 +429,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                     flex: 1,
                     fontSize: 13,
                     fontWeight: selectedFolder === "all" ? 500 : 400,
-                    color: selectedFolder === "all" ? "#13715B" : "#344054",
+                    color: selectedFolder === "all" ? "brand.primary" : "text.secondary",
                   }}
                 >
                   {allLabel}
@@ -453,7 +454,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                 }}
               >
                 <Box sx={{ width: 20 }} />
-                <Box sx={{ marginRight: "8px", display: "flex", color: "#98A2B3" }}>
+                <Box sx={{ marginRight: "8px", display: "flex", color: "text.muted" }}>
                   <UncategorizedIcon size={16} />
                 </Box>
                 <Typography
@@ -461,7 +462,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                     flex: 1,
                     fontSize: 13,
                     fontWeight: selectedFolder === "uncategorized" ? 500 : 400,
-                    color: selectedFolder === "uncategorized" ? "#13715B" : "#344054",
+                    color: selectedFolder === "uncategorized" ? "brand.primary" : "text.secondary",
                   }}
                 >
                   Uncategorized
@@ -497,7 +498,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                   <Typography
                     sx={{
                       fontSize: 13,
-                      color: "#98A2B3",
+                      color: "text.muted",
                       marginBottom: "8px",
                     }}
                   >

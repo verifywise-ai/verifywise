@@ -1,0 +1,31 @@
+<mjml>
+  <mj-head>
+    <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:300,500"></mj-font>
+    <mj-attributes>
+      <mj-all font-family="Roboto, Helvetica, sans-serif"></mj-all>
+      <mj-text font-weight="300" font-size="14px" color="#616161" line-height="24px"></mj-text>
+      <mj-section padding="0px"></mj-section>
+    </mj-attributes>
+  </mj-head>
+  <mj-body width="100%">
+    <mj-section text-align="left" padding="0px">
+      <mj-column width="100%" vertical-align="top">
+        <mj-text align="left">
+          <h2 style="color: #2c3e50; margin-bottom: 20px;">AI Gateway risk suggestions</h2>
+          <p>Hi {{recipient_name}},</p>
+          <p>{{suggestion_count}} new risk suggestion(s) were detected in your AI Gateway based on recent monitoring data.</p>
+          <table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
+            {{suggestion_rows}}
+          </table>
+          <p style="margin: 20px 0;">
+            <a href="{{gateway_url}}" style="background-color: #13715B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Review in VerifyWise</a>
+          </p>
+          <p style="color: #667085; font-size: 13px;">You can adjust detection thresholds or disable conditions in Settings &gt; Suggested risks.</p>
+          <p style="margin-top: 30px; color: #7f8c8d; font-size: 12px;">
+            Sent from VerifyWise
+          </p>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

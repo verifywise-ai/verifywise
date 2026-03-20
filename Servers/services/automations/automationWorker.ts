@@ -1,7 +1,6 @@
 import { Worker, Job } from "bullmq";
 import { REDIS_URL } from "../../database/redis";
 import sendEmail from "./actions/sendEmail";
-import { getTenantHash } from "../../tools/getTenantHash";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 import { getAllVendorsQuery } from "../../utils/vendor.utils";
 import { sequelize } from "../../database/db";
@@ -23,6 +22,56 @@ import {
 } from "../shadowAiAggregation.service";
 import { runAgentDiscoverySync } from "../agentDiscovery/agentDiscoverySync.service";
 import { processScheduledAiDetectionScans } from "../aiDetection/scheduledScanProcessor";
+// AI Gateway budget/risk jobs — call AIGateway HTTP endpoints via internal API
+const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
+const AI_GATEWAY_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
+
+async function callAIGateway(method: string, path: string, body?: object): Promise<any> {
+  const response = await fetch(`${AI_GATEWAY_URL}${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "x-internal-key": AI_GATEWAY_KEY,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`AIGateway ${path} returned ${response.status}: ${text}`);
+  }
+  return response.json();
+}
+
+async function resetAllBudgets(): Promise<void> {
+  await callAIGateway("POST", "/internal/budget/reset");
+}
+
+async function resetVirtualKeyBudgets(): Promise<void> {
+  await callAIGateway("POST", "/internal/virtual-keys/reset-budgets");
+}
+
+async function runRiskDetection(): Promise<void> {
+  // Get all org IDs with gateway data, then run detection for each
+  const orgs = await callAIGateway("GET", "/internal/risk/detection-orgs");
+  for (const orgId of orgs.data || []) {
+    try {
+      await fetch(`${AI_GATEWAY_URL}/internal/risk/detect`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-key": AI_GATEWAY_KEY,
+          "x-organization-id": String(orgId),
+          "x-user-id": "0",
+          "x-role": "Admin",
+        },
+        signal: AbortSignal.timeout(120_000),
+      });
+    } catch (err) {
+      console.error(`Risk detection failed for org ${orgId}:`, err);
+    }
+  }
+}
 import { compileMjmlToHtml } from "../../tools/mjmlCompiler";
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -37,15 +86,22 @@ const handlers = {
 async function sendVendorReviewDateNotification() {
   const organizations = await getAllOrganizationsQuery();
   for (let org of organizations) {
-    const tenantHash = getTenantHash(org.id!);
-    const vendors = await getAllVendorsQuery(tenantHash);
+    const organizationId = org.id!;
+    const vendors = await getAllVendorsQuery(organizationId);
     const automations = (await sequelize.query(`SELECT
         pat.key AS trigger_key,
         paa.key AS action_key,
         a.id AS automation_id,
         a.params AS automation_params,
         aa.*
-      FROM public.automation_triggers pat JOIN "${tenantHash}".automations a ON a.trigger_id = pat.id JOIN "${tenantHash}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_review_date_approaching' AND a.is_active ORDER BY aa."order" ASC;`)) as [
+      FROM automation_triggers pat
+      JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId
+      JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
+      JOIN automation_actions paa ON aa.action_type_id = paa.id
+      WHERE pat.key = 'vendor_review_date_approaching' AND a.is_active
+      ORDER BY aa."order" ASC;`,
+      { replacements: { organizationId } }
+    )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
         action_key: string;
@@ -88,7 +144,7 @@ async function sendVendorReviewDateNotification() {
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant: tenantHash,
+        organizationId,
       });
 
       // Send in-app + dedicated email notification
@@ -104,7 +160,7 @@ async function sendVendorReviewDateNotification() {
               })
             : "Not set";
           await notifyVendorReviewDue(
-            tenantHash,
+            organizationId,
             reviewerUserId,
             {
               id: vendor.id!,
@@ -132,9 +188,9 @@ async function sendPolicyDueSoonEmailNotification() {
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
   for (const org of organizations) {
-    const tenantHash = getTenantHash(org.id!);
+    const organizationId = org.id!;
     try {
-      const policies: PolicyManagerModel[] = await getAllPoliciesDueSoonQuery(tenantHash);
+      const policies: PolicyManagerModel[] = await getAllPoliciesDueSoonQuery(organizationId);
 
       for (const policy of policies) {
         if (!policy.author_id) continue;
@@ -149,7 +205,7 @@ async function sendPolicyDueSoonEmailNotification() {
 
         try {
           await notifyPolicyDueSoon(
-            tenantHash,
+            organizationId,
             policy.author_id,
             {
               id: policy.id!,
@@ -178,7 +234,7 @@ async function generateAndUploadReport(
   projectId: number,
   frameworkId: number,
   projectFrameworkId: number,
-  tenantId: string,
+  organizationId: number,
   organizationName: string
 ) {
   try {
@@ -195,7 +251,7 @@ async function generateAndUploadReport(
         },
       },
       userId,
-      tenantId
+      organizationId
     );
 
     if (!result.success) {
@@ -215,7 +271,7 @@ async function generateAndUploadReport(
       userId,
       projectId,
       mapReportTypeToFileSource(reportType),
-      tenantId
+      organizationId
     );
     return uploadedFile;
   } catch (error) {
@@ -227,7 +283,7 @@ async function generateAndUploadReport(
 async function sendReportNotification() {
   const organizations = await getAllOrganizationsQuery();
   for (let org of organizations) {
-    const tenantHash = getTenantHash(org.id!);
+    const organizationId = org.id!;
     const automations = (await sequelize.query(`SELECT
         pat.key AS trigger_key,
         paa.key AS action_key,
@@ -235,7 +291,14 @@ async function sendReportNotification() {
         a.params AS automation_params,
         a.created_by AS user_id,
         aa.*
-      FROM public.automation_triggers pat JOIN "${tenantHash}".automations a ON a.trigger_id = pat.id JOIN "${tenantHash}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'scheduled_report' AND a.is_active ORDER BY aa."order" ASC;`)) as [
+      FROM automation_triggers pat
+      JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId
+      JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
+      JOIN automation_actions paa ON aa.action_type_id = paa.id
+      WHERE pat.key = 'scheduled_report' AND a.is_active
+      ORDER BY aa."order" ASC;`,
+      { replacements: { organizationId } }
+    )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
         action_key: string;
@@ -267,9 +330,11 @@ async function sendReportNotification() {
           p.owner AS owner,
           pf.framework_id AS framework_id,
           pf.id AS project_framework_id
-        FROM "${tenantHash}".projects AS p INNER JOIN "${tenantHash}".projects_frameworks AS pf ON p.id = pf.project_id WHERE p.id = :projectId;`,
+        FROM projects AS p
+        INNER JOIN projects_frameworks AS pf ON p.id = pf.project_id AND pf.organization_id = :organizationId
+        WHERE p.organization_id = :organizationId AND p.id = :projectId;`,
         {
-          replacements: { projectId: parseInt(params.projectId) },
+          replacements: { organizationId, projectId: parseInt(params.projectId) },
         }
       )) as [
         {
@@ -281,13 +346,13 @@ async function sendReportNotification() {
         number,
       ];
       const [[{ full_name }]] = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :userId;`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :userId;`,
         {
           replacements: { userId: projectDetails[0][0].owner },
         }
       )) as [{ full_name: string }[], number];
       const [[{ organization_name }]] = (await sequelize.query(
-        `SELECT name FROM public.organizations WHERE id = :orgId;`,
+        `SELECT name FROM organizations WHERE id = :orgId;`,
         {
           replacements: { orgId: org.id },
         }
@@ -298,8 +363,7 @@ async function sendReportNotification() {
           "send_report_notification_daily",
           {
             automation,
-            tenantHash,
-            organization_id: org.id,
+            organizationId,
             projectDetails: projectDetails[0][0],
             full_name,
             organization_name,
@@ -332,8 +396,7 @@ async function sendReportNotification() {
       }
       await sendReportNotificationEmail({
         automation,
-        tenantHash,
-        organization_id: org.id,
+        organizationId,
         projectDetails: projectDetails[0][0],
         full_name,
         organization_name,
@@ -345,16 +408,15 @@ async function sendReportNotification() {
 async function sendReportNotificationEmail(jobData: any) {
   const {
     automation,
-    tenantHash,
-    organization_id,
+    organizationId,
     projectDetails,
     full_name,
     organization_name,
   } = jobData;
   const [[{ exists }]] = (await sequelize.query(
-    `SELECT EXISTS(SELECT 1 FROM "${tenantHash}".automation_actions WHERE id = :actionId) AS exists;`,
+    `SELECT EXISTS(SELECT 1 FROM automation_actions_data WHERE organization_id = :organizationId AND id = :actionId) AS exists;`,
     {
-      replacements: { actionId: parseInt(automation.id) },
+      replacements: { organizationId, actionId: parseInt(automation.id) },
     }
   )) as [{ exists: boolean }[], number];
   if (!exists) {
@@ -378,7 +440,7 @@ async function sendReportNotificationEmail(jobData: any) {
       parseInt(automation_params.projectId),
       projectDetails.framework_id,
       projectDetails.project_framework_id,
-      tenantHash,
+      organizationId,
       organization_name
     );
 
@@ -396,7 +458,7 @@ async function sendReportNotificationEmail(jobData: any) {
   const replacements = await buildReportingReplacements({
     reportType: automation_params.reportType,
     frequency: automation_params.frequency,
-    organizationId: organization_id,
+    organizationId,
     reportLevel: automation_params.reportLevel,
     projectDetails: { ...projectDetails, owner_name: full_name },
   });
@@ -413,7 +475,7 @@ async function sendReportNotificationEmail(jobData: any) {
   // Enqueue with processed params
   await enqueueAutomationAction(automation.action_key, {
     ...processedParams,
-    tenant: tenantHash,
+    organizationId,
   });
 }
 
@@ -450,6 +512,29 @@ export const createAutomationWorker = () => {
           await runAgentDiscoverySync();
         } else if (name === "ai_detection_scheduled_scan_check") {
           await processScheduledAiDetectionScans();
+        } else if (name === "ai_gateway_budget_reset") {
+          await resetAllBudgets();
+          await resetVirtualKeyBudgets();
+        } else if (name === "ai_gateway_risk_detection") {
+          await runRiskDetection();
+        } else if (name === "ai_gateway_cache_cleanup") {
+          const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
+          try {
+            const response = await fetch(
+              `${AI_GATEWAY_URL}/internal/cache/purge-expired`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-internal-key": process.env.AI_GATEWAY_INTERNAL_KEY || "",
+                },
+              }
+            );
+            const result = await response.json() as { deleted?: number };
+            console.log(`AI Gateway cache cleanup: ${result.deleted ?? 0} expired entries purged`);
+          } catch (err) {
+            console.error(`AI Gateway cache cleanup failed: ${err}`);
+          }
         } else if (name === "send_pmm_notification") {
           // PMM notification handling - send email using MJML templates
           const { type, data } = job.data;
@@ -530,7 +615,7 @@ export const createAutomationWorker = () => {
                   error_message: result.error,
                 },
               ],
-              job.data.tenant,
+              job.data.organizationId,
               startTime
             );
           }
@@ -549,7 +634,7 @@ export const createAutomationWorker = () => {
                   error instanceof Error ? error.message : "Unknown error",
               },
             ],
-            job.data.tenant,
+            job.data.organizationId,
             startTime
           );
         }

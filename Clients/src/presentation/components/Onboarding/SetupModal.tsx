@@ -20,6 +20,7 @@ import { postAutoDrivers } from "../../../application/repository/entity.reposito
 import { updateOnboardingStatus } from "../../../application/repository/organization.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { setOnboardingStatus } from "../../../application/redux/auth/authSlice";
+import { brand, text, background } from "../../themes/palette";
 
 interface SetupModalProps {
   /** Callback when setup is complete (either option selected) */
@@ -120,6 +121,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
 
   return (
     <Box
+      className="confirmation-backdrop"
       sx={{
         position: "fixed",
         top: 0,
@@ -151,6 +153,8 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
       }}
     >
       <Box
+        role="dialog"
+        aria-modal="true"
         sx={{
           backgroundColor: "white",
           borderRadius: "12px",
@@ -180,7 +184,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
           <Typography
             sx={{
               fontSize: 14,
-              color: "#475467",
+              color: `${text.tertiary}`,
               lineHeight: 1.5,
             }}
           >
@@ -208,7 +212,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               opacity: isLoading && loadingOption !== "demo" ? 0.5 : 1,
               transition: "all 0.2s ease",
               "&:hover": {
-                borderColor: isLoading ? "#E0E4E9" : "#13715B",
+                borderColor: isLoading ? "#E0E4E9" : `${brand.primary}`,
                 backgroundColor: isLoading ? "transparent" : "#F8FDFB",
               },
             }}
@@ -226,9 +230,9 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                 }}
               >
                 {loadingOption === "demo" ? (
-                  <CircularProgress size={24} sx={{ color: "#13715B" }} />
+                  <CircularProgress size={24} sx={{ color: `${brand.primary}` }} />
                 ) : (
-                  <Database size={24} color="#13715B" />
+                  <Database size={24} color={brand.primary} />
                 )}
               </Box>
               <Stack spacing={0.5} alignItems="center">
@@ -244,7 +248,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                 <Typography
                   sx={{
                     fontSize: 13,
-                    color: "#475467",
+                    color: `${text.tertiary}`,
                     textAlign: "center",
                     lineHeight: 1.4,
                   }}
@@ -267,7 +271,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               opacity: isLoading && loadingOption !== "blank" ? 0.5 : 1,
               transition: "all 0.2s ease",
               "&:hover": {
-                borderColor: isLoading ? "#E0E4E9" : "#13715B",
+                borderColor: isLoading ? "#E0E4E9" : `${brand.primary}`,
                 backgroundColor: isLoading ? "transparent" : "#F8FDFB",
               },
             }}
@@ -285,9 +289,9 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                 }}
               >
                 {loadingOption === "blank" ? (
-                  <CircularProgress size={24} sx={{ color: "#475467" }} />
+                  <CircularProgress size={24} sx={{ color: `${text.tertiary}` }} />
                 ) : (
-                  <LayoutDashboard size={24} color="#475467" />
+                  <LayoutDashboard size={24} color={text.tertiary} />
                 )}
               </Box>
               <Stack spacing={0.5} alignItems="center">
@@ -303,7 +307,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                 <Typography
                   sx={{
                     fontSize: 13,
-                    color: "#475467",
+                    color: `${text.tertiary}`,
                     textAlign: "center",
                     lineHeight: 1.4,
                   }}
@@ -320,7 +324,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
           sx={{
             padding: "16px 32px",
             borderTop: "1px solid #E0E4E9",
-            backgroundColor: "#F9FAFB",
+            backgroundColor: `${background.accent}`,
           }}
         >
           <Stack direction="row" justifyContent="flex-end">
@@ -330,7 +334,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               onClick={handleClose}
               isDisabled={isLoading}
               sx={{
-                color: "#475467",
+                color: `${text.tertiary}`,
                 fontSize: 13,
                 "&:hover": {
                   backgroundColor: "transparent",

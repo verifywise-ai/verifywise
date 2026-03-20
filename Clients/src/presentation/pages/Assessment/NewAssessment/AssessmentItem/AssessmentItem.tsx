@@ -11,6 +11,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { Topic } from "../../../../../application/hooks/useAssessmentAnswers";
+import { background } from "../../../../themes/palette";
 
 interface AssessmentItemProps {
   assessmentsValues: Topic[];
@@ -60,7 +61,7 @@ const AssessmentItem = ({
               primary={
                 <Typography
                   color={
-                    index === activeTab ? "#fff" : theme.palette.text.primary
+                    index === activeTab ? `${background.main}` : theme.palette.text.primary
                   }
                   sx={{ fontSize: 13 }}
                 >

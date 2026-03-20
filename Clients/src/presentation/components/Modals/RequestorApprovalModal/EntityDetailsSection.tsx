@@ -13,6 +13,7 @@ import {
     isEntityDeleted,
     EntityTypeConfig,
 } from "./entityTypeConfig";
+import { background, status } from "../../../themes/palette";
 
 interface EntityDetailsSectionProps {
     details: Record<string, any>;
@@ -24,8 +25,8 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
 
     // Container styles
     const containerStyles = {
-        backgroundColor: "#F9FAFB",
-        border: "1px solid #E5E7EB",
+        backgroundColor: `${background.accent}`,
+        border: `1px solid ${status.default.border}`,
         borderRadius: "8px",
         padding: "16px",
     };
@@ -71,7 +72,7 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
                     />
                 ))
             ) : (
-                <Typography fontSize={13} color="#6B7280" fontStyle="italic">
+                <Typography fontSize={13} color={status.default.text} fontStyle="italic">
                     {config.noDataMessage}
                 </Typography>
             )}

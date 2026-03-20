@@ -25,7 +25,7 @@ export async function loadModelPatterns(): Promise<IShadowAiModelPattern[]> {
 
   const [rows] = await sequelize.query(
     `SELECT id, name, domain_pattern, path_regex
-     FROM public.shadow_ai_model_patterns
+     FROM shadow_ai_model_patterns
      ORDER BY name`
   );
 

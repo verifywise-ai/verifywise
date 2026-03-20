@@ -1,3 +1,4 @@
+import { border as borderPalette } from "../../../../themes/palette";
 export const inputStyles = {
   minWidth: 100,
   maxWidth: 200,
@@ -16,10 +17,10 @@ export const dropdownStyles = {
   },
   "&.Mui-focused": {
     "& .MuiOutlinedInput-notchedOutline": {
-      border: '1px solid #d0d5dd',
+      border: `1px solid ${borderPalette.dark}`,
     },
   },
   "& .MuiOutlinedInput-notchedOutline": {
-    border: '1px solid #d0d5dd',
+    border: `1px solid ${borderPalette.dark}`,
   },
 };

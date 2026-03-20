@@ -11,6 +11,7 @@ import {
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import StepperModal from "../StepperModal";
 import { CustomizableButton } from "../../button/customizable-button";
+import { brand } from "../../../themes/palette";
 
 interface AiOrNotScreeningProps {
   isOpen: boolean;
@@ -135,7 +136,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
 
   const radioSx = {
     color: theme.palette.border.dark,
-    "&.Mui-checked": { color: "#13715B" },
+    "&.Mui-checked": { color: `${brand.primary}` },
     padding: "4px 8px",
   };
 

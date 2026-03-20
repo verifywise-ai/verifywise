@@ -28,10 +28,11 @@ import Chip from "../../components/Chip";
 import Alert from "../../components/Alert";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import TablePaginationActions from "../../components/TablePagination";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import { Play, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Play, Pencil, Trash2, Loader2, GitBranch, Github, Shield, RefreshCw } from "lucide-react";
 import axios from "axios";
 import {
   getRepositories,
@@ -417,8 +418,25 @@ export default function RepositoriesPage() {
                 <TableRow>
                   <TableCell colSpan={TABLE_COLUMNS.length} sx={{ p: 0, border: 0 }}>
                     <EmptyState
-                      message="No repositories added yet. Click 'Add repository' to start monitoring."
-                    />
+                      icon={GitBranch}
+                      message="No repositories added yet. Add a repository to start detecting AI components."
+                    >
+                      <EmptyStateTip
+                        icon={Github}
+                        title="Connect your GitHub repositories"
+                        description="Paste a GitHub repository URL and the system will scan its codebase for AI/ML libraries, model files, and inference endpoints."
+                      />
+                      <EmptyStateTip
+                        icon={Shield}
+                        title="Detect shadow AI"
+                        description="Find undocumented AI usage in your codebase. Identify libraries and models that haven't been registered in your AI inventory."
+                      />
+                      <EmptyStateTip
+                        icon={RefreshCw}
+                        title="Schedule recurring scans"
+                        description="Set up automatic scans to run on a schedule. Get notified when new AI components are detected in your repositories."
+                      />
+                    </EmptyState>
                   </TableCell>
                 </TableRow>
               ) : (

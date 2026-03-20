@@ -34,7 +34,7 @@ export async function getPolicyChangeHistoryById(
   try {
     const result = await getPolicyChangeHistory(
       policyId,
-      req.tenantId!,
+      req.organizationId!,
       limit,
       offset
     );

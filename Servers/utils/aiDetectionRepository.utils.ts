@@ -2,7 +2,7 @@
  * @fileoverview AI Detection Repository Database Utils
  *
  * Database query functions for AI Detection repository registry.
- * Follows the established pattern for multi-tenant database operations.
+ * Follows the established pattern for shared-schema multi-tenant database operations.
  *
  * @module utils/aiDetectionRepository
  */
@@ -17,12 +17,12 @@ import {
 } from "../domain.layer/interfaces/i.aiDetectionRepository";
 
 // ============================================================================
-// Tenant ID Validation
+// Organization ID Validation
 // ============================================================================
 
-function validateTenantId(tenantId: string): void {
-  if (!tenantId || !/^[a-zA-Z0-9_]+$/.test(tenantId)) {
-    throw new Error(`Invalid tenant identifier format: ${tenantId}`);
+function validateOrganizationId(organizationId: number): void {
+  if (!organizationId || !Number.isInteger(organizationId) || organizationId <= 0) {
+    throw new Error(`Invalid organization identifier: ${organizationId}`);
   }
 }
 
@@ -32,10 +32,10 @@ function validateTenantId(tenantId: string): void {
 
 export async function createRepositoryQuery(
   input: ICreateRepositoryInput,
-  tenantId: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IAIDetectionRepository> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
 
   const nextScanAt = input.schedule_enabled
     ? computeNextScanAt(
@@ -48,15 +48,15 @@ export async function createRepositoryQuery(
     : null;
 
   const query = `
-    INSERT INTO "${tenantId}".ai_detection_repositories (
-      repository_url, repository_owner, repository_name,
+    INSERT INTO ai_detection_repositories (
+      organization_id, repository_url, repository_owner, repository_name,
       display_name, default_branch, github_token_id,
       schedule_enabled, schedule_frequency, schedule_day_of_week,
       schedule_day_of_month, schedule_hour, schedule_minute,
       next_scan_at, is_enabled, created_by,
       created_at, updated_at
     ) VALUES (
-      :repository_url, :repository_owner, :repository_name,
+      :organizationId, :repository_url, :repository_owner, :repository_name,
       :display_name, :default_branch, :github_token_id,
       :schedule_enabled, :schedule_frequency, :schedule_day_of_week,
       :schedule_day_of_month, :schedule_hour, :schedule_minute,
@@ -68,6 +68,7 @@ export async function createRepositoryQuery(
 
   const [results] = await sequelize.query(query, {
     replacements: {
+      organizationId,
       repository_url: input.repository_url,
       repository_owner: input.repository_owner,
       repository_name: input.repository_name,
@@ -91,16 +92,16 @@ export async function createRepositoryQuery(
 
 export async function getRepositoryByIdQuery(
   id: number,
-  tenantId: string
+  organizationId: number
 ): Promise<IAIDetectionRepository | null> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    SELECT * FROM "${tenantId}".ai_detection_repositories
-    WHERE id = :id;
+    SELECT * FROM ai_detection_repositories
+    WHERE id = :id AND organization_id = :organizationId;
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { id },
+    replacements: { id, organizationId },
     type: QueryTypes.SELECT,
   });
 
@@ -110,16 +111,16 @@ export async function getRepositoryByIdQuery(
 export async function getRepositoryByOwnerNameQuery(
   owner: string,
   name: string,
-  tenantId: string
+  organizationId: number
 ): Promise<IAIDetectionRepository | null> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    SELECT * FROM "${tenantId}".ai_detection_repositories
-    WHERE repository_owner = :owner AND repository_name = :name;
+    SELECT * FROM ai_detection_repositories
+    WHERE repository_owner = :owner AND repository_name = :name AND organization_id = :organizationId;
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { owner, name },
+    replacements: { owner, name, organizationId },
     type: QueryTypes.SELECT,
   });
 
@@ -127,29 +128,31 @@ export async function getRepositoryByOwnerNameQuery(
 }
 
 export async function getRepositoriesListQuery(
-  tenantId: string,
+  organizationId: number,
   page: number = 1,
   limit: number = 20
 ): Promise<{ repositories: IAIDetectionRepository[]; total: number }> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const offset = (page - 1) * limit;
 
   const countQuery = `
     SELECT COUNT(*) as total
-    FROM "${tenantId}".ai_detection_repositories;
+    FROM ai_detection_repositories
+    WHERE organization_id = :organizationId;
   `;
 
   const dataQuery = `
     SELECT *
-    FROM "${tenantId}".ai_detection_repositories
+    FROM ai_detection_repositories
+    WHERE organization_id = :organizationId
     ORDER BY created_at DESC
     LIMIT :limit OFFSET :offset;
   `;
 
   const [countResults, dataResults] = await Promise.all([
-    sequelize.query(countQuery, { type: QueryTypes.SELECT }),
+    sequelize.query(countQuery, { replacements: { organizationId }, type: QueryTypes.SELECT }),
     sequelize.query(dataQuery, {
-      replacements: { limit, offset },
+      replacements: { organizationId, limit, offset },
       type: QueryTypes.SELECT,
     }),
   ]);
@@ -163,13 +166,13 @@ export async function getRepositoriesListQuery(
 export async function updateRepositoryQuery(
   id: number,
   input: IUpdateRepositoryInput,
-  tenantId: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IAIDetectionRepository | null> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
 
   const setClauses: string[] = ["updated_at = NOW()"];
-  const replacements: Record<string, unknown> = { id };
+  const replacements: Record<string, unknown> = { id, organizationId };
 
   if (input.display_name !== undefined) {
     setClauses.push("display_name = :display_name");
@@ -213,9 +216,9 @@ export async function updateRepositoryQuery(
   }
 
   const query = `
-    UPDATE "${tenantId}".ai_detection_repositories
+    UPDATE ai_detection_repositories
     SET ${setClauses.join(", ")}
-    WHERE id = :id
+    WHERE id = :id AND organization_id = :organizationId
     RETURNING *;
   `;
 
@@ -229,17 +232,17 @@ export async function updateRepositoryQuery(
 
 export async function deleteRepositoryQuery(
   id: number,
-  tenantId: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    DELETE FROM "${tenantId}".ai_detection_repositories
-    WHERE id = :id;
+    DELETE FROM ai_detection_repositories
+    WHERE id = :id AND organization_id = :organizationId;
   `;
 
   await sequelize.query(query, {
-    replacements: { id },
+    replacements: { id, organizationId },
     type: QueryTypes.DELETE,
     transaction,
   });
@@ -255,22 +258,22 @@ export async function updateRepositoryLastScanQuery(
   repositoryId: number,
   scanId: number,
   scanStatus: string,
-  tenantId: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    UPDATE "${tenantId}".ai_detection_repositories
+    UPDATE ai_detection_repositories
     SET
       last_scan_id = :scanId,
       last_scan_status = :scanStatus,
       last_scan_at = NOW(),
       updated_at = NOW()
-    WHERE id = :repositoryId;
+    WHERE id = :repositoryId AND organization_id = :organizationId;
   `;
 
   await sequelize.query(query, {
-    replacements: { repositoryId, scanId, scanStatus },
+    replacements: { repositoryId, scanId, scanStatus, organizationId },
     type: QueryTypes.UPDATE,
     transaction,
   });
@@ -279,18 +282,18 @@ export async function updateRepositoryLastScanQuery(
 export async function updateRepositoryNextScanAtQuery(
   repositoryId: number,
   nextScanAt: Date | null,
-  tenantId: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    UPDATE "${tenantId}".ai_detection_repositories
+    UPDATE ai_detection_repositories
     SET next_scan_at = :nextScanAt, updated_at = NOW()
-    WHERE id = :repositoryId;
+    WHERE id = :repositoryId AND organization_id = :organizationId;
   `;
 
   await sequelize.query(query, {
-    replacements: { repositoryId, nextScanAt },
+    replacements: { repositoryId, nextScanAt, organizationId },
     type: QueryTypes.UPDATE,
     transaction,
   });
@@ -301,18 +304,20 @@ export async function updateRepositoryNextScanAtQuery(
 // ============================================================================
 
 export async function getRepositoriesDueForScanQuery(
-  tenantId: string
+  organizationId: number
 ): Promise<IAIDetectionRepository[]> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    SELECT * FROM "${tenantId}".ai_detection_repositories
-    WHERE is_enabled = TRUE
+    SELECT * FROM ai_detection_repositories
+    WHERE organization_id = :organizationId
+      AND is_enabled = TRUE
       AND schedule_enabled = TRUE
       AND next_scan_at <= NOW()
     ORDER BY next_scan_at ASC;
   `;
 
   const results = await sequelize.query(query, {
+    replacements: { organizationId },
     type: QueryTypes.SELECT,
   });
 
@@ -320,15 +325,17 @@ export async function getRepositoriesDueForScanQuery(
 }
 
 export async function getRepositoryCountQuery(
-  tenantId: string
+  organizationId: number
 ): Promise<number> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
     SELECT COUNT(*) as total
-    FROM "${tenantId}".ai_detection_repositories;
+    FROM ai_detection_repositories
+    WHERE organization_id = :organizationId;
   `;
 
   const results = await sequelize.query(query, {
+    replacements: { organizationId },
     type: QueryTypes.SELECT,
   });
 

@@ -63,3 +63,18 @@ export async function deletePolicy(id: number): Promise<void> {
     throw new APIError(`Failed to delete policy with ID ${id}`, error?.response?.status, error);
   }
 }
+
+export async function importDocxToHtml(file: File): Promise<{ html: string; warnings: string[] }> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiServices.post<{ message: string; data: { html: string; warnings: string[] } }>(
+      "/policies/import/docx",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return extractData<{ html: string; warnings: string[] }>(response);
+  } catch (error: any) {
+    throw new APIError("Failed to import DOCX file", error?.response?.status, error);
+  }
+}

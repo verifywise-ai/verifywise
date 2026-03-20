@@ -17,7 +17,7 @@ describe("DOCX Generator", () => {
       projectFrameworkId: 1,
       generatedAt: new Date("2024-01-15"),
       generatedBy: "Test User",
-      tenantId: "test-tenant",
+      organizationId: 1,
       isOrganizational: false,
     },
     branding: {

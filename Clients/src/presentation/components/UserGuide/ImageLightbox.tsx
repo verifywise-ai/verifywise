@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { typography, spacing } from './styles/theme';
+import { background } from "../../themes/palette";
 
 interface ImageLightboxProps {
   src: string;
@@ -36,6 +37,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, alt, caption, onClos
 
   return (
     <div
+      className="confirmation-backdrop"
       onClick={handleBackdropClick}
       style={{
         position: 'fixed',
@@ -78,11 +80,13 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, alt, caption, onClos
         }}
         title="Close (Esc)"
       >
-        <X size={24} strokeWidth={1.5} color="#fff" />
+        <X size={24} strokeWidth={1.5} color={background.main} />
       </button>
 
       {/* Image container */}
       <div
+        role="dialog"
+        aria-modal="true"
         style={{
           maxWidth: '90vw',
           maxHeight: '90vh',

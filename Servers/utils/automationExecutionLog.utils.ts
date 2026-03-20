@@ -10,14 +10,15 @@ export async function createAutomationExecutionLog(
   trigger_data: object = {},
   action_results: IActionExecutionResult[] = [],
   status: "success" | "partial_success" | "failure" = "success",
-  tenant: string,
+  organizationId: number,
   error_message?: string,
   execution_time_ms?: number
 ): Promise<IAutomationExecutionLog> {
   const result = (await sequelize.query(
-    `INSERT INTO "${tenant}".automation_execution_logs (automation_id, trigger_data, action_results, status, error_message, execution_time_ms, triggered_at, created_at) VALUES (:automation_id, :trigger_data, :action_results, :status, :error_message, :execution_time_ms, NOW(), NOW()) RETURNING *`,
+    `INSERT INTO automation_execution_logs (organization_id, automation_id, trigger_data, action_results, status, error_message, execution_time_ms, triggered_at, created_at) VALUES (:organizationId, :automation_id, :trigger_data, :action_results, :status, :error_message, :execution_time_ms, NOW(), NOW()) RETURNING *`,
     {
       replacements: {
+        organizationId,
         automation_id,
         trigger_data: JSON.stringify(trigger_data),
         action_results: JSON.stringify(action_results),
@@ -37,16 +38,16 @@ export async function getAutomationExecutionLogs(
   automation_id: number,
   limit: number = 50,
   offset: number = 0,
-  tenant: string
+  organizationId: number
 ): Promise<{ logs: IAutomationExecutionLog[]; total: number }> {
   const result = (await sequelize.query(
     `SELECT *, COUNT(*) OVER() as total_count
-     FROM "${tenant}".automation_execution_logs
-     WHERE automation_id = :automation_id
+     FROM automation_execution_logs
+     WHERE organization_id = :organizationId AND automation_id = :automation_id
      ORDER BY triggered_at DESC
      LIMIT :limit OFFSET :offset`,
     {
-      replacements: { automation_id, limit, offset },
+      replacements: { organizationId, automation_id, limit, offset },
     }
   )) as [IAutomationExecutionLog[], number];
 
@@ -59,7 +60,7 @@ export async function getAutomationExecutionLogs(
  */
 export async function getAutomationExecutionStats(
   automation_id: number,
-  tenant: string
+  organizationId: number
 ): Promise<{
   total_executions: number;
   successful_executions: number;
@@ -72,10 +73,10 @@ export async function getAutomationExecutionStats(
       SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS successful_executions,
       SUM(CASE WHEN status = 'failure' THEN 1 ELSE 0 END) AS failed_executions,
       MAX(triggered_at) AS last_execution_at
-    FROM "${tenant}".automation_execution_logs
-    WHERE automation_id = :automation_id`,
+    FROM automation_execution_logs
+    WHERE organization_id = :organizationId AND automation_id = :automation_id`,
     {
-      replacements: { automation_id },
+      replacements: { organizationId, automation_id },
     }
   )) as [
     {
@@ -103,7 +104,7 @@ export async function logAutomationExecution(
     result_data?: object;
     error_message?: string;
   }>,
-  tenant: string,
+  organizationId: number,
   startTime?: number
 ): Promise<IAutomationExecutionLog> {
   // Determine overall status
@@ -136,7 +137,7 @@ export async function logAutomationExecution(
     trigger_data,
     timestampedActionResults,
     status,
-    tenant,
+    organizationId,
     hasFailure ? "One or more actions failed" : undefined,
     execution_time_ms
   );
@@ -146,7 +147,7 @@ export async function logAutomationExecution(
  * Get all execution logs for all automations with pagination
  */
 export async function getAllAutomationExecutionLogs(
-  tenant: string,
+  organizationId: number,
   limit: number = 50,
   offset: number = 0
 ): Promise<{ logs: IAutomationExecutionLog[]; total: number }> {
@@ -155,12 +156,13 @@ export async function getAllAutomationExecutionLogs(
       ael.*,
       a.name as automation_name,
       COUNT(*) OVER() as total_count
-    FROM "${tenant}".automation_execution_logs ael
-    INNER JOIN "${tenant}".automations a ON ael.automation_id = a.id
+    FROM automation_execution_logs ael
+    INNER JOIN automations a ON ael.automation_id = a.id AND a.organization_id = :organizationId
+    WHERE ael.organization_id = :organizationId
     ORDER BY ael.triggered_at DESC
     LIMIT :limit OFFSET :offset`,
     {
-      replacements: { limit, offset },
+      replacements: { organizationId, limit, offset },
     }
   )) as [IAutomationExecutionLog[], number];
 

@@ -250,6 +250,33 @@ def render_detail(row: dict) -> None:
                 )
                 st.markdown(inactive_html, unsafe_allow_html=True)
 
+        metadata = sc.get("metadata", {})
+        tension_signals = metadata.get("tension_signals", {})
+        if tension_signals:
+            active_sig = [k for k, v in tension_signals.items() if v]
+            inactive_sig = [k for k, v in tension_signals.items() if not v]
+            st.markdown("#### Tension Signals")
+            sig_html = ""
+            if active_sig:
+                sig_html += " ".join(pill(s.replace("_", " "), "#6a4c93") for s in active_sig)
+            if inactive_sig:
+                sig_html += " " + " ".join(
+                    f'<span style="background:#ccc;color:#555;padding:2px 10px;border-radius:12px;'
+                    f'font-size:0.8em;margin:2px;display:inline-block">{s.replace("_", " ")}</span>'
+                    for s in inactive_sig
+                )
+            if sig_html:
+                st.markdown(sig_html, unsafe_allow_html=True)
+
+        reasoning = metadata.get("semantic_reasoning", "")
+        used_fallback = metadata.get("used_heuristic_fallback", False)
+        if reasoning or used_fallback:
+            with st.expander("Semantic validation details"):
+                if used_fallback:
+                    st.info("Validated via heuristic fallback (MockChatClient — no LLM call).")
+                if reasoning:
+                    st.markdown(f"**Reasoning:** {reasoning}")
+
         reasons = sc.get("risk_reasons", [])
         if reasons:
             st.markdown("#### Risk Reasons")

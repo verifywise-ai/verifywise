@@ -8,14 +8,14 @@ import logger from "../../utils/logger/fileLogger";
 
 const fetchTrustCenterOverview = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
     const [overview, resources, subprocessors, isVisible] = await Promise.all([
-      getAITrustCentreOverviewQuery(tenant),
-      getAITrustCentreResourcesQuery(tenant),
-      getAITrustCentreSubprocessorsQuery(tenant),
-      getIsVisibleQuery(tenant),
+      getAITrustCentreOverviewQuery(organizationId),
+      getAITrustCentreResourcesQuery(organizationId),
+      getAITrustCentreSubprocessorsQuery(organizationId),
+      getIsVisibleQuery(organizationId),
     ]);
 
     return {
@@ -53,14 +53,14 @@ const fetchTrustCenterOverview = async (
 
 const getTrustCenterAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
     const [overview, resources, subprocessors, isVisible] = await Promise.all([
-      getAITrustCentreOverviewQuery(tenant),
-      getAITrustCentreResourcesQuery(tenant),
-      getAITrustCentreSubprocessorsQuery(tenant),
-      getIsVisibleQuery(tenant),
+      getAITrustCentreOverviewQuery(organizationId),
+      getAITrustCentreResourcesQuery(organizationId),
+      getAITrustCentreSubprocessorsQuery(organizationId),
+      getIsVisibleQuery(organizationId),
     ]);
 
     const resourceList = Array.isArray(resources) ? resources : [];

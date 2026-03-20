@@ -246,7 +246,7 @@ const AnimationsSection: React.FC = () => {
                     backgroundColor: theme.palette.primary.main,
                     transition: "none",
                     "&:hover": {
-                      backgroundColor: "#10614d",
+                      backgroundColor: "brand.primaryDark",
                     },
                   }}
                 >
@@ -258,7 +258,7 @@ const AnimationsSection: React.FC = () => {
                     backgroundColor: theme.palette.primary.main,
                     transition: "all 0.3s ease",
                     "&:hover": {
-                      backgroundColor: "#10614d",
+                      backgroundColor: "brand.primaryDark",
                     },
                   }}
                 >

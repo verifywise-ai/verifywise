@@ -15,6 +15,7 @@ import React, { useState } from "react";
 import DropDowns from "../../Inputs/Dropdowns";
 import AuditorFeedback from "../ComplianceFeedback/ComplianceFeedback";
 import { ICustomModalProps } from "../../../../domain/interfaces/i.customs";
+import { border as borderPalette } from "../../../themes/palette";
 
 const CustomModal: React.FC<ICustomModalProps> = ({
   isOpen,
@@ -50,9 +51,9 @@ const CustomModal: React.FC<ICustomModalProps> = ({
   // };
 
   const buttonTabStyles = {
-    backgroundColor: "#EAECF0",
+    backgroundColor: `${borderPalette.light}`,
     color: "Black",
-    borderColor: "#EAECF0",
+    borderColor: `${borderPalette.light}`,
     borderTop: 0,
     borderBottom: 0,
     borderRadius: 0,
@@ -173,7 +174,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             flexDirection: "row",
             justifyContent: "flex-start",
             borderRadius: "4px",
-            border: "1px solid #EAECF0",
+            border: "1px solid #eaecf0",
             width: "fit-content",
           }}
         >
@@ -187,7 +188,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
                 sx={{
                   ...buttonTabStyles,
                   backgroundColor:
-                    activeSection === section ? "#EAECF0" : "transparent",
+                    activeSection === section ? "border.light" : "transparent",
                   fontWeight: activeSection === section ? "500" : 300,
                 }}
               >

@@ -120,6 +120,8 @@ export interface FieldProps {
   formHelperTextProps?: TextFieldProps["FormHelperTextProps"];
   min?: number;
   max?: number;
+  multiline?: boolean;
+  minRows?: number;
   sx?: SxProps<Theme>;
 }
 

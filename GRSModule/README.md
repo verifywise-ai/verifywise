@@ -202,6 +202,104 @@ datasets/<version>/
     └── sampling_report.json           # Statistics per stage
 ```
 
+## Dataset Versioning
+
+Dataset files are **not committed to `develop`**. Instead, each completed dataset version lives on a dedicated `data/<version>` branch, keeping the code history clean. A snapshot of the `configs/` that generated the data is committed alongside it for full reproducibility.
+
+### Before running the pipeline — define your parameters
+
+Each dataset version has a `run_config.yaml` that records the exact CLI parameters used to generate it. Create this file before running any pipeline stage:
+
+```
+datasets/grs_scenarios_v0.1/run_config.yaml
+```
+
+```yaml
+version: grs_scenarios_v0.1
+
+stages:
+  render:
+    seed: 42             # --seed
+    per_obligation: 2    # --per-obligation
+  perturb:
+    k_per_base: 3        # --k-per-base
+    coverage: per_family # --coverage (random | per_family)
+```
+
+### Generate the dataset from config
+
+Runs `seeds → render → perturb → validate` using the parameters defined in `run_config.yaml`:
+
+```bash
+make generate VERSION=grs_scenarios_v0.1
+```
+
+This replaces running each stage manually with hardcoded flags — all params come from `run_config.yaml`.
+
+### Run inference and judging
+
+These stages are not driven by `run_config.yaml` and are run separately:
+
+```bash
+make infer-multi-model   # LLM inference (requires OPENROUTER_API_KEY)
+make judge               # Score responses
+```
+
+### Publish the completed dataset
+
+When the dataset is ready, publish it to the data branch. This will:
+1. Re-export the Parquet file (`make export-parquet` runs automatically)
+2. Snapshot `configs/` → `datasets/<version>/configs_snapshot/`
+3. Commit all of `datasets/<version>/` to `data/<version>` via git worktree
+
+```bash
+make publish-dataset VERSION=grs_scenarios_v0.1
+```
+
+Publishing is **additive** — each new version folder stacks alongside older ones on the data branch:
+
+```
+data/grs_scenarios_v0.1 branch:
+  GRSModule/datasets/
+    grs_scenarios_v0.1/        ← first version
+      final/
+      intermediate/
+      run_config.yaml          ← params that generated this version
+      configs_snapshot/        ← full configs/ snapshot at publish time
+    grs_scenarios_v0.2/        ← second version (added by next publish)
+      ...
+```
+
+### Inspect the data branch without switching
+
+```bash
+# View commit history on the data branch
+git log data/grs_scenarios_v0.1 --oneline
+
+# Read a file from the data branch without checking it out
+git show data/grs_scenarios_v0.1:GRSModule/datasets/grs_scenarios_v0.1/run_config.yaml
+```
+
+### Full workflow summary
+
+```bash
+# 1. Create run_config.yaml for the new version
+#    (edit datasets/<version>/run_config.yaml with your parameters)
+
+# 2. Generate the dataset
+make generate VERSION=grs_scenarios_v0.1
+
+# 3. Run inference and judging
+export OPENROUTER_API_KEY=your_key
+make infer-multi-model
+make judge
+
+# 4. Publish to the data branch
+make publish-dataset VERSION=grs_scenarios_v0.1
+```
+
+---
+
 ## Configuration Files
 
 | File | Description |

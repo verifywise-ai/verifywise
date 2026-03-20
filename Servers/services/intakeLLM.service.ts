@@ -21,8 +21,8 @@ export interface SuggestedQuestion {
 // HELPERS
 // ============================================================================
 
-async function getModelFromKey(llmKeyId: number, tenant: string) {
-  const keys = await getLLMKeysWithKeyQuery(tenant);
+async function getModelFromKey(llmKeyId: number, organizationId: number) {
+  const keys = await getLLMKeysWithKeyQuery(organizationId);
   const llmKey = keys.find((k: any) => k.id === llmKeyId);
 
   if (!llmKey) return null;
@@ -51,10 +51,10 @@ export async function generateSuggestedQuestions(
   entityType: string,
   context: string,
   llmKeyId: number,
-  tenant: string
+  organizationId: number
 ): Promise<SuggestedQuestion[] | null> {
   try {
-    const model = await getModelFromKey(llmKeyId, tenant);
+    const model = await getModelFromKey(llmKeyId, organizationId);
     if (!model) return null;
 
     const prompt = `You are an AI governance expert. Generate 5 additional intake form questions for a "${entityType}" entity type.
@@ -97,10 +97,10 @@ export async function generateFieldGuidance(
   fieldLabel: string,
   entityType: string,
   llmKeyId: number,
-  tenant: string
+  organizationId: number
 ): Promise<string | null> {
   try {
-    const model = await getModelFromKey(llmKeyId, tenant);
+    const model = await getModelFromKey(llmKeyId, organizationId);
     if (!model) return null;
 
     const prompt = `You are an AI governance expert. Write a brief guidance text (1-2 sentences, max 150 characters) explaining why this field matters for AI governance compliance.

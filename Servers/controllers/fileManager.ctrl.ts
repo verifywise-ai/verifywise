@@ -61,15 +61,14 @@ import { extractText, normalizeText } from "../services/fileIngestion/textExtrac
  * Helper function to validate and parse request authentication data
  * @param {Request} req - Express request
  * @param {Response} res - Express response
- * @returns {{ userId: number; orgId: number; tenant: string } | null} Parsed values or null if validation fails
+ * @returns {{ userId: number; orgId: number } | null} Parsed values or null if validation fails
  */
 const validateAndParseAuth = (
   req: Request,
   res: Response
-): { userId: number; orgId: number; tenant: string } | null => {
+): { userId: number; orgId: number } | null => {
   const userId = Number(req.userId);
   const orgId = Number(req.organizationId);
-  const tenant = req.tenantId || "";
 
   if (!Number.isSafeInteger(userId) || userId <= 0) {
     res.status(400).json(STATUS_CODE[400]("Invalid user ID"));
@@ -81,13 +80,7 @@ const validateAndParseAuth = (
     return null;
   }
 
-  // Tenant format validation
-  if (!/^[a-zA-Z0-9_]+$/.test(tenant)) {
-    res.status(400).json(STATUS_CODE[400]("Invalid tenant identifier"));
-    return null;
-  }
-
-  return { userId, orgId, tenant };
+  return { userId, orgId };
 };
 
 /**
@@ -222,7 +215,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
     functionName: "uploadFile",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -252,7 +245,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
         fileName: "fileManager.ctrl.ts",
         error: new Error("No file provided"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400]("No file provided"));
     }
@@ -263,7 +256,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
       return;
     }
 
-    const { userId, orgId, tenant } = auth;
+    const { userId, orgId } = auth;
 
     // Validate file type and size
     const validation = validateFileUpload(file);
@@ -275,7 +268,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
         fileName: "fileManager.ctrl.ts",
         error: new Error(validation.error),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](validation.error));
     }
@@ -283,9 +276,9 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
     // If approval workflow is specified, validate it exists and is for files
     if (approvalWorkflowId) {
       const [workflow] = await sequelize.query(
-        `SELECT id, workflow_title, entity_type FROM "${tenant}".approval_workflows WHERE id = :workflowId`,
+        `SELECT id, workflow_title, entity_type FROM approval_workflows WHERE organization_id = :orgId AND id = :workflowId`,
         {
-          replacements: { workflowId: approvalWorkflowId },
+          replacements: { orgId, workflowId: approvalWorkflowId },
           type: "SELECT" as any,
         }
       ) as any[];
@@ -318,8 +311,8 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
       uploadedFile = await uploadOrganizationFile(
         file,
         userId,
+        req.organizationId!,
         orgId,
-        tenant,
         uploadOptions
       );
 
@@ -334,13 +327,13 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
               ) FILTER (WHERE asa.approver_id IS NOT NULL),
               '[]'
             ) as approvers
-           FROM "${tenant}".approval_workflow_steps aws
-           LEFT JOIN "${tenant}".approval_step_approvers asa ON aws.id = asa.workflow_step_id
-           WHERE aws.workflow_id = :workflowId
+           FROM approval_workflow_steps aws
+           LEFT JOIN approval_step_approvers asa ON aws.id = asa.workflow_step_id
+           WHERE aws.organization_id = :orgId AND aws.workflow_id = :workflowId
            GROUP BY aws.id
            ORDER BY aws.step_number ASC`,
           {
-            replacements: { workflowId: approvalWorkflowId },
+            replacements: { orgId, workflowId: approvalWorkflowId },
             type: "SELECT" as const,
             transaction,
           }
@@ -364,7 +357,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
               requested_by: userId,
             },
             workflowSteps,
-            tenant,
+            req.organizationId!,
             transaction
           );
 
@@ -372,9 +365,9 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
 
           // Update file with approval_request_id
           await sequelize.query(
-            `UPDATE "${tenant}".files SET approval_request_id = :approvalRequestId WHERE id = :fileId`,
+            `UPDATE files SET approval_request_id = :approvalRequestId WHERE organization_id = :orgId AND id = :fileId`,
             {
-              replacements: { approvalRequestId, fileId: uploadedFile.id },
+              replacements: { approvalRequestId, orgId, fileId: uploadedFile.id },
               transaction,
             }
           );
@@ -397,13 +390,14 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
 
       if (normalized && uploadedFile.id) {
         await sequelize.query(
-          `UPDATE "${tenant}".files
+          `UPDATE files
            SET content_text = :content_text,
                content_search = to_tsvector('english', :content_text)
-           WHERE id = :fileId`,
+           WHERE organization_id = :orgId AND id = :fileId`,
           {
             replacements: {
               content_text: normalized,
+              orgId,
               fileId: uploadedFile.id,
             },
             type: "UPDATE" as const,
@@ -422,7 +416,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
     if (approvalRequestId) {
       try {
         await notifyStepApprovers(
-          tenant,
+          orgId,
           approvalRequestId,
           1,
           `File Approval: ${uploadedFile.filename}`
@@ -440,7 +434,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
       functionName: "uploadFile",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(201).json(
@@ -465,7 +459,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
@@ -489,7 +483,7 @@ export const listFiles = async (req: Request, res: Response): Promise<any> => {
   const auth = validateAndParseAuth(req, res);
   if (!auth) return; // Response already sent
 
-  const { orgId, tenant } = auth;
+  const { orgId } = auth;
 
   // Parse pagination parameters
   const page = req.query.page ? Number(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page) : undefined;
@@ -507,11 +501,11 @@ export const listFiles = async (req: Request, res: Response): Promise<any> => {
     functionName: "listFiles",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const { files, total } = await getOrganizationFiles(orgId, tenant, {
+    const { files, total } = await getOrganizationFiles(req.organizationId!, {
       limit: validPageSize,
       offset,
     });
@@ -522,7 +516,7 @@ export const listFiles = async (req: Request, res: Response): Promise<any> => {
       functionName: "listFiles",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -556,7 +550,7 @@ export const listFiles = async (req: Request, res: Response): Promise<any> => {
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
@@ -572,7 +566,7 @@ export const searchFiles = async (req: Request, res: Response): Promise<any> => 
   const auth = validateAndParseAuth(req, res);
   if (!auth) return; // Response already sent
 
-  const { orgId, tenant } = auth;
+  const { orgId } = auth;
 
   const qParam = Array.isArray(req.query.q) ? req.query.q[0] : req.query.q;
   const queryText = typeof qParam === "string" ? qParam.trim() : "";
@@ -610,7 +604,6 @@ export const searchFiles = async (req: Request, res: Response): Promise<any> => 
 
     const { files } = await searchFilesByContent(
       orgId,
-      tenant,
       queryText,
       options
     );
@@ -631,7 +624,7 @@ export const searchFiles = async (req: Request, res: Response): Promise<any> => 
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: orgId,
     });
 
     return res
@@ -669,19 +662,19 @@ export const downloadFile = async (
   const auth = validateAndParseAuth(req, res);
   if (!auth) return; // Response already sent
 
-  const { userId, orgId, tenant } = auth;
+  const { userId, orgId } = auth;
 
   logProcessing({
     description: `Starting file download for file ID ${fileId}`,
     functionName: "downloadFile",
     fileName: "fileManager.ctrl.ts",
-    userId: req.userId!,
-    tenantId: req.tenantId!,
+    userId,
+    organizationId: orgId,
   });
 
   try {
     // Get file metadata from unified files table
-    const file = await getFileById(fileId, tenant);
+    const file = await getFileById(fileId, orgId);
 
     if (!file) {
       await logFailure({
@@ -691,7 +684,7 @@ export const downloadFile = async (
         fileName: "fileManager.ctrl.ts",
         error: new Error("File not found"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]("File not found"));
     }
@@ -711,18 +704,18 @@ export const downloadFile = async (
           fileName: "fileManager.ctrl.ts",
           error: new Error("Access denied"),
           userId: req.userId!,
-          tenantId: req.tenantId!,
+          tenantId: req.organizationId!,
         });
         return res.status(403).json(STATUS_CODE[403]("Access denied"));
       }
     } else {
       // Project-level file: verify user has access to the project
-      const userProjects = await getUserProjects(userId, tenant);
+      const userProjects = await getUserProjects(userId, req.organizationId!);
       const userProjectIds = userProjects.map((p) => p.id);
 
       // Get the project to check ownership (project_id is guaranteed non-null in this branch)
       const projectId = file.project_id!;
-      const project = await getProjectByIdQuery(projectId, tenant);
+      const project = await getProjectByIdQuery(projectId, req.organizationId!);
 
       // Allow access if:
       // 1. User is a member of the project, OR
@@ -740,7 +733,7 @@ export const downloadFile = async (
           fileName: "fileManager.ctrl.ts",
           error: new Error("Access denied"),
           userId: req.userId!,
-          tenantId: req.tenantId!,
+          tenantId: req.organizationId!,
         });
         return res.status(403).json(STATUS_CODE[403]("Access denied"));
       }
@@ -749,7 +742,7 @@ export const downloadFile = async (
     // Log file access for organization-level files
     if (isOrganizationFile) {
       try {
-        await logFileAccess(fileId, userId, orgId, "download", tenant);
+        await logFileAccess(fileId, userId, req.organizationId!, "download", orgId);
       } catch (error) {
         // Don't fail the download if logging fails
         console.error("Failed to log file access:", error);
@@ -765,7 +758,7 @@ export const downloadFile = async (
         fileName: "fileManager.ctrl.ts",
         error: new Error("File content missing"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]("File content not available. This file may need to be re-uploaded."));
     }
@@ -791,7 +784,7 @@ export const downloadFile = async (
       functionName: "downloadFile",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // Send file content from database (after logging to avoid async interference)
@@ -804,7 +797,7 @@ export const downloadFile = async (
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
@@ -836,7 +829,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
   const auth = validateAndParseAuth(req, res);
   if (!auth) return; // Response already sent
 
-  const { userId, orgId, tenant } = auth;
+  const { userId, orgId } = auth;
 
   // Defense-in-depth: Verify user has delete permission (in addition to route middleware)
   if (!hasPermission(req, "delete:file", ["Admin", "Reviewer", "Editor"])) {
@@ -847,7 +840,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
       fileName: "fileManager.ctrl.ts",
       error: new Error("Insufficient permissions"),
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res
       .status(403)
@@ -859,12 +852,12 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
     functionName: "removeFile",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     // Get file metadata from unified files table
-    const file = await getFileById(fileId, tenant);
+    const file = await getFileById(fileId, orgId);
 
     if (!file) {
       await logFailure({
@@ -874,7 +867,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
         fileName: "fileManager.ctrl.ts",
         error: new Error("File not found"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]("File not found"));
     }
@@ -894,18 +887,18 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
           fileName: "fileManager.ctrl.ts",
           error: new Error("Access denied"),
           userId: req.userId!,
-          tenantId: req.tenantId!,
+          tenantId: req.organizationId!,
         });
         return res.status(403).json(STATUS_CODE[403]("Access denied"));
       }
     } else {
       // Project-level file: verify user has access to the project
-      const userProjects = await getUserProjects(userId, tenant);
+      const userProjects = await getUserProjects(userId, req.organizationId!);
       const userProjectIds = userProjects.map((p) => p.id);
 
       // Get the project to check ownership (project_id is guaranteed non-null in this branch)
       const projectId = file.project_id!;
-      const project = await getProjectByIdQuery(projectId, tenant);
+      const project = await getProjectByIdQuery(projectId, req.organizationId!);
 
       // Allow access if:
       // 1. User is a member of the project, OR
@@ -923,7 +916,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
           fileName: "fileManager.ctrl.ts",
           error: new Error("Access denied"),
           userId: req.userId!,
-          tenantId: req.tenantId!,
+          tenantId: req.organizationId!,
         });
         return res.status(403).json(STATUS_CODE[403]("Access denied"));
       }
@@ -935,14 +928,14 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
         const rejectionReason = `File deleted: The file "${file.filename}" associated with this request has been deleted.`;
         const notificationInfo = await rejectApprovalRequestOnEntityDelete(
           file.approval_request_id,
-          tenant,
+          req.organizationId!,
           rejectionReason
         );
 
         // Notify the requester that their request was rejected
         if (notificationInfo && notificationInfo.requesterId) {
           await notifyRequesterRejected(
-            tenant,
+            orgId,
             notificationInfo.requesterId,
             notificationInfo.requestId,
             notificationInfo.requestName,
@@ -959,7 +952,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
     }
 
     // Delete the file from database
-    const deleted = await deleteFileById(fileId, tenant);
+    const deleted = await deleteFileById(fileId, orgId);
 
     if (!deleted) {
       await logFailure({
@@ -969,7 +962,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
         fileName: "fileManager.ctrl.ts",
         error: new Error("File not found during deletion"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]("File not found"));
     }
@@ -980,7 +973,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
       functionName: "removeFile",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -997,7 +990,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
@@ -1030,18 +1023,18 @@ export const getFileMetadata = async (
   const auth = validateAndParseAuth(req, res);
   if (!auth) return;
 
-  const { userId, orgId, tenant } = auth;
+  const { userId, orgId } = auth;
 
   logProcessing({
     description: `Getting metadata for file ID ${fileId}`,
     functionName: "getFileMetadata",
     fileName: "fileManager.ctrl.ts",
-    userId: req.userId!,
-    tenantId: req.tenantId!,
+    userId,
+    organizationId: orgId,
   });
 
   try {
-    const file = await getFileWithMetadata(fileId, tenant);
+    const file = await getFileWithMetadata(fileId, orgId);
 
     if (!file) {
       return res.status(404).json(STATUS_CODE[404]("File not found"));
@@ -1057,10 +1050,10 @@ export const getFileMetadata = async (
       }
     } else {
       // Project-level file: verify user has access to the project
-      const userProjects = await getUserProjects(userId, tenant);
+      const userProjects = await getUserProjects(userId, req.organizationId!);
       const userProjectIds = userProjects.map((p) => p.id);
       const projectId = file.project_id!;
-      const project = await getProjectByIdQuery(projectId, tenant);
+      const project = await getProjectByIdQuery(projectId, req.organizationId!);
 
       const isProjectMember = userProjectIds.includes(projectId);
       const isProjectOwner = project && Number(project.owner) === userId;
@@ -1077,7 +1070,7 @@ export const getFileMetadata = async (
       functionName: "getFileMetadata",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](file));
@@ -1089,7 +1082,7 @@ export const getFileMetadata = async (
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
@@ -1122,7 +1115,7 @@ export const updateMetadata = async (
   const auth = validateAndParseAuth(req, res);
   if (!auth) return;
 
-  const { userId, orgId, tenant } = auth;
+  const { userId, orgId } = auth;
 
   // Defense-in-depth: Verify user has edit permission
   if (!hasPermission(req, "update:file-metadata", ["Admin", "Reviewer", "Editor"])) {
@@ -1136,12 +1129,12 @@ export const updateMetadata = async (
     functionName: "updateMetadata",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     // Get current file to verify access
-    const currentFile = await getFileById(fileId, tenant);
+    const currentFile = await getFileById(fileId, orgId);
 
     if (!currentFile) {
       return res.status(404).json(STATUS_CODE[404]("File not found"));
@@ -1157,10 +1150,10 @@ export const updateMetadata = async (
       }
     } else {
       // Project-level file: verify user has access to the project
-      const userProjects = await getUserProjects(userId, tenant);
+      const userProjects = await getUserProjects(userId, req.organizationId!);
       const userProjectIds = userProjects.map((p) => p.id);
       const projectId = currentFile.project_id!;
-      const project = await getProjectByIdQuery(projectId, tenant);
+      const project = await getProjectByIdQuery(projectId, req.organizationId!);
 
       const isProjectMember = userProjectIds.includes(projectId);
       const isProjectOwner = project && Number(project.owner) === userId;
@@ -1228,9 +1221,9 @@ export const updateMetadata = async (
     if (description !== undefined) updates.description = description;
 
     // Fetch current metadata state before update (for change tracking)
-    const beforeState = await getFileWithMetadata(fileId, tenant);
+    const beforeState = await getFileWithMetadata(fileId, orgId);
 
-    const updatedFile = await updateFileMetadata(fileId, updates, tenant);
+    const updatedFile = await updateFileMetadata(fileId, updates, orgId);
 
     if (!updatedFile) {
       return res.status(404).json(STATUS_CODE[404]("File not found after update"));
@@ -1249,7 +1242,7 @@ export const updateMetadata = async (
             "file",
             fileId,
             userId,
-            tenant,
+            req.organizationId!,
             changes
           );
         }
@@ -1265,7 +1258,7 @@ export const updateMetadata = async (
       functionName: "updateMetadata",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](updatedFile));
@@ -1277,7 +1270,7 @@ export const updateMetadata = async (
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
@@ -1303,7 +1296,7 @@ export const listFilesWithMetadata = async (
   const auth = validateAndParseAuth(req, res);
   if (!auth) return;
 
-  const { orgId, tenant } = auth;
+  const { orgId } = auth;
 
   const page = req.query.page ? Number(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page) : undefined;
   const pageSize = req.query.pageSize ? Number(Array.isArray(req.query.pageSize) ? req.query.pageSize[0] : req.query.pageSize) : undefined;
@@ -1320,11 +1313,11 @@ export const listFilesWithMetadata = async (
     functionName: "listFilesWithMetadata",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const { files, total } = await getOrganizationFilesWithMetadata(orgId, tenant, {
+    const { files, total } = await getOrganizationFilesWithMetadata(req.organizationId!, {
       limit: validPageSize,
       offset,
     });
@@ -1335,7 +1328,7 @@ export const listFilesWithMetadata = async (
       functionName: "listFilesWithMetadata",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -1357,7 +1350,7 @@ export const listFilesWithMetadata = async (
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
@@ -1383,7 +1376,7 @@ export const getHighlighted = async (
   const auth = validateAndParseAuth(req, res);
   if (!auth) return;
 
-  const { orgId, tenant } = auth;
+  const { orgId } = auth;
 
   const daysUntilExpiry = req.query.daysUntilExpiry
     ? Number(Array.isArray(req.query.daysUntilExpiry) ? req.query.daysUntilExpiry[0] : req.query.daysUntilExpiry)
@@ -1397,11 +1390,11 @@ export const getHighlighted = async (
     functionName: "getHighlighted",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const highlighted = await getHighlightedFiles(orgId, tenant, daysUntilExpiry, recentDays);
+    const highlighted = await getHighlightedFiles(req.organizationId!, daysUntilExpiry, recentDays);
 
     await logSuccess({
       eventType: "Read",
@@ -1409,7 +1402,7 @@ export const getHighlighted = async (
       functionName: "getHighlighted",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](highlighted));
@@ -1421,7 +1414,7 @@ export const getHighlighted = async (
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
@@ -1454,19 +1447,19 @@ export const previewFile = async (
   const auth = validateAndParseAuth(req, res);
   if (!auth) return;
 
-  const { userId, orgId, tenant } = auth;
+  const { userId, orgId } = auth;
 
   logProcessing({
     description: `Getting preview for file ID ${fileId}`,
     functionName: "previewFile",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     // First check file access
-    const fileMeta = await getFileById(fileId, tenant);
+    const fileMeta = await getFileById(fileId, orgId);
 
     if (!fileMeta) {
       return res.status(404).json(STATUS_CODE[404]("File not found"));
@@ -1482,10 +1475,10 @@ export const previewFile = async (
       }
     } else {
       // Project-level file: verify user has access to the project
-      const userProjects = await getUserProjects(userId, tenant);
+      const userProjects = await getUserProjects(userId, req.organizationId!);
       const userProjectIds = userProjects.map((p) => p.id);
       const projectId = fileMeta.project_id!;
-      const project = await getProjectByIdQuery(projectId, tenant);
+      const project = await getProjectByIdQuery(projectId, req.organizationId!);
 
       const isProjectMember = userProjectIds.includes(projectId);
       const isProjectOwner = project && Number(project.owner) === userId;
@@ -1497,7 +1490,7 @@ export const previewFile = async (
     }
 
     // Get preview content
-    const preview = await getFilePreview(fileId, tenant);
+    const preview = await getFilePreview(fileId, orgId);
 
     if (!preview) {
       return res.status(404).json(STATUS_CODE[404]("File not found"));
@@ -1513,7 +1506,7 @@ export const previewFile = async (
 
     // Log file access for preview
     try {
-      await logFileAccess(fileId, userId, orgId, "view", tenant);
+      await logFileAccess(fileId, userId, req.organizationId!, "view", orgId);
     } catch (error) {
       console.error("Failed to log file access:", error);
     }
@@ -1563,7 +1556,7 @@ export const previewFile = async (
       functionName: "previewFile",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
   } catch (error) {
     await logFailure({
@@ -1573,7 +1566,7 @@ export const previewFile = async (
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
@@ -1606,19 +1599,19 @@ export const getFileVersionHistory = async (
   const auth = validateAndParseAuth(req, res);
   if (!auth) return;
 
-  const { tenant } = auth;
+  const { userId, orgId } = auth;
 
   logProcessing({
     description: `Getting version history for file ID ${fileId}`,
     functionName: "getFileVersionHistory",
     fileName: "fileManager.ctrl.ts",
-    userId: req.userId!,
-    tenantId: req.tenantId!,
+    userId,
+    organizationId: orgId,
   });
 
   try {
     // Get the file to extract file_group_id
-    const file = await getFileWithMetadata(fileId, tenant);
+    const file = await getFileWithMetadata(fileId, orgId);
 
     if (!file) {
       return res.status(404).json(STATUS_CODE[404]("File not found"));
@@ -1629,15 +1622,15 @@ export const getFileVersionHistory = async (
       return res.status(200).json(STATUS_CODE[200]({ versions: [file] }));
     }
 
-    const versions = await getFileVersionHistoryRepo(file.file_group_id, tenant);
+    const versions = await getFileVersionHistoryRepo(file.file_group_id, orgId);
 
     await logSuccess({
       eventType: "Read",
       description: `Retrieved ${versions.length} versions for file group: ${file.file_group_id}`,
       functionName: "getFileVersionHistory",
       fileName: "fileManager.ctrl.ts",
-      userId: req.userId!,
-      tenantId: req.tenantId!,
+      userId,
+      organizationId: orgId,
     });
 
     return res.status(200).json(STATUS_CODE[200]({ versions }));
@@ -1649,7 +1642,7 @@ export const getFileVersionHistory = async (
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }

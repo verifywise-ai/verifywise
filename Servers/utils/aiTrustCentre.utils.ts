@@ -9,29 +9,11 @@ import { IAITrustCentrePublic } from "../domain.layer/interfaces/i.aiTrustCentre
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { deleteFileById, getFileById } from "./fileUpload.utils";
 
-function isValidTenantSchema(tenant: string): boolean {
-  // Only letters, digits, and underscores. Length 1-30.
-  return /^[A-Za-z0-9_]{1,30}$/.test(tenant);
-}
-
-function escapePgIdentifier(ident: string): string {
-  // Accept only identifiers that pass isValidTenantSchema.
-  // Otherwise throw, to avoid silent failure.
-  if (!isValidTenantSchema(ident)) {
-    throw new Error("Unsafe identifier for SQL query");
-  }
-  // Replace internal double-quotes with two double-quotes (standard PG escaping)
-  return '"' + ident.replace(/"/g, '""') + '"';
-}
-
-export const getIsVisibleQuery = async (tenant: string) => {
-  if (!isValidTenantSchema(tenant)) {
-    // You could throw, log, or return false/null as appropriate
-    return false;
-  }
+export const getIsVisibleQuery = async (organizationId: number) => {
   try {
     const result = (await sequelize.query(
-      `SELECT visible FROM ${escapePgIdentifier(tenant)}.ai_trust_center LIMIT 1;`
+      `SELECT visible FROM ai_trust_center WHERE organization_id = :organizationId LIMIT 1;`,
+      { replacements: { organizationId } }
     )) as [{ visible: boolean }[], number];
     return result[0][0]?.visible || false;
   } catch (error) {
@@ -39,22 +21,23 @@ export const getIsVisibleQuery = async (tenant: string) => {
   }
 };
 
-export const getCompanyLogoQuery = async (tenant: string) => {
-  if (!isValidTenantSchema(tenant)) {
-    // You could throw, log, or return null as appropriate for unsafe tenant values
-    return null;
-  }
+export const getCompanyLogoQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
-    `SELECT content, type FROM ${escapePgIdentifier(tenant)}.ai_trust_center AS ai INNER JOIN ${escapePgIdentifier(tenant)}.files f ON ai.logo = f.id LIMIT 1;`
+    `SELECT f.content, f.type FROM ai_trust_center AS ai
+     INNER JOIN files f ON ai.logo = f.id AND f.organization_id = :organizationId
+     WHERE ai.organization_id = :organizationId LIMIT 1;`,
+    { replacements: { organizationId } }
   )) as [{ content: Buffer }[], number];
 
   return result[0][0] || null;
 };
 
-export const getAITrustCentrePublicPageQuery = async (tenant: string) => {
+export const getAITrustCentrePublicPageQuery = async (organizationId: number) => {
   const output: Partial<IAITrustCentrePublic> = {};
   const visible = (await sequelize.query(
-    `SELECT intro_visible, compliance_badges_visible, company_description_visible, terms_and_contact_visible, resources_visible, subprocessor_visible FROM ${escapePgIdentifier(tenant)}.ai_trust_center LIMIT 1;`
+    `SELECT intro_visible, compliance_badges_visible, company_description_visible, terms_and_contact_visible, resources_visible, subprocessor_visible
+     FROM ai_trust_center WHERE organization_id = :organizationId LIMIT 1;`,
+    { replacements: { organizationId } }
   )) as [
     {
       intro_visible: boolean;
@@ -90,11 +73,11 @@ export const getAITrustCentrePublicPageQuery = async (tenant: string) => {
         WHEN our_mission_visible THEN our_mission_text
         ELSE NULL
       END AS mission
-      FROM ${escapePgIdentifier(tenant)}.ai_trust_center_intro LIMIT 1;
+      FROM ai_trust_center_intro WHERE organization_id = :organizationId LIMIT 1;
     `,
     compliance_badges_visible: `
       SELECT SOC2_Type_I, SOC2_Type_II, ISO_27001, ISO_42001, CCPA, GDPR, HIPAA, EU_AI_Act
-      FROM "${tenant}".ai_trust_center_compliance_badges LIMIT 1;
+      FROM ai_trust_center_compliance_badges WHERE organization_id = :organizationId LIMIT 1;
     `,
     company_description_visible: `
       SELECT CASE
@@ -109,7 +92,7 @@ export const getAITrustCentrePublicPageQuery = async (tenant: string) => {
         WHEN compliance_doc_visible THEN compliance_doc_text
         ELSE NULL
       END AS compliance_doc
-      FROM "${tenant}".ai_trust_center_company_description LIMIT 1;
+      FROM ai_trust_center_company_description WHERE organization_id = :organizationId LIMIT 1;
     `,
     terms_and_contact_visible: `
       SELECT CASE
@@ -124,22 +107,22 @@ export const getAITrustCentrePublicPageQuery = async (tenant: string) => {
         WHEN email_visible THEN email_text
         ELSE NULL
       END AS email
-      FROM "${tenant}".ai_trust_center_terms_and_contact LIMIT 1;
+      FROM ai_trust_center_terms_and_contact WHERE organization_id = :organizationId LIMIT 1;
     `,
     resources_visible: `
       SELECT id, name, description, file_id, visible
-      FROM "${tenant}".ai_trust_center_resources WHERE visible = true ORDER BY id ASC;
+      FROM ai_trust_center_resources WHERE organization_id = :organizationId AND visible = true ORDER BY id ASC;
     `,
     subprocessor_visible: `
       SELECT id, name, purpose, location, url
-      FROM "${tenant}".ai_trust_center_subprocessor ORDER BY id ASC;
+      FROM ai_trust_center_subprocessor WHERE organization_id = :organizationId ORDER BY id ASC;
     `,
   };
 
   for (let key of Object.keys(visibleRow) as VisibleKeys[]) {
     if (visibleRow[key] === true) {
       const query = keysQueryMap[key];
-      const result = (await sequelize.query(query)) as [any[], number];
+      const result = (await sequelize.query(query, { replacements: { organizationId } })) as [any[], number];
       const field = key.replace("_visible", "") as keyof IAITrustCentrePublic;
       if (key === "resources_visible" || key === "subprocessor_visible") {
         output[field as "resources" | "subprocessors"] = result[0] || [];
@@ -150,7 +133,8 @@ export const getAITrustCentrePublicPageQuery = async (tenant: string) => {
   }
 
   const infoQuery = (await sequelize.query(
-    `SELECT title, header_color, logo FROM ${escapePgIdentifier(tenant)}.ai_trust_center LIMIT 1;`
+    `SELECT title, header_color, logo FROM ai_trust_center WHERE organization_id = :organizationId LIMIT 1;`,
+    { replacements: { organizationId } }
   )) as [{ title: string; header_color: string; logo: number }[], number];
 
   output["info"] = infoQuery[0][0] || {};
@@ -159,12 +143,12 @@ export const getAITrustCentrePublicPageQuery = async (tenant: string) => {
 };
 
 export const getAITrustCentrePublicResourceByIdQuery = async (
-  tenant: string,
+  organizationId: number,
   id: number
 ) => {
   const visible = (await sequelize.query(
-    `SELECT visible, file_id FROM ${escapePgIdentifier(tenant)}.ai_trust_center_resources WHERE id = :id;`,
-    { replacements: { id } }
+    `SELECT visible, file_id FROM ai_trust_center_resources WHERE organization_id = :organizationId AND id = :id;`,
+    { replacements: { organizationId, id } }
   )) as [{ visible: boolean; file_id: number }[], number];
   if (visible[0].length === 0) {
     return null;
@@ -177,14 +161,14 @@ export const getAITrustCentrePublicResourceByIdQuery = async (
     );
   }
   const fileId = visible[0][0].file_id;
-  const file = await getFileById(fileId, tenant);
+  const file = await getFileById(fileId, organizationId);
   if (!file) {
     return null;
   }
   return file;
 };
 
-export const getAITrustCentreOverviewQuery = async (tenant: string) => {
+export const getAITrustCentreOverviewQuery = async (organizationId: number) => {
   let updatedOverview: Partial<Record<keyof IAITrustCentreOverview, any>> = {};
 
   await Promise.all(
@@ -195,10 +179,10 @@ export const getAITrustCentreOverviewQuery = async (tenant: string) => {
       "terms_and_contact",
       "info",
     ].map(async (section, _i) => {
-      const query = `SELECT 
+      const query = `SELECT
       ${section === "info" ? "id, title, header_color, visible, intro_visible, compliance_badges_visible, company_description_visible, terms_and_contact_visible, resources_visible, subprocessor_visible, updated_at" : "*"}
-    FROM "${tenant}".ai_trust_center${section === "info" ? "" : `_${section}`} LIMIT 1;`;
-      const result = (await sequelize.query(query)) as [any[], number];
+    FROM ai_trust_center${section === "info" ? "" : `_${section}`} WHERE organization_id = :organizationId LIMIT 1;`;
+      const result = (await sequelize.query(query, { replacements: { organizationId } })) as [any[], number];
       updatedOverview[section as keyof IAITrustCentreOverview] =
         result[0][0] || {};
     })
@@ -207,36 +191,39 @@ export const getAITrustCentreOverviewQuery = async (tenant: string) => {
   return updatedOverview as IAITrustCentreOverview;
 };
 
-export const getAITrustCentreResourcesQuery = async (tenant: string) => {
-  const query = `SELECT ai.*, f.filename FROM "${tenant}".ai_trust_center_resources ai
-    JOIN "${tenant}".files f ON ai.file_id = f.id
-  ORDER BY id ASC;`;
-  const resources = (await sequelize.query(query)) as [
+export const getAITrustCentreResourcesQuery = async (organizationId: number) => {
+  const query = `SELECT ai.*, f.filename FROM ai_trust_center_resources ai
+    JOIN files f ON ai.file_id = f.id AND f.organization_id = :organizationId
+    WHERE ai.organization_id = :organizationId
+  ORDER BY ai.id ASC;`;
+  const resources = (await sequelize.query(query, { replacements: { organizationId } })) as [
     (AITrustCenterResourcesModel & { filename: string })[],
     number,
   ];
   return resources[0];
 };
 
-export const getAITrustCentreSubprocessorsQuery = async (tenant: string) => {
-  const query = `SELECT * FROM "${tenant}".ai_trust_center_subprocessor ORDER BY id ASC;`;
+export const getAITrustCentreSubprocessorsQuery = async (organizationId: number) => {
+  const query = `SELECT * FROM ai_trust_center_subprocessor WHERE organization_id = :organizationId ORDER BY id ASC;`;
   const subprocessors = await sequelize.query(query, {
+    replacements: { organizationId },
     mapToModel: true,
-    model: AITrustCenterSubprocessorsModel, // Using the same model for subprocessors
+    model: AITrustCenterSubprocessorsModel,
   });
   return subprocessors;
 };
 
 export const createAITrustCentreResourceQuery = async (
   resource: Partial<IAITrustCentreResources>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
-  const query = `INSERT INTO "${tenant}".ai_trust_center_resources (
-    name, description, file_id, visible) VALUES (:name, :description, :fileId, :visible) RETURNING *`;
+  const query = `INSERT INTO ai_trust_center_resources (
+    organization_id, name, description, file_id, visible) VALUES (:organizationId, :name, :description, :fileId, :visible) RETURNING *`;
 
   const result = await sequelize.query(query, {
     replacements: {
+      organizationId,
       name: resource.name,
       description: resource.description,
       fileId: resource.file_id,
@@ -251,13 +238,14 @@ export const createAITrustCentreResourceQuery = async (
 
 export const createAITrustCentreSubprocessorQuery = async (
   subprocessor: IAITrustCentreSubprocessors,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
-  const query = `INSERT INTO "${tenant}".ai_trust_center_subprocessor (
-    name, purpose, location, url) VALUES (:name, :purpose, :location, :url) RETURNING *`;
+  const query = `INSERT INTO ai_trust_center_subprocessor (
+    organization_id, name, purpose, location, url) VALUES (:organizationId, :name, :purpose, :location, :url) RETURNING *`;
   const result = await sequelize.query(query, {
     replacements: {
+      organizationId,
       name: subprocessor.name,
       purpose: subprocessor.purpose,
       location: subprocessor.location,
@@ -272,22 +260,22 @@ export const createAITrustCentreSubprocessorQuery = async (
 
 export const uploadCompanyLogoQuery = async (
   file: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const currentLogo = (await sequelize.query(
-    `SELECT logo FROM "${tenant}".ai_trust_center LIMIT 1;`,
-    { transaction }
+    `SELECT logo FROM ai_trust_center WHERE organization_id = :organizationId LIMIT 1;`,
+    { replacements: { organizationId }, transaction }
   )) as [{ logo: number }[], number];
   const deleteFileId = currentLogo[0][0]?.logo;
 
   const result = (await sequelize.query(
-    `UPDATE "${tenant}".ai_trust_center SET logo = :fileId RETURNING logo;`,
-    { replacements: { fileId: file }, transaction }
+    `UPDATE ai_trust_center SET logo = :fileId WHERE organization_id = :organizationId RETURNING logo;`,
+    { replacements: { organizationId, fileId: file }, transaction }
   )) as [{ file_id: number }[], number];
 
   if (deleteFileId) {
-    await deleteFileById(deleteFileId, tenant, transaction);
+    await deleteFileById(deleteFileId, organizationId, transaction);
   }
 
   return result[0][0];
@@ -295,7 +283,7 @@ export const uploadCompanyLogoQuery = async (
 
 export const updateAITrustCentreOverviewQuery = async (
   overview: Partial<IAITrustCentreOverview>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   let updatedOverview: Partial<Record<keyof IAITrustCentreOverview, any>> = {};
@@ -385,11 +373,12 @@ export const updateAITrustCentreOverviewQuery = async (
           })
           .map((f) => `${f} = :${f}`)
           .join(", ");
-        let query = `UPDATE "${tenant}".${tableName} SET ${setClause} RETURNING ${columns.concat(["id"])};`;
+        let query = `UPDATE ${tableName} SET ${setClause} WHERE organization_id = :organizationId RETURNING ${columns.concat(["id"])};`;
         if (setClause.length === 0) {
-          query = `SELECT ${columns} FROM "${tenant}".${tableName};`;
+          query = `SELECT ${columns} FROM ${tableName} WHERE organization_id = :organizationId;`;
         }
         updatedData.id = overview[key as keyof IAITrustCentreOverview]?.id;
+        updatedData.organizationId = organizationId;
         const result = await sequelize.query(query, {
           replacements: updatedData,
           transaction,
@@ -406,18 +395,18 @@ export const updateAITrustCentreResourceQuery = async (
   id: number,
   resource: Partial<IAITrustCentreResources>,
   deleteFile: number | undefined,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
-  const updatedResource: Partial<Record<keyof IAITrustCentreResources, any>> =
+  const updatedResource: Partial<Record<keyof IAITrustCentreResources, any>> & { organizationId?: number } =
     {};
   let toDeleteFile = false;
 
   if (resource.file_id !== undefined && deleteFile !== undefined) {
     // verify if the file exists in the resource before deleting
     const currentFile = (await sequelize.query(
-      `SELECT file_id FROM "${tenant}".ai_trust_center_resources WHERE id = :id;`,
-      { replacements: { id }, transaction }
+      `SELECT file_id FROM ai_trust_center_resources WHERE organization_id = :organizationId AND id = :id;`,
+      { replacements: { organizationId, id }, transaction }
     )) as [{ file_id: number }[], number];
 
     if (currentFile[0][0]?.file_id !== deleteFile) {
@@ -441,8 +430,9 @@ export const updateAITrustCentreResourceQuery = async (
     })
     .map((f) => `${f} = :${f}`)
     .join(", ");
-  const query = `UPDATE "${tenant}".ai_trust_center_resources SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE ai_trust_center_resources SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
   updatedResource.id = id;
+  updatedResource.organizationId = organizationId;
   const result = await sequelize.query(query, {
     replacements: updatedResource,
     mapToModel: true,
@@ -451,7 +441,7 @@ export const updateAITrustCentreResourceQuery = async (
   });
 
   if (toDeleteFile) {
-    await deleteFileById(deleteFile!, tenant, transaction);
+    await deleteFileById(deleteFile!, organizationId, transaction);
   }
 
   return result[0];
@@ -460,7 +450,7 @@ export const updateAITrustCentreResourceQuery = async (
 export const updateAITrustCentreSubprocessorQuery = async (
   id: number,
   subprocessor: Partial<IAITrustCentreSubprocessors>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const updatedSubprocessor: Partial<
@@ -474,7 +464,7 @@ export const updateAITrustCentreSubprocessorQuery = async (
       },
       any
     >
-  > = {};
+  > & { organizationId?: number } = {};
 
   const setClause = ["name", "purpose", "location", "url"]
     .filter((f) => {
@@ -487,8 +477,9 @@ export const updateAITrustCentreSubprocessorQuery = async (
     })
     .map((f) => `${f} = :${f}`)
     .join(", ");
-  const query = `UPDATE "${tenant}".ai_trust_center_subprocessor SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE ai_trust_center_subprocessor SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
   updatedSubprocessor.id = id;
+  updatedSubprocessor.organizationId = organizationId;
   const result = await sequelize.query(query, {
     replacements: updatedSubprocessor,
     mapToModel: true,
@@ -500,45 +491,45 @@ export const updateAITrustCentreSubprocessorQuery = async (
 
 export const deleteAITrustCentreResourceQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ) => {
-  const query = `DELETE FROM "${tenant}".ai_trust_center_resources WHERE id = :id RETURNING *;`;
+  const query = `DELETE FROM ai_trust_center_resources WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
   const result = await sequelize.query(query, {
-    replacements: { id },
+    replacements: { organizationId, id },
   });
   return result[0].length > 0;
 };
 
 export const deleteAITrustCentreSubprocessorQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ) => {
-  const query = `DELETE FROM "${tenant}".ai_trust_center_subprocessor WHERE id = :id RETURNING *;`;
+  const query = `DELETE FROM ai_trust_center_subprocessor WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
   const result = await sequelize.query(query, {
-    replacements: { id },
+    replacements: { organizationId, id },
   });
   return result[0].length > 0;
 };
 
 export const deleteCompanyLogoQuery = async (
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const currentLogo = (await sequelize.query(
-    `SELECT logo FROM "${tenant}".ai_trust_center LIMIT 1;`,
-    { transaction }
+    `SELECT logo FROM ai_trust_center WHERE organization_id = :organizationId LIMIT 1;`,
+    { replacements: { organizationId }, transaction }
   )) as [{ logo: number }[], number];
 
   const deleteFileId = currentLogo[0][0]?.logo;
 
   const result = (await sequelize.query(
-    `UPDATE "${tenant}".ai_trust_center SET logo = NULL RETURNING logo;`,
-    { transaction }
+    `UPDATE ai_trust_center SET logo = NULL WHERE organization_id = :organizationId RETURNING logo;`,
+    { replacements: { organizationId }, transaction }
   )) as [{ logo: number }[], number];
 
   let deleted = false;
   if (deleteFileId) {
-    deleted = await deleteFileById(deleteFileId, tenant, transaction);
+    deleted = await deleteFileById(deleteFileId, organizationId, transaction);
   }
 
   return deleted && result[0][0].logo === null;

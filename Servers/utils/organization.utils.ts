@@ -23,6 +23,16 @@
 import { OrganizationModel } from "../domain.layer/models/organization/organization.model";
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
+import { createHash } from "crypto";
+
+/**
+ * Generates a tenant hash from organization ID.
+ * This is used for backward compatibility and identifying old tenant schemas.
+ */
+const generateTenantId = (orgId: number): string => {
+  const hash = createHash('sha256').update(orgId.toString()).digest('base64');
+  return hash.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+};
 
 /**
  * Retrieves all organizations from the database.
@@ -50,7 +60,7 @@ export const getAllOrganizationsQuery = async (
 
 export const getOrganizationsExistsQuery = async () => {
   const result = await sequelize.query(
-    "SELECT COUNT(*) > 0 AS exists FROM public.organizations"
+    "SELECT COUNT(*) > 0 AS exists FROM organizations"
   ) as [{ exists: boolean }[], number];
   return result[0][0];
 }
@@ -78,6 +88,27 @@ export const getOrganizationByIdQuery = async (
 };
 
 /**
+ * Retrieves an organization from the database by its tenant_id (hash).
+ * Used for public endpoints like AI Trust Centre where the hash is in the URL.
+ *
+ * @param {string} tenantHash - The tenant hash (tenant_id) of the organization.
+ * @returns {Promise<OrganizationModel | null>} A promise that resolves to the organization object or null if not found.
+ */
+export const getOrganizationByTenantHashQuery = async (
+  tenantHash: string
+): Promise<OrganizationModel | null> => {
+  const result = await sequelize.query(
+    "SELECT * FROM organizations WHERE tenant_id = :tenantHash",
+    {
+      replacements: { tenantHash },
+      mapToModel: true,
+      model: OrganizationModel,
+    }
+  );
+  return result[0] || null;
+};
+
+/**
  * Creates a new organization in the database.
  *
  * @param organization - An object containing the organization details.
@@ -93,6 +124,7 @@ export const createOrganizationQuery = async (
   // Generate a unique slug for the organization
   const slug = Math.random().toString(36).substring(2, 10);
 
+  // First insert without tenant_id to get the ID
   const result = await sequelize.query(
     `INSERT INTO organizations(name, logo, created_at, slug)
      VALUES (:name, :logo, :created_at, :slug) RETURNING *`,
@@ -108,7 +140,22 @@ export const createOrganizationQuery = async (
       transaction,
     }
   );
-  return result[0];
+
+  const createdOrg = result[0];
+
+  // Generate and set tenant_id based on the organization ID
+  const tenantId = generateTenantId(createdOrg.id!);
+  await sequelize.query(
+    `UPDATE organizations SET tenant_id = :tenantId WHERE id = :id`,
+    {
+      replacements: { tenantId, id: createdOrg.id },
+      transaction,
+    }
+  );
+
+  // Return organization with tenant_id
+  createdOrg.tenant_id = tenantId;
+  return createdOrg;
 };
 
 /**

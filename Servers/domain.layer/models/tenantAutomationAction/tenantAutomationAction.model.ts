@@ -5,7 +5,7 @@ import { AutomationModel } from "../automation/automation.model";
 import { AutomationActionModel } from "../automationAction/automationAction.model";
 
 @Table({
-  tableName: "automation_actions",
+  tableName: "automation_actions_data",
   timestamps: true,
   underscored: true,
 })

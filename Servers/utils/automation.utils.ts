@@ -9,7 +9,7 @@ import { IAutomation } from "../domain.layer/interfaces/i.automation";
 
 export const getAllAutomationTriggersQuery = async () => {
   const result = await sequelize.query(
-    `SELECT * FROM public.automation_triggers`,
+    `SELECT * FROM automation_triggers`,
     {
       mapToModel: true,
       model: AutomationTriggerModel
@@ -21,8 +21,8 @@ export const getAllAutomationTriggersQuery = async () => {
 export const getAllAutomationActionsByTriggerIdQuery = async (triggerId: number) => {
   const result = await sequelize.query(
     `SELECT aa.*
-     FROM public.automation_triggers_actions ata
-     JOIN public.automation_actions aa ON ata.action_id = aa.id
+     FROM automation_triggers_actions ata
+     JOIN automation_actions aa ON ata.action_id = aa.id
      WHERE ata.trigger_id = :triggerId
      ORDER BY ata.action_id`,
     {
@@ -34,10 +34,11 @@ export const getAllAutomationActionsByTriggerIdQuery = async (triggerId: number)
   return result;
 }
 
-export const getAllAutomationsQuery = async (tenant: string) => {
+export const getAllAutomationsQuery = async (organizationId: number) => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".automations ORDER BY created_at DESC, id DESC;`,
+    `SELECT * FROM automations WHERE organization_id = :organizationId ORDER BY created_at DESC, id DESC;`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: AutomationModel
     }
@@ -45,20 +46,20 @@ export const getAllAutomationsQuery = async (tenant: string) => {
   return result;
 }
 
-export const getAutomationByIdQuery = async (id: number, tenant: string) => {
+export const getAutomationByIdQuery = async (id: number, organizationId: number) => {
   const automations = await sequelize.query(
-    `SELECT * FROM "${tenant}".automations WHERE id = :id;`,
+    `SELECT * FROM automations WHERE organization_id = :organizationId AND id = :id;`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
     }
   ) as [AutomationModel[], number]
   const automation = automations[0][0] as unknown as (ITenantAutomationAction & { actions: ITenantAutomationAction[] });
   automation.actions = [];
   if (automations[0].length > 0) {
     const actions = await sequelize.query(
-      `SELECT * FROM "${tenant}".automation_actions WHERE automation_id = :id ORDER BY "order";`,
+      `SELECT * FROM automation_actions_data WHERE organization_id = :organizationId AND automation_id = :id ORDER BY "order";`,
       {
-        replacements: { id },
+        replacements: { organizationId, id },
       }
     ) as [TenantAutomationActionModel[], number];
     automation["actions"] = actions[0];
@@ -70,15 +71,15 @@ export const createAutomationQuery = async (
   automationMeta: Partial<IAutomation>,
   actions: Partial<ITenantAutomationAction>[],
   userId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const _automation = await sequelize.query(
-    `INSERT INTO "${tenant}".automations(
-      name, trigger_id, params, created_by) VALUES (
-      :name, :trigger_id, :params, :userId) RETURNING *;`,
+    `INSERT INTO automations(
+      organization_id, name, trigger_id, params, created_by) VALUES (
+      :organizationId, :name, :trigger_id, :params, :userId) RETURNING *;`,
     {
-      replacements: { ...automationMeta, params: JSON.stringify(automationMeta.params), userId }, transaction
+      replacements: { organizationId, ...automationMeta, params: JSON.stringify(automationMeta.params), userId }, transaction
     }
   ) as [ITenantAutomationAction[], number];
   const automation = _automation[0][0] as unknown as (ITenantAutomationAction & { actions: ITenantAutomationAction[] });
@@ -86,11 +87,12 @@ export const createAutomationQuery = async (
   // add some validations for action params
   await Promise.all(actions.map((action, index) => {
     return sequelize.query(
-      `INSERT INTO "${tenant}".automation_actions(
-        automation_id, action_type_id, params, "order") VALUES (
-        :automationId, :actionTypeId, :params, :order);`,
+      `INSERT INTO automation_actions_data(
+        organization_id, automation_id, action_type_id, params, "order") VALUES (
+        :organizationId, :automationId, :actionTypeId, :params, :order);`,
       {
         replacements: {
+          organizationId,
           automationId: automation.id,
           actionTypeId: action.action_type_id,
           params: action.params ? JSON.stringify(action.params) : null,
@@ -101,9 +103,9 @@ export const createAutomationQuery = async (
   }))
 
   const _actions = await sequelize.query(
-    `SELECT * FROM "${tenant}".automation_actions WHERE automation_id = :id ORDER BY "order";`,
+    `SELECT * FROM automation_actions_data WHERE organization_id = :organizationId AND automation_id = :id ORDER BY "order";`,
     {
-      replacements: { id: automation.id }, transaction
+      replacements: { organizationId, id: automation.id }, transaction
     }
   ) as [TenantAutomationActionModel[], number];
   automation["actions"] = _actions[0];
@@ -115,7 +117,7 @@ export const updateAutomationByIdQuery = async (
   id: number,
   currentAutomation: Partial<IAutomation>,
   actions: Partial<ITenantAutomationAction>[],
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   let automation = null;
@@ -143,34 +145,36 @@ export const updateAutomationByIdQuery = async (
 
   if (!setClause) {
     const result = await sequelize.query(
-      `SELECT * FROM "${tenant}".automations WHERE id = :id;`,
+      `SELECT * FROM automations WHERE organization_id = :organizationId AND id = :id;`,
       {
-        replacements: { id }, transaction
+        replacements: { organizationId, id }, transaction
       }
     ) as [ITenantAutomationAction[], number];
     automation = result[0][0] as unknown as (ITenantAutomationAction & { actions: ITenantAutomationAction[] });
   } else {
     updatedAutomation.id = id;
-    const query = `UPDATE "${tenant}".automations SET ${setClause} WHERE id = :id RETURNING *;`;
+    (updatedAutomation as any).organizationId = organizationId;
+    const query = `UPDATE automations SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
     const result = await sequelize.query(query, { replacements: updatedAutomation, transaction }) as [ITenantAutomationAction[], number];
     automation = result[0][0] as unknown as (ITenantAutomationAction & { actions: ITenantAutomationAction[] });
   }
 
   if (actions && actions.length > 0) {
     await sequelize.query(
-      `DELETE FROM "${tenant}".automation_actions WHERE automation_id = :id;`,
+      `DELETE FROM automation_actions_data WHERE organization_id = :organizationId AND automation_id = :id;`,
       {
-        replacements: { id }, transaction
+        replacements: { organizationId, id }, transaction
       }
     );
 
     await Promise.all((actions || []).map((action, index) => {
       return sequelize.query(
-        `INSERT INTO "${tenant}".automation_actions(
-        automation_id, action_type_id, params, "order") VALUES (
-        :automationId, :actionTypeId, :params, :order);`,
+        `INSERT INTO automation_actions_data(
+        organization_id, automation_id, action_type_id, params, "order") VALUES (
+        :organizationId, :automationId, :actionTypeId, :params, :order);`,
         {
           replacements: {
+            organizationId,
             automationId: id,
             actionTypeId: action.action_type_id,
             params: action.params ? JSON.stringify(action.params) : null,
@@ -182,9 +186,9 @@ export const updateAutomationByIdQuery = async (
   }
 
   const _actions = await sequelize.query(
-    `SELECT * FROM "${tenant}".automation_actions WHERE automation_id = :id ORDER BY "order";`,
+    `SELECT * FROM automation_actions_data WHERE organization_id = :organizationId AND automation_id = :id ORDER BY "order";`,
     {
-      replacements: { id }, transaction
+      replacements: { organizationId, id }, transaction
     }
   ) as [TenantAutomationActionModel[], number];
   automation["actions"] = _actions[0];
@@ -192,17 +196,17 @@ export const updateAutomationByIdQuery = async (
   return automation;
 }
 
-export const deleteAutomationByIdQuery = async (id: number, tenant: string, transaction: Transaction) => {
+export const deleteAutomationByIdQuery = async (id: number, organizationId: number, transaction: Transaction) => {
   await sequelize.query(
-    `DELETE FROM "${tenant}".automation_actions WHERE automation_id = :id;`,
+    `DELETE FROM automation_actions_data WHERE organization_id = :organizationId AND automation_id = :id;`,
     {
-      replacements: { id }, transaction
+      replacements: { organizationId, id }, transaction
     }
   );
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".automations WHERE id = :id;`,
+    `DELETE FROM automations WHERE organization_id = :organizationId AND id = :id;`,
     {
-      replacements: { id }, transaction
+      replacements: { organizationId, id }, transaction
     }
   );
   return result.length > 0;

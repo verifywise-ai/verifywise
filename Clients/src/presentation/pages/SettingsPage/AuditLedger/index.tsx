@@ -21,7 +21,12 @@ import {
   ShieldAlert,
   ShieldQuestion,
   ChevronsUpDown,
+  ClipboardList,
+  FileSearch,
+  Lock,
+  Filter,
 } from "lucide-react";
+import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import SearchBox from "../../../components/Search/SearchBox";
 import Select from "../../../components/Inputs/Select";
@@ -247,7 +252,7 @@ export default function AuditLedger() {
               text={isVerifying ? "Verifying..." : "Verify chain"}
               variant="contained"
               onClick={verify}
-              disabled={isVerifying}
+              isDisabled={isVerifying}
               sx={{ height: 34, minWidth: 120 }}
             />
           </Stack>
@@ -295,9 +300,26 @@ export default function AuditLedger() {
             </Stack>
           ) : entries.length === 0 ? (
             <EmptyState
+              icon={ClipboardList}
               message="No audit ledger entries found."
               showBorder
-            />
+            >
+              <EmptyStateTip
+                icon={FileSearch}
+                title="What gets logged?"
+                description="Every create, update, and delete action across your workspace is recorded here with a timestamp, user, and entity reference."
+              />
+              <EmptyStateTip
+                icon={Lock}
+                title="Immutable records"
+                description="Audit entries can't be edited or deleted. They provide a tamper-proof trail for compliance audits and internal reviews."
+              />
+              <EmptyStateTip
+                icon={Filter}
+                title="Filter and export"
+                description="Use the filters above to narrow entries by action type, user, or entity. Export filtered results for audit reporting."
+              />
+            </EmptyState>
           ) : (
               <TableContainer sx={singleTheme.tableStyles.primary.frame}>
                 <Table>

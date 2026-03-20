@@ -26,6 +26,20 @@ import { Box, Modal, Stack, Typography } from "@mui/material";
 import { LucideIcon, Shield, Check, X } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 
+const useIsDarkMode = () => {
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains("dark-mode")
+  );
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark-mode"));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  return isDark;
+};
+
 export interface OnboardingWizardStep {
   /** Label shown in the segmented bar */
   label: string;
@@ -85,6 +99,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [step, setStep] = useState(0);
   const [dismissed, setDismissed] = useState(false);
   const isLast = step === steps.length - 1;
+  const isDark = useIsDarkMode();
 
   // Check localStorage on mount
   useEffect(() => {
@@ -145,6 +160,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       }}
     >
       <Stack
+        className="onboarding-wizard"
         sx={{
           width,
           borderRadius: "12px",
@@ -156,7 +172,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {/* ── Dark header ── */}
         <Box
           sx={{
-            background: "linear-gradient(135deg, #1a1f2e 0%, #2d3548 100%)",
+            background: isDark
+              ? "linear-gradient(135deg, #e0e0e0 0%, #d2d2d2 100%)"
+              : "linear-gradient(135deg, #1a1f2e 0%, #2d3548 100%)",
             padding: "32px 32px 28px",
           }}
         >
@@ -167,12 +185,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           >
             <Stack spacing={0}>
               <Stack direction="row" alignItems="center" spacing={1}>
-                <BadgeIcon size={18} color="#4ADE80" strokeWidth={2} />
+                <BadgeIcon size={18} color={isDark ? "#b52180" : "#4ADE80"} strokeWidth={2} />
                 <Typography
                   sx={{
                     fontSize: 13,
                     fontWeight: 600,
-                    color: "#4ADE80",
+                    color: isDark ? "#b52180" : "#4ADE80",
                     textTransform: "uppercase",
                     letterSpacing: 1.2,
                   }}
@@ -187,7 +205,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 sx={{
                   fontSize: 20,
                   fontWeight: 600,
-                  color: "#FFFFFF",
+                  color: isDark ? "text.black" : "background.main",
                   lineHeight: 1.3,
                 }}
               >
@@ -197,7 +215,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <Typography
                   sx={{
                     fontSize: 13,
-                    color: "#94A3B8",
+                    color: isDark ? "#6b5c47" : "#94A3B8",
                     lineHeight: 1.5,
                     mt: 0.5,
                   }}
@@ -223,14 +241,14 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               }}
               sx={{
                 cursor: "pointer",
-                color: "#64748B",
+                color: isDark ? "#9b8b74" : "#64748B",
                 display: "flex",
                 alignItems: "center",
                 padding: "4px",
                 borderRadius: "4px",
                 "&:hover": {
-                  color: "#94A3B8",
-                  bgcolor: "rgba(255,255,255,0.05)",
+                  color: isDark ? "#6b5c47" : "#94A3B8",
+                  bgcolor: isDark ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)",
                 },
               }}
             >
@@ -246,7 +264,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               display: "flex",
               borderRadius: "10px",
               overflow: "hidden",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: isDark ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.08)",
             }}
           >
             {steps.map((s, i) => {
@@ -265,19 +283,19 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     height: 40,
                     cursor: "pointer",
                     bgcolor: isActive
-                      ? "rgba(74,222,128,0.12)"
+                      ? isDark ? "rgba(181,33,128,0.12)" : "rgba(74,222,128,0.12)"
                       : isDone
-                      ? "rgba(74,222,128,0.05)"
+                      ? isDark ? "rgba(181,33,128,0.05)" : "rgba(74,222,128,0.05)"
                       : "transparent",
                     borderRight:
                       i < steps.length - 1
-                        ? "1px solid rgba(255,255,255,0.06)"
+                        ? isDark ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)"
                         : "none",
                     transition: "background-color 0.2s",
                     "&:hover": {
                       bgcolor: isActive
-                        ? "rgba(74,222,128,0.12)"
-                        : "rgba(255,255,255,0.04)",
+                        ? isDark ? "rgba(181,33,128,0.12)" : "rgba(74,222,128,0.12)"
+                        : isDark ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.04)",
                     },
                   }}
                 >
@@ -287,14 +305,14 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         width: 16,
                         height: 16,
                         borderRadius: "50%",
-                        bgcolor: "#4ADE80",
+                        bgcolor: isDark ? "#b52180" : "#4ADE80",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
                       }}
                     >
-                      <Check size={10} color="#1a1f2e" strokeWidth={3} />
+                      <Check size={10} color={isDark ? "#e0e0e0" : "#1a1f2e"} strokeWidth={3} />
                     </Box>
                   )}
                   <Typography
@@ -302,10 +320,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                       fontSize: 13,
                       fontWeight: isActive ? 600 : isDone ? 500 : 400,
                       color: isDone
-                        ? "#4ADE80"
+                        ? isDark ? "#b52180" : "#4ADE80"
                         : isActive
-                        ? "#FFFFFF"
-                        : "#94A3B8",
+                        ? isDark ? "text.black" : "background.main"
+                        : isDark ? "#6b5c47" : "#94A3B8",
                     }}
                   >
                     {s.label}
@@ -317,7 +335,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </Box>
 
         {/* ── Light body — renders step content (any ReactNode) ── */}
-        <Box sx={{ bgcolor: "#FFFFFF", padding: "32px" }}>
+        <Box sx={{ bgcolor: "background.main", padding: "32px" }}>
           {steps[step]?.content}
         </Box>
 
@@ -339,11 +357,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               minWidth: "70px",
               height: 34,
               fontSize: 13,
-              border: "1px solid #D0D5DD",
-              color: "#344054",
+              border: "1px solid #d0d5dd",
+              color: "text.secondary",
               "&:hover": {
-                bgcolor: "#F9FAFB",
-                border: "1px solid #D0D5DD",
+                bgcolor: "background.accent",
+                border: "1px solid #d0d5dd",
               },
             }}
           />
@@ -355,9 +373,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               minWidth: "70px",
               height: 34,
               fontSize: 13,
-              bgcolor: "#13715B",
+              bgcolor: "brand.primary",
               "&:hover": {
-                bgcolor: "#0F5A47",
+                bgcolor: "brand.primaryHover",
               },
             }}
           />

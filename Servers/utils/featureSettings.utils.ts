@@ -1,7 +1,7 @@
 /**
  * Feature Settings Utilities
  *
- * Query helpers for the per-tenant feature_settings table.
+ * Query helpers for the feature_settings table (shared schema with organization_id).
  */
 
 import { sequelize } from "../database/db";
@@ -22,13 +22,14 @@ interface FeatureSettingsUpdates {
 }
 
 /**
- * Get tenant feature settings (always returns a row — created by migration).
+ * Get feature settings for an organization (always returns a row — created by migration).
  */
 export async function getFeatureSettingsQuery(
-  tenant: string
+  organizationId: number
 ): Promise<FeatureSettingsRow> {
   const [rows] = await sequelize.query(
-    `SELECT * FROM "${tenant}".feature_settings WHERE id = 1`
+    `SELECT * FROM feature_settings WHERE organization_id = :organizationId LIMIT 1`,
+    { replacements: { organizationId } }
   );
 
   // Return defaults if no row exists yet
@@ -46,15 +47,15 @@ export async function getFeatureSettingsQuery(
 }
 
 /**
- * Update tenant feature settings.
+ * Update feature settings for an organization.
  */
 export async function updateFeatureSettingsQuery(
-  tenant: string,
+  organizationId: number,
   updates: FeatureSettingsUpdates,
   transaction?: Transaction
 ): Promise<FeatureSettingsRow> {
   const setClauses = ["updated_at = NOW()"];
-  const replacements: Record<string, any> = {};
+  const replacements: Record<string, any> = { organizationId };
 
   if (updates.lifecycle_enabled !== undefined) {
     setClauses.push("lifecycle_enabled = :lifecycle_enabled");
@@ -72,9 +73,9 @@ export async function updateFeatureSettingsQuery(
   }
 
   const [result] = await sequelize.query(
-    `UPDATE "${tenant}".feature_settings
+    `UPDATE feature_settings
      SET ${setClauses.join(", ")}
-     WHERE id = 1
+     WHERE organization_id = :organizationId
      RETURNING *`,
     {
       replacements,

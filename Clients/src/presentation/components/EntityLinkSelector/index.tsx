@@ -7,6 +7,7 @@ import { getAllEntities } from "../../../application/repository/entity.repositor
 import { getAllVendors } from "../../../application/repository/vendor.repository";
 import { getAllPolicies } from "../../../application/repository/policy.repository";
 import { EntityType } from "../../../application/hooks/useTaskEntityLinks";
+import { background } from "../../themes/palette";
 
 interface EntityLink {
   entity_id: number;
@@ -818,7 +819,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "6px 12px",
-                backgroundColor: theme.palette.action?.disabledBackground || "#f5f5f5",
+                backgroundColor: theme.palette.action?.disabledBackground || background.surface,
                 borderRadius: theme.shape.borderRadius,
                 fontSize: "13px",
                 opacity: 0.7,

@@ -11,7 +11,8 @@ interface LogProcessingParams {
   functionName: string;
   fileName: string;
   userId: number;
-  tenantId: string;
+  organizationId?: number;       // New name (preferred)
+  tenantId?: number | string;    // Deprecated alias - accepts both types
 }
 interface LogSuccessParams extends LogProcessingParams {
   eventType: EventType;
@@ -38,13 +39,17 @@ export async function logSuccess({
   functionName,
   fileName,
   userId,
-  tenantId,
+  organizationId,
+  tenantId,  // Deprecated: use organizationId
 }: LogSuccessParams): Promise<void> {
   logStructured(logState, description, functionName, fileName);
   logger.debug(`✅ ${description}`);
   if (eventType != "Read") {
     try {
-      await logEvent(eventType, description, userId, tenantId);
+      // Support both organizationId (new) and tenantId (deprecated)
+      // tenantId can be number or string (legacy schema hash)
+      const orgId = organizationId ?? (typeof tenantId === 'number' ? tenantId : 0);
+      await logEvent(eventType, description, userId, orgId);
     } catch (error) {
       console.error("Failed to log success event to database:", error);
     }
@@ -59,13 +64,17 @@ export async function logFailure({
   eventType,
   error,
   userId,
-  tenantId,
+  organizationId,
+  tenantId,  // Deprecated: use organizationId
 }: LogFailureParams): Promise<void> {
   logStructured(logState, description, functionName, fileName);
   logger.error(`❌ ${description}:`, error);
   if (eventType != "Read") {
     try {
-      await logEvent('Error', `${description}: ${error.message}`, userId, tenantId);
+      // Support both organizationId (new) and tenantId (deprecated)
+      // tenantId can be number or string (legacy schema hash)
+      const orgId = organizationId ?? (typeof tenantId === 'number' ? tenantId : 0);
+      await logEvent('Error', `${description}: ${error.message}`, userId, orgId);
     } catch (dbError) {
       console.error("Failed to log failure event to database:", dbError);
     }

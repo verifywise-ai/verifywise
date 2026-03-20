@@ -34,7 +34,7 @@ export async function addTaskEntityLink(
     functionName: "addTaskEntityLink",
     fileName: "taskEntityLink.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
@@ -64,7 +64,6 @@ export async function addTaskEntityLink(
     const task = await getTaskByIdQuery(
       taskId,
       { userId, role },
-      req.tenantId!,
       req.organizationId!
     );
 
@@ -77,7 +76,7 @@ export async function addTaskEntityLink(
     const entityExists = await entityExistsQuery(
       entity_id,
       entity_type as EntityType,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -93,7 +92,7 @@ export async function addTaskEntityLink(
       taskId,
       entity_id,
       entity_type as EntityType,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -112,7 +111,7 @@ export async function addTaskEntityLink(
         entity_type: entity_type as EntityType,
         entity_name: entity_name || undefined,
       },
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -124,7 +123,7 @@ export async function addTaskEntityLink(
       functionName: "addTaskEntityLink",
       fileName: "taskEntityLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](link));
@@ -138,7 +137,7 @@ export async function addTaskEntityLink(
       fileName: "taskEntityLink.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -162,7 +161,7 @@ export async function getTaskEntityLinks(
     functionName: "getTaskEntityLinks",
     fileName: "taskEntityLink.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -175,7 +174,6 @@ export async function getTaskEntityLinks(
     const task = await getTaskByIdQuery(
       taskId,
       { userId, role },
-      req.tenantId!,
       req.organizationId!
     );
 
@@ -183,7 +181,7 @@ export async function getTaskEntityLinks(
       return res.status(404).json(STATUS_CODE[404]("Task not found"));
     }
 
-    const links = await getTaskEntityLinksQuery(taskId, req.tenantId!);
+    const links = await getTaskEntityLinksQuery(taskId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -191,7 +189,7 @@ export async function getTaskEntityLinks(
       functionName: "getTaskEntityLinks",
       fileName: "taskEntityLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](links));
@@ -203,7 +201,7 @@ export async function getTaskEntityLinks(
       fileName: "taskEntityLink.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -230,7 +228,7 @@ export async function removeTaskEntityLink(
     functionName: "removeTaskEntityLink",
     fileName: "taskEntityLink.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
@@ -244,7 +242,6 @@ export async function removeTaskEntityLink(
     const task = await getTaskByIdQuery(
       taskId,
       { userId, role },
-      req.tenantId!,
       req.organizationId!
     );
 
@@ -256,7 +253,7 @@ export async function removeTaskEntityLink(
     const deleted = await deleteTaskEntityLinkQuery(
       linkId,
       taskId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -273,7 +270,7 @@ export async function removeTaskEntityLink(
       functionName: "removeTaskEntityLink",
       fileName: "taskEntityLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -289,7 +286,7 @@ export async function removeTaskEntityLink(
       fileName: "taskEntityLink.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

@@ -12,30 +12,20 @@ import { sequelize } from "../database/db";
 import { IVirtualFolder } from "../domain.layer/interfaces/i.virtualFolder";
 
 /**
- * Validate tenant identifier to prevent SQL injection.
- */
-const validateTenant = (tenant: string): void => {
-  if (!tenant || !/^[a-zA-Z0-9]+$/.test(tenant)) {
-    throw new Error("Invalid tenant identifier");
-  }
-};
-
-/**
  * Get all folders that a policy belongs to
  */
 export const getPolicyFoldersQuery = async (
-  tenant: string,
+  organizationId: number,
   policyId: number
 ): Promise<IVirtualFolder[]> => {
-  validateTenant(tenant);
   const result = await sequelize.query(
     `SELECT vf.*
-    FROM "${tenant}".virtual_folders vf
-    INNER JOIN "${tenant}".policy_folder_mappings pfm ON vf.id = pfm.folder_id
-    WHERE pfm.policy_id = :policyId
+    FROM virtual_folders vf
+    INNER JOIN policy_folder_mappings pfm ON vf.id = pfm.folder_id
+    WHERE pfm.policy_id = :policyId AND pfm.organization_id = :organizationId
     ORDER BY vf.name ASC`,
     {
-      replacements: { policyId },
+      replacements: { policyId, organizationId },
       type: QueryTypes.SELECT,
     }
   );
@@ -46,14 +36,14 @@ export const getPolicyFoldersQuery = async (
  * Get all policy IDs assigned to a specific folder
  */
 export const getPolicyIdsInFolderQuery = async (
-  tenant: string,
+  organizationId: number,
   folderId: number
 ): Promise<number[]> => {
-  validateTenant(tenant);
   const result = await sequelize.query<{ policy_id: number }>(
-    `SELECT policy_id FROM "${tenant}".policy_folder_mappings WHERE folder_id = :folderId`,
+    `SELECT policy_id FROM policy_folder_mappings
+     WHERE folder_id = :folderId AND organization_id = :organizationId`,
     {
-      replacements: { folderId },
+      replacements: { folderId, organizationId },
       type: QueryTypes.SELECT,
     }
   );
@@ -64,19 +54,18 @@ export const getPolicyIdsInFolderQuery = async (
  * Bulk update policy folder assignments (replace all folder assignments for a policy)
  */
 export const bulkUpdatePolicyFoldersQuery = async (
-  tenant: string,
+  organizationId: number,
   policyId: number,
   folderIds: number[],
   userId: number,
   transaction?: Transaction
 ): Promise<void> => {
-  validateTenant(tenant);
-
   // Delete existing assignments
   await sequelize.query(
-    `DELETE FROM "${tenant}".policy_folder_mappings WHERE policy_id = :policyId`,
+    `DELETE FROM policy_folder_mappings
+     WHERE policy_id = :policyId AND organization_id = :organizationId`,
     {
-      replacements: { policyId },
+      replacements: { policyId, organizationId },
       transaction,
     }
   );
@@ -84,19 +73,20 @@ export const bulkUpdatePolicyFoldersQuery = async (
   // Add new assignments
   if (folderIds.length > 0) {
     const values = folderIds
-      .map((_, i) => `(:policyId, :folder_id_${i}, :userId, NOW())`)
+      .map((_, i) => `(:policyId, :folder_id_${i}, :userId, :organizationId, NOW())`)
       .join(", ");
 
     const replacements: Record<string, unknown> = {
       policyId,
       userId,
+      organizationId,
     };
     folderIds.forEach((folderId, i) => {
       replacements[`folder_id_${i}`] = folderId;
     });
 
     await sequelize.query(
-      `INSERT INTO "${tenant}".policy_folder_mappings (policy_id, folder_id, assigned_by, assigned_at)
+      `INSERT INTO policy_folder_mappings (policy_id, folder_id, assigned_by, organization_id, assigned_at)
        VALUES ${values}`,
       {
         replacements,

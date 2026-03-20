@@ -8,6 +8,7 @@
 
 import { Box, Typography } from "@mui/material";
 import { ReviewStatus } from "../../../../../application/repository/file.repository";
+import { text, border as borderPalette } from "../../../../themes/palette";
 
 interface StatusBadgeProps {
   status?: ReviewStatus;
@@ -25,8 +26,8 @@ const STATUS_CONFIGS: Record<ReviewStatus, StatusConfig> = {
   draft: {
     label: "Draft",
     backgroundColor: "#F2F4F7",
-    color: "#344054",
-    borderColor: "#D0D5DD",
+    color: `${text.secondary}`,
+    borderColor: `${borderPalette.dark}`,
   },
   pending_review: {
     label: "Pending review",
@@ -55,8 +56,8 @@ const STATUS_CONFIGS: Record<ReviewStatus, StatusConfig> = {
   superseded: {
     label: "Superseded",
     backgroundColor: "#F2F4F7",
-    color: "#667085",
-    borderColor: "#D0D5DD",
+    color: `${text.icon}`,
+    borderColor: `${borderPalette.dark}`,
   },
 };
 

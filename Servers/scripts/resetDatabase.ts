@@ -68,7 +68,7 @@ async function resetDatabase() {
     console.log("Default admin user created.");
 
     // Insert mock data (awaiting it to complete)
-    await insertMockData("public", 1, admin.id!);
+    await insertMockData(1, 1, admin.id!);
     console.log("Mock data inserted.");
 
     // Fetch the first project to get its ID

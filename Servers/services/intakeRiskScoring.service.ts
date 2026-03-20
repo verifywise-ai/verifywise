@@ -230,14 +230,14 @@ export async function enhanceWithLLM(
   submissionData: Record<string, unknown>,
   schema: FormSchema,
   llmKeyId: number,
-  tenant: string
+  organizationId: number
 ): Promise<RiskDimension[]> {
   try {
-    const keys = await getLLMKeysWithKeyQuery(tenant);
+    const keys = await getLLMKeysWithKeyQuery(organizationId);
     const llmKey = keys.find((k: any) => k.id === llmKeyId);
 
     if (!llmKey) {
-      logger.warn(`LLM key ${llmKeyId} not found for tenant ${tenant}`);
+      logger.warn(`LLM key ${llmKeyId} not found for organization ${organizationId}`);
       return dimensions;
     }
 
@@ -344,7 +344,7 @@ export async function calculateSubmissionRisk(
   schema: FormSchema,
   tierSystem: string = "eu_ai_act",
   llmKeyId?: number | null,
-  tenant?: string
+  organizationId?: number
 ): Promise<RiskResult> {
   // Step 1: Rule-based scoring
   let dimensions = scoreSubmissionRuleBased(submissionData, schema);
@@ -352,9 +352,9 @@ export async function calculateSubmissionRisk(
   let llmEnhanced = false;
 
   // Step 2: LLM enhancement (optional, non-blocking)
-  if (llmKeyId && tenant) {
+  if (llmKeyId && organizationId) {
     try {
-      dimensions = await enhanceWithLLM(dimensions, submissionData, schema, llmKeyId, tenant);
+      dimensions = await enhanceWithLLM(dimensions, submissionData, schema, llmKeyId, organizationId);
       llmEnhanced = true;
     } catch (error) {
       logger.error("LLM enhancement failed, using rule-based scores:", error);

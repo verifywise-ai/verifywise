@@ -41,12 +41,11 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
   })
   description?: string | null;
 
-  @Column({
-    type: DataType.JSONB,
-    allowNull: false,
-    defaultValue: [],
-  })
-  evidence_files!: FileResponse[];
+  /**
+   * Evidence files - now managed via file_entity_links table
+   * This property is populated dynamically by the utils layer, not stored in database
+   */
+  evidence_files?: FileResponse[];
 
   @Column({
     type: DataType.DATE,

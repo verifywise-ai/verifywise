@@ -4,6 +4,7 @@ import { CheckCircle2, Check } from "lucide-react";
 import confetti from "canvas-confetti";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { CustomizableButton } from "../../button/customizable-button";
+import { brand, text } from "../../../themes/palette";
 
 const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
   useEffect(() => {
@@ -31,13 +32,13 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
         ...defaults,
         particleCount,
         origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        colors: ["#13715B", "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
+        colors: [`${brand.primary}`, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
       });
       confetti({
         ...defaults,
         particleCount,
         origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        colors: ["#13715B", "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
+        colors: [`${brand.primary}`, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
       });
     }, 250);
 
@@ -60,7 +61,7 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
           },
         }}
       >
-        <CheckCircle2 size={56} color="#13715B" strokeWidth={1.5} />
+        <CheckCircle2 size={56} color={brand.primary} strokeWidth={1.5} />
       </Box>
 
       <Stack spacing={2} alignItems="center">
@@ -79,7 +80,7 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
         <Typography
           sx={{
             fontSize: "16px",
-            color: "#667085",
+            color: `${text.icon}`,
             textAlign: "center",
             maxWidth: "500px",
             lineHeight: 1.6,
@@ -96,11 +97,11 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
           onClick={onNext}
           endIcon={<Check size={16} />}
           sx={{
-            backgroundColor: "#13715B",
+            backgroundColor: `${brand.primary}`,
             fontSize: "14px",
             padding: "10px 24px",
             "&:hover": {
-              backgroundColor: "#0F5A47",
+              backgroundColor: `${brand.primaryHover}`,
             },
           }}
         />

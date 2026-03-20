@@ -3,6 +3,7 @@ import { X as ClearIcon } from "lucide-react";
 import { FC } from "react";
 import { useModalKeyHandling } from "../../../application/hooks/useModalKeyHandling";
 import { IPopupProps } from "../../types/widget.types";
+import { text } from "../../themes/palette";
 
 const Popup: FC<IPopupProps> = ({
   popupId,
@@ -42,7 +43,7 @@ const Popup: FC<IPopupProps> = ({
       minWidth: 36,
       height: 36,
       p: 0,
-      color: "#98A2B3",
+      color: `${text.muted}`,
       "&:hover": { background: "none" },
     },
     popupContent: {
@@ -98,7 +99,7 @@ const Popup: FC<IPopupProps> = ({
           <Typography
             variant="h1"
             component="div"
-            sx={{ color: "#344054", fontSize: 16, fontWeight: 600, mb: 3.5 }}
+            sx={{ color: `${text.secondary}`, fontSize: 16, fontWeight: 600, mb: 3.5 }}
           >
             {popupTitle}
           </Typography>
@@ -106,7 +107,7 @@ const Popup: FC<IPopupProps> = ({
             <Typography
               variant="subtitle1"
               component="div"
-              sx={{ color: "#344054", fontSize: 13 }}
+              sx={{ color: `${text.secondary}`, fontSize: 13 }}
             >
               {popupSubtitle}
             </Typography>

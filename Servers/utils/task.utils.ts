@@ -53,7 +53,6 @@ const addVisibilityLogic = (
   whereConditions: string[],
   replacements: QueryReplacements,
   { userId, role }: GetTasksOptions,
-  tenant: string,
   organizationId: number,
   joinAlias: string = "ta"
 ): void => {
@@ -63,7 +62,7 @@ const addVisibilityLogic = (
 
   if (role !== "Admin") {
     baseQueryParts.push(
-      `LEFT JOIN "${tenant}".task_assignees ${joinAlias} ON ${joinAlias}.task_id = t.id AND ${joinAlias}.user_id = :userId`
+      `LEFT JOIN task_assignees ${joinAlias} ON ${joinAlias}.task_id = t.id AND ${joinAlias}.organization_id = :organizationId AND ${joinAlias}.user_id = :userId`
     );
     whereConditions.push(
       `(t.creator_id = :userId OR ${joinAlias}.user_id IS NOT NULL)`
@@ -75,22 +74,22 @@ const addVisibilityLogic = (
 // Create a new task
 export const createNewTaskQuery = async (
   task: ITask,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
   assignees?: Array<{ user_id: number }>
 ): Promise<TasksModel> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".tasks (
-        title, description, creator_id, organization_id, due_date, priority, status, categories, is_demo
+    `INSERT INTO tasks (
+        organization_id, title, description, creator_id, due_date, priority, status, categories, is_demo
       ) VALUES (
-        :title, :description, :creator_id, :organization_id, :due_date, :priority, :status, :categories, :is_demo
+        :organization_id, :title, :description, :creator_id, :due_date, :priority, :status, :categories, :is_demo
       ) RETURNING *`,
     {
       replacements: {
+        organization_id: organizationId,
         title: task.title,
         description: task.description || null,
         creator_id: task.creator_id,
-        organization_id: task.organization_id,
         due_date: task.due_date || null,
         priority: task.priority || TaskPriority.MEDIUM,
         status: task.status || TaskStatus.OPEN,
@@ -118,9 +117,10 @@ export const createNewTaskQuery = async (
 
       if (!isNaN(userId) && userId > 0) {
         await sequelize.query(
-          `INSERT INTO "${tenant}".task_assignees (task_id, user_id) VALUES (:task_id, :user_id) RETURNING *`,
+          `INSERT INTO task_assignees (organization_id, task_id, user_id) VALUES (:organization_id, :task_id, :user_id) RETURNING *`,
           {
             replacements: {
+              organization_id: organizationId,
               task_id: createdTask.id,
               user_id: userId,
             },
@@ -138,8 +138,8 @@ export const createNewTaskQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'task_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organization_id JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organization_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'task_added' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organization_id: organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -152,14 +152,14 @@ export const createNewTaskQuery = async (
     const automation = automations[0][0];
     if (automation["trigger_key"] === "task_added") {
       const creator_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :creator_id;`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :creator_id;`,
         {
           replacements: { creator_id: createdTask.dataValues.creator_id },
           transaction,
         }
       )) as [{ full_name: string }[], number];
       const assignee_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id IN (:assignee_ids);`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
         {
           replacements: {
             assignee_ids: (createdTask.dataValues as any)["assignees"],
@@ -188,7 +188,7 @@ export const createNewTaskQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -203,7 +203,7 @@ export const createNewTaskQuery = async (
 // GET /tasks: Fetch list with filters (status, due_date range, category, assignee) and sorts (due_date, priority, created_at). Apply pagination (25 items per page, server-side). Enforce visibility rules.
 export const getTasksQuery = async (
   { userId, role }: GetTasksOptions,
-  tenant: string,
+  organizationId: number,
   filters: TaskFilters = {},
   sort: TaskSortOptions = {},
   options?: { limit?: number; offset?: number }
@@ -214,7 +214,7 @@ export const getTasksQuery = async (
   // Build base query parts following project utils pattern
   const baseQueryParts: string[] = [
     `SELECT DISTINCT t.*`,
-    `FROM "${tenant}".tasks t`,
+    `FROM tasks t`,
   ];
 
   // Build pagination clause
@@ -240,8 +240,7 @@ export const getTasksQuery = async (
     whereConditions,
     replacements,
     { userId, role },
-    tenant,
-    filters.organization_id!
+    organizationId
   );
 
   // Apply filters
@@ -288,7 +287,7 @@ export const getTasksQuery = async (
     // Add LEFT JOIN for assignee filter if not already added
     if (role === "Admin") {
       baseQueryParts.push(
-        `LEFT JOIN "${tenant}".task_assignees ta_filter ON ta_filter.task_id = t.id`
+        `LEFT JOIN task_assignees ta_filter ON ta_filter.task_id = t.id AND ta_filter.organization_id = :organizationId`
       );
     }
     const assigneeList = filters.assignee
@@ -389,9 +388,9 @@ export const getTasksQuery = async (
   // Add assignees and entity links to each task following the project members pattern
   for (const task of tasks) {
     const assignees = await sequelize.query(
-      `SELECT user_id FROM "${tenant}".task_assignees WHERE task_id = :task_id`,
+      `SELECT user_id FROM task_assignees WHERE organization_id = :organizationId AND task_id = :task_id`,
       {
-        replacements: { task_id: task.id },
+        replacements: { organizationId, task_id: task.id },
         mapToModel: true,
         model: TaskAssigneesModel,
       }
@@ -401,7 +400,7 @@ export const getTasksQuery = async (
     );
 
     // Fetch entity links for this task
-    const entityLinks = await getTaskEntityLinksQuery(task.id!, tenant);
+    const entityLinks = await getTaskEntityLinksQuery(task.id!, organizationId);
     (task.dataValues as any)["entity_links"] = entityLinks.map((link) => ({
       id: link.id,
       entity_id: link.entity_id,
@@ -417,12 +416,11 @@ export const getTasksQuery = async (
 export const getTaskByIdQuery = async (
   taskId: number,
   { userId, role }: GetTasksOptions,
-  tenant: string,
-  userOrganizationId: number
+  organizationId: number
 ): Promise<TasksModel | null> => {
   const baseQueryParts: string[] = [
     `SELECT DISTINCT t.*`,
-    `FROM "${tenant}".tasks t`,
+    `FROM tasks t`,
   ];
   const whereConditions: string[] = [
     "t.id = :taskId",
@@ -439,8 +437,7 @@ export const getTaskByIdQuery = async (
     whereConditions,
     replacements,
     { userId, role },
-    tenant,
-    userOrganizationId
+    organizationId
   );
 
   baseQueryParts.push("WHERE " + whereConditions.join(" AND "));
@@ -458,9 +455,9 @@ export const getTaskByIdQuery = async (
 
     // Add assignees following the project members pattern
     const assignees = await sequelize.query(
-      `SELECT user_id FROM "${tenant}".task_assignees WHERE task_id = :task_id`,
+      `SELECT user_id FROM task_assignees WHERE organization_id = :organizationId AND task_id = :task_id`,
       {
-        replacements: { task_id: task.id },
+        replacements: { organizationId, task_id: task.id },
         mapToModel: true,
         model: TaskAssigneesModel,
       }
@@ -470,14 +467,14 @@ export const getTaskByIdQuery = async (
     );
 
     const creator_name = (await sequelize.query(
-      `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :creator_id;`,
+      `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :creator_id;`,
       {
         replacements: { creator_id: task.dataValues.creator_id },
       }
     )) as [{ full_name: string }[], number];
     (task.dataValues as any)["creator_name"] = creator_name[0][0].full_name;
     const assignee_names = (await sequelize.query(
-      `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id IN (:assignee_ids);`,
+      `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
       {
         replacements: { assignee_ids: (task.dataValues as any)["assignees"] },
       }
@@ -487,7 +484,7 @@ export const getTaskByIdQuery = async (
     );
 
     // Fetch entity links for this task
-    const entityLinks = await getTaskEntityLinksQuery(task.id!, tenant);
+    const entityLinks = await getTaskEntityLinksQuery(task.id!, organizationId);
     (task.dataValues as any)["entity_links"] = entityLinks.map((link) => ({
       id: link.id,
       entity_id: link.entity_id,
@@ -508,25 +505,22 @@ export const updateTaskByIdQuery = async (
     task,
     userId,
     role,
-    userOrganizationId,
     transaction,
   }: {
     id: number;
     task: Partial<ITask>;
     userId: number;
     role: string;
-    userOrganizationId: number;
     transaction: Transaction;
   },
-  tenant: string,
+  organizationId: number,
   assignees?: number[]
 ): Promise<TasksModel> => {
   // First, get the task to check permissions
   const existingTask = await getTaskByIdQuery(
     id,
     { userId, role },
-    tenant,
-    userOrganizationId
+    organizationId
   );
 
   if (!existingTask) {
@@ -539,9 +533,9 @@ export const updateTaskByIdQuery = async (
 
   // Check if user is assignee using task_assignees table
   const assigneeCheck = await sequelize.query(
-    `SELECT 1 FROM "${tenant}".task_assignees WHERE task_id = :taskId AND user_id = :userId`,
+    `SELECT 1 FROM task_assignees WHERE organization_id = :organizationId AND task_id = :taskId AND user_id = :userId`,
     {
-      replacements: { taskId: id, userId },
+      replacements: { organizationId, taskId: id, userId },
       type: QueryTypes.SELECT,
     }
   );
@@ -599,9 +593,10 @@ export const updateTaskByIdQuery = async (
     );
   }
 
-  const query = `UPDATE "${tenant}".tasks SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE tasks SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateTask.id = id;
+  updateTask.organizationId = organizationId;
 
   const result: TasksModel[] = await sequelize.query(query, {
     replacements: updateTask,
@@ -617,9 +612,9 @@ export const updateTaskByIdQuery = async (
   if (assignees !== undefined) {
     // Remove existing assignees
     await sequelize.query(
-      `DELETE FROM "${tenant}".task_assignees WHERE task_id = :taskId`,
+      `DELETE FROM task_assignees WHERE organization_id = :organizationId AND task_id = :taskId`,
       {
-        replacements: { taskId: id },
+        replacements: { organizationId, taskId: id },
         type: QueryTypes.DELETE,
         transaction,
       }
@@ -628,16 +623,16 @@ export const updateTaskByIdQuery = async (
     // Add new assignees if any
     if (assignees && assignees.length > 0) {
       const assigneeValues = assignees
-        .map((_assigneeId, index) => `(:taskId, :assignee${index})`)
+        .map((_assigneeId, index) => `(:organizationId, :taskId, :assignee${index})`)
         .join(", ");
 
-      const assigneeReplacements: any = { taskId: id };
+      const assigneeReplacements: any = { organizationId, taskId: id };
       assignees.forEach((assigneeId, index) => {
         assigneeReplacements[`assignee${index}`] = assigneeId;
       });
 
       await sequelize.query(
-        `INSERT INTO "${tenant}".task_assignees (task_id, user_id) VALUES ${assigneeValues}`,
+        `INSERT INTO task_assignees (organization_id, task_id, user_id) VALUES ${assigneeValues}`,
         {
           replacements: assigneeReplacements,
           type: QueryTypes.INSERT,
@@ -651,9 +646,9 @@ export const updateTaskByIdQuery = async (
   } else {
     // Retain existing assignees in the response
     const existingAssignees = await sequelize.query(
-      `SELECT user_id FROM "${tenant}".task_assignees WHERE task_id = :task_id`,
+      `SELECT user_id FROM task_assignees WHERE organization_id = :organizationId AND task_id = :task_id`,
       {
-        replacements: { task_id: updatedTask.id },
+        replacements: { organizationId, task_id: updatedTask.id },
         mapToModel: true,
         model: TaskAssigneesModel,
       }
@@ -668,8 +663,8 @@ export const updateTaskByIdQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'task_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'task_updated' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -682,14 +677,14 @@ export const updateTaskByIdQuery = async (
     const automation = automations[0][0];
     if (automation["trigger_key"] === "task_updated") {
       const creator_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :creator_id;`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :creator_id;`,
         {
           replacements: { creator_id: updatedTask.dataValues.creator_id },
           transaction,
         }
       )) as [{ full_name: string }[], number];
       const assignee_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id IN (:assignee_ids);`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
         {
           replacements: {
             assignee_ids: (updatedTask.dataValues as any)["assignees"],
@@ -718,7 +713,7 @@ export const updateTaskByIdQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -734,12 +729,11 @@ export const updateTaskByIdQuery = async (
 const getTaskByIdIncludingArchivedQuery = async (
   taskId: number,
   { userId, role }: GetTasksOptions,
-  tenant: string,
-  userOrganizationId: number
+  organizationId: number
 ): Promise<TasksModel | null> => {
   const baseQueryParts: string[] = [
     `SELECT DISTINCT t.*`,
-    `FROM "${tenant}".tasks t`,
+    `FROM tasks t`,
   ];
   const whereConditions: string[] = ["t.id = :taskId"];
   const replacements: QueryReplacements = { taskId };
@@ -750,8 +744,7 @@ const getTaskByIdIncludingArchivedQuery = async (
     whereConditions,
     replacements,
     { userId, role },
-    tenant,
-    userOrganizationId
+    organizationId
   );
 
   baseQueryParts.push("WHERE " + whereConditions.join(" AND "));
@@ -769,9 +762,9 @@ const getTaskByIdIncludingArchivedQuery = async (
 
     // Add assignees following the project members pattern
     const assignees = await sequelize.query(
-      `SELECT user_id FROM "${tenant}".task_assignees WHERE task_id = :task_id`,
+      `SELECT user_id FROM task_assignees WHERE organization_id = :organizationId AND task_id = :task_id`,
       {
-        replacements: { task_id: task.id },
+        replacements: { organizationId, task_id: task.id },
         mapToModel: true,
         model: TaskAssigneesModel,
       }
@@ -800,14 +793,12 @@ export const deleteTaskByIdQuery = async (
     role: string;
     transaction: Transaction;
     organizationId: number;
-  },
-  tenant: string
+  }
 ): Promise<boolean> => {
   // Use helper that includes archived tasks to fix 404 bug when archiving already-archived task
   const task = await getTaskByIdIncludingArchivedQuery(
     id,
     { userId, role },
-    tenant,
     organizationId
   );
 
@@ -829,9 +820,10 @@ export const deleteTaskByIdQuery = async (
 
   // Soft delete by setting status to DELETED
   const result = (await sequelize.query(
-    `UPDATE "${tenant}".tasks SET status = :status WHERE id = :id RETURNING *;`,
+    `UPDATE tasks SET status = :status WHERE organization_id = :organizationId AND id = :id RETURNING *;`,
     {
       replacements: {
+        organizationId,
         status: TaskStatus.DELETED,
         id: id,
       },
@@ -841,9 +833,9 @@ export const deleteTaskByIdQuery = async (
   )) as [TasksModel[], number];
   const deletedTask = result[0][0];
   const existingAssignees = await sequelize.query(
-    `SELECT user_id FROM "${tenant}".task_assignees WHERE task_id = :task_id`,
+    `SELECT user_id FROM task_assignees WHERE organization_id = :organizationId AND task_id = :task_id`,
     {
-      replacements: { task_id: id },
+      replacements: { organizationId, task_id: id },
       mapToModel: true,
       model: TaskAssigneesModel,
     }
@@ -857,8 +849,8 @@ export const deleteTaskByIdQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'task_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'task_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -871,14 +863,14 @@ export const deleteTaskByIdQuery = async (
     const automation = automations[0][0];
     if (automation["trigger_key"] === "task_deleted") {
       const creator_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :creator_id;`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :creator_id;`,
         {
           replacements: { creator_id: deletedTask.creator_id },
           transaction,
         }
       )) as [{ full_name: string }[], number];
       const assignee_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id IN (:assignee_ids);`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
         {
           replacements: { assignee_ids: (deletedTask as any)["assignees"] },
           transaction,
@@ -905,7 +897,7 @@ export const deleteTaskByIdQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -931,14 +923,12 @@ export const restoreTaskByIdQuery = async (
     role: string;
     transaction: Transaction;
     organizationId: number;
-  },
-  tenant: string
+  }
 ): Promise<TasksModel | null> => {
   // Use helper that includes archived tasks
   const task = await getTaskByIdIncludingArchivedQuery(
     id,
     { userId, role },
-    tenant,
     organizationId
   );
 
@@ -965,9 +955,10 @@ export const restoreTaskByIdQuery = async (
 
   // Restore by setting status back to OPEN
   const result = (await sequelize.query(
-    `UPDATE "${tenant}".tasks SET status = :status WHERE id = :id RETURNING *;`,
+    `UPDATE tasks SET status = :status WHERE organization_id = :organizationId AND id = :id RETURNING *;`,
     {
       replacements: {
+        organizationId,
         status: TaskStatus.OPEN,
         id: id,
       },
@@ -979,9 +970,9 @@ export const restoreTaskByIdQuery = async (
 
   // Add assignees to the response
   const existingAssignees = await sequelize.query(
-    `SELECT user_id FROM "${tenant}".task_assignees WHERE task_id = :task_id`,
+    `SELECT user_id FROM task_assignees WHERE organization_id = :organizationId AND task_id = :task_id`,
     {
-      replacements: { task_id: id },
+      replacements: { organizationId, task_id: id },
       mapToModel: true,
       model: TaskAssigneesModel,
     }
@@ -1007,14 +998,12 @@ export const hardDeleteTaskByIdQuery = async (
     role: string;
     transaction: Transaction;
     organizationId: number;
-  },
-  tenant: string
+  }
 ): Promise<boolean> => {
   // Use helper that includes archived tasks
   const task = await getTaskByIdIncludingArchivedQuery(
     id,
     { userId, role },
-    tenant,
     organizationId
   );
 
@@ -1036,9 +1025,9 @@ export const hardDeleteTaskByIdQuery = async (
 
   // First delete task assignees
   await sequelize.query(
-    `DELETE FROM "${tenant}".task_assignees WHERE task_id = :id`,
+    `DELETE FROM task_assignees WHERE organization_id = :organizationId AND task_id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       type: QueryTypes.DELETE,
       transaction,
     }
@@ -1046,9 +1035,9 @@ export const hardDeleteTaskByIdQuery = async (
 
   // Then hard delete the task
   await sequelize.query(
-    `DELETE FROM "${tenant}".tasks WHERE id = :id RETURNING id;`,
+    `DELETE FROM tasks WHERE organization_id = :organizationId AND id = :id RETURNING id;`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       type: QueryTypes.DELETE,
       transaction,
     }

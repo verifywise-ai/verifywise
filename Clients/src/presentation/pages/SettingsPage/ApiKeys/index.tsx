@@ -31,6 +31,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { ApiTokenModel } from "../../../../domain/models/Common/apiToken/apiToken.model";
 import LLMKeys from "../LLMKeys";
 import { getSelectStyles } from "../../../utils/inputStyles";
+import { brand } from "../../../themes/palette";
 
 interface AlertState {
   variant: "success" | "info" | "warning" | "error";
@@ -264,7 +265,7 @@ const ApiKeys = () => {
         >
           <Box>
             <Typography
-              sx={{ fontSize: 15, fontWeight: 600, color: "#000000" }}
+              sx={{ fontSize: 15, fontWeight: 600, color: "text.black" }}
             >
               API Keys
             </Typography>
@@ -281,8 +282,8 @@ const ApiKeys = () => {
               onClick={() => setIsCreateModalOpen(true)}
               isDisabled={isDisabled}
               sx={{
-                backgroundColor: "#13715B",
-                color: "#fff",
+                backgroundColor: "brand.primary",
+                color: "background.main",
                 "&:hover": { backgroundColor: "#0e5c47" },
               }}
             />
@@ -296,7 +297,7 @@ const ApiKeys = () => {
         ) : tokens.length === 0 ? (
           <Box
             sx={{
-              border: "2px dashed #e5e7eb",
+              border: "2px dashed status.default.border",
               borderRadius: "12px",
               p: 6,
               textAlign: "center",
@@ -316,10 +317,10 @@ const ApiKeys = () => {
                 mb: 2,
               }}
             >
-              <PlusIcon size={24} color="#13715B" />
+              <PlusIcon size={24} color={brand.primary} />
             </Box>
             <Typography
-              sx={{ fontSize: 15, fontWeight: 600, color: "#000000", mb: 1 }}
+              sx={{ fontSize: 15, fontWeight: 600, color: "text.black", mb: 1 }}
             >
               No API keys yet
             </Typography>
@@ -334,8 +335,8 @@ const ApiKeys = () => {
               onClick={() => setIsCreateModalOpen(true)}
               isDisabled={isDisabled}
               sx={{
-                backgroundColor: "#13715B",
-                color: "#fff",
+                backgroundColor: "brand.primary",
+                color: "background.main",
                 "&:hover": { backgroundColor: "#0e5c47" },
               }}
             />
@@ -356,7 +357,7 @@ const ApiKeys = () => {
                     borderRadius: "4px",
                     p: 4,
                     backgroundColor:
-                      hoveredTokenId === token.id ? "#f8fffe" : "#ffffff",
+                      hoveredTokenId === token.id ? "#f8fffe" : "background.main",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -378,7 +379,7 @@ const ApiKeys = () => {
                       sx={{
                         fontSize: 14,
                         fontWeight: 600,
-                        color: "#000000",
+                        color: "text.black",
                         mb: 2,
                         letterSpacing: "0.01em",
                       }}
@@ -412,7 +413,7 @@ const ApiKeys = () => {
                           sx={{
                             fontSize: 12,
                             fontWeight: 600,
-                            color: "#000000",
+                            color: "text.black",
                           }}
                         >
                           {token.getFormattedCreatedDate()}
@@ -428,7 +429,7 @@ const ApiKeys = () => {
                           sx={{
                             fontSize: 12,
                             fontWeight: 600,
-                            color: "#000000",
+                            color: "text.black",
                           }}
                         >
                           {token.getFormattedExpiryDate()}
@@ -472,7 +473,7 @@ const ApiKeys = () => {
           title="Create New API Key"
           body={
             <Stack spacing={3}>
-              <Typography sx={{ fontSize: 13, color: "#000000", mb: 1 }}>
+              <Typography sx={{ fontSize: 13, color: "text.black", mb: 1 }}>
                 Create a new API key for programmatic access to your account.
               </Typography>
               <Field
@@ -482,7 +483,7 @@ const ApiKeys = () => {
                 onChange={handleTokenNameChange}
                 error={newTokenNameError || undefined}
                 placeholder="e.g. Production API Key"
-                sx={{ backgroundColor: "#FFFFFF" }}
+                sx={{ backgroundColor: "background.main" }}
                 isRequired
               />
               <Stack gap={theme.spacing(2)}>
@@ -502,7 +503,7 @@ const ApiKeys = () => {
                   onChange={(e) => setSelectedExpiry(e.target.value as number)}
                   size="small"
                   sx={{
-                    backgroundColor: "#FFFFFF",
+                    backgroundColor: "background.main",
                     ...getSelectStyles(theme),
                   }}
                 >
@@ -523,8 +524,8 @@ const ApiKeys = () => {
           proceedButtonVariant="contained"
           TitleFontSize={0}
           confirmBtnSx={{
-            backgroundColor: isCreateButtonDisabled ? "#ccc" : "#13715B",
-            color: isCreateButtonDisabled ? "#666" : "#fff",
+            backgroundColor: isCreateButtonDisabled ? "#ccc" : "brand.primary",
+            color: isCreateButtonDisabled ? "#666" : "background.main",
             cursor: isCreateButtonDisabled ? "not-allowed" : "pointer",
             opacity: isCreateButtonDisabled ? 0.6 : 1,
             "&:hover": {
@@ -568,7 +569,7 @@ const ApiKeys = () => {
               <Typography sx={{ fontSize: 16, fontWeight: 600, mb: 2 }}>
                 API key created
               </Typography>
-              <Typography sx={{ fontSize: 13, color: "#000000", mb: 3 }}>
+              <Typography sx={{ fontSize: 13, color: "text.black", mb: 3 }}>
                 Your API key has been created successfully. Make sure to copy it
                 now as it won't be shown again.
               </Typography>
@@ -576,7 +577,7 @@ const ApiKeys = () => {
                 <Box
                   sx={{
                     backgroundColor: "#ecfdf3",
-                    border: "1.5px solid #13715B",
+                    border: "1.5px solid brand.primary",
                     borderRadius: "4px",
                     p: 2.5,
                     display: "flex",
@@ -589,7 +590,7 @@ const ApiKeys = () => {
                     sx={{
                       fontSize: 13,
                       fontFamily: "monospace",
-                      color: "#000000",
+                      color: "text.black",
                       wordBreak: "break-all",
                       flex: 1,
                       fontWeight: 500,
@@ -601,13 +602,13 @@ const ApiKeys = () => {
                     onClick={() => handleCopyToken(newlyCreatedToken, -1)}
                     disableRipple
                     sx={{
-                      color: copiedTokenId === -1 ? "#13715B" : "#666666",
+                      color: copiedTokenId === -1 ? "brand.primary" : "#666666",
                       backgroundColor:
                         copiedTokenId === -1 ? "#f0fdf4" : "transparent",
                       transition: "all 0.2s ease-in-out",
                       "&:hover": {
                         backgroundColor: "#f0fdf4",
-                        color: "#13715B",
+                        color: "brand.primary",
                       },
                     }}
                   >
@@ -625,7 +626,7 @@ const ApiKeys = () => {
                   <Typography
                     sx={{
                       fontSize: 12,
-                      color: "#13715B",
+                      color: "brand.primary",
                       fontWeight: 500,
                       opacity: copiedTokenId === -1 ? 1 : 0,
                       transition: "opacity 0.2s ease-in-out",
@@ -648,8 +649,8 @@ const ApiKeys = () => {
                 text="I copied the key"
                 variant="contained"
                 sx={{
-                  backgroundColor: "#13715B",
-                  color: "#fff",
+                  backgroundColor: "brand.primary",
+                  color: "background.main",
                   px: "32px",
                   "&:hover": { backgroundColor: "#0e5c47" },
                 }}

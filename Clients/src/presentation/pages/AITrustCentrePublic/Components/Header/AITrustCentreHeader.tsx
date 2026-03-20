@@ -78,7 +78,7 @@ const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({
               <Typography
                 variant="h5"
                 fontWeight="semibold"
-                sx={{ color: "#344054" }}
+                sx={{ color: "text.secondary" }}
               >
                 {data?.info?.title}
               </Typography>

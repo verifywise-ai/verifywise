@@ -12,7 +12,7 @@ from database.db import get_db
 # ==================== LOGS ====================
 
 async def create_log_controller(
-    tenant: str,
+    organization_id: int,
     user_id: int,
     data: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -22,7 +22,7 @@ async def create_log_controller(
             log = await crud.create_log(
                 db=db,
                 project_id=data.get("project_id"),
-                tenant=tenant,
+                organization_id=organization_id,
                 experiment_id=data.get("experiment_id"),
                 trace_id=data.get("trace_id"),
                 parent_trace_id=data.get("parent_trace_id"),
@@ -44,7 +44,7 @@ async def create_log_controller(
 
 
 async def get_logs_controller(
-    tenant: str,
+    organization_id: int,
     project_id: Optional[str] = None,
     experiment_id: Optional[str] = None,
     status: Optional[str] = None,
@@ -56,7 +56,7 @@ async def get_logs_controller(
         async with get_db() as db:
             logs = await crud.get_logs(
                 db=db,
-                tenant=tenant,
+                organization_id=organization_id,
                 project_id=project_id,
                 experiment_id=experiment_id,
                 status=status,
@@ -66,7 +66,7 @@ async def get_logs_controller(
 
             total = await crud.get_log_count(
                 db=db,
-                tenant=tenant,
+                organization_id=organization_id,
                 project_id=project_id,
                 status=status,
             )
@@ -84,7 +84,7 @@ async def get_logs_controller(
 # ==================== METRICS ====================
 
 async def create_metric_controller(
-    tenant: str,
+    organization_id: int,
     data: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Create a new metric entry"""
@@ -96,7 +96,7 @@ async def create_metric_controller(
                 metric_name=data.get("metric_name"),
                 metric_type=data.get("metric_type"),
                 value=data.get("value"),
-                tenant=tenant,
+                organization_id=organization_id,
                 experiment_id=data.get("experiment_id"),
                 dimensions=data.get("dimensions"),
             )
@@ -106,7 +106,7 @@ async def create_metric_controller(
 
 
 async def get_metric_aggregates_controller(
-    tenant: str,
+    organization_id: int,
     project_id: str,
     metric_name: str,
     start_date: Optional[str] = None,
@@ -120,7 +120,7 @@ async def get_metric_aggregates_controller(
         async with get_db() as db:
             aggregates = await crud.get_metric_aggregates(
                 db=db,
-                tenant=tenant,
+                organization_id=organization_id,
                 project_id=project_id,
                 metric_name=metric_name,
                 start_date=start_dt,
@@ -138,14 +138,14 @@ async def get_metric_aggregates_controller(
 # ==================== EXPERIMENTS ====================
 
 async def create_experiment_controller(
-    tenant: str,
+    organization_id: int,
     user_id: int,
     data: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Create a new experiment"""
     try:
         print(f"📊 Controller - Creating experiment in DB...")
-        print(f"   Tenant: {tenant}")
+        print(f"   Org ID: {organization_id}")
         print(f"   User ID: {user_id}")
         print(f"   Data keys: {list(data.keys())}")
         
@@ -155,7 +155,7 @@ async def create_experiment_controller(
                 project_id=data.get("project_id"),
                 name=data.get("name"),
                 config=data.get("config"),
-                tenant=tenant,
+                organization_id=organization_id,
                 description=data.get("description"),
                 baseline_experiment_id=data.get("baseline_experiment_id"),
                 created_by=user_id,
@@ -171,7 +171,7 @@ async def create_experiment_controller(
 
 async def get_experiment_by_id_controller(
     experiment_id: str,
-    tenant: str,
+    organization_id: int,
 ) -> Dict[str, Any]:
     """Get a specific experiment by ID"""
     try:
@@ -179,7 +179,7 @@ async def get_experiment_by_id_controller(
             experiment = await crud.get_experiment_by_id(
                 db=db,
                 experiment_id=experiment_id,
-                tenant=tenant,
+                organization_id=organization_id,
             )
             if not experiment:
                 raise HTTPException(status_code=404, detail="Experiment not found")
@@ -191,7 +191,7 @@ async def get_experiment_by_id_controller(
 
 
 async def get_experiments_controller(
-    tenant: str,
+    organization_id: int,
     project_id: Optional[str] = None,
     status: Optional[str] = None,
     limit: int = 100,
@@ -202,7 +202,7 @@ async def get_experiments_controller(
         async with get_db() as db:
             experiments = await crud.get_experiments(
                 db=db,
-                tenant=tenant,
+                organization_id=organization_id,
                 project_id=project_id,
                 status=status,
                 limit=limit,
@@ -211,7 +211,7 @@ async def get_experiments_controller(
 
             total = await crud.get_experiment_count(
                 db=db,
-                tenant=tenant,
+                organization_id=organization_id,
                 project_id=project_id,
             )
 
@@ -228,7 +228,7 @@ async def get_experiments_controller(
 async def update_experiment_controller(
     db: AsyncSession,
     experiment_id: str,
-    tenant: str,
+    organization_id: int,
     name: Optional[str] = None,
     description: Optional[str] = None,
 ):
@@ -237,7 +237,7 @@ async def update_experiment_controller(
         updated = await crud.update_experiment(
             db=db,
             experiment_id=experiment_id,
-            tenant=tenant,
+            organization_id=organization_id,
             name=name,
             description=description,
         )
@@ -256,14 +256,14 @@ async def update_experiment_controller(
 async def delete_experiment_controller(
     db: AsyncSession,
     experiment_id: str,
-    tenant: str,
+    organization_id: int,
 ):
     """Delete an experiment and all associated data"""
     try:
         deleted = await crud.delete_experiment(
             db=db,
             experiment_id=experiment_id,
-            tenant=tenant,
+            organization_id=organization_id,
         )
 
         if not deleted:

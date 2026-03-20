@@ -16,6 +16,7 @@ import {
   IconButton,
   Slider,
   SelectChangeEvent,
+  Chip,
 } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import TabPanel from "@mui/lab/TabPanel";
@@ -51,10 +52,13 @@ import { LLMKeysModel } from "../../../domain/models/Common/llmKeys/llmKeys.mode
 import {
   DimensionKey,
   RiskScoringConfig,
+  VulnerabilityTypeKey,
   DIMENSION_LABELS,
   DIMENSION_DESCRIPTIONS,
   DIMENSION_ORDER,
   DEFAULT_DIMENSION_WEIGHTS,
+  VULNERABILITY_TYPES,
+  DEFAULT_VULNERABILITY_TYPES_ENABLED,
 } from "../../../domain/ai-detection/riskScoringTypes";
 import { palette } from "../../themes/palette";
 
@@ -85,6 +89,10 @@ export default function SettingsPage() {
     { ...DEFAULT_DIMENSION_WEIGHTS }
   );
   const [llmKeys, setLlmKeys] = useState<LLMKeysModel[]>([]);
+  const [vulnerabilityScanEnabled, setVulnerabilityScanEnabled] = useState(false);
+  const [vulnerabilityTypesEnabled, setVulnerabilityTypesEnabled] = useState<Record<VulnerabilityTypeKey, boolean>>(
+    { ...DEFAULT_VULNERABILITY_TYPES_ENABLED }
+  );
 
   // Load token status on mount
   const loadTokenStatus = useCallback(async () => {
@@ -116,6 +124,8 @@ export default function SettingsPage() {
       setLlmEnabled(config.llm_enabled);
       setLlmKeyId(config.llm_key_id);
       setDimensionWeights(config.dimension_weights);
+      setVulnerabilityScanEnabled(config.vulnerability_scan_enabled ?? false);
+      setVulnerabilityTypesEnabled(config.vulnerability_types_enabled ?? { ...DEFAULT_VULNERABILITY_TYPES_ENABLED });
 
       const keys = keysResponse?.data?.data || keysResponse?.data || [];
       setLlmKeys(Array.isArray(keys) ? keys : []);
@@ -230,6 +240,8 @@ export default function SettingsPage() {
         llm_enabled: llmEnabled,
         llm_key_id: llmEnabled ? llmKeyId : null,
         dimension_weights: dimensionWeights,
+        vulnerability_scan_enabled: llmEnabled ? vulnerabilityScanEnabled : false,
+        vulnerability_types_enabled: vulnerabilityTypesEnabled,
       });
       setRiskConfig(updated);
       setAlert({ variant: "success", body: "Risk scoring settings saved" });
@@ -477,6 +489,96 @@ export default function SettingsPage() {
                         </Typography>
                       </Box>
                     )}
+                  </Box>
+                )}
+              </Box>
+
+              {/* Vulnerability scanning */}
+              <Box
+                sx={{
+                  border: `1px solid ${palette.border.dark}`,
+                  borderRadius: "4px",
+                  p: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  opacity: llmEnabled ? 1 : 0.5,
+                }}
+              >
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Typography sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}>
+                      Vulnerability detection
+                    </Typography>
+                    <Toggle
+                      checked={vulnerabilityScanEnabled}
+                      onChange={(e) => setVulnerabilityScanEnabled(e.target.checked)}
+                      size="small"
+                      disabled={!llmEnabled}
+                    />
+                  </Box>
+                  <Typography sx={{ fontSize: 13, color: palette.text.secondary, mt: "4px" }}>
+                    Use LLM analysis to detect security vulnerabilities in scanned code.
+                    Uses additional LLM API tokens per scan. Patterns are adapted from
+                    Promptfoo redteam graders and mapped to the OWASP LLM Top 10.
+                  </Typography>
+                </Box>
+
+                {!llmEnabled && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Info size={12} color={palette.text.tertiary} strokeWidth={1.5} />
+                    <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                      Enable LLM-enhanced analysis above to use vulnerability detection.
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Per-type vulnerability cards */}
+                {vulnerabilityScanEnabled && llmEnabled && (
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {VULNERABILITY_TYPES.map((vulnType) => (
+                      <Box
+                        key={vulnType.key}
+                        sx={{
+                          border: `1px solid ${palette.border.dark}`,
+                          borderRadius: "4px",
+                          p: "12px",
+                          opacity: vulnerabilityTypesEnabled[vulnType.key] ? 1 : 0.6,
+                        }}
+                      >
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary }}>
+                              {vulnType.name}
+                            </Typography>
+                            <Chip
+                              label={vulnType.owaspId}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                backgroundColor: palette.background.alt,
+                                color: palette.text.secondary,
+                              }}
+                            />
+                          </Box>
+                          <Toggle
+                            checked={vulnerabilityTypesEnabled[vulnType.key]}
+                            onChange={(e) =>
+                              setVulnerabilityTypesEnabled((prev) => ({
+                                ...prev,
+                                [vulnType.key]: e.target.checked,
+                              }))
+                            }
+                            size="small"
+                          />
+                        </Box>
+                        <Typography sx={{ fontSize: 12, color: palette.text.secondary, mt: "4px" }}>
+                          {vulnType.description}
+                        </Typography>
+                      </Box>
+                    ))}
                   </Box>
                 )}
               </Box>

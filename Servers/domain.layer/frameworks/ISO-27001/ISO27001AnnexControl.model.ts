@@ -31,11 +31,7 @@ export class ISO27001AnnexControlModel
   })
   implementation_description!: string;
 
-  @Column({
-    type: DataType.JSONB,
-    allowNull: false,
-  })
-  evidence_links!: Object[];
+  // NOTE: evidence_links are now stored in file_entity_links table
 
   @Column({
     type: DataType.STRING,
@@ -113,7 +109,7 @@ export class ISO27001AnnexControlModel
     return {
       id: this.id,
       implementation_description: this.implementation_description,
-      evidence_links: this.evidence_links,
+      // NOTE: evidence_links are now stored in file_entity_links table
       status: this.status,
       owner: this.owner,
       reviewer: this.reviewer,

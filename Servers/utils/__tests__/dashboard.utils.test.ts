@@ -29,7 +29,7 @@ const mockGetDataFromProviders = PluginService.getDataFromProviders as jest.Mock
 >;
 
 describe("getDashboardDataQuery", () => {
-  const tenant = "a1b2c3d4e5";
+  const organizationId = 1;
   const userId = 1;
   const role = "Admin";
 
@@ -57,19 +57,19 @@ describe("getDashboardDataQuery", () => {
     ];
     mockGetAllProjects.mockResolvedValue(projects as any);
 
-    const result = await getDashboardDataQuery(tenant, userId, role);
+    const result = await getDashboardDataQuery(organizationId, userId, role);
 
     expect(result).not.toBeNull();
     expect(result!.projects).toBe(2);
     expect(result!.projects_list).toHaveLength(2);
   });
 
-  it("should call getAllProjectsQuery with userId, role, and tenant", async () => {
-    await getDashboardDataQuery(tenant, userId, role);
+  it("should call getAllProjectsQuery with userId, role, and organizationId", async () => {
+    await getDashboardDataQuery(organizationId, userId, role);
 
     expect(mockGetAllProjects).toHaveBeenCalledWith(
       { userId, role },
-      tenant
+      organizationId
     );
   });
 
@@ -81,12 +81,13 @@ describe("getDashboardDataQuery", () => {
       return [[{ count: "0" }], 0] as any;
     });
 
-    const result = await getDashboardDataQuery(tenant, userId, role);
+    const result = await getDashboardDataQuery(organizationId, userId, role);
 
     expect(result!.trainings).toBe(7);
-    // Verify query includes tenant schema
+    // Verify query uses organization_id filter
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining(`"${tenant}".trainingregistar`)
+      expect.stringContaining("trainingregistar WHERE organization_id"),
+      expect.objectContaining({ replacements: expect.objectContaining({ organizationId }) })
     );
   });
 
@@ -98,11 +99,12 @@ describe("getDashboardDataQuery", () => {
       return [[{ count: "0" }], 0] as any;
     });
 
-    const result = await getDashboardDataQuery(tenant, userId, role);
+    const result = await getDashboardDataQuery(organizationId, userId, role);
 
     expect(result!.models).toBe(4);
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining(`"${tenant}".model_inventories`)
+      expect.stringContaining("model_inventories WHERE organization_id"),
+      expect.objectContaining({ replacements: expect.objectContaining({ organizationId }) })
     );
   });
 
@@ -114,11 +116,12 @@ describe("getDashboardDataQuery", () => {
       return [[{ count: "0" }], 0] as any;
     });
 
-    const result = await getDashboardDataQuery(tenant, userId, role);
+    const result = await getDashboardDataQuery(organizationId, userId, role);
 
     expect(result!.reports).toBe(3);
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining(`"${tenant}".files`)
+      expect.stringContaining("files AS f WHERE"),
+      expect.objectContaining({ replacements: expect.objectContaining({ organizationId }) })
     );
   });
 
@@ -141,7 +144,7 @@ describe("getDashboardDataQuery", () => {
       return [[{ count: "0" }], 0] as any;
     });
 
-    const result = await getDashboardDataQuery(tenant, userId, role);
+    const result = await getDashboardDataQuery(organizationId, userId, role);
 
     expect(result!.task_radar.overdue).toBe(2);
     expect(result!.task_radar.due).toBe(5);
@@ -155,13 +158,13 @@ describe("getDashboardDataQuery", () => {
     mockGetAllProjects.mockResolvedValue(nativeProjects as any);
     mockGetDataFromProviders.mockResolvedValue(pluginUseCases as any);
 
-    const result = await getDashboardDataQuery(tenant, userId, role);
+    const result = await getDashboardDataQuery(organizationId, userId, role);
 
     expect(result!.projects).toBe(2);
     expect(result!.projects_list).toHaveLength(2);
     expect(mockGetDataFromProviders).toHaveBeenCalledWith(
       "use-cases",
-      tenant,
+      organizationId,
       sequelize
     );
   });
@@ -171,7 +174,7 @@ describe("getDashboardDataQuery", () => {
     mockGetAllProjects.mockResolvedValue(nativeProjects as any);
     mockGetDataFromProviders.mockRejectedValue(new Error("Plugin error"));
 
-    const result = await getDashboardDataQuery(tenant, userId, role);
+    const result = await getDashboardDataQuery(organizationId, userId, role);
 
     // Should still return native projects
     expect(result!.projects).toBe(1);
@@ -181,12 +184,12 @@ describe("getDashboardDataQuery", () => {
   it("should continue gracefully when tasks table does not exist (task radar defaults to 0)", async () => {
     mockQuery.mockImplementation(async (sql: any) => {
       if (typeof sql === "string" && sql.includes("tasks")) {
-        throw new Error('relation "a1b2c3d4e5".tasks does not exist');
+        throw new Error('relation "public".tasks does not exist');
       }
       return [[{ count: "0" }], 0] as any;
     });
 
-    const result = await getDashboardDataQuery(tenant, userId, role);
+    const result = await getDashboardDataQuery(organizationId, userId, role);
 
     expect(result!.task_radar.overdue).toBe(0);
     expect(result!.task_radar.due).toBe(0);

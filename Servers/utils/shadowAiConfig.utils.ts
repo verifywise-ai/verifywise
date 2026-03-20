@@ -11,14 +11,16 @@ import { IShadowAiSyslogConfig, IShadowAiSettings } from "../domain.layer/interf
 // ─── Syslog Config ─────────────────────────────────────────────────────
 
 /**
- * Get all syslog configurations for a tenant.
+ * Get all syslog configurations for an organization.
  */
 export async function getSyslogConfigsQuery(
-  tenant: string
+  organizationId: number
 ): Promise<IShadowAiSyslogConfig[]> {
   const [rows] = await sequelize.query(
-    `SELECT * FROM "${tenant}".shadow_ai_syslog_config
-     ORDER BY created_at DESC`
+    `SELECT * FROM shadow_ai_syslog_config
+     WHERE organization_id = :organizationId
+     ORDER BY created_at DESC`,
+    { replacements: { organizationId } }
   );
 
   return rows as IShadowAiSyslogConfig[];
@@ -28,7 +30,7 @@ export async function getSyslogConfigsQuery(
  * Create a new syslog configuration.
  */
 export async function createSyslogConfigQuery(
-  tenant: string,
+  organizationId: number,
   config: {
     source_identifier: string;
     parser_type: string;
@@ -37,13 +39,14 @@ export async function createSyslogConfigQuery(
   transaction?: Transaction
 ): Promise<IShadowAiSyslogConfig> {
   const [result] = await sequelize.query(
-    `INSERT INTO "${tenant}".shadow_ai_syslog_config
-       (source_identifier, parser_type, is_active)
+    `INSERT INTO shadow_ai_syslog_config
+       (organization_id, source_identifier, parser_type, is_active)
      VALUES
-       (:source_identifier, :parser_type, :is_active)
+       (:organizationId, :source_identifier, :parser_type, :is_active)
      RETURNING *`,
     {
       replacements: {
+        organizationId,
         source_identifier: config.source_identifier,
         parser_type: config.parser_type,
         is_active: config.is_active,
@@ -59,7 +62,7 @@ export async function createSyslogConfigQuery(
  * Update a syslog configuration.
  */
 export async function updateSyslogConfigQuery(
-  tenant: string,
+  organizationId: number,
   configId: number,
   updates: {
     source_identifier?: string;
@@ -69,7 +72,7 @@ export async function updateSyslogConfigQuery(
   transaction?: Transaction
 ): Promise<IShadowAiSyslogConfig | null> {
   const setClauses: string[] = [];
-  const replacements: Record<string, unknown> = { configId };
+  const replacements: Record<string, unknown> = { organizationId, configId };
 
   if (updates.source_identifier !== undefined) {
     setClauses.push("source_identifier = :source_identifier");
@@ -87,9 +90,9 @@ export async function updateSyslogConfigQuery(
   if (setClauses.length === 0) return null;
 
   const [result] = await sequelize.query(
-    `UPDATE "${tenant}".shadow_ai_syslog_config
+    `UPDATE shadow_ai_syslog_config
      SET ${setClauses.join(", ")}
-     WHERE id = :configId
+     WHERE organization_id = :organizationId AND id = :configId
      RETURNING *`,
     {
       replacements,
@@ -105,15 +108,15 @@ export async function updateSyslogConfigQuery(
  * Delete a syslog configuration.
  */
 export async function deleteSyslogConfigQuery(
-  tenant: string,
+  organizationId: number,
   configId: number,
   transaction?: Transaction
 ): Promise<boolean> {
   const [rows] = await sequelize.query(
-    `DELETE FROM "${tenant}".shadow_ai_syslog_config WHERE id = :configId
+    `DELETE FROM shadow_ai_syslog_config WHERE organization_id = :organizationId AND id = :configId
      RETURNING id`,
     {
-      replacements: { configId },
+      replacements: { organizationId, configId },
       ...(transaction ? { transaction } : {}),
     }
   );
@@ -124,13 +127,14 @@ export async function deleteSyslogConfigQuery(
 // ─── Settings ──────────────────────────────────────────────────────
 
 /**
- * Get tenant settings (always returns a row — created by migration).
+ * Get organization settings (always returns a row — created by migration).
  */
 export async function getSettingsQuery(
-  tenant: string
+  organizationId: number
 ): Promise<IShadowAiSettings> {
   const [rows] = await sequelize.query(
-    `SELECT * FROM "${tenant}".shadow_ai_settings WHERE id = 1`
+    `SELECT * FROM shadow_ai_settings WHERE organization_id = :organizationId`,
+    { replacements: { organizationId } }
   );
 
   // Return defaults if no row exists yet
@@ -147,15 +151,15 @@ export async function getSettingsQuery(
 }
 
 /**
- * Update tenant settings.
+ * Update organization settings.
  */
 export async function updateSettingsQuery(
-  tenant: string,
+  organizationId: number,
   updates: Partial<Omit<IShadowAiSettings, "id" | "updated_at">>,
   transaction?: Transaction
 ): Promise<IShadowAiSettings> {
   const setClauses: string[] = ["updated_at = NOW()"];
-  const replacements: Record<string, unknown> = {};
+  const replacements: Record<string, unknown> = { organizationId };
 
   if (updates.rate_limit_max_events_per_hour !== undefined) {
     setClauses.push("rate_limit_max_events_per_hour = :rate_limit");
@@ -179,9 +183,9 @@ export async function updateSettingsQuery(
   }
 
   const [result] = await sequelize.query(
-    `UPDATE "${tenant}".shadow_ai_settings
+    `UPDATE shadow_ai_settings
      SET ${setClauses.join(", ")}
-     WHERE id = 1
+     WHERE organization_id = :organizationId
      RETURNING *`,
     {
       replacements,

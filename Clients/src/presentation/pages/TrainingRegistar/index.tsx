@@ -40,6 +40,11 @@ import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import { ColumnSelector } from "../../components/Table/ColumnSelector";
+import {
+  useColumnVisibility,
+  ColumnConfig,
+} from "../../../application/hooks/useColumnVisibility";
 
 const Alert = React.lazy(
   () => import("../../../presentation/components/Alert")
@@ -81,6 +86,26 @@ const createAlert = (
   title,
 });
 
+// Column type for Training table
+type TrainingColumn =
+  | "training_name"
+  | "duration"
+  | "provider"
+  | "department"
+  | "status"
+  | "numberOfPeople"
+  | "actions";
+
+const TRAINING_COLUMNS: ColumnConfig<TrainingColumn>[] = [
+  { key: "training_name", label: "Training name", defaultVisible: true, alwaysVisible: true },
+  { key: "duration", label: "Duration", defaultVisible: true },
+  { key: "provider", label: "Provider", defaultVisible: true },
+  { key: "department", label: "Department", defaultVisible: true },
+  { key: "status", label: "Status", defaultVisible: true },
+  { key: "numberOfPeople", label: "People", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
+
 const Training: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -108,6 +133,13 @@ const Training: React.FC = () => {
 
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Column visibility
+  const { visibleColumns, allColumns, toggleColumn, resetToDefaults } =
+    useColumnVisibility<TrainingColumn>({
+      tableId: "training-registry-table",
+      columns: TRAINING_COLUMNS,
+    });
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
@@ -548,6 +580,13 @@ const Training: React.FC = () => {
             onGroupChange={handleGroupChange}
           />
 
+          <ColumnSelector
+            columns={allColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+            onResetToDefaults={resetToDefaults}
+          />
+
           <SearchBox
             placeholder="Search trainings..."
             value={searchTerm}
@@ -569,8 +608,8 @@ const Training: React.FC = () => {
             <CustomizableButton
               variant="contained"
               sx={{
-                backgroundColor: "#13715B",
-                border: "1px solid #13715B",
+                backgroundColor: "brand.primary",
+                border: "1px solid brand.primary",
                 gap: 2,
               }}
               text="New training"
@@ -594,6 +633,7 @@ const Training: React.FC = () => {
               onEdit={handleEditTraining}
               onDelete={handleDeleteTraining}
               hidePagination={options?.hidePagination}
+              visibleColumns={visibleColumns as Set<string>}
             />
           )}
         />

@@ -33,7 +33,7 @@ async def run_evaluation(
     db: AsyncSession,
     experiment_id: str,
     config: Dict[str, Any],
-    tenant: str,
+    organization_id: int,
 ) -> Dict[str, Any]:
     """
     Run a DeepEval evaluation based on experiment configuration.
@@ -42,7 +42,7 @@ async def run_evaluation(
         db: Database session
         experiment_id: Experiment ID
         config: Experiment configuration with model, dataset, judge LLM, metrics
-        tenant: Tenant ID
+        organization_id: Organization ID for tenant isolation
         
     Returns:
         Evaluation results
@@ -258,7 +258,7 @@ async def run_evaluation(
             await crud.update_experiment_status(
                 db=db,
                 experiment_id=experiment_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 status="failed",
                 error_message=error_msg
             )
@@ -309,7 +309,7 @@ async def run_evaluation(
                 await crud.update_experiment_status(
                     db=db,
                     experiment_id=experiment_id,
-                    tenant=tenant,
+                    organization_id=organization_id,
                     status="failed",
                     error_message=error_msg
                 )
@@ -326,7 +326,7 @@ async def run_evaluation(
                 await crud.update_experiment_status(
                     db=db,
                     experiment_id=experiment_id,
-                    tenant=tenant,
+                    organization_id=organization_id,
                     status="failed",
                     error_message=error_msg
                 )
@@ -344,7 +344,7 @@ async def run_evaluation(
             await crud.update_experiment_status(
                 db=db,
                 experiment_id=experiment_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 status="failed",
                 error_message=error_msg
             )
@@ -367,7 +367,7 @@ async def run_evaluation(
                 await crud.update_experiment_status(
                     db=db,
                     experiment_id=experiment_id,
-                    tenant=tenant,
+                    organization_id=organization_id,
                     status="failed",
                     error_message=error_msg
                 )
@@ -515,7 +515,7 @@ async def run_evaluation(
                             await crud.update_experiment_status(
                                 db=db,
                                 experiment_id=experiment_id,
-                                tenant=tenant,
+                                organization_id=organization_id,
                                 status="failed",
                                 error_message=termination_reason,
                             )
@@ -568,7 +568,7 @@ async def run_evaluation(
                 created_log = await crud.create_log(
                     db=db,
                     project_id=config.get("project_id"),
-                    tenant=tenant,
+                    organization_id=organization_id,
                     experiment_id=experiment_id,
                     input_text=combined_input or scenario,
                     output_text=combined_output,
@@ -626,7 +626,7 @@ async def run_evaluation(
                         await crud.create_log(
                             db=db,
                             project_id=config.get("project_id"),
-                            tenant=tenant,
+                            organization_id=organization_id,
                             experiment_id=experiment_id,
                             input_text=prompt_data["prompt"],
                             output_text="",
@@ -652,7 +652,7 @@ async def run_evaluation(
                     created_log = await crud.create_log(
                         db=db,
                         project_id=config.get("project_id"),
-                        tenant=tenant,
+                        organization_id=organization_id,
                         experiment_id=experiment_id,
                         input_text=prompt_data["prompt"],
                         output_text=response,
@@ -669,7 +669,7 @@ async def run_evaluation(
                         metric_name="latency",
                         metric_type="performance",
                         value=float(latency_ms),
-                        tenant=tenant,
+                        organization_id=organization_id,
                         experiment_id=experiment_id,
                     )
                     
@@ -698,7 +698,7 @@ async def run_evaluation(
                     await crud.create_log(
                         db=db,
                         project_id=config.get("project_id"),
-                        tenant=tenant,
+                        organization_id=organization_id,
                         experiment_id=experiment_id,
                         input_text=prompt_data.get("prompt", str(prompt_data)[:200]),
                         model_name=model_name,
@@ -719,7 +719,7 @@ async def run_evaluation(
                         await crud.update_experiment_status(
                             db=db,
                             experiment_id=experiment_id,
-                            tenant=tenant,
+                            organization_id=organization_id,
                             status="failed",
                             error_message=termination_reason,
                         )
@@ -732,7 +732,7 @@ async def run_evaluation(
             await crud.update_experiment_status(
                 db=db,
                 experiment_id=experiment_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 status="failed",
                 error_message=error_msg
             )
@@ -893,9 +893,9 @@ async def run_evaluation(
         
         if evaluation_mode in ("scorer", "both"):
             try:
-                # Load enabled custom scorers for this tenant
-                # Note: Scorers are org-scoped, tenant isolation is sufficient here
-                all_scorers = await list_scorers(tenant=tenant, db=db)
+                # Load enabled custom scorers for this organization
+                # Note: Scorers are org-scoped, organization_id isolation is sufficient here
+                all_scorers = await list_scorers(organization_id=organization_id, db=db)
                 enabled_scorers = [s for s in all_scorers if s.get("enabled") and s.get("type") == "llm"]
 
                 # Filter by selected scorers if specified in experiment config
@@ -1097,7 +1097,7 @@ async def run_evaluation(
                     await crud.update_log_metadata(
                         db=db,
                         log_id=log_id,
-                        tenant=tenant,
+                        organization_id=organization_id,
                         metadata={"metric_scores": normalized_scores},
                     )
                     print(f"   ✅ Updated log {log_id[:8]}... with {len(normalized_scores)} metrics")
@@ -1183,7 +1183,7 @@ async def run_evaluation(
                         metric_name=camel_key,
                         metric_type="quality",
                         value=avg_score,
-                        tenant=tenant,
+                        organization_id=organization_id,
                         experiment_id=experiment_id,
                     )
                     print(f"   ✅ Saved {metric_name}: {avg_score:.3f}")
@@ -1211,7 +1211,7 @@ async def run_evaluation(
                             metric_name=camel_key,  # Use camelCase for DB too
                             metric_type="quality",
                             value=avg_score,
-                            tenant=tenant,
+                            organization_id=organization_id,
                             experiment_id=experiment_id,
                         )
         
@@ -1243,7 +1243,7 @@ async def run_evaluation(
                         metric_name=metric_key,
                         metric_type="quality",  # Same type as DeepEval metrics
                         value=avg_score,
-                        tenant=tenant,
+                        organization_id=organization_id,
                         experiment_id=experiment_id,
                     )
                     print(f"   ✅ Saved {scorer_name} ({metric_key}): avg={avg_score:.3f}, pass_rate={passed_rate:.1%}")
@@ -1261,7 +1261,7 @@ async def run_evaluation(
         await crud.update_experiment_status(
             db=db,
             experiment_id=experiment_id,
-            tenant=tenant,
+            organization_id=organization_id,
             status="completed",
             results=experiment_results,
         )
@@ -1281,7 +1281,7 @@ async def run_evaluation(
             await crud.update_experiment_status(
                 db=db,
                 experiment_id=experiment_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 status="failed",
                 error_message=error_msg,
             )

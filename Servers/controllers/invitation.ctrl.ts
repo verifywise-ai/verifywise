@@ -16,8 +16,8 @@ export const getInvitations = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const tenant = req.tenantId!;
-    const invitations = await getInvitationsByTenantQuery(tenant);
+    const organizationId = req.organizationId!;
+    const invitations = await getInvitationsByTenantQuery(organizationId);
     return res.status(200).json({ invitations });
   } catch (error) {
     console.error("Error fetching invitations:", error);
@@ -35,13 +35,13 @@ export const revokeInvitation = async (
 ): Promise<Response> => {
   try {
     const id = parseInt(req.params.id as string, 10);
-    const tenant = req.tenantId!;
+    const organizationId = req.organizationId!;
 
     if (isNaN(id)) {
       return res.status(400).json({ error: "Invalid invitation ID" });
     }
 
-    const deleted = await revokeInvitationQuery(tenant, id);
+    const deleted = await revokeInvitationQuery(organizationId, id);
     if (!deleted) {
       return res.status(404).json({ error: "Invitation not found" });
     }
@@ -63,13 +63,13 @@ export const resendInvitation = async (
 ): Promise<Response> => {
   try {
     const id = parseInt(req.params.id as string, 10);
-    const tenant = req.tenantId!;
+    const organizationId = req.organizationId!;
 
     if (isNaN(id)) {
       return res.status(400).json({ error: "Invalid invitation ID" });
     }
 
-    const invitation = await getInvitationByIdQuery(tenant, id);
+    const invitation = await getInvitationByIdQuery(organizationId, id);
     if (!invitation) {
       return res.status(404).json({ error: "Invitation not found" });
     }
@@ -79,10 +79,10 @@ export const resendInvitation = async (
       name: invitation.name,
       surname: invitation.surname,
       roleId: invitation.role_id,
-      organizationId: req.organizationId!,
+      organizationId: organizationId,
     });
 
-    await updateInvitationExpiryQuery(tenant, id, expiresAt);
+    await updateInvitationExpiryQuery(organizationId, id, expiresAt);
 
     if (info.error) {
       return res.status(206).json({

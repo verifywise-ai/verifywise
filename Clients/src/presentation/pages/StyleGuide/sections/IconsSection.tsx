@@ -3,6 +3,7 @@ import { Box, Stack, Typography, useTheme, Snackbar, TextField, InputAdornment }
 import { Copy, Search } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import CodeBlock from "../components/CodeBlock";
+import { status } from "../../../themes/palette";
 
 // Common icons used throughout VerifyWise
 const COMMON_ICONS = [
@@ -262,11 +263,11 @@ const IconsSection: React.FC = () => {
                   }}
                 >
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.CheckCircle size={20} color="#138A5E" />
+                    <LucideIcons.CheckCircle size={20} color={status.success.text} />
                     <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>Success</Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.AlertCircle size={20} color="#D32F2F" />
+                    <LucideIcons.AlertCircle size={20} color={status.error.text} />
                     <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>Error</Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
@@ -334,10 +335,10 @@ const IconsSection: React.FC = () => {
             <SpecTable
               onCopy={handleCopy}
               specs={[
-                { property: "Default", value: "#667085 (text.tertiary)" },
-                { property: "Primary", value: "#13715B (primary.main)" },
-                { property: "Success", value: "#138A5E (status.success.main)" },
-                { property: "Error", value: "#D32F2F (status.error.main)" },
+                { property: "Default", value: "text.icon (text.tertiary)" },
+                { property: "Primary", value: "brand.primary (primary.main)" },
+                { property: "Success", value: "status.success.text (status.success.main)" },
+                { property: "Error", value: "status.error.text (status.error.main)" },
                 { property: "Warning", value: "#795548 (status.warning.main)" },
                 { property: "Info", value: "#1565C0 (status.info.main)" },
               ]}

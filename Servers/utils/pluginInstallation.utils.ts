@@ -9,7 +9,7 @@ import {
 
 /**
  * Plugin Installation Database Utilities
- * Uses raw SQL queries to interact with tenant-scoped plugin_installations table
+ * Uses raw SQL queries to interact with shared-schema plugin_installations table
  */
 
 /**
@@ -17,7 +17,7 @@ import {
  */
 export async function createInstallation(
   plugin_key: string,
-  tenantId: string
+  organizationId: number
 ): Promise<IPluginInstallation> {
   // Validate required fields
   if (!plugin_key || plugin_key.trim().length === 0) {
@@ -28,22 +28,22 @@ export async function createInstallation(
     );
   }
 
-  if (!tenantId || tenantId.trim().length === 0) {
+  if (!organizationId || organizationId < 1) {
     throw new ValidationException(
-      "Valid tenant ID is required",
-      "tenantId",
-      tenantId
+      "Valid organization ID is required",
+      "organizationId",
+      organizationId
     );
   }
 
   try {
     // Check if plugin is already installed
     const existing = await sequelize.query(
-      `SELECT * FROM "${tenantId}".plugin_installations
-       WHERE plugin_key = :plugin_key
+      `SELECT * FROM plugin_installations
+       WHERE plugin_key = :plugin_key AND organization_id = :organizationId
        LIMIT 1`,
       {
-        replacements: { plugin_key: plugin_key.trim() },
+        replacements: { plugin_key: plugin_key.trim(), organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -58,13 +58,14 @@ export async function createInstallation(
 
     // Create new installation record
     const result = await sequelize.query(
-      `INSERT INTO "${tenantId}".plugin_installations
-       (plugin_key, status, created_at, updated_at)
-       VALUES (:plugin_key, :status, NOW(), NOW())
+      `INSERT INTO plugin_installations
+       (plugin_key, organization_id, status, created_at, updated_at)
+       VALUES (:plugin_key, :organizationId, :status, NOW(), NOW())
        RETURNING *`,
       {
         replacements: {
           plugin_key: plugin_key.trim(),
+          organizationId,
           status: PluginInstallationStatus.INSTALLED,
         },
         type: QueryTypes.INSERT,
@@ -91,14 +92,14 @@ export async function createInstallation(
  */
 export async function findByPlugin(
   plugin_key: string,
-  tenantId: string
+  organizationId: number
 ): Promise<IPluginInstallation | null> {
   const results = await sequelize.query(
-    `SELECT * FROM "${tenantId}".plugin_installations
-     WHERE plugin_key = :plugin_key
+    `SELECT * FROM plugin_installations
+     WHERE plugin_key = :plugin_key AND organization_id = :organizationId
      LIMIT 1`,
     {
-      replacements: { plugin_key: plugin_key.trim() },
+      replacements: { plugin_key: plugin_key.trim(), organizationId },
       type: QueryTypes.SELECT,
     }
   );
@@ -107,15 +108,17 @@ export async function findByPlugin(
 }
 
 /**
- * Get all installed plugins for a tenant
+ * Get all installed plugins for an organization
  */
 export async function getInstalledPlugins(
-  tenantId: string
+  organizationId: number
 ): Promise<IPluginInstallation[]> {
   const results = await sequelize.query(
-    `SELECT * FROM "${tenantId}".plugin_installations
+    `SELECT * FROM plugin_installations
+     WHERE organization_id = :organizationId
      ORDER BY installed_at DESC`,
     {
+      replacements: { organizationId },
       type: QueryTypes.SELECT,
     }
   );
@@ -128,7 +131,7 @@ export async function getInstalledPlugins(
  */
 export async function findById(
   id: number,
-  tenantId: string
+  organizationId: number
 ): Promise<IPluginInstallation | null> {
   if (!id || id < 1) {
     throw new ValidationException(
@@ -139,11 +142,11 @@ export async function findById(
   }
 
   const results = await sequelize.query(
-    `SELECT * FROM "${tenantId}".plugin_installations
-     WHERE id = :id
+    `SELECT * FROM plugin_installations
+     WHERE id = :id AND organization_id = :organizationId
      LIMIT 1`,
     {
-      replacements: { id },
+      replacements: { id, organizationId },
       type: QueryTypes.SELECT,
     }
   );
@@ -156,9 +159,9 @@ export async function findById(
  */
 export async function findByIdWithValidation(
   id: number,
-  tenantId: string
+  organizationId: number
 ): Promise<IPluginInstallation> {
-  const installation = await findById(id, tenantId);
+  const installation = await findById(id, organizationId);
 
   if (!installation) {
     throw new NotFoundException("Plugin installation not found", "installation", id);
@@ -172,16 +175,16 @@ export async function findByIdWithValidation(
  */
 export async function updateStatus(
   id: number,
-  tenantId: string,
+  organizationId: number,
   status: PluginInstallationStatus
 ): Promise<IPluginInstallation> {
   const results = await sequelize.query(
-    `UPDATE "${tenantId}".plugin_installations
+    `UPDATE plugin_installations
      SET status = :status, installed_at = NOW(), error_message = NULL, updated_at = NOW()
-     WHERE id = :id
+     WHERE id = :id AND organization_id = :organizationId
      RETURNING *`,
     {
-      replacements: { id, status },
+      replacements: { id, organizationId, status },
       type: QueryTypes.UPDATE,
     }
   );
@@ -198,13 +201,13 @@ export async function updateStatus(
  */
 export async function deleteInstallation(
   id: number,
-  tenantId: string
+  organizationId: number
 ): Promise<void> {
   await sequelize.query(
-    `DELETE FROM "${tenantId}".plugin_installations
-     WHERE id = :id`,
+    `DELETE FROM plugin_installations
+     WHERE id = :id AND organization_id = :organizationId`,
     {
-      replacements: { id },
+      replacements: { id, organizationId },
       type: QueryTypes.DELETE,
     }
   );
@@ -215,16 +218,16 @@ export async function deleteInstallation(
  */
 export async function updateConfiguration(
   id: number,
-  tenantId: string,
+  organizationId: number,
   configuration: any
 ): Promise<IPluginInstallation> {
   const results = await sequelize.query(
-    `UPDATE "${tenantId}".plugin_installations
+    `UPDATE plugin_installations
      SET configuration = :configuration, updated_at = NOW()
-     WHERE id = :id
+     WHERE id = :id AND organization_id = :organizationId
      RETURNING *`,
     {
-      replacements: { id, configuration: JSON.stringify(configuration) },
+      replacements: { id, organizationId, configuration: JSON.stringify(configuration) },
       type: QueryTypes.UPDATE,
     }
   );

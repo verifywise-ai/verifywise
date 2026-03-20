@@ -419,7 +419,7 @@ const Organization = () => {
               label="Organization name"
               value={organizationName}
               onChange={handleOrganizationNameChange}
-              sx={{ mb: 2, backgroundColor: "#FFFFFF" }}
+              sx={{ mb: 2, backgroundColor: "background.main" }}
               error={organizationNameError || undefined}
               disabled={isEditingDisabled}
               placeholder="e.g. My Organization"
@@ -429,7 +429,7 @@ const Organization = () => {
               text="Save"
               sx={{
                 width: 90,
-                backgroundColor: "#13715B",
+                backgroundColor: "brand.primary",
                 border: "1px solid",
                 gap: 2,
                 mt: 3,
@@ -474,7 +474,7 @@ const Organization = () => {
                   overflow: "hidden",
                   "&:hover": {
                     borderColor: "#999",
-                    backgroundColor: "#f5f5f5",
+                    backgroundColor: "background.surface",
                   },
                 }}
               >
@@ -561,7 +561,7 @@ const Organization = () => {
                 sx={{
                   fontSize: 12,
                   textTransform: "none",
-                  color: "#13715B",
+                  color: "brand.primary",
                   "&:hover": {
                     backgroundColor: "transparent !important",
                   },

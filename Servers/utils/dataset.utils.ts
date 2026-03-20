@@ -3,10 +3,11 @@ import { sequelize } from "../database/db";
 import { Transaction } from "sequelize";
 import { IDatasetModelInventory, IDatasetProject } from "../domain.layer/interfaces/i.dataset";
 
-export const getAllDatasetsQuery = async (tenant: string) => {
+export const getAllDatasetsQuery = async (organizationId: number) => {
   const datasets = await sequelize.query(
-    `SELECT * FROM "${tenant}".datasets ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM datasets WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: DatasetModel,
     }
@@ -19,9 +20,9 @@ export const getAllDatasetsQuery = async (tenant: string) => {
 
     // Get model relationships
     const modelRelations = (await sequelize.query(
-      `SELECT model_inventory_id, relationship_type FROM "${tenant}".dataset_model_inventories WHERE dataset_id = :dataset_id`,
+      `SELECT model_inventory_id, relationship_type FROM dataset_model_inventories WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
       {
-        replacements: { dataset_id: dataset.id },
+        replacements: { organizationId, dataset_id: dataset.id },
       }
     )) as [IDatasetModelInventory[], number];
 
@@ -31,9 +32,9 @@ export const getAllDatasetsQuery = async (tenant: string) => {
 
     // Get project relationships
     const projectRelations = (await sequelize.query(
-      `SELECT project_id FROM "${tenant}".dataset_projects WHERE dataset_id = :dataset_id`,
+      `SELECT project_id FROM dataset_projects WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
       {
-        replacements: { dataset_id: dataset.id },
+        replacements: { organizationId, dataset_id: dataset.id },
       }
     )) as [IDatasetProject[], number];
 
@@ -45,11 +46,11 @@ export const getAllDatasetsQuery = async (tenant: string) => {
   return datasets;
 };
 
-export const getDatasetByIdQuery = async (id: number, tenant: string) => {
+export const getDatasetByIdQuery = async (id: number, organizationId: number) => {
   const datasets = await sequelize.query(
-    `SELECT * FROM "${tenant}".datasets WHERE id = :id`,
+    `SELECT * FROM datasets WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: DatasetModel,
     }
@@ -63,9 +64,9 @@ export const getDatasetByIdQuery = async (id: number, tenant: string) => {
 
   // Get model relationships
   const modelRelations = (await sequelize.query(
-    `SELECT model_inventory_id, relationship_type FROM "${tenant}".dataset_model_inventories WHERE dataset_id = :dataset_id`,
+    `SELECT model_inventory_id, relationship_type FROM dataset_model_inventories WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
     {
-      replacements: { dataset_id: dataset.id },
+      replacements: { organizationId, dataset_id: dataset.id },
     }
   )) as [IDatasetModelInventory[], number];
 
@@ -75,9 +76,9 @@ export const getDatasetByIdQuery = async (id: number, tenant: string) => {
 
   // Get project relationships
   const projectRelations = (await sequelize.query(
-    `SELECT project_id FROM "${tenant}".dataset_projects WHERE dataset_id = :dataset_id`,
+    `SELECT project_id FROM dataset_projects WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
     {
-      replacements: { dataset_id: dataset.id },
+      replacements: { organizationId, dataset_id: dataset.id },
     }
   )) as [IDatasetProject[], number];
 
@@ -90,14 +91,14 @@ export const getDatasetByIdQuery = async (id: number, tenant: string) => {
 
 export const getDatasetsByModelIdQuery = async (
   modelId: number,
-  tenant: string
+  organizationId: number
 ) => {
   const datasets = await sequelize.query(
-    `SELECT d.*, dmi.relationship_type FROM "${tenant}".datasets d
-      JOIN "${tenant}".dataset_model_inventories dmi ON d.id = dmi.dataset_id
-      WHERE dmi.model_inventory_id = :model_id`,
+    `SELECT d.*, dmi.relationship_type FROM datasets d
+      JOIN dataset_model_inventories dmi ON d.id = dmi.dataset_id AND dmi.organization_id = :organizationId
+      WHERE d.organization_id = :organizationId AND dmi.model_inventory_id = :model_id`,
     {
-      replacements: { model_id: modelId },
+      replacements: { organizationId, model_id: modelId },
       mapToModel: true,
       model: DatasetModel,
     }
@@ -107,14 +108,14 @@ export const getDatasetsByModelIdQuery = async (
 
 export const getDatasetsByProjectIdQuery = async (
   projectId: number,
-  tenant: string
+  organizationId: number
 ) => {
   const datasets = await sequelize.query(
-    `SELECT d.* FROM "${tenant}".datasets d
-      JOIN "${tenant}".dataset_projects dp ON d.id = dp.dataset_id
-      WHERE dp.project_id = :project_id`,
+    `SELECT d.* FROM datasets d
+      JOIN dataset_projects dp ON d.id = dp.dataset_id AND dp.organization_id = :organizationId
+      WHERE d.organization_id = :organizationId AND dp.project_id = :project_id`,
     {
-      replacements: { project_id: projectId },
+      replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: DatasetModel,
     }
@@ -124,7 +125,7 @@ export const getDatasetsByProjectIdQuery = async (
 
 export const createNewDatasetQuery = async (
   dataset: DatasetModel,
-  tenant: string,
+  organizationId: number,
   models: number[],
   projects: number[],
   transaction: Transaction
@@ -133,19 +134,20 @@ export const createNewDatasetQuery = async (
 
   try {
     const result = await sequelize.query(
-      `INSERT INTO "${tenant}".datasets (
-        name, description, version, owner, type, function, source, license, format,
+      `INSERT INTO datasets (
+        organization_id, name, description, version, owner, type, function, source, license, format,
         classification, contains_pii, pii_types, status, status_date,
         known_biases, bias_mitigation, collection_method, preprocessing_steps,
         documentation_data, is_demo, created_at, updated_at
       ) VALUES (
-        :name, :description, :version, :owner, :type, :function, :source, :license, :format,
+        :organization_id, :name, :description, :version, :owner, :type, :function, :source, :license, :format,
         :classification, :contains_pii, :pii_types, :status, :status_date,
         :known_biases, :bias_mitigation, :collection_method, :preprocessing_steps,
         :documentation_data, :is_demo, :created_at, :updated_at
       ) RETURNING *`,
       {
         replacements: {
+          organization_id: organizationId,
           name: dataset.name,
           description: dataset.description,
           version: dataset.version,
@@ -182,10 +184,11 @@ export const createNewDatasetQuery = async (
     // Create model relationships
     for (const modelId of models) {
       await sequelize.query(
-        `INSERT INTO "${tenant}".dataset_model_inventories (dataset_id, model_inventory_id, relationship_type, created_at)
-         VALUES (:dataset_id, :model_inventory_id, 'trained_on', NOW())`,
+        `INSERT INTO dataset_model_inventories (organization_id, dataset_id, model_inventory_id, relationship_type, created_at)
+         VALUES (:organization_id, :dataset_id, :model_inventory_id, 'trained_on', NOW())`,
         {
           replacements: {
+            organization_id: organizationId,
             dataset_id: createdDataset.id,
             model_inventory_id: modelId,
           },
@@ -198,10 +201,11 @@ export const createNewDatasetQuery = async (
     // Create project relationships
     for (const projectId of projects) {
       await sequelize.query(
-        `INSERT INTO "${tenant}".dataset_projects (dataset_id, project_id, created_at)
-         VALUES (:dataset_id, :project_id, NOW())`,
+        `INSERT INTO dataset_projects (organization_id, dataset_id, project_id, created_at)
+         VALUES (:organization_id, :dataset_id, :project_id, NOW())`,
         {
           replacements: {
+            organization_id: organizationId,
             dataset_id: createdDataset.id,
             project_id: projectId,
           },
@@ -225,7 +229,7 @@ export const updateDatasetByIdQuery = async (
   projects: number[],
   deleteModels: boolean,
   deleteProjects: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const updated_at = new Date();
@@ -233,7 +237,7 @@ export const updateDatasetByIdQuery = async (
   try {
     // Update the dataset record
     await sequelize.query(
-      `UPDATE "${tenant}".datasets SET
+      `UPDATE datasets SET
         name = :name,
         description = :description,
         version = :version,
@@ -255,9 +259,10 @@ export const updateDatasetByIdQuery = async (
         documentation_data = :documentation_data,
         is_demo = :is_demo,
         updated_at = :updated_at
-      WHERE id = :id`,
+      WHERE organization_id = :organizationId AND id = :id`,
       {
         replacements: {
+          organizationId,
           id,
           name: dataset.name,
           description: dataset.description,
@@ -287,9 +292,9 @@ export const updateDatasetByIdQuery = async (
 
     // Fetch the updated record
     const result = await sequelize.query(
-      `SELECT * FROM "${tenant}".datasets WHERE id = :id`,
+      `SELECT * FROM datasets WHERE organization_id = :organizationId AND id = :id`,
       {
-        replacements: { id },
+        replacements: { organizationId, id },
         mapToModel: true,
         model: DatasetModel,
         transaction,
@@ -304,9 +309,9 @@ export const updateDatasetByIdQuery = async (
     if ((models && models.length > 0) || deleteModels) {
       // Delete existing model associations
       await sequelize.query(
-        `DELETE FROM "${tenant}".dataset_model_inventories WHERE dataset_id = :dataset_id`,
+        `DELETE FROM dataset_model_inventories WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
         {
-          replacements: { dataset_id: id },
+          replacements: { organizationId, dataset_id: id },
           transaction,
         }
       );
@@ -314,10 +319,11 @@ export const updateDatasetByIdQuery = async (
       // Insert new model associations
       for (const modelId of models) {
         await sequelize.query(
-          `INSERT INTO "${tenant}".dataset_model_inventories (dataset_id, model_inventory_id, relationship_type, created_at)
-           VALUES (:dataset_id, :model_inventory_id, 'trained_on', NOW())`,
+          `INSERT INTO dataset_model_inventories (organization_id, dataset_id, model_inventory_id, relationship_type, created_at)
+           VALUES (:organization_id, :dataset_id, :model_inventory_id, 'trained_on', NOW())`,
           {
             replacements: {
+              organization_id: organizationId,
               dataset_id: id,
               model_inventory_id: modelId,
             },
@@ -332,9 +338,9 @@ export const updateDatasetByIdQuery = async (
     if ((projects && projects.length > 0) || deleteProjects) {
       // Delete existing project associations
       await sequelize.query(
-        `DELETE FROM "${tenant}".dataset_projects WHERE dataset_id = :dataset_id`,
+        `DELETE FROM dataset_projects WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
         {
-          replacements: { dataset_id: id },
+          replacements: { organizationId, dataset_id: id },
           transaction,
         }
       );
@@ -342,10 +348,11 @@ export const updateDatasetByIdQuery = async (
       // Insert new project associations
       for (const projectId of projects) {
         await sequelize.query(
-          `INSERT INTO "${tenant}".dataset_projects (dataset_id, project_id, created_at)
-           VALUES (:dataset_id, :project_id, NOW())`,
+          `INSERT INTO dataset_projects (organization_id, dataset_id, project_id, created_at)
+           VALUES (:organization_id, :dataset_id, :project_id, NOW())`,
           {
             replacements: {
+              organization_id: organizationId,
               dataset_id: id,
               project_id: projectId,
             },
@@ -365,14 +372,14 @@ export const updateDatasetByIdQuery = async (
 
 export const deleteDatasetByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   try {
     const result = (await sequelize.query(
-      `DELETE FROM "${tenant}".datasets WHERE id = :id RETURNING *`,
+      `DELETE FROM datasets WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       {
-        replacements: { id },
+        replacements: { organizationId, id },
         transaction,
       }
     )) as [DatasetModel[], number];

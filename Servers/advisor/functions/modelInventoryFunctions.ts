@@ -20,23 +20,23 @@ export interface FetchModelInventoriesParams {
 
 const fetchModelInventories = async (
   params: FetchModelInventoriesParams,
-  tenant: string,
+  organizationId: number,
 ): Promise<Partial<IModelInventory>[]> => {
   let models: IModelInventory[] = [];
 
   try {
     // Fetch based on scope
     if (params.projectId) {
-      const result = await getModelByProjectIdQuery(params.projectId, tenant);
+      const result = await getModelByProjectIdQuery(params.projectId, organizationId);
       models = result || [];
     } else if (params.frameworkId) {
       const result = await getModelByFrameworkIdQuery(
         params.frameworkId,
-        tenant,
+        organizationId,
       );
       models = result || [];
     } else {
-      models = await getAllModelInventoriesQuery(tenant);
+      models = await getAllModelInventoriesQuery(organizationId);
     }
 
     // Apply filters
@@ -127,13 +127,13 @@ export interface ModelInventoryAnalytics {
 
 const getModelInventoryAnalytics = async (
   params: { projectId?: number },
-  tenant: string,
+  organizationId: number,
 ): Promise<ModelInventoryAnalytics> => {
   try {
     // Fetch models for analysis
     const models = params.projectId
-      ? (await getModelByProjectIdQuery(params.projectId, tenant)) || []
-      : await getAllModelInventoriesQuery(tenant);
+      ? (await getModelByProjectIdQuery(params.projectId, organizationId)) || []
+      : await getAllModelInventoriesQuery(organizationId);
 
     const totalModels = models.length;
 
@@ -264,13 +264,13 @@ export interface ModelInventoryExecutiveSummary {
 
 const getModelInventoryExecutiveSummary = async (
   params: { projectId?: number },
-  tenant: string,
+  organizationId: number,
 ): Promise<ModelInventoryExecutiveSummary> => {
   try {
     // Fetch models
     const models = params.projectId
-      ? (await getModelByProjectIdQuery(params.projectId, tenant)) || []
-      : await getAllModelInventoriesQuery(tenant);
+      ? (await getModelByProjectIdQuery(params.projectId, organizationId)) || []
+      : await getAllModelInventoriesQuery(organizationId);
 
     const totalActiveModels = models.length;
 

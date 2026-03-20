@@ -11,11 +11,11 @@ export async function getAuditLedger(req: Request, res: Response): Promise<any> 
     functionName: "getAuditLedger",
     fileName: "auditLedger.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
-    const tenantId = req.tenantId!;
+    const organizationId = req.organizationId!;
     const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
     const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
 
@@ -24,8 +24,8 @@ export async function getAuditLedger(req: Request, res: Response): Promise<any> 
     const entryType = (req.query.entry_type as string) || "";
 
     // Build WHERE clauses
-    const conditions: string[] = [];
-    const replacements: Record<string, string | number> = { limit, offset };
+    const conditions: string[] = ["al.organization_id = :organizationId"];
+    const replacements: Record<string, string | number> = { organizationId, limit, offset };
 
     if (entityType) {
       conditions.push("al.entity_type = :entityType");
@@ -36,18 +36,18 @@ export async function getAuditLedger(req: Request, res: Response): Promise<any> 
       replacements.entryType = entryType;
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
     const countResult: any[] = await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".audit_ledger al ${whereClause}`,
+      `SELECT COUNT(*) as count FROM audit_ledger al ${whereClause}`,
       { replacements, type: QueryTypes.SELECT }
     );
     const total = parseInt(countResult[0]?.count || "0", 10);
 
     const entries = await sequelize.query(
       `SELECT al.*, u.name as user_name, u.surname as user_surname
-       FROM "${tenantId}".audit_ledger al
-       LEFT JOIN public.users u ON al.user_id = u.id
+       FROM audit_ledger al
+       LEFT JOIN users u ON al.user_id = u.id
        ${whereClause}
        ORDER BY al.id DESC
        LIMIT :limit OFFSET :offset`,
@@ -63,7 +63,7 @@ export async function getAuditLedger(req: Request, res: Response): Promise<any> 
       functionName: "getAuditLedger",
       fileName: "auditLedger.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -83,7 +83,7 @@ export async function getAuditLedger(req: Request, res: Response): Promise<any> 
       fileName: "auditLedger.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -96,12 +96,12 @@ export async function verifyAuditLedger(req: Request, res: Response): Promise<an
     functionName: "verifyAuditLedger",
     fileName: "auditLedger.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
-    const tenantId = req.tenantId!;
-    const result = await verifyChain(tenantId);
+    const organizationId = req.organizationId!;
+    const result = await verifyChain(organizationId);
 
     await logSuccess({
       eventType: "Read",
@@ -109,7 +109,7 @@ export async function verifyAuditLedger(req: Request, res: Response): Promise<an
       functionName: "verifyAuditLedger",
       fileName: "auditLedger.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](result));
@@ -121,7 +121,7 @@ export async function verifyAuditLedger(req: Request, res: Response): Promise<an
       fileName: "auditLedger.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

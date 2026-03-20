@@ -1,5 +1,6 @@
 import { FileText, Upload } from "lucide-react";
 import { IPageTourStep } from "../../types/interfaces/i.tour";
+import { background } from "../../themes/palette";
 
 const FileSteps: IPageTourStep[] = [
   {
@@ -7,7 +8,7 @@ const FileSteps: IPageTourStep[] = [
     content: {
       header: "Upload new files",
       body: "Upload policy documents, compliance certificates, assessment reports, and other AI governance documentation to keep everything organized.",
-      icon: <Upload size={20} color="#ffffff" />,
+      icon: <Upload size={20} color={background.main} />,
     },
     placement: "bottom-end",
   },
@@ -16,7 +17,7 @@ const FileSteps: IPageTourStep[] = [
     content: {
       header: "Manage your documents",
       body: "All uploaded files are catalogued here. Filter by project, uploader, or date to quickly find what you need.",
-      icon: <FileText size={20} color="#ffffff" />,
+      icon: <FileText size={20} color={background.main} />,
     },
     placement: "bottom",
   },

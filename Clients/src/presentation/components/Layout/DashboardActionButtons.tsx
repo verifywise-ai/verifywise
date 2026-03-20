@@ -162,7 +162,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
       {/* Approval workflows */}
       {isAdmin && <VWTooltip
         header="Approval Workflows"
-        content={"Set up approval workflows."}
+        content={"Define multi-step review and sign-off chains that run automatically when items need approval."}
         placement="bottom"
         maxWidth={200}
       >

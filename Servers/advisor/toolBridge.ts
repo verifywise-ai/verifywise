@@ -90,8 +90,8 @@ export function bridgeTools(
       parameters: Record<string, unknown>;
     };
   }>,
-  availableTools: Record<string, (params: Record<string, unknown>, tenant: string) => Promise<unknown>>,
-  tenant: string
+  availableTools: Record<string, (params: Record<string, unknown>, tenant: number) => Promise<unknown>>,
+  tenant: number
 ): ToolSet {
   const tools: ToolSet = {};
 

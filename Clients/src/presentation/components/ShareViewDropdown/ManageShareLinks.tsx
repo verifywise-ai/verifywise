@@ -13,6 +13,7 @@ import {
   useUpdateShareLink,
   useDeleteShareLink,
 } from "../../../application/hooks/useShare";
+import { brand, text, background } from "../../themes/palette";
 
 /**
  * Props for the ManageShareLinks component
@@ -108,7 +109,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
           p: 4,
         }}
       >
-        <CircularProgress size={24} sx={{ color: "#13715B" }} />
+        <CircularProgress size={24} sx={{ color: `${brand.primary}` }} />
       </Box>
     );
   }
@@ -144,7 +145,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
           sx={{
             fontSize: "14px",
             fontWeight: 600,
-            color: "#000",
+            color: `${text.black}`,
           }}
         >
           Existing Share Links ({shareLinks.length})
@@ -155,7 +156,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
             onClick={() => refetch()}
             sx={{
               p: 0.5,
-              color: "#13715B",
+              color: `${brand.primary}`,
               "&:hover": {
                 backgroundColor: "rgba(19, 113, 91, 0.1)",
               },
@@ -174,7 +175,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
               border: "1px solid #e0e0e0",
               borderRadius: "6px",
               p: 1.5,
-              backgroundColor: shareLink.is_enabled ? "#fff" : "#f5f5f5",
+              backgroundColor: shareLink.is_enabled ? `${background.main}` : `${background.surface}`,
             }}
           >
             <Box
@@ -238,7 +239,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                     disabled={!shareLink.is_enabled}
                     sx={{
                       p: 0.5,
-                      color: "#13715B",
+                      color: `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },
@@ -254,7 +255,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                     disabled={!shareLink.is_enabled}
                     sx={{
                       p: 0.5,
-                      color: "#13715B",
+                      color: `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },

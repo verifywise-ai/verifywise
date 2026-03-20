@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 import { Check } from "lucide-react";
+import { brand, text, background, status } from "../../themes/palette";
 
 export interface SelectableCardProps {
   /** Whether this card is currently selected */
@@ -15,7 +16,7 @@ export interface SelectableCardProps {
   description: string;
   /** Optional chip/badge to display */
   chip?: React.ReactNode;
-  /** Accent color for selection state (default: "#13715B") */
+  /** Accent color for selection state (default: `${brand.primary}`) */
   accentColor?: string;
   /** Whether the card is disabled */
   disabled?: boolean;
@@ -29,7 +30,7 @@ export interface SelectableCardProps {
  * <SelectableCard
  *   isSelected={selectedOption === "option1"}
  *   onClick={() => setSelectedOption("option1")}
- *   icon={<Database size={14} color={selectedOption === "option1" ? "#13715B" : "#9CA3AF"} />}
+ *   icon={<Database size={14} color={selectedOption === "option1" ? `${brand.primary}` : `${text.disabled}`} />}
  *   title="Option 1"
  *   description="Description for option 1"
  * />
@@ -41,7 +42,7 @@ const SelectableCard = ({
   title,
   description,
   chip,
-  accentColor = "#13715B",
+  accentColor = `${brand.primary}`,
   disabled = false,
 }: SelectableCardProps) => (
   <Box
@@ -49,10 +50,10 @@ const SelectableCard = ({
     sx={{
       p: "8px",
       border: "1px solid",
-      borderColor: disabled ? "#E5E7EB" : isSelected ? accentColor : "#E5E7EB",
+      borderColor: disabled ? `${status.default.border}` : isSelected ? accentColor : `${status.default.border}`,
       borderRadius: "4px",
       cursor: disabled ? "not-allowed" : "pointer",
-      backgroundColor: disabled ? "#F9FAFB" : isSelected ? (accentColor === "#6366F1" ? "#EEF2FF" : "#F0FDF4") : "#FFFFFF",
+      backgroundColor: disabled ? `${background.accent}` : isSelected ? (accentColor === "#6366F1" ? "#EEF2FF" : "#F0FDF4") : `${background.main}`,
       opacity: disabled ? 0.6 : 1,
       display: "flex",
       alignItems: "center",
@@ -60,14 +61,14 @@ const SelectableCard = ({
       transition: "all 0.15s ease",
       "&:hover": disabled ? {} : {
         borderColor: accentColor,
-        backgroundColor: isSelected ? (accentColor === "#6366F1" ? "#EEF2FF" : "#F0FDF4") : "#F9FAFB",
+        backgroundColor: isSelected ? (accentColor === "#6366F1" ? "#EEF2FF" : "#F0FDF4") : `${background.accent}`,
       },
     }}
   >
     {icon}
     <Box sx={{ flex: 1 }}>
-      <Typography sx={{ fontSize: "13px", fontWeight: 500, color: disabled ? "#9CA3AF" : "#374151" }}>{title}</Typography>
-      <Typography sx={{ fontSize: "11px", color: disabled ? "#D1D5DB" : "#9CA3AF" }}>{description}</Typography>
+      <Typography sx={{ fontSize: "13px", fontWeight: 500, color: disabled ? `${text.disabled}` : "#374151" }}>{title}</Typography>
+      <Typography sx={{ fontSize: "11px", color: disabled ? "#D1D5DB" : `${text.disabled}` }}>{description}</Typography>
     </Box>
     {chip}
     {isSelected && !disabled && <Check size={14} color={accentColor} />}

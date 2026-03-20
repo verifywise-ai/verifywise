@@ -27,6 +27,10 @@ services:
     volumes:
       - eval_uploads-prod:/app/data/uploads
 
+  ai_gateway:
+    env_file:
+      - ./.env.prod
+
 volumes:
   db-prod:
   eval_uploads-prod:

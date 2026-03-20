@@ -6,6 +6,7 @@
  */
 
 import { Box, Typography } from "@mui/material";
+import { text, border as borderPalette } from "../../../../themes/palette";
 
 interface VersionBadgeProps {
   version?: string;
@@ -22,7 +23,7 @@ interface VersionColorConfig {
 const getVersionColors = (reviewStatus?: string): VersionColorConfig => {
   switch (reviewStatus) {
     case "superseded":
-      return { backgroundColor: "#F2F4F7", color: "#667085", borderColor: "#D0D5DD" };
+      return { backgroundColor: "#F2F4F7", color: `${text.icon}`, borderColor: `${borderPalette.dark}` };
     case "approved":
       return { backgroundColor: "#ECFDF3", color: "#027A48", borderColor: "#A6F4C5" };
     default:

@@ -8,13 +8,13 @@ export interface FetchReportsParams {
 
 const fetchReports = async (
   params: FetchReportsParams,
-  tenant: string
+  organizationId: number
 ): Promise<any[]> => {
   try {
     // Use Admin role to get all reports for the advisor
     let reports = await getGeneratedReportsQuery(
       { userId: 0, role: "Admin" },
-      tenant
+      organizationId
     );
 
     if (!Array.isArray(reports)) reports = [];
@@ -54,12 +54,12 @@ const fetchReports = async (
 
 const getReportingAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
     let reports = await getGeneratedReportsQuery(
       { userId: 0, role: "Admin" },
-      tenant
+      organizationId
     );
 
     if (!Array.isArray(reports)) reports = [];

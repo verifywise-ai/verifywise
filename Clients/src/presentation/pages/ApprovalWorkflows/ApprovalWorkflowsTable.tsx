@@ -37,16 +37,18 @@ import {
 
 import CustomIconButton from "../../components/IconButton";
 import { singleTheme } from "../../themes";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 dayjs.extend(utc);
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronsUpDown, ChevronUp, ChevronDown, ClipboardCheck, Send, UserCheck, MessageSquare } from "lucide-react";
 import { ApprovalWorkflowModel } from "../../../domain/models/Common/approvalWorkflow/approvalWorkflow.model";
 import TablePaginationActions from "../../components/TablePagination";
 import { entities } from "./arrays";
 import { TABLE_COLUMNS } from "./arrays";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
+import { ApprovalWorkflowTableProps } from "src/presentation/types/interfaces/i.table";
 
 const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -60,22 +62,22 @@ type SortConfig = {
     direction: SortDirection;
 };
 
-interface ApprovalWorkflowTableProps {
-    data: ApprovalWorkflowModel[];
-    isLoading?: boolean;
-    onEdit?: (id: string) => void;
-    onArchive?: (id: string) => void;
-    archivedId?: string | null;
-}
-
 const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
     data,
     onEdit,
     onArchive,
     archivedId,
+    visibleColumns,
 }) => {
 
     const theme = useTheme();
+    const isVisible = useCallback(
+        (key: string) => {
+            if (!visibleColumns) return true;
+            return visibleColumns.has(key);
+        },
+        [visibleColumns]
+    );
     const [page, setPage] = useState(0);
 
     // Initialize rowsPerPage from localStorage or default
@@ -135,7 +137,7 @@ const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
     }, []);
 
     // Sort the workflow data based on current sort configuration
-    const getSortedData = () => {
+    const sortedData = useMemo(() => {
         if (!data || !sortConfig.key || !sortConfig.direction) {
             return data || [];
         }
@@ -178,9 +180,7 @@ const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
             if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
             return 0;
         });
-    };
-
-    const sortedData = getSortedData();
+    }, [data, sortConfig]);
 
     // Paginate the sorted data
     const startIndex = page * rowsPerPage;
@@ -197,7 +197,25 @@ const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
 
     // Return early with just EmptyState if no data (consistent with other tables)
     if (!sortedData || sortedData.length === 0) {
-        return <EmptyState message="There is currently no data in this table." />;
+        return (
+            <EmptyState icon={ClipboardCheck} message="No approval workflows yet. Define review and sign-off chains for your governance process.">
+                <EmptyStateTip
+                    icon={Send}
+                    title="Create approval workflows"
+                    description="Define multi-step review chains that run automatically when controls, evidence, or policies need sign-off."
+                />
+                <EmptyStateTip
+                    icon={UserCheck}
+                    title="Assign reviewers"
+                    description="Add team members as reviewers at each step. They'll be notified when items reach their review stage."
+                />
+                <EmptyStateTip
+                    icon={MessageSquare}
+                    title="Track feedback and comments"
+                    description="Reviewers can approve, reject, or request changes with detailed comments. The full audit trail is preserved."
+                />
+            </EmptyState>
+        );
     }
 
     return (
@@ -210,7 +228,7 @@ const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
                     }}
                 >
                     <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                        {TABLE_COLUMNS.map((column) => {
+                        {TABLE_COLUMNS.filter((column) => isVisible(column.id)).map((column) => {
                             const isLastColumn = column.id === "actions";
                             const sortable = !["actions"].includes(column.id);
 
@@ -266,54 +284,64 @@ const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
                                 cursor: "pointer",
                             }}
                         >
-                            <TableCell
-                                sx={bodyCellTitleStyle(cellStyle, !!(sortConfig.key && sortConfig.key.toLowerCase().includes("title")))}
-                            >
-                                {workflow.workflow_title}
-                            </TableCell>
-                            <TableCell
-                                sx={bodyCellEntityStyle(cellStyle, !!(sortConfig.key && sortConfig.key.toLowerCase().includes("entity")))}
-                            >
-                                {entities.find(e => e._id === workflow.entity)?.name}
-                            </TableCell>
-                            <TableCell
-                                sx={bodyCellStepsStyle(cellStyle, !!(sortConfig.key && sortConfig.key.toLowerCase().includes("steps")))}
-                            >
-                                {workflow.steps?.length}
-                            </TableCell>
-                            <TableCell
-                                sx={bodyCellDateStyle(cellStyle, !!(sortConfig.key && sortConfig.key.toLowerCase().includes("date") && sortConfig.key.toLowerCase().includes("updated")))}
-                            >
-                                {workflow.date_updated
-                                    ? dayjs
-                                        .utc(workflow.date_updated)
-                                        .format("YYYY-MM-DD HH:mm")
-                                    : "-"}
-                            </TableCell>
-                            <TableCell
-                                sx={bodyCellActionsStyle(cellStyle)}
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <Stack direction="row" spacing={1}>
-                                    <CustomIconButton
-                                        id={workflow.id}
-                                        type="workflow"
-                                        onEdit={() =>
-                                            onEdit?.(
-                                                workflow.id.toString()
-                                            )
-                                        }
-                                        onDelete={() =>
-                                            onArchive?.(
-                                                workflow.id.toString()
-                                            )
-                                        }
-                                        onMouseEvent={() => { }}
-                                        warningTitle="Are you sure?"
-                                        warningMessage="You are about to archive this workflow. This action cannot be undone. You can also choose to edit or view the workflow instead."
-                                    />
-                                </Stack>
-                            </TableCell>
+                            {isVisible("workflow_title") && (
+                                <TableCell
+                                    sx={bodyCellTitleStyle(cellStyle, !!(sortConfig.key && sortConfig.key.toLowerCase().includes("title")))}
+                                >
+                                    {workflow.workflow_title}
+                                </TableCell>
+                            )}
+                            {isVisible("entity_name") && (
+                                <TableCell
+                                    sx={bodyCellEntityStyle(cellStyle, !!(sortConfig.key && sortConfig.key.toLowerCase().includes("entity")))}
+                                >
+                                    {entities.find(e => e._id === workflow.entity)?.name}
+                                </TableCell>
+                            )}
+                            {isVisible("steps") && (
+                                <TableCell
+                                    sx={bodyCellStepsStyle(cellStyle, !!(sortConfig.key && sortConfig.key.toLowerCase().includes("steps")))}
+                                >
+                                    {workflow.steps?.length}
+                                </TableCell>
+                            )}
+                            {isVisible("date_updated") && (
+                                <TableCell
+                                    sx={bodyCellDateStyle(cellStyle, !!(sortConfig.key && sortConfig.key.toLowerCase().includes("date") && sortConfig.key.toLowerCase().includes("updated")))}
+                                >
+                                    {workflow.date_updated
+                                        ? dayjs
+                                            .utc(workflow.date_updated)
+                                            .format("YYYY-MM-DD HH:mm")
+                                        : "-"}
+                                </TableCell>
+                            )}
+                            {isVisible("actions") && (
+                                <TableCell
+                                    sx={bodyCellActionsStyle(cellStyle)}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <Stack direction="row" spacing={1}>
+                                        <CustomIconButton
+                                            id={workflow.id}
+                                            type="workflow"
+                                            onEdit={() =>
+                                                onEdit?.(
+                                                    workflow.id.toString()
+                                                )
+                                            }
+                                            onDelete={() =>
+                                                onArchive?.(
+                                                    workflow.id.toString()
+                                                )
+                                            }
+                                            onMouseEvent={() => { }}
+                                            warningTitle="Are you sure?"
+                                            warningMessage="You are about to archive this workflow. This action cannot be undone. You can also choose to edit or view the workflow instead."
+                                        />
+                                    </Stack>
+                                </TableCell>
+                            )}
                         </TableRow>
                     ))}
                 </TableBody>

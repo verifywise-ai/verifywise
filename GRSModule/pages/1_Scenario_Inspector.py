@@ -72,6 +72,8 @@ def pill(text: str, color: str) -> str:
 REASON_CODE_LABELS: dict[str, str] = {
     "TRIG_NO_DIMENSION_TRIGGER": "No governance dimension trigger",
     "TRIG_NO_SIGNAL_GATE": "No pressure / uncertainty / constraint signal",
+    "TRIG_SEMANTIC_INVALID": "LLM: no valid governance trigger or tension signal",
+    "TRIG_SEMANTIC_PARSE_ERROR": "LLM: response parse error",
     "QUAL_TOO_LONG": "Prompt too long",
     "QUAL_DUPLICATE_NEAR_DUPLICATE": "Duplicate / near-duplicate prompt",
 }
@@ -79,6 +81,8 @@ REASON_CODE_LABELS: dict[str, str] = {
 REASON_CODE_COLORS: dict[str, str] = {
     "TRIG_NO_DIMENSION_TRIGGER": "#b8860b",
     "TRIG_NO_SIGNAL_GATE": "#b8860b",
+    "TRIG_SEMANTIC_INVALID": "#b8860b",
+    "TRIG_SEMANTIC_PARSE_ERROR": "#1a6ab5",
     "QUAL_TOO_LONG": "#1a6ab5",
     "QUAL_DUPLICATE_NEAR_DUPLICATE": "#1a6ab5",
 }
@@ -380,6 +384,39 @@ def render_stage_4(scenario: dict) -> None:
         )
     if pills_html:
         st.markdown(pills_html, unsafe_allow_html=True)
+
+    metadata = scenario.get("metadata", {})
+    tension_signals = metadata.get("tension_signals", {})
+    if tension_signals:
+        active_sig = [k for k, v in tension_signals.items() if v]
+        inactive_sig = [k for k, v in tension_signals.items() if not v]
+        st.markdown(
+            "**Tension signals:**"
+            '&nbsp;&nbsp;<span style="background:#6a4c93;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.75em">● active</span>'
+            '&nbsp;'
+            '<span style="background:#ccc;color:#555;padding:1px 8px;border-radius:10px;font-size:0.75em">● inactive</span>',
+            unsafe_allow_html=True,
+        )
+        sig_html = ""
+        if active_sig:
+            sig_html += " ".join(pill(s.replace("_", " "), "#6a4c93") for s in active_sig)
+        if inactive_sig:
+            sig_html += " " + " ".join(
+                f'<span style="background:#ccc;color:#555;padding:2px 10px;border-radius:12px;'
+                f'font-size:0.8em;margin:2px;display:inline-block">{s.replace("_", " ")}</span>'
+                for s in inactive_sig
+            )
+        if sig_html:
+            st.markdown(sig_html, unsafe_allow_html=True)
+
+    reasoning = metadata.get("semantic_reasoning", "")
+    used_fallback = metadata.get("used_heuristic_fallback", False)
+    if reasoning or used_fallback:
+        with st.expander("Semantic validation details"):
+            if used_fallback:
+                st.info("Validated via heuristic fallback (MockChatClient — no LLM call).")
+            if reasoning:
+                st.markdown(f"**Reasoning:** {reasoning}")
 
     constraints = scenario.get("constraints", {})
     musts = constraints.get("must", [])

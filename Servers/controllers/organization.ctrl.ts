@@ -2,15 +2,13 @@
  * @fileoverview Organization Management Controller
  *
  * Handles organization lifecycle operations including creation, retrieval, updates, and deletion.
- * Implements multi-tenant architecture with automatic tenant provisioning and admin user creation
- * during organization setup.
+ * Implements shared-schema multi-tenant architecture with admin user creation during organization setup.
  *
  * Key Features:
  * - Organization CRUD operations with validation
- * - Automatic tenant database provisioning on creation
  * - Admin user creation with JWT token generation
  * - Transaction-based operations for data consistency
- * - Multi-tenant isolation and data segregation
+ * - Multi-tenant isolation via organization_id
  * - Comprehensive validation and error handling
  *
  * Security Features:
@@ -21,9 +19,9 @@
  * - Organization-scoped data access
  *
  * Multi-Tenancy:
- * - Each organization gets isolated tenant database
- * - Tenant provisioning automated via createNewTenant()
- * - Organization ID used for data segregation
+ * - Shared-schema architecture with organization_id for tenant isolation
+ * - All tenant data in public schema with organization_id column
+ * - Organization ID used for data segregation in WHERE clauses
  * - Admin user linked to organization on creation
  *
  * @module controllers/organization
@@ -41,7 +39,6 @@ import {
   getOrganizationsExistsQuery,
   updateOrganizationByIdQuery,
 } from "../utils/organization.utils";
-import { createNewTenant } from "../scripts/createNewTenant";
 import { createNewUserWrapper } from "./user.ctrl";
 import {
   ValidationException,
@@ -50,7 +47,6 @@ import {
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import { generateUserTokens } from "../utils/auth.utils";
-import { getTenantHash } from "../tools/getTenantHash";
 
 /**
  * Retrieves all organizations from the system
@@ -117,7 +113,7 @@ export async function getAllOrganizations(
       "Error",
       `Failed to retrieve organizations: ${(error as Error).message}`,
       _req.userId!,
-      _req.tenantId!
+      _req.organizationId!
     );
     logger.error("❌ Error in getAllOrganizations:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -223,7 +219,7 @@ export async function getOrganizationById(
       "Error",
       `Failed to retrieve organization by ID: ${organizationId}`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     logger.error("❌ Error in getOrganizationById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -317,7 +313,8 @@ export async function createOrganization(
 
     if (createdOrganization) {
       const organization_id = createdOrganization.id!;
-      await createNewTenant(organization_id, transaction);
+      // With shared-schema multi-tenancy, no tenant schema creation needed
+      // All data goes to public schema with organization_id column
       const user = await createNewUserWrapper(
         {
           email: body.userEmail,
@@ -352,7 +349,7 @@ export async function createOrganization(
         "Create",
         `Organization created: ${createdOrganization.name}`,
         user.id!,
-        getTenantHash(organization_id)
+        organization_id
       );
       return res.status(201).json(
         STATUS_CODE[201]({
@@ -372,7 +369,7 @@ export async function createOrganization(
       "createOrganization",
       "organization.ctrl.ts"
     );
-    await logEvent("Error", "Organization creation failed", req.userId!, req.tenantId!);
+    await logEvent("Error", "Organization creation failed", req.userId!, req.organizationId!);
     await transaction.rollback();
     return res
       .status(400)
@@ -392,7 +389,7 @@ export async function createOrganization(
         "Error",
         `Validation error during organization creation: ${error.message}`,
         req.userId!,
-        req.tenantId!
+        req.organizationId!
       );
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -408,7 +405,7 @@ export async function createOrganization(
         "Error",
         `Business logic error during organization creation: ${error.message}`,
         req.userId!,
-        req.tenantId!
+        req.organizationId!
       );
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -424,7 +421,7 @@ export async function createOrganization(
       `Unexpected error during organization creation: ${(error as Error).message
       }`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     logger.error("❌ Error in createOrganization:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -512,7 +509,7 @@ export async function updateOrganizationById(
         "updateOrganizationById",
         "organization.ctrl.ts"
       );
-      await logEvent("Update", `Organization updated: ID ${organizationId}`, req.userId!, req.tenantId!);
+      await logEvent("Update", `Organization updated: ID ${organizationId}`, req.userId!, req.organizationId!);
       return res.status(200).json(STATUS_CODE[200](updatedOrganization));
     }
 
@@ -526,7 +523,7 @@ export async function updateOrganizationById(
       "Error",
       "Organization not found for updateOrganizationById",
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     await transaction.rollback();
     return res.status(404).json(STATUS_CODE[404]("Organization not found"));
@@ -545,7 +542,7 @@ export async function updateOrganizationById(
         "Error",
         `Validation error during organization update: ${error.message}`,
         req.userId!,
-        req.tenantId!
+        req.organizationId!
       );
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -561,7 +558,7 @@ export async function updateOrganizationById(
         "Error",
         `Business logic error during organization update: ${error.message}`,
         req.userId!,
-        req.tenantId!
+        req.organizationId!
       );
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -577,7 +574,7 @@ export async function updateOrganizationById(
       `Unexpected error during update for organization ID ${organizationId}: ${(error as Error).message
       }`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     logger.error("❌ Error in updateOrganizationById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -646,7 +643,7 @@ export async function deleteOrganizationById(
         "Error",
         `Delete failed — organization not found: ID ${organizationId}`,
         req.userId!,
-        req.tenantId!
+        req.organizationId!
       );
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Organization not found"));
@@ -665,7 +662,7 @@ export async function deleteOrganizationById(
         "deleteOrganizationById",
         "organization.ctrl.ts"
       );
-      await logEvent("Delete", `Organization deleted: ID ${organizationId}`, req.userId!, req.tenantId!);
+      await logEvent("Delete", `Organization deleted: ID ${organizationId}`, req.userId!, req.organizationId!);
       return res.status(200).json(STATUS_CODE[200](organization));
     }
 
@@ -675,7 +672,7 @@ export async function deleteOrganizationById(
       "deleteOrganizationById",
       "organization.ctrl.ts"
     );
-    await logEvent("Error", "Unable to delete organization", req.userId!, req.tenantId!);
+    await logEvent("Error", "Unable to delete organization", req.userId!, req.organizationId!);
     await transaction.rollback();
     return res
       .status(400)
@@ -693,7 +690,7 @@ export async function deleteOrganizationById(
       `Unexpected error during delete for organization ID ${organizationId}: ${(error as Error).message
       }`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     logger.error("❌ Error in deleteOrganizationById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

@@ -34,7 +34,7 @@ export const recordPolicyChange = async (
   policyId: number,
   action: "created" | "updated" | "deleted",
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
@@ -45,7 +45,7 @@ export const recordPolicyChange = async (
     policyId,
     action,
     changedByUserId,
-    tenant,
+    organizationId,
     fieldName,
     oldValue,
     newValue,
@@ -60,7 +60,7 @@ export const recordPolicyChange = async (
 export const recordMultipleFieldChanges = async (
   policyId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -68,7 +68,7 @@ export const recordMultipleFieldChanges = async (
     "policy",
     policyId,
     changedByUserId,
-    tenant,
+    organizationId,
     changes,
     transaction
   );
@@ -80,14 +80,14 @@ export const recordMultipleFieldChanges = async (
  */
 export const getPolicyChangeHistory = async (
   policyId: number,
-  tenant: string,
+  organizationId: number,
   limit: number = 100,
   offset: number = 0
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
   return getEntityChangeHistory(
     "policy",
     policyId,
-    tenant,
+    organizationId,
     limit,
     offset
   );
@@ -111,7 +111,7 @@ export const trackPolicyChanges = async (
 export const recordPolicyCreation = async (
   policyId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   policyData: Partial<IPolicy>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -119,7 +119,7 @@ export const recordPolicyCreation = async (
     "policy",
     policyId,
     changedByUserId,
-    tenant,
+    organizationId,
     policyData,
     transaction
   );
@@ -132,14 +132,14 @@ export const recordPolicyCreation = async (
 export const recordPolicyDeletion = async (
   policyId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   return recordEntityDeletion(
     "policy",
     policyId,
     changedByUserId,
-    tenant,
+    organizationId,
     transaction
   );
 };

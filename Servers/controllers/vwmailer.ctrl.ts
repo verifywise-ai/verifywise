@@ -26,7 +26,7 @@ export const invite = async (
     functionName: "invite",
     fileName: "vwmailer.ctrl.ts",
     userId: _req.userId!,
-    tenantId: _req.tenantId!,
+    tenantId: _req.organizationId!,
   });
   logger.debug(
     `📧 Sending invitation email to ${to} for user ${name} ${surname || ""}`
@@ -44,7 +44,7 @@ export const invite = async (
     // Persist invitation record
     try {
       await createInvitationQuery(
-        _req.tenantId!,
+        _req.organizationId!,
         to,
         name,
         surname || "",
@@ -65,7 +65,7 @@ export const invite = async (
         fileName: "vwmailer.ctrl.ts",
         error: new Error(`${info.error.name}: ${info.error.message}`),
         userId: _req.userId!,
-        tenantId: _req.tenantId!,
+        tenantId: _req.organizationId!,
       });
       return res.status(206).json({
         error: `${info.error.name}: ${info.error.message}`,
@@ -78,7 +78,7 @@ export const invite = async (
         functionName: "invite",
         fileName: "vwmailer.ctrl.ts",
         userId: _req.userId!,
-        tenantId: _req.tenantId!,
+        tenantId: _req.organizationId!,
       });
       return res.status(200).json({ message: "Email sent successfully" });
     }
@@ -91,7 +91,7 @@ export const invite = async (
       fileName: "vwmailer.ctrl.ts",
       error: error as Error,
       userId: _req.userId!,
-      tenantId: _req.tenantId!,
+      tenantId: _req.organizationId!,
     });
     return res.status(500).json({
       error: "Failed to send email",

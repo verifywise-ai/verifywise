@@ -46,19 +46,19 @@ import { sanitizeErrorMessage } from "../utils/entityGraphSecurity.utils";
  * @returns {Promise<any>} JSON response with created view or error
  */
 export async function createView(req: Request, res: Response): Promise<any> {
+  const organizationId = req.organizationId!;
+
   logProcessing({
     description: "Starting createView",
     functionName: "createView",
     fileName: "entityGraphViews.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId,
   });
 
   try {
     const { name, config } = req.body;
     const userId = req.userId!;
-    const organizationId = req.organizationId!;
-    const tenantId = req.tenantId!;
 
     // Validate required fields
     if (!name || name.trim().length === 0) {
@@ -77,8 +77,7 @@ export async function createView(req: Request, res: Response): Promise<any> {
       name,
       config,
       userId,
-      organizationId,
-      tenantId
+      organizationId
     );
 
     return res.status(201).json(STATUS_CODE[201](savedView.toJSON()));
@@ -90,7 +89,7 @@ export async function createView(req: Request, res: Response): Promise<any> {
       fileName: "entityGraphViews.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {
@@ -118,23 +117,22 @@ export async function createView(req: Request, res: Response): Promise<any> {
  * @returns {Promise<any>} JSON response with views array or error
  */
 export async function getViews(req: Request, res: Response): Promise<any> {
+  const organizationId = req.organizationId!;
+
   logProcessing({
     description: "Starting getViews",
     functionName: "getViews",
     fileName: "entityGraphViews.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId,
   });
 
   try {
     const userId = req.userId!;
-    const organizationId = req.organizationId!;
-    const tenantId = req.tenantId!;
 
     const views = await EntityGraphViewsService.getViews(
       userId,
-      organizationId,
-      tenantId
+      organizationId
     );
 
     const responseData = views.map((view) => view.toJSON());
@@ -147,7 +145,7 @@ export async function getViews(req: Request, res: Response): Promise<any> {
       fileName: "entityGraphViews.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(
@@ -169,16 +167,16 @@ export async function getViews(req: Request, res: Response): Promise<any> {
  * @returns {Promise<any>} JSON response with view or error
  */
 export async function getViewById(req: Request, res: Response): Promise<any> {
+  const organizationId = req.organizationId!;
   const viewId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
 
   logProcessing({
     description: `Starting getViewById for ID ${viewId}`,
     functionName: "getViewById",
     fileName: "entityGraphViews.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId,
   });
 
   try {
@@ -193,7 +191,7 @@ export async function getViewById(req: Request, res: Response): Promise<any> {
     const view = await EntityGraphViewsService.getViewById(
       viewId,
       userId,
-      tenantId
+      organizationId
     );
 
     if (!view) {
@@ -209,7 +207,7 @@ export async function getViewById(req: Request, res: Response): Promise<any> {
       fileName: "entityGraphViews.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {
@@ -240,17 +238,17 @@ export async function getViewById(req: Request, res: Response): Promise<any> {
  * @returns {Promise<any>} JSON response with updated view or error
  */
 export async function updateView(req: Request, res: Response): Promise<any> {
+  const organizationId = req.organizationId!;
   const viewId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { name, config } = req.body;
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
 
   logProcessing({
     description: `Starting updateView for ID ${viewId}`,
     functionName: "updateView",
     fileName: "entityGraphViews.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId,
   });
 
   try {
@@ -276,7 +274,7 @@ export async function updateView(req: Request, res: Response): Promise<any> {
       name,
       config,
       userId,
-      tenantId
+      organizationId
     );
 
     return res.status(200).json(STATUS_CODE[200](updatedView.toJSON()));
@@ -288,7 +286,7 @@ export async function updateView(req: Request, res: Response): Promise<any> {
       fileName: "entityGraphViews.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof BusinessLogicException) {
@@ -316,16 +314,16 @@ export async function updateView(req: Request, res: Response): Promise<any> {
  * @returns {Promise<any>} JSON response with success message or error
  */
 export async function deleteView(req: Request, res: Response): Promise<any> {
+  const organizationId = req.organizationId!;
   const viewId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
 
   logProcessing({
     description: `Starting deleteView for ID ${viewId}`,
     functionName: "deleteView",
     fileName: "entityGraphViews.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId,
   });
 
   try {
@@ -337,7 +335,7 @@ export async function deleteView(req: Request, res: Response): Promise<any> {
       );
     }
 
-    await EntityGraphViewsService.deleteView(viewId, userId, tenantId);
+    await EntityGraphViewsService.deleteView(viewId, userId, organizationId);
 
     return res.status(200).json(STATUS_CODE[200]("View deleted successfully"));
   } catch (error) {
@@ -348,7 +346,7 @@ export async function deleteView(req: Request, res: Response): Promise<any> {
       fileName: "entityGraphViews.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof BusinessLogicException) {

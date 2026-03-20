@@ -69,6 +69,7 @@ export interface IVWProjectRisksTable {
   page: number;
   flashRow: number | null;
   hidePagination?: boolean;
+  visibleColumns?: Set<string>;
 }
 
 /**
@@ -87,6 +88,7 @@ export interface IVWProjectRisksTableRow {
     key: string;
     direction: "asc" | "desc" | null;
   };
+  visibleColumns?: Set<string>;
 }
 
 /**

@@ -49,13 +49,13 @@ interface AlertContext {
  * Called during event ingestion when rules match.
  */
 export async function processTriggeredRules(
-  tenant: string,
+  organizationId: number,
   rules: IShadowAiRule[],
   context: AlertContext
 ): Promise<void> {
   for (const rule of rules) {
     try {
-      await sendRuleAlert(tenant, rule, context);
+      await sendRuleAlert(organizationId, rule, context);
     } catch (error) {
       logger.error(
         `Failed to process alert for rule ${rule.id}:`,
@@ -69,7 +69,7 @@ export async function processTriggeredRules(
  * Send alert for a single triggered rule.
  */
 async function sendRuleAlert(
-  tenant: string,
+  organizationId: number,
   rule: IShadowAiRule,
   context: AlertContext
 ): Promise<void> {
@@ -79,7 +79,7 @@ async function sendRuleAlert(
   const firedAt = new Date().toISOString();
 
   // 1. Record alert in history
-  await insertAlertHistoryQuery(tenant, {
+  await insertAlertHistoryQuery(organizationId, {
     rule_id: rule.id!,
     rule_name: rule.name,
     trigger_type: rule.trigger_type,
@@ -116,7 +116,7 @@ async function sendRuleAlert(
 
   if (userIds.length === 1) {
     await sendInAppNotification(
-      tenant,
+      organizationId,
       {
         user_id: userIds[0],
         type: NotificationType.SHADOW_AI_ALERT,
@@ -133,7 +133,7 @@ async function sendRuleAlert(
     );
   } else {
     await sendBulkInAppNotifications(
-      tenant,
+      organizationId,
       {
         user_ids: userIds,
         type: NotificationType.SHADOW_AI_ALERT,
@@ -194,12 +194,12 @@ export interface BatchContext {
  * Called asynchronously after event ingestion completes.
  */
 export async function evaluateRulesForBatch(
-  tenant: string,
+  organizationId: number,
   batch: BatchContext
 ): Promise<void> {
   let rules: IShadowAiRule[];
   try {
-    rules = await getActiveRulesQuery(tenant);
+    rules = await getActiveRulesQuery(organizationId);
   } catch (error) {
     logger.debug("Rule evaluation skipped (rules table unavailable)");
     return;
@@ -216,9 +216,9 @@ export async function evaluateRulesForBatch(
     try {
       const [toolRows] = await sequelize.query(
         `SELECT id, name, risk_score, total_events, status
-         FROM "${tenant}".shadow_ai_tools
-         WHERE id IN (:toolIds)`,
-        { replacements: { toolIds } }
+         FROM shadow_ai_tools
+         WHERE organization_id = :organizationId AND id IN (:toolIds)`,
+        { replacements: { organizationId, toolIds } }
       );
       for (const t of toolRows as any[]) {
         toolDataMap.set(t.id, {
@@ -239,13 +239,14 @@ export async function evaluateRulesForBatch(
   if (batchEmails.length > 0) {
     try {
       const [userRows] = await sequelize.query(
-        `SELECT DISTINCT user_email FROM "${tenant}".shadow_ai_events
-         WHERE user_email IN (:emails)
+        `SELECT DISTINCT user_email FROM shadow_ai_events
+         WHERE organization_id = :organizationId AND user_email IN (:emails)
          AND id NOT IN (
-           SELECT id FROM "${tenant}".shadow_ai_events
+           SELECT id FROM shadow_ai_events
+           WHERE organization_id = :organizationId
            ORDER BY id DESC LIMIT :recentLimit
          )`,
-        { replacements: { emails: batchEmails, recentLimit: batchEmails.length * 10 } }
+        { replacements: { organizationId, emails: batchEmails, recentLimit: batchEmails.length * 10 } }
       );
       for (const r of userRows as any[]) {
         existingEmails.add(r.user_email);
@@ -261,7 +262,7 @@ export async function evaluateRulesForBatch(
     id: r.id!,
     cooldown_minutes: (r.cooldown_minutes as number) || DEFAULT_COOLDOWN_MINUTES,
   }));
-  const recentKeys = await getRecentAlertKeys(tenant, cooldownRules);
+  const recentKeys = await getRecentAlertKeys(organizationId, cooldownRules);
 
   for (const rule of rules) {
     switch (rule.trigger_type) {
@@ -391,17 +392,17 @@ export async function evaluateRulesForBatch(
   // Per-batch alert cap — hard safety net
   if (triggered.length > MAX_ALERTS_PER_BATCH) {
     logger.warn(
-      `Alert cap reached: ${triggered.length} alerts truncated to ${MAX_ALERTS_PER_BATCH} for tenant ${tenant.substring(0, 4)}...`
+      `Alert cap reached: ${triggered.length} alerts truncated to ${MAX_ALERTS_PER_BATCH} for org ${organizationId}`
     );
     triggered.length = MAX_ALERTS_PER_BATCH;
   }
 
   // Send alerts for all triggered rules
   if (triggered.length > 0) {
-    logger.debug(`🔔 ${triggered.length} alert(s) triggered for tenant ${tenant.substring(0, 4)}...`);
+    logger.debug(`🔔 ${triggered.length} alert(s) triggered for org ${organizationId}`);
     for (const { rule, context } of triggered) {
       try {
-        await sendRuleAlert(tenant, rule, context);
+        await sendRuleAlert(organizationId, rule, context);
       } catch (error) {
         logger.error(`Failed to send alert for rule ${rule.id}:`, error);
       }

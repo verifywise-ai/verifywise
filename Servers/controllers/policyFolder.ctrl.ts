@@ -44,7 +44,7 @@ export const getPolicyFolders = async (
       return res.status(400).json(STATUS_CODE[400]("Invalid policy ID"));
     }
 
-    const folders = await getPolicyFoldersQuery(req.tenantId!, policyId);
+    const folders = await getPolicyFoldersQuery(req.organizationId!, policyId);
     return res.status(200).json(STATUS_CODE[200](folders));
   } catch (error) {
     console.error("Error getting policy folders:", error);
@@ -66,7 +66,7 @@ export const getPoliciesInFolder = async (
       return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
     }
 
-    const policyIds = await getPolicyIdsInFolderQuery(req.tenantId!, folderId);
+    const policyIds = await getPolicyIdsInFolderQuery(req.organizationId!, folderId);
     return res.status(200).json(STATUS_CODE[200](policyIds));
   } catch (error) {
     console.error("Error getting policies in folder:", error);
@@ -102,14 +102,14 @@ export const updatePolicyFolders = async (
     }
 
     await bulkUpdatePolicyFoldersQuery(
-      req.tenantId!,
+      req.organizationId!,
       policyId,
       folder_ids,
       req.userId!,
       transaction
     );
 
-    const updatedFolders = await getPolicyFoldersQuery(req.tenantId!, policyId);
+    const updatedFolders = await getPolicyFoldersQuery(req.organizationId!, policyId);
 
     await transaction.commit();
     return res.status(200).json(STATUS_CODE[200](updatedFolders));

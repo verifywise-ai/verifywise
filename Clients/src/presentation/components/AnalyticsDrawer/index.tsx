@@ -152,13 +152,11 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
         {chartType === "model" ? (
           <ModelInventoryHistoryChart
             parameter={selectedParameter}
-            title={`${entityName} ${selectedParameterLabel} Over Time`}
             height={300}
           />
         ) : (
           <RiskHistoryChart
             parameter={selectedParameter}
-            title={`${entityName} ${selectedParameterLabel} Over Time`}
             height={300}
           />
         )}

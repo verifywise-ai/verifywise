@@ -28,7 +28,7 @@ import { logSuccess } from '../utils/logger/logHelper';
  */
 export const getAllKeys = async (req: Request, res: Response) => {
   try {
-    const keys = await getAllKeysForOrganizationQuery(req.tenantId!);
+    const keys = await getAllKeysForOrganizationQuery(req.organizationId!);
 
     return res.status(200).json({
       success: true,
@@ -68,7 +68,7 @@ export const addKey = async (req: Request, res: Response) => {
 
     // Create or update key
     const keyData = await createKeyQuery(
-      req.tenantId!,
+      req.organizationId!,
       provider as LLMProvider,
       apiKey,
       transaction
@@ -80,7 +80,7 @@ export const addKey = async (req: Request, res: Response) => {
       functionName: 'addKey',
       fileName: 'evaluationLlmApiKey.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     await transaction.commit();
@@ -115,12 +115,12 @@ export const addKey = async (req: Request, res: Response) => {
  * Should only be accessible from internal services (localhost).
  *
  * Query params:
- * - tenantId: string (required)
+ * - organizationId: number (required)
  */
 export const getDecryptedKeys = async (req: Request, res: Response) => {
   try {
-    // Get all decrypted keys for the tenant
-    const decryptedKeys = await getDecryptedKeysForOrganizationQuery(req.tenantId!);
+    // Get all decrypted keys for the organization
+    const decryptedKeys = await getDecryptedKeysForOrganizationQuery(req.organizationId!);
 
     return res.status(200).json({
       success: true,
@@ -297,7 +297,7 @@ export const deleteKey = async (req: Request, res: Response) => {
     }
 
     const deleted = await deleteKeyQuery(
-      req.tenantId!,
+      req.organizationId!,
       provider as LLMProvider
     );
 
@@ -314,7 +314,7 @@ export const deleteKey = async (req: Request, res: Response) => {
       functionName: 'deleteKey',
       fileName: 'evaluationLlmApiKey.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json({

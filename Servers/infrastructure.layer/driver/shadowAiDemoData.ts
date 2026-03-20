@@ -405,15 +405,14 @@ function weightedPick(rng: SeededRandom, weights: number[]): number {
 }
 
 // ---------------------------------------------------------------------------
-// Check whether shadow AI tables exist in this tenant schema
+// Check whether shadow AI tables exist in the public schema
 // ---------------------------------------------------------------------------
 
 async function shadowAiTablesExist(
-  tenant: string,
   transaction: Transaction
 ): Promise<boolean> {
   const result = await sequelize.query(
-    `SELECT to_regclass('"${tenant}".shadow_ai_tools') AS tbl`,
+    `SELECT to_regclass('shadow_ai_tools') AS tbl`,
     { type: QueryTypes.SELECT, transaction }
   );
   return !!(result[0] as any)?.tbl;
@@ -426,19 +425,19 @@ async function shadowAiTablesExist(
 const BATCH_SIZE = 100;
 
 export async function insertShadowAiDemoData(
-  tenant: string,
+  organizationId: number,
   userId: number,
   transaction: Transaction
 ): Promise<void> {
   // Gracefully skip if shadow AI tables don't exist
-  if (!(await shadowAiTablesExist(tenant, transaction))) {
+  if (!(await shadowAiTablesExist(transaction))) {
     return;
   }
 
-  // Idempotent: skip if tools already seeded
+  // Idempotent: skip if tools already seeded for this organization
   const existing = await sequelize.query<{ count: string }>(
-    `SELECT COUNT(*)::text AS count FROM "${tenant}".shadow_ai_tools`,
-    { type: QueryTypes.SELECT, transaction }
+    `SELECT COUNT(*)::text AS count FROM shadow_ai_tools WHERE organization_id = :organizationId`,
+    { type: QueryTypes.SELECT, transaction, replacements: { organizationId } }
   );
   if (parseInt(existing[0].count) > 0) {
     return;
@@ -460,12 +459,12 @@ export async function insertShadowAiDemoData(
     );
 
     const [inserted] = await sequelize.query<{ id: number }>(
-      `INSERT INTO "${tenant}".shadow_ai_tools
-        (name, vendor, domains, status, risk_score, first_detected_at, last_seen_at,
+      `INSERT INTO shadow_ai_tools
+        (organization_id, name, vendor, domains, status, risk_score, first_detected_at, last_seen_at,
          total_users, total_events, trains_on_data, soc2_certified, gdpr_compliant,
          data_residency, sso_support, encryption_at_rest, created_at, updated_at)
        VALUES
-        (:name, :vendor, :domains, :status, :risk_score, :first_detected_at, :last_seen_at,
+        (:organizationId, :name, :vendor, :domains, :status, :risk_score, :first_detected_at, :last_seen_at,
          :total_users, :total_events, :trains_on_data, :soc2_certified, :gdpr_compliant,
          :data_residency, :sso_support, :encryption_at_rest, NOW(), NOW())
        RETURNING id`,
@@ -473,6 +472,7 @@ export async function insertShadowAiDemoData(
         type: QueryTypes.SELECT,
         transaction,
         replacements: {
+          organizationId,
           name: tool.name,
           vendor: tool.vendor,
           domains: `{${tool.domains.join(",")}}`,
@@ -553,12 +553,12 @@ export async function insertShadowAiDemoData(
 
   for (const batch of eventBatches) {
     const valuePlaceholders: string[] = [];
-    const flatReplacements: Record<string, any> = {};
+    const flatReplacements: Record<string, any> = { organizationId };
 
     batch.forEach((evt, idx) => {
       const prefix = `e${insertedEvents + idx}`;
       valuePlaceholders.push(
-        `(:${prefix}_ue, :${prefix}_dest, :${prefix}_uri, :${prefix}_hm, :${prefix}_act, :${prefix}_tid, :${prefix}_ts, NOW(), :${prefix}_dept, :${prefix}_jt, :${prefix}_me)`
+        `(:organizationId, :${prefix}_ue, :${prefix}_dest, :${prefix}_uri, :${prefix}_hm, :${prefix}_act, :${prefix}_tid, :${prefix}_ts, NOW(), :${prefix}_dept, :${prefix}_jt, :${prefix}_me)`
       );
       flatReplacements[`${prefix}_ue`] = evt.user_email;
       flatReplacements[`${prefix}_dest`] = evt.destination;
@@ -573,8 +573,8 @@ export async function insertShadowAiDemoData(
     });
 
     await sequelize.query(
-      `INSERT INTO "${tenant}".shadow_ai_events
-        (user_email, destination, uri_path, http_method, action, detected_tool_id,
+      `INSERT INTO shadow_ai_events
+        (organization_id, user_email, destination, uri_path, http_method, action, detected_tool_id,
          event_timestamp, ingested_at, department, job_title, manager_email)
        VALUES ${valuePlaceholders.join(", ")}`,
       { replacements: flatReplacements, transaction }
@@ -628,12 +628,12 @@ export async function insertShadowAiDemoData(
 
   for (const batch of rollupBatches) {
     const valuePlaceholders: string[] = [];
-    const flatReplacements: Record<string, any> = {};
+    const flatReplacements: Record<string, any> = { organizationId };
 
     batch.forEach((r, idx) => {
       const prefix = `r${insertedRollups + idx}`;
       valuePlaceholders.push(
-        `(:${prefix}_rd, :${prefix}_ue, :${prefix}_tid, :${prefix}_dept, :${prefix}_te, :${prefix}_pe, :${prefix}_be, NOW())`
+        `(:organizationId, :${prefix}_rd, :${prefix}_ue, :${prefix}_tid, :${prefix}_dept, :${prefix}_te, :${prefix}_pe, :${prefix}_be, NOW())`
       );
       flatReplacements[`${prefix}_rd`] = r.rollup_date;
       flatReplacements[`${prefix}_ue`] = r.user_email;
@@ -645,8 +645,8 @@ export async function insertShadowAiDemoData(
     });
 
     await sequelize.query(
-      `INSERT INTO "${tenant}".shadow_ai_daily_rollups
-        (rollup_date, user_email, tool_id, department, total_events, post_events, blocked_events, created_at)
+      `INSERT INTO shadow_ai_daily_rollups
+        (organization_id, rollup_date, user_email, tool_id, department, total_events, post_events, blocked_events, created_at)
        VALUES ${valuePlaceholders.join(", ")}`,
       { replacements: flatReplacements, transaction }
     );
@@ -696,11 +696,12 @@ export async function insertShadowAiDemoData(
 
   for (const acc of monthlyMap.values()) {
     await sequelize.query(
-      `INSERT INTO "${tenant}".shadow_ai_monthly_rollups
-        (rollup_month, tool_id, department, unique_users, total_events, post_events, blocked_events, created_at)
-       VALUES (:rollup_month, :tool_id, :department, :unique_users, :total_events, :post_events, :blocked_events, NOW())`,
+      `INSERT INTO shadow_ai_monthly_rollups
+        (organization_id, rollup_month, tool_id, department, unique_users, total_events, post_events, blocked_events, created_at)
+       VALUES (:organizationId, :rollup_month, :tool_id, :department, :unique_users, :total_events, :post_events, :blocked_events, NOW())`,
       {
         replacements: {
+          organizationId,
           rollup_month: acc.rollup_month,
           tool_id: acc.tool_id,
           department: acc.department,
@@ -747,15 +748,16 @@ export async function insertShadowAiDemoData(
 
   for (const rule of rules) {
     const [inserted] = await sequelize.query<{ id: number }>(
-      `INSERT INTO "${tenant}".shadow_ai_rules
-        (name, description, is_active, trigger_type, trigger_config, actions, created_by, created_at, updated_at)
+      `INSERT INTO shadow_ai_rules
+        (organization_id, name, description, is_active, trigger_type, trigger_config, actions, created_by, created_at, updated_at)
        VALUES
-        (:name, :description, false, :trigger_type, :trigger_config, :actions, :created_by, NOW(), NOW())
+        (:organizationId, :name, :description, false, :trigger_type, :trigger_config, :actions, :created_by, NOW(), NOW())
        RETURNING id`,
       {
         type: QueryTypes.SELECT,
         transaction,
         replacements: {
+          organizationId,
           name: rule.name,
           description: rule.description,
           trigger_type: rule.trigger_type,
@@ -869,13 +871,14 @@ export async function insertShadowAiDemoData(
     );
 
     await sequelize.query(
-      `INSERT INTO "${tenant}".shadow_ai_alert_history
-        (rule_id, rule_name, trigger_type, trigger_data, actions_taken, fired_at)
+      `INSERT INTO shadow_ai_alert_history
+        (organization_id, rule_id, rule_name, trigger_type, trigger_data, actions_taken, fired_at)
        VALUES
-        (:rule_id, :rule_name, :trigger_type, :trigger_data, :actions_taken, :fired_at)`,
+        (:organizationId, :rule_id, :rule_name, :trigger_type, :trigger_data, :actions_taken, :fired_at)`,
       {
         transaction,
         replacements: {
+          organizationId,
           rule_id: ruleId ?? null,
           rule_name: alert.rule_name,
           trigger_type: alert.trigger_type,
@@ -893,17 +896,16 @@ export async function insertShadowAiDemoData(
 // ---------------------------------------------------------------------------
 
 export async function deleteShadowAiDemoData(
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<void> {
   // Gracefully skip if shadow AI tables don't exist
-  if (!(await shadowAiTablesExist(tenant, transaction))) {
+  if (!(await shadowAiTablesExist(transaction))) {
     return;
   }
 
   // Delete in FK-safe order (children before parents).
-  // We delete ALL rows because shadow AI tables are module-specific
-  // with no user-created data to protect alongside demo data.
+  // We delete only rows for this organization.
   const tables = [
     "shadow_ai_alert_history",
     "shadow_ai_rule_notifications",
@@ -921,11 +923,11 @@ export async function deleteShadowAiDemoData(
   for (const table of tables) {
     try {
       await sequelize.query(
-        `DELETE FROM "${tenant}"."${table}" WHERE TRUE`,
-        { transaction }
+        `DELETE FROM ${table} WHERE organization_id = :organizationId`,
+        { replacements: { organizationId }, transaction }
       );
     } catch {
-      // Table may not exist in older schemas — safe to skip
+      // Table may not exist — safe to skip
     }
   }
 }

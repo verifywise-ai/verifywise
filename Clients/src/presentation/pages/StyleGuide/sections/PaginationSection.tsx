@@ -258,9 +258,9 @@ const PaginationSection: React.FC = () => {
         <SpecTable
           onCopy={handleCopy}
           specs={[
-            { property: "Background", value: "background.main (#FFFFFF)" },
+            { property: "Background", value: "background.main (background.main)" },
             { property: "Border", value: "1px solid #eaecf0" },
-            { property: "Button color", value: "text.tertiary (#475467)" },
+            { property: "Button color", value: "text.tertiary (text.tertiary)" },
             { property: "Button border radius", value: "4px" },
             { property: "First/last button border", value: "1px solid #eaecf0" },
             { property: "Selected background", value: "background.fill (#F4F4F4)" },

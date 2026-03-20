@@ -37,7 +37,7 @@ export async function getAllIncidents(req: Request, res: Response) {
 
   try {
     const incidents = (await getAllIncidentsQuery(
-      req.tenantId!
+      req.organizationId!
     )) as AIIncidentManagementModel[];
 
     if (incidents && incidents.length > 0) {
@@ -105,7 +105,7 @@ export async function getIncidentById(req: Request, res: Response) {
   try {
     const incident = (await getIncidentByIdQuery(
       incidentId,
-      req.tenantId!
+      req.organizationId!
     )) as AIIncidentManagementModel;
     if (incident) {
       logStructured(
@@ -192,7 +192,7 @@ export async function createNewIncident(req: Request, res: Response) {
 
     const savedIncident = await createNewIncidentQuery(
       incident,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -201,7 +201,7 @@ export async function createNewIncident(req: Request, res: Response) {
       await recordIncidentCreation(
         savedIncident.id,
         req.userId,
-        req.tenantId!,
+        req.organizationId!,
         req.body,
         transaction
       );
@@ -254,7 +254,7 @@ export async function updateIncidentById(req: Request, res: Response) {
   try {
     existingIncident = (await getIncidentByIdQuery(
       incidentId,
-      req.tenantId!
+      req.organizationId!
     )) as AIIncidentManagementModel;
   } catch {}
 
@@ -285,7 +285,7 @@ export async function updateIncidentById(req: Request, res: Response) {
   try {
     const currentIncident = (await getIncidentByIdQuery(
       incidentId,
-      req.tenantId!
+      req.organizationId!
     )) as AIIncidentManagementModel;
     if (!currentIncident) {
       logStructured(
@@ -305,7 +305,7 @@ export async function updateIncidentById(req: Request, res: Response) {
     const savedIncident = await updateIncidentByIdQuery(
       incidentId,
       currentIncident,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -316,7 +316,7 @@ export async function updateIncidentById(req: Request, res: Response) {
         await recordMultipleFieldChanges(
           incidentId,
           req.userId,
-          req.tenantId!,
+          req.organizationId!,
           changes,
           transaction
         );
@@ -370,7 +370,7 @@ export async function deleteIncidentById(req: Request, res: Response) {
   try {
     const existingIncident = (await getIncidentByIdQuery(
       incidentId,
-      req.tenantId!
+      req.organizationId!
     )) as AIIncidentManagementModel;
     if (!existingIncident) {
       logStructured(
@@ -382,7 +382,7 @@ export async function deleteIncidentById(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404]("Incident not found"));
     }
 
-    await deleteIncidentByIdQuery(incidentId, req.tenantId!, transaction);
+    await deleteIncidentByIdQuery(incidentId, req.organizationId!, transaction);
     await transaction.commit();
 
     logStructured(
@@ -432,7 +432,7 @@ export async function archiveIncidentById(req: Request, res: Response) {
   try {
     const existingIncident = (await getIncidentByIdQuery(
       incidentId,
-      req.tenantId!
+      req.organizationId!
     )) as AIIncidentManagementModel;
     if (!existingIncident) {
       logStructured(
@@ -446,7 +446,7 @@ export async function archiveIncidentById(req: Request, res: Response) {
 
     const archivedIncident = await archiveIncidentByIdQuery(
       incidentId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
     await transaction.commit();

@@ -11,6 +11,7 @@ import TableHeader from "../TableHead";
 import { useState } from "react";
 import { ProjectRiskMitigation } from "../../../../domain/types/ProjectRisk";
 import { ProjectRiskMitigationTableBody } from "./ProjectRiskMitigationTableBody";
+import { Shield } from "lucide-react";
 import { EmptyState } from "../../EmptyState";
 
 const TITLE_OF_COLUMNS = ["Component", "Type", ""];
@@ -50,7 +51,7 @@ export const ProjectRiskMitigationTable: React.FC<
                 align="center"
                 sx={{ border: "none", p: 0 }}
               >
-                <EmptyState message="There is currently no data in this table." />
+                <EmptyState icon={Shield} message="There is currently no data in this table." />
               </TableCell>
             </TableRow>
           </TableBody>

@@ -24,22 +24,23 @@ function safeJsonParse<T>(value: unknown, fallback: T): T {
 }
 
 /**
- * Get all active rules for a tenant.
+ * Get all active rules for an organization.
  */
 export async function getActiveRulesQuery(
-  tenant: string
+  organizationId: number
 ): Promise<IShadowAiRule[]> {
   const [rows] = await sequelize.query(
     `SELECT r.*,
        COALESCE(
          (SELECT json_agg(rn.user_id)
-          FROM "${tenant}".shadow_ai_rule_notifications rn
-          WHERE rn.rule_id = r.id),
+          FROM shadow_ai_rule_notifications rn
+          WHERE rn.organization_id = r.organization_id AND rn.rule_id = r.id),
          '[]'
        ) as notification_user_ids
-     FROM "${tenant}".shadow_ai_rules r
-     WHERE r.is_active = true
-     ORDER BY r.created_at DESC`
+     FROM shadow_ai_rules r
+     WHERE r.organization_id = :organizationId AND r.is_active = true
+     ORDER BY r.created_at DESC`,
+    { replacements: { organizationId } }
   );
 
   return (rows as any[]).map((r) => ({
@@ -51,21 +52,23 @@ export async function getActiveRulesQuery(
 }
 
 /**
- * Get all rules for a tenant.
+ * Get all rules for an organization.
  */
 export async function getAllRulesQuery(
-  tenant: string
+  organizationId: number
 ): Promise<IShadowAiRule[]> {
   const [rows] = await sequelize.query(
     `SELECT r.*,
        COALESCE(
          (SELECT json_agg(rn.user_id)
-          FROM "${tenant}".shadow_ai_rule_notifications rn
-          WHERE rn.rule_id = r.id),
+          FROM shadow_ai_rule_notifications rn
+          WHERE rn.organization_id = r.organization_id AND rn.rule_id = r.id),
          '[]'
        ) as notification_user_ids
-     FROM "${tenant}".shadow_ai_rules r
-     ORDER BY r.created_at DESC`
+     FROM shadow_ai_rules r
+     WHERE r.organization_id = :organizationId
+     ORDER BY r.created_at DESC`,
+    { replacements: { organizationId } }
   );
 
   return (rows as any[]).map((r) => ({
@@ -80,7 +83,7 @@ export async function getAllRulesQuery(
  * Create a new rule.
  */
 export async function createRuleQuery(
-  tenant: string,
+  organizationId: number,
   rule: {
     name: string;
     description?: string;
@@ -95,13 +98,14 @@ export async function createRuleQuery(
   transaction?: Transaction
 ): Promise<IShadowAiRule> {
   const [result] = await sequelize.query(
-    `INSERT INTO "${tenant}".shadow_ai_rules
-       (name, description, is_active, trigger_type, trigger_config, actions, cooldown_minutes, created_by)
+    `INSERT INTO shadow_ai_rules
+       (organization_id, name, description, is_active, trigger_type, trigger_config, actions, cooldown_minutes, created_by)
      VALUES
-       (:name, :description, :is_active, :trigger_type, :trigger_config, :actions, :cooldown_minutes, :created_by)
+       (:organizationId, :name, :description, :is_active, :trigger_type, :trigger_config, :actions, :cooldown_minutes, :created_by)
      RETURNING *`,
     {
       replacements: {
+        organizationId,
         name: rule.name,
         description: rule.description || null,
         is_active: rule.is_active,
@@ -121,11 +125,11 @@ export async function createRuleQuery(
   if (rule.notification_user_ids && rule.notification_user_ids.length > 0) {
     for (const userId of rule.notification_user_ids) {
       await sequelize.query(
-        `INSERT INTO "${tenant}".shadow_ai_rule_notifications (rule_id, user_id)
-         VALUES (:ruleId, :userId)
-         ON CONFLICT (rule_id, user_id) DO NOTHING`,
+        `INSERT INTO shadow_ai_rule_notifications (organization_id, rule_id, user_id)
+         VALUES (:organizationId, :ruleId, :userId)
+         ON CONFLICT (organization_id, rule_id, user_id) DO NOTHING`,
         {
-          replacements: { ruleId: created.id, userId },
+          replacements: { organizationId, ruleId: created.id, userId },
           ...(transaction ? { transaction } : {}),
         }
       );
@@ -144,7 +148,7 @@ export async function createRuleQuery(
  * Update a rule.
  */
 export async function updateRuleQuery(
-  tenant: string,
+  organizationId: number,
   ruleId: number,
   updates: {
     name?: string;
@@ -160,7 +164,7 @@ export async function updateRuleQuery(
 ): Promise<IShadowAiRule | null> {
   // Build SET clause dynamically
   const setClauses: string[] = ["updated_at = NOW()"];
-  const replacements: Record<string, any> = { ruleId };
+  const replacements: Record<string, any> = { organizationId, ruleId };
 
   if (updates.name !== undefined) {
     setClauses.push("name = :name");
@@ -192,9 +196,9 @@ export async function updateRuleQuery(
   }
 
   const [rows] = await sequelize.query(
-    `UPDATE "${tenant}".shadow_ai_rules
+    `UPDATE shadow_ai_rules
      SET ${setClauses.join(", ")}
-     WHERE id = :ruleId
+     WHERE organization_id = :organizationId AND id = :ruleId
      RETURNING *`,
     {
       replacements,
@@ -208,20 +212,20 @@ export async function updateRuleQuery(
   // Update notification recipients if provided
   if (updates.notification_user_ids !== undefined) {
     await sequelize.query(
-      `DELETE FROM "${tenant}".shadow_ai_rule_notifications WHERE rule_id = :ruleId`,
+      `DELETE FROM shadow_ai_rule_notifications WHERE organization_id = :organizationId AND rule_id = :ruleId`,
       {
-        replacements: { ruleId },
+        replacements: { organizationId, ruleId },
         ...(transaction ? { transaction } : {}),
       }
     );
 
     for (const userId of updates.notification_user_ids) {
       await sequelize.query(
-        `INSERT INTO "${tenant}".shadow_ai_rule_notifications (rule_id, user_id)
-         VALUES (:ruleId, :userId)
-         ON CONFLICT (rule_id, user_id) DO NOTHING`,
+        `INSERT INTO shadow_ai_rule_notifications (organization_id, rule_id, user_id)
+         VALUES (:organizationId, :ruleId, :userId)
+         ON CONFLICT (organization_id, rule_id, user_id) DO NOTHING`,
         {
-          replacements: { ruleId, userId },
+          replacements: { organizationId, ruleId, userId },
           ...(transaction ? { transaction } : {}),
         }
       );
@@ -241,14 +245,14 @@ export async function updateRuleQuery(
  * Delete a rule and its notification recipients.
  */
 export async function deleteRuleQuery(
-  tenant: string,
+  organizationId: number,
   ruleId: number,
   transaction?: Transaction
 ): Promise<boolean> {
   const [rows] = await sequelize.query(
-    `DELETE FROM "${tenant}".shadow_ai_rules WHERE id = :ruleId RETURNING id`,
+    `DELETE FROM shadow_ai_rules WHERE organization_id = :organizationId AND id = :ruleId RETURNING id`,
     {
-      replacements: { ruleId },
+      replacements: { organizationId, ruleId },
       ...(transaction ? { transaction } : {}),
     }
   );
@@ -260,7 +264,7 @@ export async function deleteRuleQuery(
  * Get alert history with optional filtering.
  */
 export async function getAlertHistoryQuery(
-  tenant: string,
+  organizationId: number,
   options?: {
     page?: number;
     limit?: number;
@@ -271,16 +275,18 @@ export async function getAlertHistoryQuery(
   const limit = options?.limit || 20;
   const offset = (page - 1) * limit;
 
-  let whereClause = "";
-  const replacements: Record<string, any> = { limit, offset };
+  const whereConditions: string[] = ["organization_id = :organizationId"];
+  const replacements: Record<string, any> = { organizationId, limit, offset };
 
   if (options?.ruleId) {
-    whereClause = "WHERE rule_id = :ruleId";
+    whereConditions.push("rule_id = :ruleId");
     replacements.ruleId = options.ruleId;
   }
 
+  const whereClause = `WHERE ${whereConditions.join(" AND ")}`;
+
   const [rows] = await sequelize.query(
-    `SELECT * FROM "${tenant}".shadow_ai_alert_history
+    `SELECT * FROM shadow_ai_alert_history
      ${whereClause}
      ORDER BY fired_at DESC
      LIMIT :limit OFFSET :offset`,
@@ -288,7 +294,7 @@ export async function getAlertHistoryQuery(
   );
 
   const [countResult] = await sequelize.query(
-    `SELECT COUNT(*) as total FROM "${tenant}".shadow_ai_alert_history ${whereClause}`,
+    `SELECT COUNT(*) as total FROM shadow_ai_alert_history ${whereClause}`,
     { replacements }
   );
 
@@ -310,7 +316,7 @@ export async function getAlertHistoryQuery(
  * Uses a single batch query to avoid N+1 lookups.
  */
 export async function getRecentAlertKeys(
-  tenant: string,
+  organizationId: number,
   rules: Array<{ id: number; cooldown_minutes: number }>
 ): Promise<Set<string>> {
   const result = new Set<string>();
@@ -329,10 +335,11 @@ export async function getRecentAlertKeys(
   try {
     const [rows] = await sequelize.query(
       `SELECT rule_id, trigger_data, fired_at
-       FROM "${tenant}".shadow_ai_alert_history
-       WHERE rule_id IN (:ruleIds)
-       AND fired_at > NOW() - INTERVAL '1 minute' * :maxCooldown`,
-      { replacements: { ruleIds, maxCooldown } }
+       FROM shadow_ai_alert_history
+       WHERE organization_id = :organizationId
+         AND rule_id IN (:ruleIds)
+         AND fired_at > NOW() - INTERVAL '1 minute' * :maxCooldown`,
+      { replacements: { organizationId, ruleIds, maxCooldown } }
     );
 
     for (const row of rows as any[]) {
@@ -369,7 +376,7 @@ export async function getRecentAlertKeys(
  * Insert an alert history record.
  */
 export async function insertAlertHistoryQuery(
-  tenant: string,
+  organizationId: number,
   alert: {
     rule_id: number;
     rule_name: string;
@@ -380,12 +387,13 @@ export async function insertAlertHistoryQuery(
   transaction?: Transaction
 ): Promise<void> {
   await sequelize.query(
-    `INSERT INTO "${tenant}".shadow_ai_alert_history
-       (rule_id, rule_name, trigger_type, trigger_data, actions_taken)
+    `INSERT INTO shadow_ai_alert_history
+       (organization_id, rule_id, rule_name, trigger_type, trigger_data, actions_taken)
      VALUES
-       (:rule_id, :rule_name, :trigger_type, :trigger_data, :actions_taken)`,
+       (:organizationId, :rule_id, :rule_name, :trigger_type, :trigger_data, :actions_taken)`,
     {
       replacements: {
+        organizationId,
         rule_id: alert.rule_id,
         rule_name: alert.rule_name,
         trigger_type: alert.trigger_type,

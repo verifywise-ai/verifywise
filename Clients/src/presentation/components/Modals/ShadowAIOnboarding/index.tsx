@@ -9,6 +9,7 @@ import React from "react";
 import { Stack, Typography } from "@mui/material";
 import OnboardingWizard from "../OnboardingWizard";
 import { Eye } from "lucide-react";
+import { text } from "../../../themes/palette";
 
 const STORAGE_KEY = "vw:shadow-ai-onboarding-dismissed";
 
@@ -20,7 +21,7 @@ const StepContent: React.FC<{ title: string; detail: string }> = ({
     <Typography sx={{ fontSize: 15, fontWeight: 600, color: "#1c2130" }}>
       {title}
     </Typography>
-    <Typography sx={{ fontSize: 13, color: "#475467", lineHeight: 1.7 }}>
+    <Typography sx={{ fontSize: 13, color: `${text.tertiary}`, lineHeight: 1.7 }}>
       {detail}
     </Typography>
   </Stack>

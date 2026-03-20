@@ -46,7 +46,6 @@ import {
   generateFieldId,
   generateSlug,
   DEFAULT_DESIGN_SETTINGS,
-  ENTITY_FIELD_MAPPINGS,
   analyzeMappingCoverage,
   createFieldFromMapping,
 } from "./types";
@@ -596,7 +595,7 @@ export function IntakeFormBuilder() {
                       color: builderMode === "edit" ? theme.palette.background.main : theme.palette.text.secondary,
                       transition: "all 0.15s ease",
                       "&:hover": {
-                        backgroundColor: builderMode === "edit" ? "#0F5A47" : theme.palette.background.accent,
+                        backgroundColor: builderMode === "edit" ? "brand.primaryHover" : theme.palette.background.accent,
                       },
                     }}
                   >
@@ -620,7 +619,7 @@ export function IntakeFormBuilder() {
                       color: builderMode === "design" ? theme.palette.background.main : theme.palette.text.secondary,
                       transition: "all 0.15s ease",
                       "&:hover": {
-                        backgroundColor: builderMode === "design" ? "#0F5A47" : theme.palette.background.accent,
+                        backgroundColor: builderMode === "design" ? "brand.primaryHover" : theme.palette.background.accent,
                       },
                     }}
                   >
@@ -718,7 +717,7 @@ export function IntakeFormBuilder() {
                         height: 34,
                         fontSize: "13px",
                         backgroundColor: theme.palette.primary.main,
-                        "&:hover": { backgroundColor: "#0F5A47" },
+                        "&:hover": { backgroundColor: "brand.primaryHover" },
                       }}
                     />
                   )}
@@ -848,8 +847,6 @@ export function IntakeFormBuilder() {
                           const { missingRequired, missingOptional, typeMismatches } = mappingCoverage;
                           const allMapped = missingRequired.length === 0 && missingOptional.length === 0 && typeMismatches.length === 0;
                           const entityLabel = form.entityType === IntakeEntityType.USE_CASE ? "use case" : "model";
-                          const hasErrors = missingRequired.length > 0 || typeMismatches.length > 0;
-
                           const handleAddField = (m: typeof missingRequired[0]) => {
                             const newField = createFieldFromMapping(m, form.schema.fields.length);
                             setForm((prev) => ({
@@ -885,7 +882,7 @@ export function IntakeFormBuilder() {
                                         sx={{
                                           fontSize: 11,
                                           fontWeight: 500,
-                                          color: "#13715B",
+                                          color: "brand.primary",
                                           cursor: "pointer",
                                           display: "flex",
                                           alignItems: "center",
@@ -926,7 +923,7 @@ export function IntakeFormBuilder() {
                                         sx={{
                                           fontSize: 11,
                                           fontWeight: 500,
-                                          color: "#13715B",
+                                          color: "brand.primary",
                                           cursor: "pointer",
                                           display: "flex",
                                           alignItems: "center",

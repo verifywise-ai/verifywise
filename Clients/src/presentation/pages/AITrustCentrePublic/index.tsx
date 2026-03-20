@@ -103,7 +103,7 @@ const AITrustCentrePublic: React.FC = () => {
           >
             <TabList
               onChange={handleTabChange}
-              TabIndicatorProps={{ style: { backgroundColor: "#13715B" } }}
+              TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
               aria-label="AI Trust Center Public Tabs"
               sx={aiTrustCenterTabListStyle}
             >

@@ -10,7 +10,7 @@ export async function logEvent(
     eventType: EventType,
     description: string,
     userId: number,
-    tenant: string
+    organizationId: number
 ): Promise<void> {
     const store = asyncLocalStorage.getStore();
     const effectiveUserId = store?.userId || userId;
@@ -20,15 +20,15 @@ export async function logEvent(
     }
     try {
         await sequelize.query(
-            `INSERT INTO "${tenant}".event_logs (event_type, description, user_id) VALUES (:eventType, :description, :userId)`,
+            `INSERT INTO event_logs (organization_id, event_type, description, user_id) VALUES (:organizationId, :eventType, :description, :userId)`,
             {
-                replacements: { eventType, description, userId: effectiveUserId },
+                replacements: { organizationId, eventType, description, userId: effectiveUserId },
                 type: QueryTypes.INSERT,
             }
         );
         // Append to tamper-proof audit ledger (fire-and-forget)
         appendToAuditLedger({
-            tenantId: tenant,
+            organizationId,
             entryType: "event_log",
             userId: effectiveUserId,
             eventType,

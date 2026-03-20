@@ -47,19 +47,19 @@ import { sanitizeErrorMessage } from "../utils/entityGraphSecurity.utils";
  * @returns {Promise<any>} JSON response with created/updated annotation or error
  */
 export async function saveAnnotation(req: Request, res: Response): Promise<any> {
+  const organizationId = req.organizationId!;
+
   logProcessing({
     description: "Starting saveAnnotation",
     functionName: "saveAnnotation",
     fileName: "entityGraphAnnotations.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId,
   });
 
   try {
     const { content, entity_type, entity_id } = req.body;
     const userId = req.userId!;
-    const organizationId = req.organizationId!;
-    const tenantId = req.tenantId!;
 
     // Validate required fields
     if (!content || content.trim().length === 0) {
@@ -91,8 +91,7 @@ export async function saveAnnotation(req: Request, res: Response): Promise<any> 
       userId,
       entity_type,
       entity_id,
-      organizationId,
-      tenantId
+      organizationId
     );
 
     return res.status(201).json(STATUS_CODE[201](savedAnnotation.toJSON()));
@@ -104,7 +103,7 @@ export async function saveAnnotation(req: Request, res: Response): Promise<any> 
       fileName: "entityGraphAnnotations.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId,
     });
 
     if (error instanceof ValidationException) {
@@ -129,23 +128,22 @@ export async function saveAnnotation(req: Request, res: Response): Promise<any> 
  * @returns {Promise<any>} JSON response with annotations array or error
  */
 export async function getAnnotations(req: Request, res: Response): Promise<any> {
+  const organizationId = req.organizationId!;
+
   logProcessing({
     description: "Starting getAnnotations",
     functionName: "getAnnotations",
     fileName: "entityGraphAnnotations.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId,
   });
 
   try {
     const userId = req.userId!;
-    const organizationId = req.organizationId!;
-    const tenantId = req.tenantId!;
 
     const annotations = await EntityGraphAnnotationsService.getAnnotations(
       userId,
-      organizationId,
-      tenantId
+      organizationId
     );
 
     const responseData = annotations.map((annotation) => annotation.toJSON());
@@ -158,7 +156,7 @@ export async function getAnnotations(req: Request, res: Response): Promise<any> 
       fileName: "entityGraphAnnotations.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(
@@ -188,14 +186,14 @@ export async function getAnnotationByEntity(
     functionName: "getAnnotationByEntity",
     fileName: "entityGraphAnnotations.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const entityType = Array.isArray(req.params.entityType) ? req.params.entityType[0] : req.params.entityType;
     const entityId = Array.isArray(req.params.entityId) ? req.params.entityId[0] : req.params.entityId;
     const userId = req.userId!;
-    const tenantId = req.tenantId!;
+    const organizationId = req.organizationId!;
 
     if (!entityType || !entityId) {
       throw new ValidationException(
@@ -209,7 +207,7 @@ export async function getAnnotationByEntity(
       userId,
       entityType,
       entityId,
-      tenantId
+      organizationId
     );
 
     return res.status(200).json(STATUS_CODE[200](annotation?.toJSON() || null));
@@ -221,7 +219,7 @@ export async function getAnnotationByEntity(
       fileName: "entityGraphAnnotations.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {
@@ -248,14 +246,14 @@ export async function getAnnotationByEntity(
 export async function deleteAnnotation(req: Request, res: Response): Promise<any> {
   const annotationId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logProcessing({
     description: `Starting deleteAnnotation for ID ${annotationId}`,
     functionName: "deleteAnnotation",
     fileName: "entityGraphAnnotations.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -270,7 +268,7 @@ export async function deleteAnnotation(req: Request, res: Response): Promise<any
     await EntityGraphAnnotationsService.deleteAnnotation(
       annotationId,
       userId,
-      tenantId
+      organizationId
     );
 
     return res.status(200).json(STATUS_CODE[200]("Annotation deleted successfully"));
@@ -282,7 +280,7 @@ export async function deleteAnnotation(req: Request, res: Response): Promise<any
       fileName: "entityGraphAnnotations.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof BusinessLogicException) {
@@ -315,14 +313,14 @@ export async function deleteAnnotationByEntity(
 ): Promise<any> {
   const { entityType, entityId } = req.params;
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logProcessing({
     description: `Starting deleteAnnotationByEntity for ${entityType}:${entityId}`,
     functionName: "deleteAnnotationByEntity",
     fileName: "entityGraphAnnotations.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -338,7 +336,7 @@ export async function deleteAnnotationByEntity(
       userId,
       Array.isArray(entityType) ? entityType[0] : entityType,
       Array.isArray(entityId) ? entityId[0] : entityId,
-      tenantId
+      organizationId
     );
 
     return res.status(200).json(STATUS_CODE[200]("Annotation deleted successfully"));
@@ -350,7 +348,7 @@ export async function deleteAnnotationByEntity(
       fileName: "entityGraphAnnotations.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {

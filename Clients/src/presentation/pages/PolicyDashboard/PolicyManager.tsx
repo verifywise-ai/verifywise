@@ -10,11 +10,16 @@ import {
 import {
   CirclePlus as AddCircleOutlineIcon,
   FolderOpen,
+  FileText,
+  Sparkles,
+  Shield,
+  Link2,
 } from "lucide-react";
 import PolicyTable from "../../components/Policies/PolicyTable";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { deletePolicy } from "../../../application/repository/policy.repository";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { SearchBox } from "../../components/Search";
 import { handleAlert } from "../../../application/tools/alertUtils";
 import Alert from "../../components/Alert";
@@ -28,6 +33,8 @@ import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { ColumnSelector } from "../../components/Table/ColumnSelector";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import LinkedPolicyModal from "../../components/Policies/LinkedPolicyModal";
 import { displayFormattedDate } from "../../tools/isoDateToString";
@@ -45,6 +52,18 @@ import type {
   IVirtualFolder,
   IVirtualFolderInput,
 } from "../../../domain/interfaces/i.virtualFolder";
+
+type PolicyColumnKey = "title" | "status" | "next_review" | "author" | "last_updated" | "updated_by" | "actions";
+
+const POLICY_TABLE_COLUMNS: ColumnConfig<PolicyColumnKey>[] = [
+  { key: "title", label: "Title", defaultVisible: true, alwaysVisible: true },
+  { key: "status", label: "Status", defaultVisible: true },
+  { key: "next_review", label: "Next review", defaultVisible: true },
+  { key: "author", label: "Author", defaultVisible: true },
+  { key: "last_updated", label: "Last updated", defaultVisible: true },
+  { key: "updated_by", label: "Updated by", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true }
+];
 
 const PolicyManager: React.FC<PolicyManagerProps> = ({
   policies: policyList,
@@ -292,6 +311,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
 
   const { users } = useUsers();
 
+  const { visibleColumns, allColumns, toggleColumn, resetToDefaults } =
+    useColumnVisibility({ tableId: "policy-manager-table", columns: POLICY_TABLE_COLUMNS });
+
   // FilterBy - Dynamic options generators
   const getUniqueAuthors = useCallback(() => {
     const authorIds = new Set<string>();
@@ -495,6 +517,14 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
             onGroupChange={handleGroupChange}
           />
 
+          {/* Column Selector */}
+          <ColumnSelector
+            columns={allColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+            onResetToDefaults={resetToDefaults}
+          />
+
           {/* Search */}
           <Box data-joyride-id="policy-search">
             <SearchBox
@@ -514,7 +544,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
               onClick={() => setFolderSidebarOpen((prev) => !prev)}
               size="small"
               sx={{
-                color: folderSidebarOpen ? "#13715B" : "#98A2B3",
+                color: folderSidebarOpen ? "brand.primary" : "text.muted",
                 padding: "4px",
                 borderRadius: "4px",
                 backgroundColor: folderSidebarOpen
@@ -541,8 +571,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
               variant="contained"
               text="Add new policy"
               sx={{
-                backgroundColor: "#13715B",
-                border: "1px solid #13715B",
+                backgroundColor: "brand.primary",
+                border: "1px solid brand.primary",
               gap: 3,
             }}
             icon={<AddCircleOutlineIcon size={16} />}
@@ -596,13 +626,34 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {filteredPolicies.length === 0 ? (
             <EmptyState
+              icon={FileText}
               message={
                 searchTerm
                   ? "No matching policies found."
-                  : "There is currently no data in this table."
+                  : "No policies yet. Policies define the rules your organization follows for AI governance."
               }
               imageAlt="No policies available"
-            />
+            >
+              {!searchTerm && (
+                <>
+                  <EmptyStateTip
+                    icon={Sparkles}
+                    title="Create from templates"
+                    description="Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready."
+                  />
+                  <EmptyStateTip
+                    icon={Shield}
+                    title="Link policies to controls"
+                    description="Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements."
+                  />
+                  <EmptyStateTip
+                    icon={Link2}
+                    title="Common policies to start with"
+                    description="AI Ethics Policy, Data Governance Policy, AI Risk Management Policy, Incident Response Policy, and Third-Party AI Vendor Policy."
+                  />
+                </>
+              )}
+            </EmptyState>
           ) : (
             <GroupedTableView
               groupedData={groupedPolicies}
@@ -616,6 +667,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
                   onAssignToFolder={handleAssignToFolder}
                   hidePagination={options?.hidePagination}
                   flashRowId={flashRowId}
+                  visibleColumns={visibleColumns}
                 />
               )}
             />

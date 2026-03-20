@@ -44,6 +44,11 @@ import { RiskCalculator } from "../../tools/riskCalculator";
 import { HistorySidebar } from "../Common/HistorySidebar";
 import { getTabStyle } from "./style";
 import "./styles.module.css";
+import QuantitativeRiskForm, {
+  QuantitativeRiskFormValues,
+  quantitativeInitialState,
+} from "../QuantitativeRiskForm";
+import { useRiskAssessmentMode } from "../../../application/hooks/useRiskAssessmentMode";
 
 const RiskSection = lazy(() => import("./RisksSection"));
 const MitigationSection = lazy(() => import("./MitigationSection"));
@@ -164,6 +169,10 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
     useState<RiskFormValues>(initialRiskValues); // Track original values for diff
   const [originalMitigationValues, setOriginalMitigationValues] =
     useState<MitigationFormValues>(initialMitigationValues); // Track original values for diff
+  const [quantitativeValues, setQuantitativeValues] =
+    useState<QuantitativeRiskFormValues>(quantitativeInitialState);
+  const [originalQuantitativeValues, setOriginalQuantitativeValues] =
+    useState<QuantitativeRiskFormValues>(quantitativeInitialState);
   const [value, setValue] = useState("risks");
   const handleChange = useCallback(
     (_: React.SyntheticEvent, newValue: string) => {
@@ -176,6 +185,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
   const projectId = searchParams.get("projectId");
 
   const { userRoleName } = useAuth();
+  const { isQuantitative } = useRiskAssessmentMode();
 
   // Use props if provided, otherwise fallback to hook
   const hookData = useUsers();
@@ -268,6 +278,36 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
       setMitigationValues(currentMitigationData);
       setOriginalRiskValues(currentRiskData);
       setOriginalMitigationValues(currentMitigationData);
+
+      // Populate quantitative FAIR fields from existing risk data
+      const toNum = (v: unknown): number | null => {
+        if (v == null) return null;
+        const n = Number(v);
+        return isNaN(n) ? null : n;
+      };
+      const currentQuantitativeData: QuantitativeRiskFormValues = {
+        event_frequency_min: toNum(inputValues.event_frequency_min),
+        event_frequency_likely: toNum(inputValues.event_frequency_likely),
+        event_frequency_max: toNum(inputValues.event_frequency_max),
+        loss_regulatory_min: toNum(inputValues.loss_regulatory_min),
+        loss_regulatory_likely: toNum(inputValues.loss_regulatory_likely),
+        loss_regulatory_max: toNum(inputValues.loss_regulatory_max),
+        loss_operational_min: toNum(inputValues.loss_operational_min),
+        loss_operational_likely: toNum(inputValues.loss_operational_likely),
+        loss_operational_max: toNum(inputValues.loss_operational_max),
+        loss_litigation_min: toNum(inputValues.loss_litigation_min),
+        loss_litigation_likely: toNum(inputValues.loss_litigation_likely),
+        loss_litigation_max: toNum(inputValues.loss_litigation_max),
+        loss_reputational_min: toNum(inputValues.loss_reputational_min),
+        loss_reputational_likely: toNum(inputValues.loss_reputational_likely),
+        loss_reputational_max: toNum(inputValues.loss_reputational_max),
+        control_effectiveness: toNum(inputValues.control_effectiveness),
+        mitigation_cost_annual: toNum(inputValues.mitigation_cost_annual),
+        benchmark_id: toNum(inputValues.benchmark_id),
+        currency: (typeof inputValues.currency === 'string' ? inputValues.currency : null) ?? "USD",
+      };
+      setQuantitativeValues(currentQuantitativeData);
+      setOriginalQuantitativeValues(currentQuantitativeData);
     }
   }, [popupStatus, inputValues, users, usersLoading]);
 
@@ -537,6 +577,28 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         date_of_assessment: mitigationValues.dateOfAssessment,
         projects: riskValues.applicableProjects,
         frameworks: riskValues.applicableFrameworks,
+        // Quantitative FAIR fields (included when quantitative mode is active)
+        ...(isQuantitative ? {
+          event_frequency_min: quantitativeValues.event_frequency_min,
+          event_frequency_likely: quantitativeValues.event_frequency_likely,
+          event_frequency_max: quantitativeValues.event_frequency_max,
+          loss_regulatory_min: quantitativeValues.loss_regulatory_min,
+          loss_regulatory_likely: quantitativeValues.loss_regulatory_likely,
+          loss_regulatory_max: quantitativeValues.loss_regulatory_max,
+          loss_operational_min: quantitativeValues.loss_operational_min,
+          loss_operational_likely: quantitativeValues.loss_operational_likely,
+          loss_operational_max: quantitativeValues.loss_operational_max,
+          loss_litigation_min: quantitativeValues.loss_litigation_min,
+          loss_litigation_likely: quantitativeValues.loss_litigation_likely,
+          loss_litigation_max: quantitativeValues.loss_litigation_max,
+          loss_reputational_min: quantitativeValues.loss_reputational_min,
+          loss_reputational_likely: quantitativeValues.loss_reputational_likely,
+          loss_reputational_max: quantitativeValues.loss_reputational_max,
+          control_effectiveness: quantitativeValues.control_effectiveness,
+          mitigation_cost_annual: quantitativeValues.mitigation_cost_annual,
+          benchmark_id: quantitativeValues.benchmark_id,
+          currency: quantitativeValues.currency,
+        } : {}),
       };
 
       // If changedFields is provided (for updates), only return the changed fields
@@ -606,7 +668,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
       // Return full data for create operations
       return fullData;
     },
-    [projectId, riskValues, mitigationValues]
+    [projectId, riskValues, mitigationValues, isQuantitative, quantitativeValues]
   );
 
   const riskFormSubmitHandler = async () => {
@@ -667,11 +729,27 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
           changedFields[`mitigation_${key}`] = changedMitigationFields[key];
         });
 
+        // Include quantitative field changes if in quantitative mode
+        if (isQuantitative) {
+          const changedQuantitativeFields = getChangedFields(originalQuantitativeValues, quantitativeValues);
+          Object.keys(changedQuantitativeFields).forEach(key => {
+            changedFields[`quantitative_${key}`] = changedQuantitativeFields[key];
+          });
+        }
+
         formData = buildFormData(
           risk_risklevel.level,
           mitigation_risklevel.level,
           changedFields
         ) as Record<string, unknown>;
+
+        // For quantitative updates, directly include FAIR fields that changed
+        if (isQuantitative) {
+          const changedQuantitativeFields = getChangedFields(originalQuantitativeValues, quantitativeValues);
+          Object.keys(changedQuantitativeFields).forEach(key => {
+            formData[key] = changedQuantitativeFields[key];
+          });
+        }
 
         // Add boolean flags for deleted/emptied linked projects and frameworks
         if (Object.prototype.hasOwnProperty.call(changedFields, 'risk_applicableProjects')) {
@@ -811,6 +889,14 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
               sx={tabStyle}
               disableRipple={disableRipple}
             />
+            {isQuantitative && (
+              <Tab
+                label="Quantitative"
+                value="quantitative"
+                sx={tabStyle}
+                disableRipple={disableRipple}
+              />
+            )}
             {popupStatus === "edit" && entityId && (
               <Tab
                 label="Activity"
@@ -856,6 +942,24 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
               compactMode={compactMode}
             />
           </TabPanel>
+          {isQuantitative && (
+            <TabPanel
+              value="quantitative"
+              sx={{
+                p: COMPONENT_CONSTANTS.TAB_PADDING,
+                ...(onSubmitRef ? {} : { maxHeight: COMPONENT_CONSTANTS.MAX_HEIGHT }),
+                overflowY: "auto",
+              }}
+            >
+              <QuantitativeRiskForm
+                values={quantitativeValues}
+                onChange={setQuantitativeValues}
+                disabled={
+                  popupStatus === "new" ? isCreatingDisabled : isEditingDisabled
+                }
+              />
+            </TabPanel>
+          )}
           {popupStatus === "edit" && entityId && (
             <TabPanel value="activity" sx={{ p: 0 }}>
               <HistorySidebar

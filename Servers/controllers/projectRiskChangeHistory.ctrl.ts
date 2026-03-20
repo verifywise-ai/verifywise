@@ -23,7 +23,7 @@ export async function getProjectRiskChangeHistoryByRiskId(
 
     const history = await getProjectRiskChangeHistory(
       projectRiskId,
-      req.tenantId!,
+      req.organizationId!,
       limit,
       offset
     );

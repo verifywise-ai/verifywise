@@ -18,6 +18,8 @@
 
 import React from "react";
 import {
+  Divider,
+  ListSubheader,
   MenuItem,
   Select as MuiSelect,
   Stack,
@@ -42,6 +44,8 @@ function Select({
   value,
   items,
   isRequired,
+  isOptional,
+  optionalLabel,
   error,
   onChange,
   sx,
@@ -49,6 +53,9 @@ function Select({
   disabled,
   customRenderValue,
   isFilterApplied = false,
+  dividerAfterIndex,
+  dividerLabel,
+  dividers,
 }: SelectProps) {
   const theme = useTheme();
   const itemStyles = {
@@ -138,6 +145,17 @@ function Select({
               *
             </Typography>
           )}
+          {isOptional && (
+            <Typography
+              component="span"
+              fontSize="inherit"
+              fontWeight={400}
+              ml={theme.spacing(2)}
+              sx={{ opacity: 0.6 }}
+            >
+              {optionalLabel || "(optional)"}
+            </Typography>
+          )}
         </Typography>
       )}
       <MuiSelect
@@ -202,7 +220,7 @@ function Select({
           ...sxWithoutLayoutProps,
         }}
       >
-        {items.map(
+        {items.flatMap(
           (item: {
             _id: string | number;
             name: string;
@@ -210,28 +228,83 @@ function Select({
             surname?: string;
             icon?: React.ComponentType<{ color?: string; size?: number }>;
             color?: string;
-          }) => (
-            <MenuItem
-              value={getOptionValue ? getOptionValue(item) : item._id}
-              key={`${id}-${item._id}`}
-              sx={{
-                display: "flex",
-                ...itemStyles,
-                justifyContent: "space-between",
-                flexDirection: "row",
-              }}
-            >
-              <Stack direction="row" alignItems="center" spacing={1}>
-                {item.icon && <item.icon color={item.color} size={16} />}
-                <span>{`${item.name} ${item.surname ? item.surname : ""}`}</span>
-              </Stack>
-              {item.email && (
-                <span style={{ fontSize: 11, color: theme.palette.text.disabled }}>
-                  {item.email}
-                </span>
-              )}
-            </MenuItem>
-          )
+          }, index: number) => {
+            const menuItem = (
+              <MenuItem
+                value={getOptionValue ? getOptionValue(item) : item._id}
+                key={`${id}-${item._id}`}
+                sx={{
+                  display: "flex",
+                  ...itemStyles,
+                  justifyContent: "space-between",
+                  flexDirection: "row",
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  {item.icon && <item.icon color={item.color} size={16} />}
+                  <span>{`${item.name} ${item.surname ? item.surname : ""}`}</span>
+                </Stack>
+                {item.email && (
+                  <span style={{ fontSize: 11, color: theme.palette.text.disabled }}>
+                    {item.email}
+                  </span>
+                )}
+              </MenuItem>
+            );
+
+            // Check single divider prop
+            if (dividerAfterIndex !== undefined && index === dividerAfterIndex) {
+              const elements: React.ReactElement[] = [
+                <Divider key={`${id}-divider-${index}`} sx={{ my: 0.5 }} />,
+              ];
+              if (dividerLabel) {
+                elements.push(
+                  <ListSubheader
+                    key={`${id}-divider-label-${index}`}
+                    sx={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: theme.palette.text.tertiary,
+                      lineHeight: "28px",
+                      backgroundColor: "transparent",
+                    }}
+                  >
+                    {dividerLabel}
+                  </ListSubheader>
+                );
+              }
+              elements.push(menuItem);
+              return elements;
+            }
+
+            // Check multi-divider prop
+            const dividerEntry = dividers?.find((d) => d.index === index);
+            if (dividerEntry) {
+              const elements: React.ReactElement[] = [
+                <Divider key={`${id}-divider-${index}`} sx={{ my: 0.5 }} />,
+              ];
+              if (dividerEntry.label) {
+                elements.push(
+                  <ListSubheader
+                    key={`${id}-divider-label-${index}`}
+                    sx={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: theme.palette.text.tertiary,
+                      lineHeight: "28px",
+                      backgroundColor: "transparent",
+                    }}
+                  >
+                    {dividerEntry.label}
+                  </ListSubheader>
+                );
+              }
+              elements.push(menuItem);
+              return elements;
+            }
+
+            return [menuItem];
+          }
         )}
       </MuiSelect>
       {error && (

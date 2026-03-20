@@ -53,12 +53,12 @@ interface PolicyWithReviewers {
 
 const fetchPolicies = async (
   params: FetchPoliciesParams,
-  tenant: string
+  organizationId: number
 ): Promise<Partial<PolicyWithReviewers>[]> => {
   let policies: PolicyWithReviewers[] = [];
 
   try {
-    policies = (await getAllPoliciesQuery(tenant)) as PolicyWithReviewers[];
+    policies = (await getAllPoliciesQuery(organizationId)) as PolicyWithReviewers[];
     const now = new Date();
 
     // Apply filters
@@ -139,10 +139,10 @@ export interface PolicyAnalytics {
 
 const getPolicyAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<PolicyAnalytics> => {
   try {
-    const policies = (await getAllPoliciesQuery(tenant)) as PolicyWithReviewers[];
+    const policies = (await getAllPoliciesQuery(organizationId)) as PolicyWithReviewers[];
     const totalPolicies = policies.length;
     const now = new Date();
 
@@ -294,10 +294,10 @@ export interface PolicyExecutiveSummary {
 
 const getPolicyExecutiveSummary = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<PolicyExecutiveSummary> => {
   try {
-    const policies = (await getAllPoliciesQuery(tenant)) as PolicyWithReviewers[];
+    const policies = (await getAllPoliciesQuery(organizationId)) as PolicyWithReviewers[];
     const totalPolicies = policies.length;
     const now = new Date();
 
@@ -454,7 +454,7 @@ interface PolicyTemplateResult {
 
 const searchPolicyTemplates = async (
   params: SearchPolicyTemplatesParams,
-  _tenant: string
+  _organizationId: number
 ): Promise<PolicyTemplateResult[]> => {
   try {
     let templates = [...policyTemplates];
@@ -514,10 +514,10 @@ interface TemplateRecommendation {
 
 const getTemplateRecommendations = async (
   params: GetTemplateRecommendationsParams,
-  tenant: string
+  organizationId: number
 ): Promise<TemplateRecommendation[]> => {
   try {
-    const policies = (await getAllPoliciesQuery(tenant)) as PolicyWithReviewers[];
+    const policies = (await getAllPoliciesQuery(organizationId)) as PolicyWithReviewers[];
 
     // Get all tags currently covered by existing policies
     const existingTags = new Set<string>();

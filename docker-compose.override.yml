@@ -42,5 +42,14 @@ services:
       - ./EvalServer/src:/app
       - eval_uploads-dev:/app/data/uploads
 
+  ai_gateway:
+    build:
+      context: ./AIGateway
+      dockerfile: Dockerfile.dev
+    # volumes:
+    #   - ./AIGateway/src:/app
+    env_file:
+      - ./.env.dev
+
 volumes:
   eval_uploads-dev:

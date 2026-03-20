@@ -10,9 +10,10 @@ import {
 } from "@mui/material";
 import { Suspense, lazy, useMemo, useState, useCallback, useEffect } from "react";
 import TablePaginationActions from "../../TablePagination";
-import TableHeader, { SortConfig } from "./TableHead";
+import StandardTableHead from "../StandardTableHead";
 import { EmptyState } from "../../EmptyState";
-import { ChevronsUpDown } from "lucide-react";
+import EmptyStateTip from "../../EmptyState/EmptyStateTip";
+import { ChevronsUpDown, FlaskConical, Play, Database, BarChart3 } from "lucide-react";
 
 const SelectorVertical = (props: React.SVGProps<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
@@ -29,10 +30,41 @@ import {
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
 import { IEvaluationTableProps, IEvaluationRow } from "../../../types/interfaces/i.table";
+import type { SortConfig, StandardColumn } from "../../../../domain/types/standardTable";
 
 const EvaluationTableBody = lazy(() => import("./TableBody"));
 
 const EVALUATION_SORTING_KEY = "verifywise_evaluation_sorting";
+
+// Map column labels to sortable field keys
+const columnSortKeys: Record<string, string> = {
+  "EXPERIMENT NAME": "name",
+  "MODEL": "model",
+  "JUDGE/SCORER": "judge",
+  "# PROMPTS": "prompts",
+  "DATASET": "dataset",
+  "DATE": "date",
+};
+
+// Column width definitions for consistent spacing
+const columnWidths: Record<string, string> = {
+  "EXPERIMENT NAME": "20%",
+  "MODEL": "12%",
+  "JUDGE/SCORER": "16%",
+  "# PROMPTS": "8%",
+  "DATASET": "14%",
+  "DATE": "16%",
+  "ACTION": "60px",
+};
+
+const toStandardColumns = (labels: string[]): StandardColumn[] =>
+  labels.map((label) => ({
+    id: columnSortKeys[label] || label.toLowerCase(),
+    label,
+    sortable: !!columnSortKeys[label],
+    width: columnWidths[label],
+    minWidth: label === "ACTION" ? "60px" : undefined,
+  }));
 
 const EvaluationTable: React.FC<IEvaluationTableProps> = ({
   columns,
@@ -46,6 +78,8 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
   onCopy,
   hidePagination = false,
 }) => {
+  const standardColumns = useMemo(() => toStandardColumns(columns), [columns]);
+
   const [rowsPerPage, setRowsPerPage] = useState(() =>
     getPaginationRowCount("evaluation", 10)
   );
@@ -56,7 +90,6 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // If saved state is empty, use the default
         if (!parsed.key || !parsed.direction) {
           return { key: "date", direction: "desc" };
         }
@@ -104,43 +137,35 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
           aValue = a.id.toLowerCase();
           bValue = b.id.toLowerCase();
           break;
-
         case "model":
           aValue = a.model.toLowerCase();
           bValue = b.model.toLowerCase();
           break;
-
         case "judge":
           aValue = (a.judge || "").toLowerCase();
           bValue = (b.judge || "").toLowerCase();
           break;
-
         case "prompts":
           aValue = a.prompts ?? 0;
           bValue = b.prompts ?? 0;
           break;
-
         case "dataset":
           aValue = a.dataset.toLowerCase();
           bValue = b.dataset.toLowerCase();
           break;
-
         case "date":
           aValue = a.date ? new Date(a.date).getTime() : 0;
           bValue = b.date ? new Date(b.date).getTime() : 0;
           break;
-
         default:
           return 0;
       }
 
-      // Handle string comparisons
       if (typeof aValue === "string" && typeof bValue === "string") {
         const comparison = aValue.localeCompare(bValue);
         return sortConfig.direction === "asc" ? comparison : -comparison;
       }
 
-      // Handle number comparisons
       if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
       if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
@@ -177,7 +202,11 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
       <TableContainer sx={{ mt: 10 }}>
         <Suspense fallback={<div>Loading...</div>}>
           <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
-            <TableHeader columns={columns} sortConfig={sortConfig} onSort={handleSort} />
+            <StandardTableHead
+              columns={standardColumns}
+              sortConfig={sortConfig}
+              onSort={handleSort}
+            />
             {sortedRows.length !== 0 ? (
               <>
                 <EvaluationTableBody
@@ -254,7 +283,23 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
               <TableBody>
                 <TableRow>
                   <TableCell colSpan={columns.length} sx={{ border: "none", p: 0 }}>
-                    <EmptyState message="There is currently no data in this table." />
+                    <EmptyState icon={FlaskConical} message="No experiments run yet. Create an experiment to evaluate model performance.">
+                      <EmptyStateTip
+                        icon={Play}
+                        title="Run your first experiment"
+                        description="Select a dataset, pick one or more models, and choose scorers. The system runs each prompt through the models and grades the outputs."
+                      />
+                      <EmptyStateTip
+                        icon={Database}
+                        title="Prepare a dataset first"
+                        description="Experiments need a dataset with prompts and expected outputs. Upload one in the datasets tab before running an experiment."
+                      />
+                      <EmptyStateTip
+                        icon={BarChart3}
+                        title="Compare results over time"
+                        description="Each experiment run is saved here with scores and metadata. Run the same dataset across different models or configs to track progress."
+                      />
+                    </EmptyState>
                   </TableCell>
                 </TableRow>
               </TableBody>

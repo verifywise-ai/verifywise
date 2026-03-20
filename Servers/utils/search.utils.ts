@@ -28,14 +28,12 @@ export const SEARCH_CONSTANTS = {
 };
 
 /**
- * Sanitize tenant ID to prevent SQL injection
- * Only allows alphanumeric characters, underscores, and hyphens
+ * Validate organization ID
  */
-function sanitizeTenantId(tenantId: string): string {
-  if (!/^[a-zA-Z0-9_-]+$/.test(tenantId)) {
-    throw new Error("Invalid tenant ID format");
+function validateOrganizationId(organizationId: number): void {
+  if (!organizationId || !Number.isInteger(organizationId) || organizationId <= 0) {
+    throw new Error("Invalid organization ID");
   }
-  return tenantId;
 }
 
 /**
@@ -110,7 +108,6 @@ export interface GroupedSearchResults {
  */
 export interface SearchOptions {
   query: string;
-  tenantId: string;
   organizationId: number;
   userId: number;
   limit?: number;
@@ -131,9 +128,7 @@ interface EntityConfig {
   route: (id: number | string) => string;
   requiresProjectAccess?: boolean;
   requiresVendorAccess?: boolean;
-  organizationColumn?: string;
   projectColumn?: string;
-  tenantColumn?: string;
   /** Column name for review_status filtering (if the entity supports it) */
   reviewStatusColumn?: string;
 }
@@ -157,7 +152,6 @@ const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     titleColumn: "title",
     icon: "Flag",
     route: (id) => `/tasks?taskId=${id}`,
-    organizationColumn: "organization_id",
   },
   vendors: {
     tableName: "vendors",
@@ -216,7 +210,6 @@ const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     titleColumn: "filename",
     icon: "Folder",
     route: (id) => `/file-manager?fileId=${id}`,
-    organizationColumn: "org_id",
     // Note: For file manager, we only search org-level files (project_id IS NULL)
     // This is handled via additionalWhereClause in the search query
     reviewStatusColumn: "review_status",
@@ -296,13 +289,13 @@ function getMatchedField(row: any, columns: string[], query: string): { field: s
 /**
  * Get user's accessible project IDs
  */
-async function getUserProjectIds(tenantId: string, userId: number): Promise<number[]> {
+async function getUserProjectIds(organizationId: number, userId: number): Promise<number[]> {
   try {
-    const safeTenantId = sanitizeTenantId(tenantId);
+    validateOrganizationId(organizationId);
     const result = await sequelize.query<{ project_id: number }>(
-      `SELECT project_id FROM "${safeTenantId}".projects_members WHERE user_id = :userId`,
+      `SELECT project_id FROM projects_members WHERE user_id = :userId AND organization_id = :organizationId`,
       {
-        replacements: { userId },
+        replacements: { userId, organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -316,15 +309,15 @@ async function getUserProjectIds(tenantId: string, userId: number): Promise<numb
 /**
  * Get vendor IDs accessible to user through their projects
  */
-async function getUserVendorIds(tenantId: string, projectIds: number[]): Promise<number[]> {
+async function getUserVendorIds(organizationId: number, projectIds: number[]): Promise<number[]> {
   if (projectIds.length === 0) return [];
 
   try {
-    const safeTenantId = sanitizeTenantId(tenantId);
+    validateOrganizationId(organizationId);
     const result = await sequelize.query<{ vendor_id: number }>(
-      `SELECT DISTINCT vendor_id FROM "${safeTenantId}".vendors_projects WHERE project_id IN (:projectIds)`,
+      `SELECT DISTINCT vendor_id FROM vendors_projects WHERE project_id IN (:projectIds) AND organization_id = :organizationId`,
       {
-        replacements: { projectIds },
+        replacements: { projectIds, organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -345,15 +338,15 @@ async function searchEntity(
   projectIds: number[],
   vendorIds: number[]
 ): Promise<SearchResult[]> {
-  const { query, tenantId, organizationId, limit = 20, reviewStatus } = options;
+  const { query, organizationId, limit = 20, reviewStatus } = options;
 
   // If a reviewStatus filter is active, skip entities that don't have a review_status column
   if (reviewStatus && !config.reviewStatusColumn) {
     return [];
   }
 
-  // Sanitize tenantId and escape query for ILIKE
-  const safeTenantId = sanitizeTenantId(tenantId);
+  // Validate organizationId and escape query for ILIKE
+  validateOrganizationId(organizationId);
   const hasTextQuery = query && query.trim().length >= SEARCH_CONSTANTS.MIN_QUERY_LENGTH;
 
   // Build WHERE conditions
@@ -383,17 +376,9 @@ async function searchEntity(
     }
   }
 
-  // Add organization filter if applicable
-  if (config.organizationColumn) {
-    conditions.push(`${config.organizationColumn} = :organizationId`);
-    replacements.organizationId = organizationId;
-  }
-
-  // Add tenant filter if applicable (for tables with explicit tenant column)
-  if (config.tenantColumn) {
-    conditions.push(`${config.tenantColumn} = :tenantId`);
-    replacements.tenantId = tenantId;
-  }
+  // Always add organization filter for shared-schema multi-tenancy
+  conditions.push(`organization_id = :organizationId`);
+  replacements.organizationId = organizationId;
 
   // Add project access filter if applicable
   if (config.requiresProjectAccess) {
@@ -441,7 +426,7 @@ async function searchEntity(
   // Build and execute query
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const sql = `
-    SELECT DISTINCT * FROM "${safeTenantId}".${safeTableName}
+    SELECT DISTINCT * FROM ${safeTableName}
     ${whereClause}
     LIMIT :limit
   `;
@@ -477,7 +462,7 @@ async function searchEntity(
  * Search across all entities
  */
 export async function wiseSearch(options: SearchOptions): Promise<GroupedSearchResults> {
-  const { query, tenantId, userId, reviewStatus } = options;
+  const { query, organizationId, userId, reviewStatus } = options;
 
   // Minimum characters required for search (skip check if a reviewStatus filter is active)
   const hasTextQuery = query && query.trim().length >= SEARCH_CONSTANTS.MIN_QUERY_LENGTH;
@@ -487,10 +472,10 @@ export async function wiseSearch(options: SearchOptions): Promise<GroupedSearchR
   }
 
   // Get user's accessible project IDs for permission filtering
-  const projectIds = await getUserProjectIds(tenantId, userId);
+  const projectIds = await getUserProjectIds(organizationId, userId);
 
   // Get vendor IDs accessible through user's projects
-  const vendorIds = await getUserVendorIds(tenantId, projectIds);
+  const vendorIds = await getUserVendorIds(organizationId, projectIds);
 
   // Search all entities in parallel
   const searchPromises = Object.entries(ENTITY_CONFIGS).map(async ([entityType, config]) => {

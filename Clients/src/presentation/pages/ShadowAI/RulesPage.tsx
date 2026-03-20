@@ -30,7 +30,7 @@ const Alert = React.lazy(() => import("../../components/Alert"));
 import Toggle from "../../components/Inputs/Toggle";
 import Chip from "../../components/Chip";
 import TabContext from "@mui/lab/TabContext";
-import { Trash2, Info } from "lucide-react";
+import { Trash2, Info, ShieldCheck, Bell, Zap, Mail, Filter } from "lucide-react";
 import TabBar from "../../components/TabBar";
 import TablePaginationActions from "../../components/TablePagination";
 import singleTheme from "../../themes/v1SingleTheme";
@@ -48,6 +48,7 @@ import {
   ShadowAiTriggerType,
 } from "../../../domain/interfaces/i.shadowAi";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
@@ -393,9 +394,26 @@ export default function RulesPage() {
       ) : viewMode === "rules" ? (
         rules.length === 0 ? (
           <EmptyState
-            message="No rules configured yet. Create a rule to get alerted about Shadow AI activity."
+            icon={ShieldCheck}
+            message="No rules configured yet. Create rules to automate alerts and enforce AI usage policies."
             showBorder
-          />
+          >
+            <EmptyStateTip
+              icon={Zap}
+              title="Trigger-based alerts"
+              description="Set rules that fire when specific conditions are met: new tool detected, usage threshold exceeded, or data sensitivity flags triggered."
+            />
+            <EmptyStateTip
+              icon={Mail}
+              title="Notify the right people"
+              description="Route alerts to security teams, managers, or compliance officers. Each rule can have different notification recipients."
+            />
+            <EmptyStateTip
+              icon={Filter}
+              title="Common rules to start with"
+              description="Alert on first use of any new AI tool, flag tools accessing sensitive data, notify when usage exceeds a set threshold per department."
+            />
+          </EmptyState>
         ) : (
           <Stack gap="12px">
             {rules.map((rule) => (
@@ -495,6 +513,7 @@ export default function RulesPage() {
         )
       ) : alerts.length === 0 ? (
         <EmptyState
+          icon={Bell}
           message="No alerts have been triggered yet."
           showBorder
         />

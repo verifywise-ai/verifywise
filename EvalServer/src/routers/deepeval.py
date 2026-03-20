@@ -2,6 +2,7 @@
 DeepEval Router
 
 Endpoints for running DeepEval LLM evaluations.
+Shared-schema multi-tenancy: Uses organization_id from request.state.
 """
 
 from fastapi import APIRouter, BackgroundTasks, Request, Body, HTTPException, UploadFile, File, Form
@@ -36,6 +37,14 @@ from controllers.deepeval import (
 )
 
 router = APIRouter()
+
+
+def _get_organization_id(request: Request) -> int:
+    """Extract organization_id from request state (set by middleware)."""
+    org_id = getattr(request.state, "organization_id", None)
+    if org_id is None:
+        raise HTTPException(status_code=400, detail="Missing organization id")
+    return org_id
 
 
 @router.post("/evaluate")
@@ -79,10 +88,11 @@ async def create_deepeval_evaluation(
         "selectedScorers": ["scorer_id_1", "scorer_id_2"]  // optional - if not specified, all enabled scorers will run
     }
     """
+    organization_id = _get_organization_id(request)
     return await create_deepeval_evaluation_controller(
         background_tasks=background_tasks,
         config_data=config_data,
-        tenant=request.headers["x-tenant-id"]
+        organization_id=organization_id
     )
 
 
@@ -100,9 +110,10 @@ async def get_evaluation_status(eval_id: str, request: Request):
         "updated_at": "2025-01-30T12:01:30"
     }
     """
+    organization_id = _get_organization_id(request)
     return await get_deepeval_evaluation_status_controller(
         eval_id,
-        request.state.tenant
+        organization_id
     )
 
 
@@ -133,9 +144,10 @@ async def get_evaluation_results(eval_id: str, request: Request):
         }
     }
     """
+    organization_id = _get_organization_id(request)
     return await get_deepeval_evaluation_results_controller(
         eval_id,
-        request.state.tenant
+        organization_id
     )
 
 
@@ -159,8 +171,9 @@ async def get_all_evaluations(request: Request):
         ]
     }
     """
+    organization_id = _get_organization_id(request)
     return await get_all_deepeval_evaluations_controller(
-        request.state.tenant
+        organization_id
     )
 
 
@@ -175,9 +188,10 @@ async def delete_evaluation(eval_id: str, request: Request):
         "eval_id": "deepeval_20250130_120000"
     }
     """
+    organization_id = _get_organization_id(request)
     return await delete_deepeval_evaluation_controller(
         eval_id,
-        request.state.tenant
+        organization_id
     )
 
 
@@ -245,10 +259,11 @@ async def upload_dataset(
     }
     """
     # Extract user_id from headers for created_by tracking
+    organization_id = _get_organization_id(request)
     user_id = request.headers.get("x-user-id")
     return await upload_deepeval_dataset_controller(
         dataset=dataset,
-        tenant=request.headers["x-tenant-id"],
+        organization_id=organization_id,
         org_id=org_id,
         dataset_type=dataset_type,
         turn_type=turn_type,
@@ -273,21 +288,21 @@ async def read_dataset(path: str):
 @router.get("/datasets/uploads")
 async def list_uploaded_datasets(request: Request):
     """
-    List uploaded JSON datasets for the current tenant.
-    Docker: /app/data/uploads/{tenant}
-    Local: EvaluationModule/data/uploads/{tenant}
+    List uploaded JSON datasets for the current organization.
+    Docker: /app/data/uploads/{organization_id}
+    Local: EvaluationModule/data/uploads/{organization_id}
     """
     try:
-        tenant = request.state.tenant
+        organization_id = _get_organization_id(request)
         uploads_root = _get_uploads_root()
-        uploads_dir = uploads_root / tenant
+        uploads_dir = uploads_root / str(organization_id)
         uploads = []
         if uploads_dir.is_dir():
             for p in uploads_dir.glob("*.json"):
                 stat = p.stat()
                 uploads.append({
                     "name": p.name,
-                    "path": str((Path("data") / "uploads" / tenant / p.name).as_posix()),
+                    "path": str((Path("data") / "uploads" / str(organization_id) / p.name).as_posix()),
                     "size": stat.st_size,
                     "modifiedAt": stat.st_mtime,
                 })
@@ -298,22 +313,22 @@ async def list_uploaded_datasets(request: Request):
 @router.get("/datasets/user")
 async def list_user_datasets(request: Request, org_id: str | None = None):
     """
-    List user-uploaded datasets from DB for the current tenant.
+    List user-uploaded datasets from DB for the current organization.
     Optionally filter by org_id.
     """
-    tenant = request.state.tenant
-    return await list_user_datasets_controller(tenant=tenant, org_id=org_id)
+    organization_id = _get_organization_id(request)
+    return await list_user_datasets_controller(organization_id=organization_id, org_id=org_id)
 
 @router.delete("/datasets/user")
 async def delete_user_datasets(request: Request):
     """
-    Delete user-uploaded datasets from DB and filesystem for the current tenant.
+    Delete user-uploaded datasets from DB and filesystem for the current organization.
     Expects JSON body with {"paths": ["path1", "path2", ...]}
     """
-    tenant = request.state.tenant
+    organization_id = _get_organization_id(request)
     body = await request.json()
     paths = body.get("paths", [])
-    return await delete_user_datasets_controller(tenant=tenant, paths=paths)
+    return await delete_user_datasets_controller(organization_id=organization_id, paths=paths)
 
 
 # ==================== SCORERS ====================
@@ -321,10 +336,10 @@ async def delete_user_datasets(request: Request):
 @router.get("/scorers")
 async def list_scorers_endpoint(request: Request, org_id: str | None = None):
     """
-    List scorer definitions for the current tenant (optionally for a single project).
+    List scorer definitions for the current organization (optionally for a single project).
     """
-    tenant = request.state.tenant
-    return await list_deepeval_scorers_controller(tenant=tenant, org_id=org_id)
+    organization_id = _get_organization_id(request)
+    return await list_deepeval_scorers_controller(organization_id=organization_id, org_id=org_id)
 
 
 @router.post("/scorers")
@@ -332,13 +347,13 @@ async def create_scorer_endpoint(request: Request, payload: dict = Body(...)):
     """
     Create a new scorer definition.
     """
-    tenant = request.state.tenant
+    organization_id = _get_organization_id(request)
     # Add user_id from headers if not already in payload
     if "createdBy" not in payload:
         user_id = request.headers.get("x-user-id")
         if user_id:
             payload["createdBy"] = user_id
-    return await create_deepeval_scorer_controller(tenant=tenant, payload=payload)
+    return await create_deepeval_scorer_controller(organization_id=organization_id, payload=payload)
 
 
 @router.put("/scorers/{scorer_id}")
@@ -346,8 +361,8 @@ async def update_scorer_endpoint(request: Request, scorer_id: str, payload: dict
     """
     Update an existing scorer definition.
     """
-    tenant = request.state.tenant
-    return await update_deepeval_scorer_controller(scorer_id, tenant=tenant, payload=payload)
+    organization_id = _get_organization_id(request)
+    return await update_deepeval_scorer_controller(scorer_id, organization_id=organization_id, payload=payload)
 
 
 @router.delete("/scorers/{scorer_id}")
@@ -355,15 +370,15 @@ async def delete_scorer_endpoint(request: Request, scorer_id: str):
     """
     Delete a scorer definition.
     """
-    tenant = request.state.tenant
-    return await delete_deepeval_scorer_controller(scorer_id, tenant=tenant)
+    organization_id = _get_organization_id(request)
+    return await delete_deepeval_scorer_controller(scorer_id, organization_id=organization_id)
 
 
 @router.post("/scorers/{scorer_id}/test")
 async def test_scorer_endpoint(request: Request, scorer_id: str, payload: dict = Body(...)):
     """
     Test a scorer with sample input/output.
-    
+
     Expected payload:
     {
       "input": "The source text...",
@@ -371,8 +386,8 @@ async def test_scorer_endpoint(request: Request, scorer_id: str, payload: dict =
       "expected": "Optional expected output..."
     }
     """
-    tenant = request.state.tenant
-    return await test_deepeval_scorer_controller(scorer_id, tenant=tenant, payload=payload)
+    organization_id = _get_organization_id(request)
+    return await test_deepeval_scorer_controller(scorer_id, organization_id=organization_id, payload=payload)
 
 
 # ==================== MODELS ====================
@@ -380,10 +395,10 @@ async def test_scorer_endpoint(request: Request, scorer_id: str, payload: dict =
 @router.get("/models")
 async def list_models_endpoint(request: Request, org_id: str | None = None):
     """
-    List saved model configurations for the current tenant.
+    List saved model configurations for the current organization.
     """
-    tenant = request.state.tenant
-    return await list_deepeval_models_controller(tenant=tenant, org_id=org_id)
+    organization_id = _get_organization_id(request)
+    return await list_deepeval_models_controller(organization_id=organization_id, org_id=org_id)
 
 
 @router.post("/models")
@@ -391,13 +406,13 @@ async def create_model_endpoint(request: Request, payload: dict = Body(...)):
     """
     Create a new saved model configuration.
     """
-    tenant = request.state.tenant
+    organization_id = _get_organization_id(request)
     # Add user_id from headers if not already in payload
     if "createdBy" not in payload:
         user_id = request.headers.get("x-user-id")
         if user_id:
             payload["createdBy"] = user_id
-    return await create_deepeval_model_controller(tenant=tenant, payload=payload)
+    return await create_deepeval_model_controller(organization_id=organization_id, payload=payload)
 
 
 @router.put("/models/{model_id}")
@@ -405,8 +420,8 @@ async def update_model_endpoint(request: Request, model_id: str, payload: dict =
     """
     Update an existing saved model configuration.
     """
-    tenant = request.state.tenant
-    return await update_deepeval_model_controller(model_id, tenant=tenant, payload=payload)
+    organization_id = _get_organization_id(request)
+    return await update_deepeval_model_controller(model_id, organization_id=organization_id, payload=payload)
 
 
 @router.delete("/models/{model_id}")
@@ -414,8 +429,8 @@ async def delete_model_endpoint(request: Request, model_id: str):
     """
     Delete a saved model configuration.
     """
-    tenant = request.state.tenant
-    return await delete_deepeval_model_controller(model_id, tenant=tenant)
+    organization_id = _get_organization_id(request)
+    return await delete_deepeval_model_controller(model_id, organization_id=organization_id)
 
 
 # ==================== LATEST MODEL/SCORER FOR EXPERIMENTS ====================
@@ -426,8 +441,8 @@ async def get_latest_model_endpoint(request: Request, org_id: str | None = None)
     Get the most recently added/updated model configuration.
     Used for auto-populating experiment forms.
     """
-    tenant = request.state.tenant
-    return await get_latest_model_controller(tenant=tenant, org_id=org_id)
+    organization_id = _get_organization_id(request)
+    return await get_latest_model_controller(organization_id=organization_id, org_id=org_id)
 
 
 @router.get("/scorers/latest")
@@ -436,5 +451,5 @@ async def get_latest_scorer_endpoint(request: Request, org_id: str | None = None
     Get the most recently added/updated scorer (judge) configuration.
     Used for auto-populating experiment forms.
     """
-    tenant = request.state.tenant
-    return await get_latest_scorer_controller(tenant=tenant, org_id=org_id)
+    organization_id = _get_organization_id(request)
+    return await get_latest_scorer_controller(organization_id=organization_id, org_id=org_id)

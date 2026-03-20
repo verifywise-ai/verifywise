@@ -5,7 +5,7 @@ import { QueryTypes, Transaction } from "sequelize";
 
 export const getVendorRisksByProjectIdQuery = async (
   projectId: number,
-  tenant: string,
+  organizationId: number,
   filter: "active" | "deleted" | "all" = "active"
 ): Promise<IVendorRisk[]> => {
   let whereClause = "";
@@ -22,9 +22,9 @@ export const getVendorRisksByProjectIdQuery = async (
   }
 
   const vendorRisks = await sequelize.query(
-    `SELECT * FROM "${tenant}".vendorRisks WHERE vendor_id IN (SELECT vendor_id FROM "${tenant}".vendors_projects WHERE project_id = :project_id) ${whereClause} ORDER BY created_at DESC, id ASC;`,
+    `SELECT * FROM vendorRisks WHERE organization_id = :organizationId AND vendor_id IN (SELECT vendor_id FROM vendors_projects WHERE organization_id = :organizationId AND project_id = :project_id) ${whereClause} ORDER BY created_at DESC, id ASC;`,
     {
-      replacements: { project_id: projectId },
+      replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: VendorRiskModel,
     }
@@ -34,7 +34,7 @@ export const getVendorRisksByProjectIdQuery = async (
 
 export const getVendorRisksByVendorIdQuery = async (
   vendorId: number,
-  tenant: string,
+  organizationId: number,
   filter: "active" | "deleted" | "all" = "active"
 ): Promise<IVendorRisk[]> => {
   let whereClause = "";
@@ -51,9 +51,9 @@ export const getVendorRisksByVendorIdQuery = async (
   }
 
   const vendorRisks = await sequelize.query(
-    `SELECT * FROM "${tenant}".vendorRisks WHERE vendor_id = :vendor_id ${whereClause} ORDER BY created_at DESC, id ASC;`,
+    `SELECT * FROM vendorRisks WHERE organization_id = :organizationId AND vendor_id = :vendor_id ${whereClause} ORDER BY created_at DESC, id ASC;`,
     {
-      replacements: { vendor_id: vendorId },
+      replacements: { organizationId, vendor_id: vendorId },
       mapToModel: true,
       model: VendorRiskModel,
     }
@@ -63,16 +63,16 @@ export const getVendorRisksByVendorIdQuery = async (
 
 export const getVendorRiskByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   includeDeleted: boolean = false
 ): Promise<IVendorRisk | null> => {
   const whereClause = includeDeleted
-    ? "WHERE id = :id"
-    : "WHERE id = :id AND is_deleted = false";
+    ? "WHERE organization_id = :organizationId AND id = :id"
+    : "WHERE organization_id = :organizationId AND id = :id AND is_deleted = false";
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".vendorRisks ${whereClause} ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM vendorRisks ${whereClause} ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: VendorRiskModel,
     }
@@ -82,19 +82,20 @@ export const getVendorRiskByIdQuery = async (
 
 export const createNewVendorRiskQuery = async (
   vendorRisk: IVendorRisk,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<VendorRiskModel> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".vendorRisks (
-      vendor_id, order_no, risk_description, impact_description,
+    `INSERT INTO vendorRisks (
+      organization_id, vendor_id, order_no, risk_description, impact_description,
       likelihood, risk_severity, action_plan, action_owner, risk_level, is_demo
     ) VALUES (
-      :vendor_id, :order_no, :risk_description, :impact_description,
+      :organization_id, :vendor_id, :order_no, :risk_description, :impact_description,
       :likelihood, :risk_severity, :action_plan, :action_owner, :risk_level, :is_demo
     ) RETURNING *`,
     {
       replacements: {
+        organization_id: organizationId,
         vendor_id: vendorRisk.vendor_id,
         order_no: vendorRisk.order_no || null,
         risk_description: vendorRisk.risk_description,
@@ -118,10 +119,10 @@ export const createNewVendorRiskQuery = async (
 export const updateVendorRiskByIdQuery = async (
   id: number,
   vendorRisk: Partial<VendorRiskModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<VendorRiskModel | null> => {
-  const updateVendorRisk: Partial<Record<keyof VendorRiskModel, any>> = {};
+  const updateVendorRisk: Partial<Record<keyof VendorRiskModel, any>> & { organizationId?: number } = {};
   const setClause = [
     "vendor_id",
     "risk_description",
@@ -146,8 +147,9 @@ export const updateVendorRiskByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE "${tenant}".vendorrisks SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE vendorrisks SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
+  updateVendorRisk.organizationId = organizationId;
   updateVendorRisk.id = id;
 
   const result = await sequelize.query(query, {
@@ -163,13 +165,13 @@ export const updateVendorRiskByIdQuery = async (
 
 export const deleteVendorRiskByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `UPDATE "${tenant}".vendorrisks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND is_deleted = false RETURNING *`,
+    `UPDATE vendorrisks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: VendorRiskModel,
       type: QueryTypes.UPDATE,
@@ -181,13 +183,13 @@ export const deleteVendorRiskByIdQuery = async (
 
 export const deleteVendorRisksForVendorQuery = async (
   vendorId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".vendorrisks WHERE vendor_id = :vendor_id RETURNING id`,
+    `DELETE FROM vendorrisks WHERE organization_id = :organizationId AND vendor_id = :vendor_id RETURNING id`,
     {
-      replacements: { vendor_id: vendorId },
+      replacements: { organizationId, vendor_id: vendorId },
       mapToModel: true,
       model: VendorRiskModel,
       type: QueryTypes.UPDATE,
@@ -198,16 +200,16 @@ export const deleteVendorRisksForVendorQuery = async (
 };
 
 export const getAllVendorRisksAllProjectsQuery = async (
-  tenant: string,
+  organizationId: number,
   filter: "active" | "deleted" | "all" = "active"
 ) => {
   let whereClause = "";
   switch (filter) {
     case "active":
-      whereClause = "WHERE vr.is_deleted = false";
+      whereClause = "AND vr.is_deleted = false";
       break;
     case "deleted":
-      whereClause = "WHERE vr.is_deleted = true";
+      whereClause = "AND vr.is_deleted = true";
       break;
     case "all":
       whereClause = "";
@@ -234,13 +236,14 @@ export const getAllVendorRisksAllProjectsQuery = async (
       v.vendor_name,
       vp.project_id AS project_id,
       p.project_title AS project_title
-    FROM "${tenant}".vendorRisks AS vr
-    JOIN "${tenant}".vendors AS v ON vr.vendor_id = v.id
-    LEFT JOIN "${tenant}".vendors_projects AS vp ON v.id = vp.vendor_id
-    LEFT JOIN "${tenant}".projects AS p ON vp.project_id = p.id
-    ${whereClause}
+    FROM vendorRisks AS vr
+    JOIN vendors AS v ON vr.vendor_id = v.id AND v.organization_id = :organizationId
+    LEFT JOIN vendors_projects AS vp ON v.id = vp.vendor_id AND vp.organization_id = :organizationId
+    LEFT JOIN projects AS p ON vp.project_id = p.id AND p.organization_id = :organizationId
+    WHERE vr.organization_id = :organizationId ${whereClause}
     ORDER BY vp.project_id, v.id, vr.id`,
     {
+      replacements: { organizationId },
       type: QueryTypes.SELECT,
     }
   );

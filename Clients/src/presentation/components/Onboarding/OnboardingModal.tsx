@@ -17,6 +17,7 @@ import TaskWorkflowStep from "./steps/TaskWorkflowStep";
 import SampleProjectStep from "./steps/SampleProjectStep";
 import InviteTeamStep from "./steps/InviteTeamStep";
 import CompletionStep from "./steps/CompletionStep";
+import { brand, text, border as borderPalette, status } from "../../themes/palette";
 
 const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onComplete,
@@ -162,6 +163,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   return (
     <>
       <Box
+        className="confirmation-backdrop"
         sx={{
           position: "fixed",
           top: 0,
@@ -195,6 +197,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
         }}
       >
         <Box
+          role="dialog"
+          aria-modal="true"
           sx={{
             backgroundColor: "white",
             borderRadius: "8px",
@@ -250,7 +254,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     text="Skip onboarding"
                     onClick={handleSkipStep}
                     sx={{
-                      color: "#6B7280",
+                      color: `${status.default.text}`,
                       "&:hover": {
                         backgroundColor: "transparent",
                         color: "#374151",
@@ -266,10 +270,10 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onClick={handleBack}
                         startIcon={<ArrowLeft size={16} />}
                         sx={{
-                          borderColor: "#D0D5DD",
-                          color: "#344054",
+                          borderColor: `${borderPalette.dark}`,
+                          color: `${text.secondary}`,
                           "&:hover": {
-                            borderColor: "#98A2B3",
+                            borderColor: `${text.muted}`,
                           },
                         }}
                       />
@@ -280,9 +284,9 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                       onClick={handleNext}
                       endIcon={<ArrowRight size={16} />}
                       sx={{
-                        backgroundColor: "#13715B",
+                        backgroundColor: `${brand.primary}`,
                         "&:hover": {
-                          backgroundColor: "#0F5A47",
+                          backgroundColor: `${brand.primaryHover}`,
                         },
                       }}
                     />

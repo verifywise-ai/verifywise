@@ -1,0 +1,41 @@
+<mjml>
+  <mj-head>
+    <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:300,500"></mj-font>
+    <mj-attributes>
+      <mj-all font-family="Roboto, Helvetica, sans-serif"></mj-all>
+      <mj-text font-weight="300" font-size="14px" color="#616161" line-height="24px"></mj-text>
+      <mj-section padding="0px"></mj-section>
+    </mj-attributes>
+  </mj-head>
+  <mj-body width="100%">
+    <mj-section text-align="left" padding="0px">
+      <mj-column width="100%" vertical-align="top">
+        <mj-text align="left">
+          <h2 style="color: #2c3e50; margin-bottom: 20px;">AI Gateway configuration change</h2>
+          <p>Hi {{recipient_name}},</p>
+          <p>{{change_description}}</p>
+          <div style="background-color: #F0F4F5; padding: 16px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #13715B;">
+            <p style="margin: 0 0 8px 0; font-weight: 500; color: #2c3e50;">{{entity_type}}: {{entity_name}}</p>
+            <p style="margin: 0; color: #667085; font-size: 13px;">{{change_detail}}</p>
+          </div>
+          <table style="width: 100%; margin: 16px 0; font-size: 13px;">
+            <tr>
+              <td style="color: #667085; padding: 4px 0;">Changed by:</td>
+              <td style="color: #344054; padding: 4px 0;"><strong>{{changed_by}}</strong></td>
+            </tr>
+            <tr>
+              <td style="color: #667085; padding: 4px 0;">Time:</td>
+              <td style="color: #344054; padding: 4px 0;"><strong>{{changed_at}}</strong></td>
+            </tr>
+          </table>
+          <p style="margin: 20px 0;">
+            <a href="{{action_url}}" style="background-color: #13715B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">{{action_label}}</a>
+          </p>
+          <p style="margin-top: 30px; color: #7f8c8d; font-size: 12px;">
+            Sent from VerifyWise
+          </p>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

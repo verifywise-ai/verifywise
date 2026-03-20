@@ -1,8 +1,9 @@
 import type { EntityType } from '../EntityNode';
+import { brand } from "../../../themes/palette";
 
 // Entity type colors following VerifyWise design system
 export const entityColors: Record<EntityType, string> = {
-  useCase: '#13715B',     // Primary green
+  useCase: `${brand.primary}`,     // Primary green
   model: '#2196F3',       // Blue
   risk: '#f44336',        // Red
   vendor: '#9c27b0',      // Purple

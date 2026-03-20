@@ -88,6 +88,7 @@ import {
   ChevronDown as ChevronDownIcon,
   ChevronUp as ChevronUpIcon,
   Search,
+  Upload,
 } from "lucide-react";
 
 import Select from "../../components/Inputs/Select";
@@ -97,12 +98,14 @@ import { HistorySidebar } from "../../components/Common/HistorySidebar";
 import { usePolicyChangeHistory } from "../../../application/hooks/usePolicyChangeHistory";
 import PolicyForm from "../../components/Policies/PolicyForm";
 import InsertLinkModal from "../../components/Modals/InsertLinkModal/InsertLinkModal";
+import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import { uploadFileToManager } from "../../../application/repository/file.repository";
 import {
   getPolicyById,
   getAllTags,
   createPolicy,
   updatePolicy,
+  importDocxToHtml,
 } from "../../../application/repository/policy.repository";
 import useUsers from "../../../application/hooks/useUsers";
 import { User } from "../../../domain/types/User";
@@ -196,7 +199,7 @@ const AuthImage: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }
             position: "relative",
             display: "inline-block",
             margin: "12px 0",
-            outline: selected ? "2px solid #13715B" : "none",
+            outline: selected ? "2px solid brand.primary" : "none",
             borderRadius: 8,
           }}
         >
@@ -220,8 +223,8 @@ const AuthImage: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }
                 bottom: -5,
                 width: 12,
                 height: 12,
-                backgroundColor: "#13715B",
-                border: "2px solid #fff",
+                backgroundColor: "brand.primary",
+                border: "2px solid background.main",
                 borderRadius: 2,
                 cursor: "nwse-resize",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
@@ -341,7 +344,7 @@ function normalizeSlateHtml(html: string): string {
   return n;
 }
 
-const sanitizeOptions: DOMPurify.Config = {
+const sanitizeOptions: Parameters<typeof DOMPurify.sanitize>[1] = {
   ALLOWED_TAGS: [
     "p", "br", "strong", "b", "em", "i", "u",
     "h1", "h2", "h3", "h4", "h5", "h6",
@@ -442,6 +445,11 @@ export default function PolicyEditorPage() {
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isExportingDOCX, setIsExportingDOCX] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [exportAnchorEl, setExportAnchorEl] = useState<HTMLElement | null>(null);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const docxInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errors, setErrors] = useState<PolicyFormErrors>({});
@@ -741,7 +749,7 @@ export default function PolicyEditorPage() {
 
   // ── Color palette ────────────────────────────────────────────────
   const colorPalette = [
-    "#000000", "#344054", "#475467", "#667085",
+    "text.black", "text.secondary", "text.tertiary", "text.icon",
     "#dc2626", "#ea580c", "#d97706", "#ca8a04",
     "#16a34a", "#059669", "#0d9488", "#0891b2",
     "#2563eb", "#4f46e5", "#7c3aed", "#9333ea",
@@ -1312,6 +1320,54 @@ export default function PolicyEditorPage() {
     }
   };
 
+  // ── DOCX import ──────────────────────────────────────────────────
+  const MAX_DOCX_SIZE = 10 * 1024 * 1024; // 10 MB (matches backend multer limit)
+
+  const handleDocxFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ""; // reset so same file can be re-selected
+
+    if (file.size > MAX_DOCX_SIZE) {
+      setImportError("File is too large. Maximum size is 10 MB.");
+      return;
+    }
+
+    // If editor has content, show confirmation dialog
+    if (editor && !editor.isEmpty) {
+      setPendingImportFile(file);
+    } else {
+      processDocxImport(file);
+    }
+  };
+
+  const processDocxImport = async (file: File) => {
+    setIsImporting(true);
+    setImportError(null);
+    try {
+      const { html } = await importDocxToHtml(file);
+      const sanitized = DOMPurify.sanitize(html, sanitizeOptions);
+      if (editor) {
+        editor.commands.setContent(sanitized);
+      }
+    } catch {
+      setImportError("Failed to import DOCX file. Please try again.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const confirmImport = async () => {
+    if (pendingImportFile) {
+      await processDocxImport(pendingImportFile);
+    }
+    setPendingImportFile(null);
+  };
+
+  const cancelImport = () => {
+    setPendingImportFile(null);
+  };
+
   // ── Loading / error states ────────────────────────────────────────
   if (isLoading) {
     return (
@@ -1336,7 +1392,7 @@ export default function PolicyEditorPage() {
             borderRadius: "4px",
           }}
         >
-          <Typography sx={{ color: "#344054", mb: 2 }}>{loadError}</Typography>
+          <Typography sx={{ color: "text.secondary", mb: 2 }}>{loadError}</Typography>
           <CustomizableButton
             variant="outlined"
             text="Back to policies"
@@ -1427,14 +1483,14 @@ export default function PolicyEditorPage() {
                 sx={{
                   padding: "4px",
                   borderRadius: "4px",
-                  color: "#98A2B3",
-                  "&:hover": { backgroundColor: "#F2F4F7", color: "#344054" },
+                  color: "text.muted",
+                  "&:hover": { backgroundColor: "#F2F4F7", color: "text.secondary" },
                 }}
               >
                 <ArrowLeft size={18} />
               </IconButton>
             </Tooltip>
-            <Typography sx={{ fontSize: 16, color: "#344054", fontWeight: 600 }}>
+            <Typography sx={{ fontSize: 16, color: "text.secondary", fontWeight: 600 }}>
               {pageTitle}
             </Typography>
           </Stack>
@@ -1463,7 +1519,7 @@ export default function PolicyEditorPage() {
                   onClick={() => setIsHistorySidebarOpen((prev) => !prev)}
                   size="small"
                   sx={{
-                    color: isHistorySidebarOpen ? "#13715B" : "#98A2B3",
+                    color: isHistorySidebarOpen ? "brand.primary" : "text.muted",
                     padding: "4px",
                     borderRadius: "4px",
                     backgroundColor: isHistorySidebarOpen
@@ -1481,83 +1537,146 @@ export default function PolicyEditorPage() {
               </Tooltip>
             )}
 
-            {/* Export buttons */}
+            {/* Export dropdown + Import button */}
             {!isNew && policy?.id && (
               <>
-                <Tooltip title="Download as PDF" arrow>
-                  <span>
-                    <CustomizableButton
-                      variant="outlined"
-                      text={isExportingPDF ? "Exporting..." : "PDF"}
-                      isDisabled={isExportingPDF || isExportingDOCX}
-                      sx={{
-                        backgroundColor: "#fff",
-                        border: "1px solid #D0D5DD",
-                        color: "#344054",
-                        gap: 1,
-                        minWidth: "80px",
-                        "&:hover": {
-                          backgroundColor: "#F9FAFB",
-                          borderColor: "#98A2B3",
-                        },
-                        "&:disabled": {
-                          backgroundColor: "#F9FAFB",
-                          borderColor: "#E4E7EC",
-                          color: "#98A2B3",
-                        },
+                <CustomizableButton
+                  variant="outlined"
+                  text={
+                    isExportingPDF
+                      ? "Exporting PDF..."
+                      : isExportingDOCX
+                        ? "Exporting Word..."
+                        : "Export"
+                  }
+                  isDisabled={isExportingPDF || isExportingDOCX}
+                  sx={{
+                    backgroundColor: "background.main",
+                    border: "1px solid #d0d5dd",
+                    color: "text.secondary",
+                    gap: 1,
+                    minWidth: "90px",
+                    "&:hover": {
+                      backgroundColor: "background.accent",
+                      borderColor: "text.muted",
+                    },
+                    "&:disabled": {
+                      backgroundColor: "background.accent",
+                      borderColor: "#E4E7EC",
+                      color: "text.muted",
+                    },
+                  }}
+                  onClick={(e: React.MouseEvent<HTMLElement>) =>
+                    setExportAnchorEl(e.currentTarget)
+                  }
+                  icon={
+                    isExportingPDF || isExportingDOCX ? (
+                      <Loader2
+                        size={16}
+                        style={{ animation: "spin 1s linear infinite" }}
+                      />
+                    ) : (
+                      <FileDown size={16} />
+                    )
+                  }
+                />
+                <Popover
+                  open={Boolean(exportAnchorEl)}
+                  anchorEl={exportAnchorEl}
+                  onClose={() => setExportAnchorEl(null)}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                  transformOrigin={{ vertical: "top", horizontal: "left" }}
+                  slotProps={{
+                    paper: {
+                      sx: {
+                        mt: 0.5,
+                        borderRadius: "4px",
+                        border: "1px solid #E4E7EC",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                        minWidth: 140,
+                        p: 0.5,
+                        display: "flex",
+                        flexDirection: "column",
+                      },
+                    },
+                  }}
+                >
+                  {[
+                    { icon: <FileText size={14} />, label: "Download as PDF", format: "pdf" as const },
+                    { icon: <FileDown size={14} />, label: "Download as Word", format: "docx" as const },
+                  ].map(({ icon, label, format }) => (
+                    <Box
+                      key={format}
+                      component="button"
+                      onClick={() => {
+                        setExportAnchorEl(null);
+                        downloadExport(format);
                       }}
-                      onClick={() => downloadExport("pdf")}
-                      icon={
-                        isExportingPDF ? (
-                          <Loader2
-                            size={16}
-                            style={{ animation: "spin 1s linear infinite" }}
-                          />
-                        ) : (
-                          <FileText size={16} />
-                        )
-                      }
-                    />
-                  </span>
-                </Tooltip>
-                <Tooltip title="Download as Word" arrow>
-                  <span>
-                    <CustomizableButton
-                      variant="outlined"
-                      text={isExportingDOCX ? "Exporting..." : "Word"}
-                      isDisabled={isExportingPDF || isExportingDOCX}
                       sx={{
-                        backgroundColor: "#fff",
-                        border: "1px solid #D0D5DD",
-                        color: "#344054",
+                        display: "flex",
+                        alignItems: "center",
                         gap: 1,
-                        minWidth: "80px",
-                        "&:hover": {
-                          backgroundColor: "#F9FAFB",
-                          borderColor: "#98A2B3",
-                        },
-                        "&:disabled": {
-                          backgroundColor: "#F9FAFB",
-                          borderColor: "#E4E7EC",
-                          color: "#98A2B3",
-                        },
+                        px: 1.5,
+                        py: 1,
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        borderRadius: "4px",
+                        fontSize: 13,
+                        color: "text.secondary",
+                        width: "100%",
+                        textAlign: "left",
+                        "&:hover": { backgroundColor: "#F2F4F7" },
                       }}
-                      onClick={() => downloadExport("docx")}
-                      icon={
-                        isExportingDOCX ? (
-                          <Loader2
-                            size={16}
-                            style={{ animation: "spin 1s linear infinite" }}
-                          />
-                        ) : (
-                          <FileDown size={16} />
-                        )
-                      }
-                    />
-                  </span>
-                </Tooltip>
+                    >
+                      {icon}
+                      {label}
+                    </Box>
+                  ))}
+                </Popover>
               </>
             )}
+
+            {/* Import DOCX */}
+            <CustomizableButton
+              variant="outlined"
+              text={isImporting ? "Importing..." : "Import"}
+              isDisabled={isImporting}
+              sx={{
+                backgroundColor: "background.main",
+                border: "1px solid #d0d5dd",
+                color: "text.secondary",
+                gap: 1,
+                minWidth: "90px",
+                "&:hover": {
+                  backgroundColor: "background.accent",
+                  borderColor: "text.muted",
+                },
+                "&:disabled": {
+                  backgroundColor: "background.accent",
+                  borderColor: "#E4E7EC",
+                  color: "text.muted",
+                },
+              }}
+              onClick={() => docxInputRef.current?.click()}
+              icon={
+                isImporting ? (
+                  <Loader2
+                    size={16}
+                    style={{ animation: "spin 1s linear infinite" }}
+                  />
+                ) : (
+                  <Upload size={16} />
+                )
+              }
+            />
+            <input
+              ref={docxInputRef}
+              type="file"
+              accept=".docx"
+              style={{ display: "none" }}
+              onChange={handleDocxFileSelect}
+            />
 
             {/* Save */}
             <CustomizableButton
@@ -1573,7 +1692,7 @@ export default function PolicyEditorPage() {
               }
               isDisabled={isSaving}
               sx={{
-                backgroundColor: saveSuccess ? "#079455" : "#13715B",
+                backgroundColor: saveSuccess ? "#079455" : "brand.primary",
                 border: `1px solid ${saveSuccess ? "#079455" : "#13715B"}`,
                 gap: 2,
                 "&:hover": {
@@ -1581,7 +1700,7 @@ export default function PolicyEditorPage() {
                   borderColor: saveSuccess ? "#079455" : "#0F5B4D",
                 },
                 "&:disabled": {
-                  backgroundColor: "#13715B",
+                  backgroundColor: "brand.primary",
                   opacity: 0.7,
                 },
               }}
@@ -1659,10 +1778,10 @@ export default function PolicyEditorPage() {
                 sx={{
                   padding: "6px",
                   borderRadius: "3px",
-                  backgroundColor: toolbarState[key] ? "#E0F7FA" : "#FFFFFF",
+                  backgroundColor: toolbarState[key] ? "#E0F7FA" : "background.main",
                   border: "1px solid",
-                  borderColor: toolbarState[key] ? "#13715B" : "transparent",
-                  "&:hover": { backgroundColor: "#F5F5F5" },
+                  borderColor: toolbarState[key] ? "brand.primary" : "transparent",
+                  "&:hover": { backgroundColor: "background.surface" },
                 }}
               >
                 {icon}
@@ -1673,10 +1792,10 @@ export default function PolicyEditorPage() {
           {/* Character / word count */}
           {editor && (
             <Box sx={{ ml: "auto", display: "flex", gap: 2, alignItems: "center" }}>
-              <Typography sx={{ fontSize: 11, color: "#98A2B3" }}>
+              <Typography sx={{ fontSize: 11, color: "text.muted" }}>
                 {editor.storage.characterCount.words()} words
               </Typography>
-              <Typography sx={{ fontSize: 11, color: "#98A2B3" }}>
+              <Typography sx={{ fontSize: 11, color: "text.muted" }}>
                 {editor.storage.characterCount.characters()} characters
               </Typography>
             </Box>
@@ -1695,7 +1814,7 @@ export default function PolicyEditorPage() {
               sx: {
                 p: 1.5,
                 borderRadius: "6px",
-                border: "1px solid #D0D5DD",
+                border: "1px solid #d0d5dd",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               },
             },
@@ -1730,9 +1849,9 @@ export default function PolicyEditorPage() {
               mt: 1,
               textAlign: "center",
               fontSize: 11,
-              color: "#667085",
+              color: "text.icon",
               cursor: "pointer",
-              "&:hover": { color: "#344054" },
+              "&:hover": { color: "text.secondary" },
             }}
           >
             Reset to default
@@ -1757,7 +1876,7 @@ export default function PolicyEditorPage() {
               sx: {
                 width: 340,
                 borderRadius: "4px",
-                border: "1px solid #D0D5DD",
+                border: "1px solid #d0d5dd",
                 boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
                 p: "16px",
               },
@@ -1789,10 +1908,10 @@ export default function PolicyEditorPage() {
                   sx={{
                     padding: "6px",
                     borderRadius: "4px",
-                    border: "1px solid #D0D5DD",
-                    color: "#344054",
-                    "&:hover": { backgroundColor: "#F9FAFB" },
-                    "&:disabled": { color: "#D0D5DD", borderColor: "#EAECF0" },
+                    border: "1px solid #d0d5dd",
+                    color: "text.secondary",
+                    "&:hover": { backgroundColor: "background.accent" },
+                    "&:disabled": { color: "border.dark", borderColor: "border.light" },
                   }}
                 >
                   <ChevronUpIcon size={16} />
@@ -1806,10 +1925,10 @@ export default function PolicyEditorPage() {
                   sx={{
                     padding: "6px",
                     borderRadius: "4px",
-                    border: "1px solid #D0D5DD",
-                    color: "#344054",
-                    "&:hover": { backgroundColor: "#F9FAFB" },
-                    "&:disabled": { color: "#D0D5DD", borderColor: "#EAECF0" },
+                    border: "1px solid #d0d5dd",
+                    color: "text.secondary",
+                    "&:hover": { backgroundColor: "background.accent" },
+                    "&:disabled": { color: "border.dark", borderColor: "border.light" },
                   }}
                 >
                   <ChevronDownIcon size={16} />
@@ -1819,7 +1938,7 @@ export default function PolicyEditorPage() {
 
             {/* Match count */}
             {searchText && (
-              <Typography sx={{ fontSize: 11, color: "#98A2B3", mt: "-4px" }}>
+              <Typography sx={{ fontSize: 11, color: "text.muted", mt: "-4px" }}>
                 {searchMatchCount === 0
                   ? "No matches found"
                   : `${searchMatchCount} match${searchMatchCount !== 1 ? "es" : ""} found`}
@@ -1853,11 +1972,11 @@ export default function PolicyEditorPage() {
                       height: 34,
                       px: "10px",
                       fontSize: 12,
-                      backgroundColor: "#fff",
-                      border: "1px solid #D0D5DD",
-                      color: "#344054",
+                      backgroundColor: "background.main",
+                      border: "1px solid #d0d5dd",
+                      color: "text.secondary",
                       whiteSpace: "nowrap",
-                      "&:hover": { backgroundColor: "#F9FAFB" },
+                      "&:hover": { backgroundColor: "background.accent" },
                     }}
                   />
                 </span>
@@ -1876,11 +1995,11 @@ export default function PolicyEditorPage() {
                   height: 34,
                   px: "10px",
                   fontSize: 12,
-                  backgroundColor: "#fff",
-                  border: "1px solid #D0D5DD",
-                  color: "#344054",
+                  backgroundColor: "background.main",
+                  border: "1px solid #d0d5dd",
+                  color: "text.secondary",
                   whiteSpace: "nowrap",
-                  "&:hover": { backgroundColor: "#F9FAFB" },
+                  "&:hover": { backgroundColor: "background.accent" },
                 }}
               />
             </Box>
@@ -1899,7 +2018,7 @@ export default function PolicyEditorPage() {
               minWidth: 0,
               minHeight: 0,
               overflow: "auto",
-              border: "1px solid #D0D5DD",
+              border: "1px solid #d0d5dd",
               borderRadius: "4px",
             }}
           >
@@ -1922,7 +2041,7 @@ export default function PolicyEditorPage() {
                     gap: "2px",
                     p: "4px",
                     alignItems: "center",
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.main",
                     border: "1px solid #d0d5dd",
                     borderRadius: "6px",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
@@ -1942,7 +2061,7 @@ export default function PolicyEditorPage() {
                             borderRadius: "4px",
                             color: danger ? "#dc2626" : "#374151",
                             "&:hover": {
-                              backgroundColor: danger ? "#fef2f2" : "#f3f4f6",
+                              backgroundColor: danger ? "#fef2f2" : "background.hover",
                             },
                           }}
                         >
@@ -1950,7 +2069,7 @@ export default function PolicyEditorPage() {
                         </IconButton>
                       </Tooltip>
                       {separator && (
-                        <Divider orientation="vertical" flexItem sx={{ mx: "2px", borderColor: "#e5e7eb" }} />
+                        <Divider orientation="vertical" flexItem sx={{ mx: "2px", borderColor: "status.default.border" }} />
                       )}
                     </React.Fragment>
                   ))}
@@ -2182,6 +2301,44 @@ export default function PolicyEditorPage() {
           Please fill in all required fields before saving.
         </Alert>
       </Snackbar>
+
+      {/* Import error snackbar */}
+      <Snackbar
+        open={Boolean(importError)}
+        autoHideDuration={4000}
+        onClose={() => setImportError(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setImportError(null)}
+          severity="error"
+          sx={{ width: "100%" }}
+        >
+          {importError}
+        </Alert>
+      </Snackbar>
+
+      {/* Import confirmation dialog */}
+      <ConfirmationModal
+        isOpen={pendingImportFile !== null}
+        isLoading={isImporting}
+        title="Replace existing content?"
+        body={
+          <Typography sx={{ fontSize: 13, color: "text.tertiary" }}>
+            Importing this file will replace all current content in the editor.
+            This action cannot be undone.
+          </Typography>
+        }
+        cancelText="Cancel"
+        proceedText="Replace content"
+        proceedButtonVariant="contained"
+        onCancel={cancelImport}
+        onProceed={confirmImport}
+        confirmBtnSx={{
+          backgroundColor: "brand.primary",
+          "&:hover": { backgroundColor: "brand.primaryHover" },
+        }}
+      />
     </>
   );
 }

@@ -7,23 +7,24 @@ import {
 import { IQuestion, IQuestionnaireAnswers } from "./iQuestion";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import Radio from "../../../components/Inputs/Radio";
+import { brand, background } from "../../../themes/palette";
 
 const radioOptionStyle = {
   width: "100%",
   padding: "0px 4px",
   border: "1px solid #E4E7EC",
   borderRadius: "4px",
-  backgroundColor: "#FFFFFF",
+  backgroundColor: `${background.main}`,
   cursor: "pointer",
   transition: "all 0.2s ease-in-out",
   marginLeft: 0,
   marginRight: 0,
   "&:hover": {
-    borderColor: "#13715B",
+    borderColor: `${brand.primary}`,
     backgroundColor: "#F9F9F9",
   },
   "&.selected": {
-    borderColor: "#13715B",
+    borderColor: `${brand.primary}`,
     backgroundColor: "#F0F9F6",
   },
 };

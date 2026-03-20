@@ -28,6 +28,7 @@ export interface PolicyTableProps {
   error?: Error | null;
   hidePagination?: boolean;
   flashRowId?: number | string | null;
+  visibleColumns?: Set<string>;
 }
 
 /**

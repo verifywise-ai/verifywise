@@ -6,16 +6,17 @@ import {
   Settings,
   KeyRound,
   Swords,
+  Trophy,
   Cpu,
+  MessageSquare,
   Scale,
+  FileText,
 } from "lucide-react";
-import { useCallback } from "react";
 import SidebarShell, {
   SidebarMenuItem,
   RecentSection,
   ProjectSelectorConfig,
 } from "../../components/Sidebar/SidebarShell";
-import { useUserGuideSidebarContext } from "../../components/UserGuide";
 
 interface RecentExperiment {
   id: string;
@@ -69,9 +70,6 @@ export default function EvalsSidebar({
   allProjects = [],
   onProjectChange,
 }: EvalsSidebarProps) {
-  const { open: openUserGuide, openTab } = useUserGuideSidebarContext();
-  const openReleaseNotes = useCallback(() => openTab('whats-new'), [openTab]);
-
   // Menu items for Evals
   const flatItems: SidebarMenuItem[] = [
     {
@@ -114,6 +112,13 @@ export default function EvalsSidebar({
       disabled: false, // Always enabled - org-scoped
     },
     {
+      id: "playground",
+      label: "Playground",
+      value: "playground",
+      icon: <MessageSquare size={16} strokeWidth={1.5} />,
+      disabled: false, // Always enabled - chat with any model
+    },
+    {
       id: "arena",
       label: "Arena",
       value: "arena",
@@ -122,11 +127,25 @@ export default function EvalsSidebar({
       disabled: false, // Always enabled - org-scoped
     },
     {
+      id: "leaderboard",
+      label: "Leaderboard",
+      value: "leaderboard",
+      icon: <Trophy size={16} strokeWidth={1.5} />,
+      disabled: false,
+    },
+    {
       id: "bias-audits",
       label: "Bias audits",
       value: "bias-audits",
       icon: <Scale size={16} strokeWidth={1.5} />,
-      disabled: false, // Always enabled - org-scoped
+      disabled: false,
+    },
+    {
+      id: "reports",
+      label: "Reports",
+      value: "reports",
+      icon: <FileText size={16} strokeWidth={1.5} />,
+      disabled: disabled,
       dividerAfter: true,
     },
     {
@@ -196,8 +215,6 @@ export default function EvalsSidebar({
       isItemActive={isItemActive}
       onItemClick={handleItemClick}
       showReadyToSubscribe={false}
-      openUserGuide={openUserGuide}
-      openReleaseNotes={openReleaseNotes}
       enableFlyingHearts={false}
     />
   );

@@ -270,6 +270,12 @@ export const riskAssessmentContent: ArticleContent = {
       items: [
         {
           collectionId: 'risk-management',
+          articleId: 'quantitative-risk-assessment',
+          title: 'Quantitative risk assessment (FAIR)',
+          description: 'Quantify AI risks in financial terms with ALE calculations and industry benchmarks',
+        },
+        {
+          collectionId: 'risk-management',
           articleId: 'risk-mitigation',
           title: 'Risk mitigation strategies',
           description: 'Learn how to implement controls for identified risks',

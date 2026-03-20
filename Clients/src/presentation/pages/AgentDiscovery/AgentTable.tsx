@@ -13,10 +13,11 @@ import {
   Box,
   useTheme,
 } from "@mui/material";
-import { ChevronsUpDown, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
+import { ChevronsUpDown, ChevronUp, ChevronDown, AlertTriangle, Bot, RefreshCw, Eye, ShieldCheck } from "lucide-react";
 import IconButton from "../../components/IconButton";
 import { ReactComponent as SelectorVertical } from "../../assets/icons/selector-vertical.svg";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import Chip from "../../components/Chip";
 import TablePaginationActions from "../../components/TablePagination";
 import { singleTheme } from "../../themes";
@@ -156,11 +157,29 @@ const AgentTable: React.FC<AgentTableProps> = ({
   }, [page, rowsPerPage, sortedData.length]);
 
   if (isLoading) {
-    return <EmptyState message="Loading agents..." />;
+    return <EmptyState icon={Bot} message="Loading agents..." />;
   }
 
   if (!sortedData || sortedData.length === 0) {
-    return <EmptyState message="No agents found. Trigger a sync or add one manually." />;
+    return (
+      <EmptyState icon={Bot} message="No agents discovered yet. Sync your infrastructure to detect AI agents.">
+        <EmptyStateTip
+          icon={RefreshCw}
+          title="Trigger a sync"
+          description="Click 'Sync' to scan your connected infrastructure for autonomous AI agents, chatbots, and automated pipelines."
+        />
+        <EmptyStateTip
+          icon={Eye}
+          title="What gets discovered?"
+          description="LLM-based chatbots, autonomous coding agents, automated decision systems, ML inference endpoints, and workflow automation tools."
+        />
+        <EmptyStateTip
+          icon={ShieldCheck}
+          title="Govern discovered agents"
+          description="Once discovered, classify agents by risk level, assign owners, and link them to your compliance controls and risk register."
+        />
+      </EmptyState>
+    );
   }
 
   const tableHeader = (
@@ -216,7 +235,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
                       color:
                         sortConfig.key === column.label
                           ? "primary.main"
-                          : "#9CA3AF",
+                          : "text.disabled",
                     }}
                   >
                     {sortConfig.key === column.label &&

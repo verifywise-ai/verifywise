@@ -38,26 +38,26 @@ export const setupNotificationSubscriber = async (): Promise<void> => {
 
       try {
         const payload = JSON.parse(message);
-        const { tenantId, userId, notification } = payload;
+        const { organizationId, userId, notification } = payload;
 
-        console.log(`📨 Processing notification for tenant=${tenantId}, user=${userId}, type=${notification?.type}`);
+        console.log(`📨 Processing notification for tenant=${organizationId}, user=${userId}, type=${notification?.type}`);
 
         // SECURITY: Validate message format
-        if (!tenantId || !userId || !notification) {
+        if (!organizationId || !userId || !notification) {
           console.error("Security: Invalid notification message format", payload);
           return;
         }
 
-        const connectionKey = `${tenantId}:${userId}`;
+        const connectionKey = `${organizationId}:${userId}`;
         const connectionData = getConnection(connectionKey);
 
         if (connectionData) {
           console.log(`✅ Found active connection for ${connectionKey}`);
 
           // SECURITY: Double-check tenant matches stored connection
-          if (connectionData.tenantId !== tenantId) {
+          if (connectionData.organizationId !== organizationId) {
             console.error(
-              `Security: Tenant mismatch! Stored: ${connectionData.tenantId}, Message: ${tenantId}`
+              `Security: Tenant mismatch! Stored: ${connectionData.organizationId}, Message: ${organizationId}`
             );
             return;
           }

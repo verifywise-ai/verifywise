@@ -27,6 +27,7 @@ const TaskSummaryCards: React.FC<TaskSummaryCardsProps> = ({
       entityName="task"
       onCardClick={onCardClick}
       selectedKey={selectedStatus}
+      size="small"
     />
   );
 };

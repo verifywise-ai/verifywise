@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Stack, Typography, Box, IconButton, Tooltip } from "@mui/material";
 
 import { infoCardbodyStyle, infoCardStyle, infoCardTitleStyle } from "./style";
+import { brand, text } from "../../../themes/palette";
 
 interface InfoCardProps {
   title: string;
@@ -47,7 +48,7 @@ export function InfoCard({
               position: "absolute",
               top: 4,
               right: 4,
-              color: isActionActive ? "#13715B" : "#98A2B3",
+              color: isActionActive ? `${brand.primary}` : `${text.muted}`,
               padding: "4px",
               borderRadius: "4px",
               backgroundColor: isActionActive ? "#E6F4F1" : "transparent",

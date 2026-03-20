@@ -6,6 +6,7 @@ import {
   Divider,
 } from "@mui/material";
 import { Check, FileText } from "lucide-react";
+import { brand, text, background, status } from "../../../themes/palette";
 
 // Re-export TemplateRow from this file to avoid circular dependency
 export interface TemplateRow {
@@ -51,7 +52,7 @@ const getCategoryStyles = (category: string) => {
     case "agent":
       return { backgroundColor: "#FEE2E2", color: "#DC2626" };
     default:
-      return { backgroundColor: "#F3F4F6", color: "#6B7280" };
+      return { backgroundColor: `${background.hover}`, color: `${status.default.text}` };
   }
 };
 
@@ -89,14 +90,14 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
         sx={{
           p: compact ? 1 : 1.5,
           border: "1px solid",
-          borderColor: isSelected ? "#13715B" : "#E5E7EB",
+          borderColor: isSelected ? `${brand.primary}` : `${status.default.border}`,
           borderRadius: "8px",
           cursor: "pointer",
-          backgroundColor: isSelected ? "#F0FDF4" : "#FFFFFF",
+          backgroundColor: isSelected ? "#F0FDF4" : `${background.main}`,
           transition: "all 0.15s ease",
           "&:hover": {
-            borderColor: "#13715B",
-            backgroundColor: isSelected ? "#F0FDF4" : "#F9FAFB",
+            borderColor: `${brand.primary}`,
+            backgroundColor: isSelected ? "#F0FDF4" : `${background.accent}`,
           },
         }}
       >
@@ -106,14 +107,14 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               width: compact ? 28 : 32,
               height: compact ? 28 : 32,
               borderRadius: "6px",
-              backgroundColor: isSelected ? "#13715B" : "#F3F4F6",
+              backgroundColor: isSelected ? `${brand.primary}` : `${background.hover}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
             }}
           >
-            <FileText size={compact ? 14 : 16} color={isSelected ? "#FFFFFF" : "#6B7280"} />
+            <FileText size={compact ? 14 : 16} color={isSelected ? `${background.main}` : `${status.default.text}`} />
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography
@@ -132,7 +133,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               <Typography
                 sx={{
                   fontSize: "11px",
-                  color: "#9CA3AF",
+                  color: `${text.disabled}`,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -155,7 +156,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               }}
             />
             {template.test_count && (
-              <Typography sx={{ fontSize: compact ? "10px" : "11px", color: "#9CA3AF" }}>
+              <Typography sx={{ fontSize: compact ? "10px" : "11px", color: `${text.disabled}` }}>
                 {template.test_count}
               </Typography>
             )}
@@ -171,7 +172,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                 "& .MuiChip-label": { px: 0.75 },
               }}
             />
-            {isSelected && <Check size={14} color="#13715B" />}
+            {isSelected && <Check size={14} color={brand.primary} />}
           </Stack>
         </Stack>
       </Box>
@@ -181,7 +182,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
   if (loading) {
     return (
       <Box sx={{ py: 3, textAlign: "center" }}>
-        <Typography sx={{ fontSize: "13px", color: "#6B7280" }}>Loading templates...</Typography>
+        <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>Loading templates...</Typography>
       </Box>
     );
   }
@@ -189,7 +190,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
   if (templates.length === 0) {
     return (
       <Box sx={{ py: 3, textAlign: "center" }}>
-        <Typography sx={{ fontSize: "13px", color: "#6B7280" }}>No templates available</Typography>
+        <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>No templates available</Typography>
       </Box>
     );
   }
@@ -206,7 +207,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   sx={{
                     fontSize: "11px",
                     fontWeight: 600,
-                    color: "#6B7280",
+                    color: `${status.default.text}`,
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                   }}
@@ -242,7 +243,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   sx={{
                     fontSize: "11px",
                     fontWeight: 600,
-                    color: "#6B7280",
+                    color: `${status.default.text}`,
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                   }}
@@ -280,7 +281,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   sx={{
                     fontSize: "11px",
                     fontWeight: 600,
-                    color: "#6B7280",
+                    color: `${status.default.text}`,
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                   }}
@@ -331,7 +332,7 @@ export const getTypeStyles = (type?: string) => {
     case "simulated":
       return { backgroundColor: "#EDE9FE", color: "#6D28D9" };
     default:
-      return { backgroundColor: "#F3F4F6", color: "#6B7280" };
+      return { backgroundColor: `${background.hover}`, color: `${status.default.text}` };
   }
 };
 

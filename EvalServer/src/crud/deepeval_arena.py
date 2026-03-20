@@ -1,5 +1,7 @@
 """
 CRUD operations for DeepEval Arena comparisons.
+
+Shared-schema multi-tenancy: All data is in the public schema with organization_id column.
 """
 
 from typing import List, Dict, Any, Optional
@@ -14,12 +16,11 @@ async def create_arena_comparison(
     *,
     name: str,
     description: Optional[str],
-    org_id: Optional[str],
+    organization_id: int,
     contestants: List[Dict[str, Any]],
     contestant_names: List[str],
     metric_config: Dict[str, Any],
     judge_model: str,
-    tenant: str,
     created_by: Optional[str],
     db: AsyncSession,
 ) -> Optional[Dict[str, Any]]:
@@ -28,16 +29,16 @@ async def create_arena_comparison(
     """
     result = await db.execute(
         text(
-            f'''
-            INSERT INTO "{tenant}".llm_evals_arena_comparisons
-            (id, name, description, org_id, contestants, contestant_names, 
+            '''
+            INSERT INTO llm_evals_arena_comparisons
+            (id, name, description, organization_id, contestants, contestant_names,
              metric_config, judge_model, status, created_by)
             VALUES
-            (:id, :name, :description, :org_id, :contestants, :contestant_names,
+            (:id, :name, :description, :organization_id, :contestants, :contestant_names,
              :metric_config, :judge_model, :status, :created_by)
-            RETURNING id, name, description, org_id, contestants, contestant_names,
+            RETURNING id, name, description, organization_id, contestants, contestant_names,
                       metric_config, judge_model, status, progress, winner, win_counts,
-                      detailed_results, error_message, created_at, updated_at, 
+                      detailed_results, error_message, created_at, updated_at,
                       completed_at, created_by
             '''
         ),
@@ -45,7 +46,7 @@ async def create_arena_comparison(
             "id": comparison_id,
             "name": name,
             "description": description,
-            "org_id": org_id,
+            "organization_id": organization_id,
             "contestants": json.dumps(contestants),
             "contestant_names": json.dumps(contestant_names),
             "metric_config": json.dumps(metric_config),
@@ -65,7 +66,7 @@ async def create_arena_comparison(
 async def get_arena_comparison(
     comparison_id: str,
     *,
-    tenant: str,
+    organization_id: int,
     db: AsyncSession,
 ) -> Optional[Dict[str, Any]]:
     """
@@ -73,16 +74,16 @@ async def get_arena_comparison(
     """
     result = await db.execute(
         text(
-            f'''
-            SELECT id, name, description, org_id, contestants, contestant_names,
+            '''
+            SELECT id, name, description, organization_id, contestants, contestant_names,
                    metric_config, judge_model, status, progress, winner, win_counts,
                    detailed_results, error_message, created_at, updated_at,
                    completed_at, created_by
-            FROM "{tenant}".llm_evals_arena_comparisons
-            WHERE id = :id
+            FROM llm_evals_arena_comparisons
+            WHERE organization_id = :organization_id AND id = :id
             '''
         ),
-        {"id": comparison_id},
+        {"organization_id": organization_id, "id": comparison_id},
     )
 
     row = result.mappings().first()
@@ -93,33 +94,25 @@ async def get_arena_comparison(
 
 
 async def list_arena_comparisons(
-    tenant: str,
+    organization_id: int,
     db: AsyncSession,
-    org_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
-    List all arena comparisons for a tenant.
+    List all arena comparisons for an organization.
     """
-    params: Dict[str, Any] = {}
-    where_clause = ""
-    
-    if org_id:
-        where_clause = "WHERE org_id = :org_id"
-        params["org_id"] = org_id
-
     result = await db.execute(
         text(
-            f'''
-            SELECT id, name, description, org_id, contestants, contestant_names,
+            '''
+            SELECT id, name, description, organization_id, contestants, contestant_names,
                    metric_config, judge_model, status, progress, winner, win_counts,
                    detailed_results, error_message, created_at, updated_at,
                    completed_at, created_by
-            FROM "{tenant}".llm_evals_arena_comparisons
-            {where_clause}
+            FROM llm_evals_arena_comparisons
+            WHERE organization_id = :organization_id
             ORDER BY created_at DESC
             '''
         ),
-        params if params else {},
+        {"organization_id": organization_id},
     )
 
     rows = result.mappings().all()
@@ -129,7 +122,7 @@ async def list_arena_comparisons(
 async def update_arena_comparison(
     comparison_id: str,
     *,
-    tenant: str,
+    organization_id: int,
     db: AsyncSession,
     status: Optional[str] = None,
     progress: Optional[str] = None,
@@ -143,7 +136,7 @@ async def update_arena_comparison(
     Update an arena comparison.
     """
     updates = []
-    params: Dict[str, Any] = {"id": comparison_id}
+    params: Dict[str, Any] = {"id": comparison_id, "organization_id": organization_id}
 
     if status is not None:
         updates.append("status = :status")
@@ -168,17 +161,17 @@ async def update_arena_comparison(
         params["completed_at"] = completed_at
 
     if not updates:
-        return await get_arena_comparison(comparison_id, tenant=tenant, db=db)
+        return await get_arena_comparison(comparison_id, organization_id=organization_id, db=db)
 
     updates.append("updated_at = CURRENT_TIMESTAMP")
 
     result = await db.execute(
         text(
             f'''
-            UPDATE "{tenant}".llm_evals_arena_comparisons
+            UPDATE llm_evals_arena_comparisons
             SET {", ".join(updates)}
-            WHERE id = :id
-            RETURNING id, name, description, org_id, contestants, contestant_names,
+            WHERE organization_id = :organization_id AND id = :id
+            RETURNING id, name, description, organization_id, contestants, contestant_names,
                       metric_config, judge_model, status, progress, winner, win_counts,
                       detailed_results, error_message, created_at, updated_at,
                       completed_at, created_by
@@ -197,7 +190,7 @@ async def update_arena_comparison(
 async def delete_arena_comparison(
     comparison_id: str,
     *,
-    tenant: str,
+    organization_id: int,
     db: AsyncSession,
 ) -> bool:
     """
@@ -205,13 +198,13 @@ async def delete_arena_comparison(
     """
     result = await db.execute(
         text(
-            f'''
-            DELETE FROM "{tenant}".llm_evals_arena_comparisons
-            WHERE id = :id
+            '''
+            DELETE FROM llm_evals_arena_comparisons
+            WHERE organization_id = :organization_id AND id = :id
             RETURNING id
             '''
         ),
-        {"id": comparison_id},
+        {"organization_id": organization_id, "id": comparison_id},
     )
 
     row = result.fetchone()
@@ -223,12 +216,12 @@ def _row_to_dict(row) -> Dict[str, Any]:
     Convert a database row to a dictionary.
     """
     metric_config = row["metric_config"] if isinstance(row["metric_config"], dict) else json.loads(row["metric_config"] or "{}")
-    
+
     return {
         "id": row["id"],
         "name": row["name"],
         "description": row["description"],
-        "orgId": row["org_id"],
+        "orgId": str(row["organization_id"]) if row["organization_id"] else None,
         "contestants": row["contestants"] if isinstance(row["contestants"], list) else json.loads(row["contestants"] or "[]"),
         "contestantNames": row["contestant_names"] if isinstance(row["contestant_names"], list) else json.loads(row["contestant_names"] or "[]"),
         "metricConfig": metric_config,
@@ -245,4 +238,3 @@ def _row_to_dict(row) -> Dict[str, Any]:
         "createdBy": row["created_by"],
         "dataset": metric_config.get("datasetPath", ""),
     }
-

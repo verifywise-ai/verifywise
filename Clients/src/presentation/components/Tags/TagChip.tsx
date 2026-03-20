@@ -1,5 +1,6 @@
 import React from "react";
 import { Box } from "@mui/material";
+import { accent, background, risk, status, text as textPalette } from "../../themes/palette";
 
 export interface TagChipProps {
   tag: string;
@@ -12,33 +13,33 @@ const getTagStyle = (tag: string) => {
   // Color mapping based on official POLICY_TAGS from backend
   const tagStyles: Record<string, { bg: string; color: string }> = {
     // Ethics & Fairness - Green tones
-    "ai ethics": { bg: "#E6F4EA", color: "#138A5E" },
+    "ai ethics": { bg: `${status.success.bg}`, color: `${status.success.text}` },
     fairness: { bg: "#E8F5E9", color: "#2E7D32" },
     "bias mitigation": { bg: "#F1F8E9", color: "#558B2F" },
 
     // Transparency & Explainability - Blue tones
-    transparency: { bg: "#E3F2FD", color: "#1565C0" },
+    transparency: { bg: `${status.info.bg}`, color: `${status.info.text}` },
     explainability: { bg: "#E1F5FE", color: "#0277BD" },
 
     // Privacy & Data Governance - Purple tones
     privacy: { bg: "#F3E5F5", color: "#6A1B9A" },
-    "data governance": { bg: "#EDE7F6", color: "#4527A0" },
+    "data governance": { bg: `${accent.purple.bg}`, color: "#4527A0" },
 
     // Risk & Security - Orange/Red tones
-    "model risk": { bg: "#FFE5D0", color: "#E64A19" },
-    security: { bg: "#FFECB3", color: "#F57F17" },
+    "model risk": { bg: `${risk.high.bg}`, color: `${risk.high.text}` },
+    security: { bg: `${accent.amber.border}`, color: "#F57F17" },
 
     // Accountability & Oversight - Deep Purple
-    accountability: { bg: "#EDE7F6", color: "#5E35B1" },
-    "human oversight": { bg: "#E8EAF6", color: "#3949AB" },
+    accountability: { bg: `${accent.purple.bg}`, color: `${accent.purple.text}` },
+    "human oversight": { bg: `${accent.indigo.bg}`, color: `${accent.indigo.text}` },
 
     // Compliance & Standards - Amber/Brown tones
-    "eu ai act": { bg: "#FFF8E1", color: "#F57C00" },
-    "iso 42001": { bg: "#FFF3E0", color: "#EF6C00" },
-    "nist rmf": { bg: "#FFECB3", color: "#F9A825" },
+    "eu ai act": { bg: `${accent.amber.bg}`, color: "#F57C00" },
+    "iso 42001": { bg: `${accent.orange.bg}`, color: "#EF6C00" },
+    "nist rmf": { bg: `${accent.amber.border}`, color: "#F9A825" },
 
     // LLM Specific - Cyan
-    llm: { bg: "#E0F7FA", color: "#00838F" },
+    llm: { bg: `${risk.veryLow.bg}`, color: "#00838F" },
   };
 
   // Check for exact matches (case-insensitive)
@@ -49,7 +50,7 @@ const getTagStyle = (tag: string) => {
   }
 
   // Default style for unmatched tags
-  return { bg: "#F5F5F5", color: "#616161" };
+  return { bg: `${background.surface}`, color: `${textPalette.subdued}` };
 };
 
 const TagChip: React.FC<TagChipProps> = ({ tag }) => {

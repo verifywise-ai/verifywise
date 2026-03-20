@@ -72,10 +72,10 @@ const LoginLoadingOverlay: React.FC = () => {
                       animationDelay: `${totalIndex * 0.1}s`,
                       "@keyframes colorWave": {
                         "0%, 100%": {
-                          color: "#6b7280",
+                          color: "status.default.text",
                         },
                         "50%": {
-                          color: "#13715B",
+                          color: "brand.primary",
                         },
                       },
                     }}
@@ -228,7 +228,7 @@ const Login: React.FC = () => {
   // Styles for input fields
   const fieldStyles = {
     width: 360,
-    backgroundColor: "#fff",
+    backgroundColor: "background.main",
   };
 
   return (

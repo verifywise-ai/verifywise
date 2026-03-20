@@ -39,7 +39,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
     functionName: "createTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
@@ -74,7 +74,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
 
     const task = await createNewTaskQuery(
       taskData,
-      req.tenantId!,
+      req.organizationId!,
       transaction,
       assignees
     );
@@ -85,7 +85,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
         "task",
         task.id,
         userId,
-        req.tenantId!,
+        req.organizationId!,
         taskData,
         transaction
       );
@@ -106,7 +106,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
       functionName: "createTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // Send notifications to assigned users (async, don't block response)
@@ -115,7 +115,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
         try {
           // Get creator name
           const creatorResult = await sequelize.query<{ name: string; surname: string }>(
-            `SELECT name, surname FROM public.users WHERE id = :userId`,
+            `SELECT name, surname FROM users WHERE id = :userId`,
             { replacements: { userId }, type: QueryTypes.SELECT }
           );
           const creator = creatorResult[0];
@@ -137,7 +137,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
           // Notify each assignee
           for (const assigneeId of taskAssignees) {
             await notifyTaskAssigned(
-              req.tenantId!,
+              req.organizationId!,
               assigneeId,
               {
                 id: task.id!,
@@ -159,7 +159,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
             fileName: "task.ctrl.ts",
             error: notifyError as Error,
             userId: req.userId!,
-            tenantId: req.tenantId!,
+            tenantId: req.organizationId!,
           });
         }
       })();
@@ -177,7 +177,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -190,7 +190,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -202,7 +202,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -215,7 +215,7 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
     functionName: "getAllTasks",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -271,7 +271,7 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
 
     const tasks = await getTasksQuery(
       { userId, role },
-      req.tenantId!,
+      req.organizationId!,
       filters,
       sort
     );
@@ -300,7 +300,7 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       functionName: "getAllTasks",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -317,7 +317,7 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -332,7 +332,7 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
     functionName: "getTaskById",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -344,7 +344,6 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
     const task = await getTaskByIdQuery(
       taskId,
       { userId, role },
-      req.tenantId!,
       req.organizationId!
     );
 
@@ -362,7 +361,7 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
         functionName: "getTaskById",
         fileName: "task.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(STATUS_CODE[200](taskResponse));
@@ -374,7 +373,7 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
       functionName: "getTaskById",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -386,7 +385,7 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -403,7 +402,6 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
     const existingTask = await getTaskByIdQuery(
       taskId,
       { userId: req.userId!, role: req.role! },
-      req.tenantId!,
       req.organizationId!
     );
     if (existingTask) {
@@ -419,7 +417,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
     functionName: "updateTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
@@ -456,10 +454,9 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         task: updateData,
         userId,
         role,
-        userOrganizationId: req.organizationId!,
         transaction,
       },
-      req.tenantId!,
+      req.organizationId!,
       assignees // Pass assignees to the function
     );
 
@@ -471,7 +468,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
           "task",
           taskId,
           userId,
-          req.tenantId!,
+          req.organizationId!,
           changes,
           transaction
         );
@@ -486,7 +483,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
       functionName: "updateTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // Add assignees to response (manually from dataValues)
@@ -501,7 +498,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
       try {
         // Get updater name
         const updaterResult = await sequelize.query<{ name: string; surname: string }>(
-          `SELECT name, surname FROM public.users WHERE id = :userId`,
+          `SELECT name, surname FROM users WHERE id = :userId`,
           { replacements: { userId }, type: QueryTypes.SELECT }
         );
         const updater = updaterResult[0];
@@ -522,7 +519,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
           }));
         } else {
           // Fall back to fetching from DB (for backwards compatibility)
-          const dbEntityLinks = await getTaskEntityLinksQuery(updatedTask.id!, req.tenantId!);
+          const dbEntityLinks = await getTaskEntityLinksQuery(updatedTask.id!, req.organizationId!);
           entityLinksForEmail = dbEntityLinks.map(link => ({
             entity_id: link.entity_id,
             entity_type: link.entity_type,
@@ -545,7 +542,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         // Notify newly assigned users with TASK_ASSIGNED email
         for (const assigneeId of newlyAssigned) {
           await notifyTaskAssigned(
-            req.tenantId!,
+            req.organizationId!,
             assigneeId,
             {
               id: updatedTask.id!,
@@ -563,7 +560,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         // Notify existing assignees with TASK_UPDATED email
         for (const assigneeId of existingAssigneesStillAssigned) {
           await notifyTaskUpdated(
-            req.tenantId!,
+            req.organizationId!,
             assigneeId,
             {
               id: updatedTask.id!,
@@ -586,7 +583,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
           fileName: "task.ctrl.ts",
           error: notifyError as Error,
           userId: req.userId!,
-          tenantId: req.tenantId!,
+          tenantId: req.organizationId!,
         });
       }
     })();
@@ -603,7 +600,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -616,7 +613,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -628,7 +625,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     const statusCode = (error as Error).message.includes("not found")
@@ -651,7 +648,7 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
     functionName: "deleteTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
@@ -661,20 +658,17 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const deleted = await deleteTaskByIdQuery(
-      {
-        id: taskId,
-        userId,
-        role,
-        transaction,
-        organizationId: req.organizationId!,
-      },
-      req.tenantId!
-    );
+    const deleted = await deleteTaskByIdQuery({
+      id: taskId,
+      userId,
+      role,
+      transaction,
+      organizationId: req.organizationId!,
+    });
 
     // Record deletion in change history
     if (deleted && userId) {
-      await recordEntityDeletion("task", taskId, userId, req.tenantId!, transaction);
+      await recordEntityDeletion("task", taskId, userId, req.organizationId!, transaction);
     }
 
     await transaction.commit();
@@ -686,7 +680,7 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
         functionName: "deleteTask",
         fileName: "task.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res
@@ -700,7 +694,7 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
       functionName: "deleteTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -714,7 +708,7 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     const statusCode = (error as Error).message.includes("not found")
@@ -737,7 +731,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
     functionName: "restoreTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
@@ -747,16 +741,13 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const restoredTask = await restoreTaskByIdQuery(
-      {
-        id: taskId,
-        userId,
-        role,
-        transaction,
-        organizationId: req.organizationId!,
-      },
-      req.tenantId!
-    );
+    const restoredTask = await restoreTaskByIdQuery({
+      id: taskId,
+      userId,
+      role,
+      transaction,
+      organizationId: req.organizationId!,
+    });
 
     await transaction.commit();
 
@@ -767,7 +758,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         functionName: "restoreTask",
         fileName: "task.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       // Add assignees to response
@@ -785,7 +776,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
       functionName: "restoreTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -800,7 +791,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -813,7 +804,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -826,7 +817,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -838,7 +829,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     const statusCode = (error as Error).message.includes("not found")
@@ -864,7 +855,7 @@ export async function hardDeleteTask(
     functionName: "hardDeleteTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
@@ -874,16 +865,13 @@ export async function hardDeleteTask(
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const deleted = await hardDeleteTaskByIdQuery(
-      {
-        id: taskId,
-        userId,
-        role,
-        transaction,
-        organizationId: req.organizationId!,
-      },
-      req.tenantId!
-    );
+    const deleted = await hardDeleteTaskByIdQuery({
+      id: taskId,
+      userId,
+      role,
+      transaction,
+      organizationId: req.organizationId!,
+    });
 
     await transaction.commit();
 
@@ -894,7 +882,7 @@ export async function hardDeleteTask(
         functionName: "hardDeleteTask",
         fileName: "task.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res
@@ -908,7 +896,7 @@ export async function hardDeleteTask(
       functionName: "hardDeleteTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -923,7 +911,7 @@ export async function hardDeleteTask(
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -936,7 +924,7 @@ export async function hardDeleteTask(
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -949,7 +937,7 @@ export async function hardDeleteTask(
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -961,7 +949,7 @@ export async function hardDeleteTask(
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     const statusCode = (error as Error).message.includes("not found")

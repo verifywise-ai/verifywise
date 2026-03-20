@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Bot,
   Database,
+  Rocket,
 } from "lucide-react";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
@@ -82,6 +83,12 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Top level items
   const topItems: SidebarMenuItem[] = [
+    {
+      id: "start-here",
+      label: "Start here",
+      icon: <Rocket size={16} strokeWidth={1.5} />,
+      path: "/start-here",
+    },
     {
       id: "dashboard",
       label: "Dashboard",

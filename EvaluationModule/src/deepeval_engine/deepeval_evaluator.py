@@ -404,14 +404,25 @@ class DeepEvalEvaluator:
             if key not in self.metric_thresholds:
                 self.metric_thresholds[key] = value
         
-        # Check for any supported LLM API key for judge-based metrics (OpenAI / Anthropic / Gemini / xAI)
-        has_openai = bool(os.getenv("OPENAI_API_KEY"))
-        has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
-        has_gemini = bool(os.getenv("GEMINI_API_KEY"))
-        has_xai = bool(os.getenv("XAI_API_KEY"))
-        self.has_llm_key = any([has_openai, has_anthropic, has_gemini, has_xai])
+        # Check for any supported LLM API key for judge-based metrics.
+        # G_EVAL_PROVIDER is set by run_evaluation.py when a judge LLM is configured.
+        # Check each provider's env var so Mistral/Google/OpenRouter judges are recognised.
+        _provider_key_map = {
+            "openai":      os.getenv("OPENAI_API_KEY"),
+            "anthropic":   os.getenv("ANTHROPIC_API_KEY"),
+            # Proxy sets GOOGLE_API_KEY for google/gemini; evaluator historically checked GEMINI_API_KEY
+            "gemini":      os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"),
+            "google":      os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"),
+            "xai":         os.getenv("XAI_API_KEY"),
+            "mistral":     os.getenv("MISTRAL_API_KEY"),
+            "openrouter":  os.getenv("OPENROUTER_API_KEY"),
+        }
+        configured_judge_provider = os.getenv("G_EVAL_PROVIDER", "openai").lower()
+        # For self-hosted/ollama, G_EVAL_PROVIDER is already normalised to "openai" with OPENAI_API_KEY set
+        self.has_llm_key = bool(_provider_key_map.get(configured_judge_provider) or
+                                any(_provider_key_map.values()))
         if not self.has_llm_key:
-            print("\n⚠️  NOTE: G‑Eval metrics require a model API key (OpenAI/Anthropic/Gemini/xAI).")
+            print("\n⚠️  NOTE: G‑Eval metrics require a model API key (OpenAI/Anthropic/Gemini/Mistral/xAI/OpenRouter).")
             print("    No supported LLM API key found; G‑Eval metrics will be skipped.\n")
         
         print(f"✓ Initialized DeepEval evaluator")
@@ -568,7 +579,7 @@ class DeepEvalEvaluator:
         if not self.has_llm_key:
             raise RuntimeError(
                 "No LLM API key configured for metrics evaluation. "
-                "Please provide an OpenAI, Anthropic, or other supported LLM API key."
+                "Please provide an API key for OpenAI, Anthropic, Gemini, Mistral, xAI, or OpenRouter."
             )
         
         print("\n" + "="*70)

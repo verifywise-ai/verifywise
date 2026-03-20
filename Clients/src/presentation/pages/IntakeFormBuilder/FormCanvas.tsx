@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Box, Typography, IconButton, Tooltip, useTheme } from "@mui/material";
-import { Plus, Check, X, User, Mail } from "lucide-react";
+import { Check, X, User, Mail, LayoutTemplate } from "lucide-react";
 import { FormField } from "./types";
 import { FieldCard } from "./FieldCard";
 
@@ -31,7 +31,7 @@ function EmptyState() {
           mb: 2,
         }}
       >
-        <Plus size={32} color={theme.palette.text.accent} />
+        <LayoutTemplate size={32} color={theme.palette.text.accent} />
       </Box>
       <Typography sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: "15px" }}>
         Start building your form
@@ -117,7 +117,7 @@ function EditableFormTitle({
               color: theme.palette.background.main,
               backgroundColor: theme.palette.primary.main,
               borderRadius: "4px",
-              "&:hover": { backgroundColor: "#0F5A47" },
+              "&:hover": { backgroundColor: "brand.primaryHover" },
             }}
           >
             <Check size={14} />
@@ -252,7 +252,7 @@ function EditableFormDescription({
               color: theme.palette.background.main,
               backgroundColor: theme.palette.primary.main,
               borderRadius: "4px",
-              "&:hover": { backgroundColor: "#0F5A47" },
+              "&:hover": { backgroundColor: "brand.primaryHover" },
             }}
           >
             <Check size={14} />

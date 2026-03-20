@@ -19,6 +19,7 @@ import {
   FormDesignSettings,
   DEFAULT_DESIGN_SETTINGS,
 } from "../IntakeFormBuilder/types";
+import { brand } from "../../themes/palette";
 
 /**
  * Public form data structure
@@ -55,7 +56,7 @@ function GradientBanner({
   logoSrc?: string | null;
   children?: React.ReactNode;
 }) {
-  const gradient = buildGradient(colorTheme || "#13715B");
+  const gradient = buildGradient(colorTheme || brand.primary);
   return (
     <Box
       sx={{
@@ -75,7 +76,7 @@ function GradientBanner({
           sx={{
             width: 56,
             height: 56,
-            backgroundColor: "#fff",
+            backgroundColor: "background.main",
             borderRadius: "10px",
             display: "flex",
             alignItems: "center",
@@ -310,7 +311,7 @@ export function PublicIntakeForm() {
       >
         <Loader2
           size={32}
-          color="#13715B"
+          color={brand.primary}
           style={{ animation: "spin 1s linear infinite" }}
         />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
@@ -337,7 +338,7 @@ export function PublicIntakeForm() {
             maxWidth: 500,
             textAlign: "center",
             borderRadius: "12px",
-            backgroundColor: "#fff",
+            backgroundColor: "background.main",
             boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
           }}
         >
@@ -386,7 +387,7 @@ export function PublicIntakeForm() {
           sx={{
             borderRadius: "12px",
             overflow: "hidden",
-            backgroundColor: "#fff",
+            backgroundColor: "background.main",
             border: "1px solid #d0d5dd",
             boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
           }}
@@ -395,7 +396,7 @@ export function PublicIntakeForm() {
           <GradientBanner height={160} colorTheme={ds.colorTheme} logoSrc={organizationLogo}>
             <Typography
               sx={{
-                color: "#fff",
+                color: "background.main",
                 fontSize: "28px",
                 fontWeight: 700,
                 lineHeight: 1.2,
@@ -584,7 +585,7 @@ export function PublicIntakeForm() {
                 },
                 "&:disabled": {
                   backgroundColor: "#cbd5e1",
-                  color: "#fff",
+                  color: "background.main",
                 },
                 "& .MuiButton-startIcon": {
                   marginRight: "8px",

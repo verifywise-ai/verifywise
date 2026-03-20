@@ -28,8 +28,8 @@ const MAX_CONCURRENT = 3;
 // MODEL RESOLUTION (follows intakeLLM.service.ts pattern)
 // ============================================================================
 
-async function getModelFromKey(llmKeyId: number | undefined, tenant: string) {
-  const keys = await getLLMKeysWithKeyQuery(tenant);
+async function getModelFromKey(llmKeyId: number | undefined, organizationId: number) {
+  const keys = await getLLMKeysWithKeyQuery(organizationId);
   if (!keys || keys.length === 0) return null;
 
   let llmKey: any;
@@ -389,7 +389,7 @@ ${riskSections.join("\n\n")}`;
 
 export async function generateAISummaries(
   reportData: ReportData,
-  tenantId: string,
+  organizationId: number,
   llmKeyId?: number
 ): Promise<AISummaries> {
   const result: AISummaries = {
@@ -398,7 +398,7 @@ export async function generateAISummaries(
 
   try {
     // 1. Resolve LLM model
-    const model = await getModelFromKey(llmKeyId, tenantId);
+    const model = await getModelFromKey(llmKeyId, organizationId);
     if (!model) {
       logger.warn(
         "AI Summarizer: No LLM keys configured, skipping AI summaries"

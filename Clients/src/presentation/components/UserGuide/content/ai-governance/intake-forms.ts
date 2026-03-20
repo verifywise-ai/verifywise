@@ -291,7 +291,7 @@ export const intakeFormsContent: ArticleContent = {
       rows: [
         { setting: 'Format', description: 'Form width — narrow (620px) or wide (820px)', default: 'Narrow' },
         { setting: 'Alignment', description: 'Horizontal position — left, center, or right', default: 'Center' },
-        { setting: 'Color theme', description: 'Primary color used for the banner gradient, focused inputs, and the submit button', default: '#13715B' },
+        { setting: 'Color theme', description: 'Primary color used for the banner gradient, focused inputs, and the submit button', default: 'brand.primary' },
         { setting: 'Background color', description: 'Page background behind the form card', default: '#fafafa' },
         { setting: 'Logo URL', description: 'Organization logo displayed on the form', default: 'None' },
         { setting: 'Font family', description: 'Typography for all form text', default: 'Inter' },

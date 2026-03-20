@@ -22,7 +22,7 @@ export const commonStyles = {
   } as SxProps<Theme>,
 
   title: {
-    color: "#1A1919",
+    color: "text.primary",
     fontWeight: 600,
     mb: "6px",
     fontSize: 16,

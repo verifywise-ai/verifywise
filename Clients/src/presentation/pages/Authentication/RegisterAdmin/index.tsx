@@ -217,7 +217,7 @@ const RegisterAdmin: React.FC<{ multiTenant: boolean }> = ({
   // Styles for input fields
   const fieldStyles = {
     width: 360,
-    backgroundColor: "#fff",
+    backgroundColor: "background.main",
   };
 
   return (

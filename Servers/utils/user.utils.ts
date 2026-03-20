@@ -138,7 +138,7 @@ export const getUserByIdQuery = async (
   transaction: Transaction | null = null
 ): Promise<UserModel> => {
   const users = await sequelize.query<UserModel>(
-    "SELECT * FROM public.users WHERE id = :id",
+    "SELECT * FROM users WHERE id = :id",
     {
       replacements: { id },
       model: UserModel,
@@ -180,7 +180,7 @@ export const doesUserBelongsToOrganizationQuery = async (
   organizationId: number
 ) => {
   const result = (await sequelize.query(
-    "SELECT COUNT(*) > 0 AS belongs FROM public.users WHERE id = :userId AND organization_id = :organizationId",
+    "SELECT COUNT(*) > 0 AS belongs FROM users WHERE id = :userId AND organization_id = :organizationId",
     {
       replacements: { userId, organizationId },
     }
@@ -343,7 +343,7 @@ export const updateUserByIdQuery = async (
  */
 export const deleteUserByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const usersFK = [
@@ -377,9 +377,9 @@ export const deleteUserByIdQuery = async (
     await Promise.all(
       entry.fields.map(async (f) => {
         await sequelize.query(
-          `UPDATE "${tenant}".${entry.table} SET ${f} = :x WHERE ${f} = :id`,
+          `UPDATE ${entry.table} SET ${f} = :x WHERE organization_id = :organizationId AND ${f} = :id`,
           {
-            replacements: { x: null, id },
+            replacements: { x: null, id, organizationId },
             // type: QueryTypes.UPDATE
             transaction,
           }
@@ -389,9 +389,9 @@ export const deleteUserByIdQuery = async (
   }
 
   await sequelize.query(
-    `DELETE FROM "${tenant}".projects_members WHERE user_id = :user_id`,
+    `DELETE FROM projects_members WHERE organization_id = :organizationId AND user_id = :user_id`,
     {
-      replacements: { user_id: id },
+      replacements: { user_id: id, organizationId },
       type: QueryTypes.DELETE,
       transaction,
     }
@@ -437,13 +437,13 @@ export const checkUserExistsQuery = async (): Promise<boolean> => {
   }
 };
 
-export const getUserProjects = async (userId: number, tenant: string) => {
+export const getUserProjects = async (userId: number, organizationId: number) => {
   const result = await sequelize.query(
-    `SELECT p.* FROM "${tenant}".projects p
-     INNER JOIN "${tenant}".projects_members pm ON p.id = pm.project_id
-     WHERE pm.user_id = :user_id`,
+    `SELECT p.* FROM projects p
+     INNER JOIN projects_members pm ON p.id = pm.project_id AND pm.organization_id = :organizationId
+     WHERE p.organization_id = :organizationId AND pm.user_id = :user_id`,
     {
-      replacements: { user_id: userId },
+      replacements: { user_id: userId, organizationId },
       mapToModel: true,
       model: ProjectModel,
     }
@@ -538,7 +538,7 @@ export const getQuestionsForSubTopic = async (id: number) => {
 export const uploadUserProfilePhotoQuery = async (
   userId: number,
   fileId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   // Get current profile photo ID if exists
@@ -558,7 +558,7 @@ export const uploadUserProfilePhotoQuery = async (
 
   // Delete old file if it exists
   if (deleteFileId) {
-    await deleteFileById(deleteFileId, tenant, transaction);
+    await deleteFileById(deleteFileId, organizationId, transaction);
   }
 
   return result[0][0];
@@ -566,15 +566,15 @@ export const uploadUserProfilePhotoQuery = async (
 
 export const getUserProfilePhotoQuery = async (
   userId: number,
-  tenant: string
+  organizationId: number
 ) => {
   const result = (await sequelize.query(
     `SELECT f.content, f.type
      FROM users u
-     INNER JOIN "${tenant}".files f ON u.profile_photo_id = f.id
+     INNER JOIN files f ON u.profile_photo_id = f.id AND f.organization_id = :organizationId
      WHERE u.id = :userId
      LIMIT 1;`,
-    { replacements: { userId } }
+    { replacements: { userId, organizationId } }
   )) as [{ content: Buffer; type: string }[], number];
 
   return result[0][0] || null;
@@ -582,7 +582,7 @@ export const getUserProfilePhotoQuery = async (
 
 export const deleteUserProfilePhotoQuery = async (
   userId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   // Get current profile photo ID
@@ -602,7 +602,7 @@ export const deleteUserProfilePhotoQuery = async (
   // Delete the file if it exists
   let deleted = false;
   if (deleteFileId) {
-    deleted = await deleteFileById(deleteFileId, tenant, transaction);
+    deleted = await deleteFileById(deleteFileId, organizationId, transaction);
   }
 
   return deleted && result[0][0].profile_photo_id === null;

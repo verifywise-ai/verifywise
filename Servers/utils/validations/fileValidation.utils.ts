@@ -106,7 +106,7 @@ export const validatePaginationParams = (
  */
 export const validateFileUploadBody = async (
   body: any,
-  _tenant: string
+  _organizationId: number
 ): Promise<ValidationError[]> => {
   const errors: ValidationError[] = [];
 
@@ -288,9 +288,9 @@ export const validateUploadedFiles = (files: any): ValidationError[] => {
 export const validateFileUploadRequest = async (
   body: any,
   files: any,
-  tenant: string
+  organizationId: number
 ): Promise<ValidationError[]> => {
-  const bodyErrors = await validateFileUploadBody(body, tenant);
+  const bodyErrors = await validateFileUploadBody(body, organizationId);
   const fileErrors = validateUploadedFiles(files);
 
   return [...bodyErrors, ...fileErrors];
@@ -345,9 +345,9 @@ export const validateFileBusinessRules = (
 export const validateCompleteFileUpload = async (
   body: any,
   files: any,
-  tenant: string
+  organizationId: number
 ): Promise<ValidationError[]> => {
-  const validationErrors = await validateFileUploadRequest(body, files, tenant);
+  const validationErrors = await validateFileUploadRequest(body, files, organizationId);
   const businessErrors = validateFileBusinessRules(body, files);
 
   return [...validationErrors, ...businessErrors];

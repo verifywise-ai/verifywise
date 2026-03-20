@@ -28,7 +28,6 @@ jest.mock("../../utils/logger/logHelper", () => ({
 
 import { EntityGraphViewsService } from "../entityGraphViewsService";
 import {
-  ensureViewsTableExists,
   createViewQuery,
   getViewsByUserQuery,
   getViewByIdQuery,
@@ -47,9 +46,6 @@ import {
 } from "../../domain.layer/exceptions/custom.exception";
 
 // Cast mocks
-const mockEnsureViewsTableExists = ensureViewsTableExists as jest.MockedFunction<
-  typeof ensureViewsTableExists
->;
 const mockCreateViewQuery = createViewQuery as jest.MockedFunction<
   typeof createViewQuery
 >;
@@ -84,7 +80,6 @@ describe("EntityGraphViewsService", () => {
     config: { visibleEntities: ["model", "risk"] },
     userId: 1,
     organizationId: 1,
-    tenantId: "tenant_1",
   };
 
   const mockView = {
@@ -109,7 +104,7 @@ describe("EntityGraphViewsService", () => {
 
   describe("createView", () => {
     beforeEach(() => {
-      mockEnsureViewsTableExists.mockResolvedValue(undefined);
+
       mockGetViewCountByUserQuery.mockResolvedValue(0);
       mockCreateView.mockResolvedValue(mockView);
       mockCreateViewQuery.mockResolvedValue(mockView);
@@ -120,16 +115,14 @@ describe("EntityGraphViewsService", () => {
         validViewData.name,
         validViewData.config,
         validViewData.userId,
-        validViewData.organizationId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(result).toBe(mockView);
-      expect(mockEnsureViewsTableExists).toHaveBeenCalledWith(validViewData.tenantId);
+
       expect(mockGetViewCountByUserQuery).toHaveBeenCalledWith(
         validViewData.userId,
-        validViewData.organizationId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
       expect(mockCreateView).toHaveBeenCalled();
       expect(mockCreateViewQuery).toHaveBeenCalled();
@@ -147,8 +140,7 @@ describe("EntityGraphViewsService", () => {
           "",
           validViewData.config,
           validViewData.userId,
-          validViewData.organizationId,
-          validViewData.tenantId
+          validViewData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -165,8 +157,7 @@ describe("EntityGraphViewsService", () => {
           validViewData.name,
           "not-an-object" as any,
           validViewData.userId,
-          validViewData.organizationId,
-          validViewData.tenantId
+          validViewData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -177,8 +168,7 @@ describe("EntityGraphViewsService", () => {
           validViewData.name,
           validViewData.config,
           0,
-          validViewData.organizationId,
-          validViewData.tenantId
+          validViewData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -191,8 +181,7 @@ describe("EntityGraphViewsService", () => {
           validViewData.name,
           validViewData.config,
           validViewData.userId,
-          validViewData.organizationId,
-          validViewData.tenantId
+          validViewData.organizationId
         )
       ).rejects.toThrow(BusinessLogicException);
     });
@@ -202,33 +191,30 @@ describe("EntityGraphViewsService", () => {
         validViewData.name,
         validViewData.config,
         validViewData.userId,
-        validViewData.organizationId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
-      expect(mockEnsureViewsTableExists).toHaveBeenCalled();
+
       expect(mockGetViewCountByUserQuery).toHaveBeenCalled();
     });
   });
 
   describe("getViews", () => {
     beforeEach(() => {
-      mockEnsureViewsTableExists.mockResolvedValue(undefined);
+
       mockGetViewsByUserQuery.mockResolvedValue([mockView]);
     });
 
     it("should return views for user", async () => {
       const result = await EntityGraphViewsService.getViews(
         validViewData.userId,
-        validViewData.organizationId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(result).toEqual([mockView]);
       expect(mockGetViewsByUserQuery).toHaveBeenCalledWith(
         validViewData.userId,
-        validViewData.organizationId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
     });
 
@@ -237,8 +223,7 @@ describe("EntityGraphViewsService", () => {
 
       const result = await EntityGraphViewsService.getViews(
         validViewData.userId,
-        validViewData.organizationId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(result).toEqual([]);
@@ -247,17 +232,16 @@ describe("EntityGraphViewsService", () => {
     it("should ensure table exists before fetching", async () => {
       await EntityGraphViewsService.getViews(
         validViewData.userId,
-        validViewData.organizationId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
-      expect(mockEnsureViewsTableExists).toHaveBeenCalledWith(validViewData.tenantId);
+
     });
   });
 
   describe("getViewById", () => {
     beforeEach(() => {
-      mockEnsureViewsTableExists.mockResolvedValue(undefined);
+
       mockGetViewByIdQuery.mockResolvedValue(mockView);
     });
 
@@ -267,7 +251,7 @@ describe("EntityGraphViewsService", () => {
       const result = await EntityGraphViewsService.getViewById(
         1,
         validViewData.userId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(result).toBe(mockView);
@@ -279,7 +263,7 @@ describe("EntityGraphViewsService", () => {
       const result = await EntityGraphViewsService.getViewById(
         1,
         999,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(result).toBeNull();
@@ -291,7 +275,7 @@ describe("EntityGraphViewsService", () => {
       const result = await EntityGraphViewsService.getViewById(
         999,
         validViewData.userId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(result).toBeNull();
@@ -300,7 +284,7 @@ describe("EntityGraphViewsService", () => {
 
   describe("updateView", () => {
     beforeEach(() => {
-      mockEnsureViewsTableExists.mockResolvedValue(undefined);
+
       mockGetViewByIdQuery.mockResolvedValue(mockView);
       mockUpdateViewQuery.mockResolvedValue(mockView);
       mockView.isOwnedBy.mockReturnValue(true);
@@ -312,7 +296,7 @@ describe("EntityGraphViewsService", () => {
         "New Name",
         { visibleEntities: ["control"] },
         validViewData.userId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(result).toBe(mockView);
@@ -328,7 +312,7 @@ describe("EntityGraphViewsService", () => {
           "New Name",
           undefined,
           validViewData.userId,
-          validViewData.tenantId
+          validViewData.organizationId
         )
       ).rejects.toThrow("View with ID 999 not found");
     });
@@ -342,7 +326,7 @@ describe("EntityGraphViewsService", () => {
           "New Name",
           undefined,
           999,
-          validViewData.tenantId
+          validViewData.organizationId
         )
       ).rejects.toThrow(BusinessLogicException);
     });
@@ -360,7 +344,7 @@ describe("EntityGraphViewsService", () => {
           "",
           undefined,
           validViewData.userId,
-          validViewData.tenantId
+          validViewData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -371,14 +355,14 @@ describe("EntityGraphViewsService", () => {
         "Only Name",
         undefined,
         validViewData.userId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(mockUpdateViewQuery).toHaveBeenCalledWith(
         1,
         "Test View",
         undefined,
-        validViewData.tenantId
+        validViewData.organizationId
       );
     });
 
@@ -388,7 +372,7 @@ describe("EntityGraphViewsService", () => {
         undefined,
         { showProblemsOnly: true },
         validViewData.userId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(mockUpdateViewQuery).toHaveBeenCalled();
@@ -397,7 +381,7 @@ describe("EntityGraphViewsService", () => {
 
   describe("deleteView", () => {
     beforeEach(() => {
-      mockEnsureViewsTableExists.mockResolvedValue(undefined);
+
       mockGetViewByIdQuery.mockResolvedValue(mockView);
       mockDeleteViewByIdQuery.mockResolvedValue(1);
       mockView.isOwnedBy.mockReturnValue(true);
@@ -407,18 +391,18 @@ describe("EntityGraphViewsService", () => {
       const result = await EntityGraphViewsService.deleteView(
         1,
         validViewData.userId,
-        validViewData.tenantId
+        validViewData.organizationId
       );
 
       expect(result).toBe(true);
-      expect(mockDeleteViewByIdQuery).toHaveBeenCalledWith(1, validViewData.tenantId);
+      expect(mockDeleteViewByIdQuery).toHaveBeenCalledWith(1, validViewData.organizationId);
     });
 
     it("should throw error when view not found", async () => {
       mockGetViewByIdQuery.mockResolvedValue(null);
 
       await expect(
-        EntityGraphViewsService.deleteView(999, validViewData.userId, validViewData.tenantId)
+        EntityGraphViewsService.deleteView(999, validViewData.userId, validViewData.organizationId)
       ).rejects.toThrow("View with ID 999 not found");
     });
 
@@ -426,7 +410,7 @@ describe("EntityGraphViewsService", () => {
       mockView.isOwnedBy.mockReturnValue(false);
 
       await expect(
-        EntityGraphViewsService.deleteView(1, 999, validViewData.tenantId)
+        EntityGraphViewsService.deleteView(1, 999, validViewData.organizationId)
       ).rejects.toThrow(BusinessLogicException);
     });
 
@@ -434,7 +418,7 @@ describe("EntityGraphViewsService", () => {
       mockDeleteViewByIdQuery.mockResolvedValue(0);
 
       await expect(
-        EntityGraphViewsService.deleteView(1, validViewData.userId, validViewData.tenantId)
+        EntityGraphViewsService.deleteView(1, validViewData.userId, validViewData.organizationId)
       ).rejects.toThrow("Failed to delete view with ID 1");
     });
   });

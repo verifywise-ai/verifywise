@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, ArrowRight, ExternalLink, Rocket, Shield, AlertTriangle, Brain, Settings, Plug, FileText, GraduationCap, BarChart3, FlaskConical, ScanSearch, EyeOff, LucideIcon } from 'lucide-react';
+import { Search, ArrowRight, ExternalLink, Rocket, Shield, AlertTriangle, Brain, Settings, Plug, FileText, GraduationCap, BarChart3, FlaskConical, ScanSearch, EyeOff, Router, LucideIcon } from 'lucide-react';
 import { collections, fastFinds, getCollection, IconName } from '@user-guide-content/userGuideConfig';
 
 // Map icon names to actual Lucide components
@@ -16,6 +16,7 @@ const iconMap: Record<IconName, LucideIcon> = {
   FlaskConical,
   ScanSearch,
   EyeOff,
+  Router,
 };
 import { colors, typography, spacing, border } from './styles/theme';
 import './UserGuideLanding.css';

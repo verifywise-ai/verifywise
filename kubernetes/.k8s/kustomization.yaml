@@ -23,6 +23,7 @@ resources:
   - worker-deployment.yaml
   - eval-server-pvc.yaml
   - eval-server-deployment.yaml
+  - ai-gateway-deployment.yaml
 
   # Ingress for external access
   # - ingress.yaml
@@ -46,6 +47,8 @@ images:
   - name: ghcr.io/verifywise-ai/verifywise-frontend
     newTag: latest
   - name: ghcr.io/verifywise-ai/verifywise-eval-server
+    newTag: latest
+  - name: ghcr.io/verifywise-ai/verifywise-ai-gateway
     newTag: latest
 
 # ConfigMap generator (optional - alternative to using configmap-generated.yaml)

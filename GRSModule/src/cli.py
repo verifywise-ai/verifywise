@@ -24,6 +24,7 @@ from perturb.load_catalog import load_mutation_catalog
 from perturb.perturbator import apply_mutations
 
 from validate.validator import validate_candidates, ValidateConfig
+from validate.semantic import SemanticValidator, SemanticValidatorConfig
 from reports.validate_report import build_validate_report
 
 from seeds.index import ObligationIndex
@@ -257,9 +258,16 @@ def _cmd_generate(args: argparse.Namespace) -> int:
             return 2
 
         candidates = list(read_jsonl(cand_in))
+        sem_client = (
+            MockChatClient()
+            if args.provider == "mock"
+            else OpenRouterChatClient(model_id=args.validator_model_id)
+        )
+        sem_validator = SemanticValidator(sem_client, SemanticValidatorConfig())
         accepted, rejections = validate_candidates(
             candidates=candidates,
             cfg=ValidateConfig(),
+            semantic_validator=sem_validator,
         )
 
         accepted = enrich_with_obligations(
@@ -614,6 +622,7 @@ def main() -> None:
     gen.add_argument("--inject-constraints-into-prompt", action="store_true")
     gen.add_argument("--model-id", default="mock-model")
     gen.add_argument("--provider", default="mock")
+    gen.add_argument("--validator-model-id", default="openai/gpt-4o-mini")
     gen.add_argument("--temperature", default="0.2")
     gen.add_argument("--max-tokens", default="2048")
     gen.add_argument("--limit", type=int, default=None, help="Max number of scenarios to run inference on")

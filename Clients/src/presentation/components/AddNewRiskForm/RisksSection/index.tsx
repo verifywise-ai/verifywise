@@ -55,7 +55,7 @@ const FORM_CONSTANTS = {
 const FORM_STYLES = {
   fontSize: "13px",
   borderRadius: "8px",
-  focusedBackground: "#f9fafb",
+  focusedBackground: "background.accent",
   padding: "12px",
   chipPadding: "4px",
 } as const;

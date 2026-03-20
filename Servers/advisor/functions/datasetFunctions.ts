@@ -11,10 +11,10 @@ export interface FetchDatasetsParams {
 
 const fetchDatasets = async (
   params: FetchDatasetsParams,
-  tenant: string
+  organizationId: number
 ): Promise<any[]> => {
   try {
-    let datasets = await getAllDatasetsQuery(tenant);
+    let datasets = await getAllDatasetsQuery(organizationId);
 
     // Apply filters
     if (params.type) {
@@ -64,10 +64,10 @@ const fetchDatasets = async (
 
 const getDatasetAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const datasets = await getAllDatasetsQuery(tenant);
+    const datasets = await getAllDatasetsQuery(organizationId);
     const total = datasets.length;
 
     // Type distribution
@@ -124,10 +124,10 @@ const getDatasetAnalytics = async (
 
 const getDatasetExecutiveSummary = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const datasets = await getAllDatasetsQuery(tenant);
+    const datasets = await getAllDatasetsQuery(organizationId);
     const total = datasets.length;
 
     const piiCount = datasets.filter((d: any) => d.contains_pii).length;

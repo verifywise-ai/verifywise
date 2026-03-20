@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Select from "../../components/Inputs/Select";
 import { FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "./types";
+import { brand, text, background } from "../../themes/palette";
 
 interface DesignPanelProps {
   settings: FormDesignSettings;
@@ -29,13 +30,13 @@ const FONT_OPTIONS = [
 ];
 
 const THEME_COLORS = [
-  "#13715B", "#0F5A47", "#1976D2", "#2E7D32", "#C62828",
+  `${brand.primary}`, `${brand.primaryHover}`, "#1976D2", "#2E7D32", "#C62828",
   "#AD1457", "#6A1B9A", "#283593", "#00695C", "#EF6C00",
-  "#4E342E", "#37474F", "#000000", "#546E7A",
+  "#4E342E", "#37474F", `${text.black}`, "#546E7A",
 ];
 
 const BG_COLORS = [
-  "#fafafa", "#ffffff", "#f5f5f5", "#f0f4f8", "#fdf2f8",
+  "#fafafa", `${background.main}`, `${background.surface}`, "#f0f4f8", "#fdf2f8",
   "#f0fdf4", "#fef3c7", "#ecfeff", "#f5f3ff", "#fef2f2",
   "#e8f5e9", "#e3f2fd", "#fff3e0", "#f3e5f5",
 ];
@@ -202,7 +203,7 @@ function ColorGrid({
           <Box
             component="input"
             type="color"
-            value={customValue || "#13715B"}
+            value={customValue || brand.primary}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               onCustomChange?.(e.target.value)
             }
@@ -222,7 +223,7 @@ function ColorGrid({
             }}
           />
           <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent, fontFamily: "monospace" }}>
-            {customValue || "#13715B"}
+            {customValue || brand.primary}
           </Typography>
         </Box>
       )}

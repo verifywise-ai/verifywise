@@ -7,7 +7,7 @@ import { Transaction, QueryTypes } from "sequelize";
  */
 export async function recordHistorySnapshot(
   parameter: string,
-  tenant: string,
+  organizationId: number,
   triggered_by_user_id?: number,
   transaction?: Transaction
 ): Promise<RiskHistoryModel> {
@@ -15,7 +15,7 @@ export async function recordHistorySnapshot(
     // Get current counts for the parameter
     const snapshot_data = await getCurrentParameterCounts(
       parameter,
-      tenant,
+      organizationId,
       transaction
     );
 
@@ -24,11 +24,12 @@ export async function recordHistorySnapshot(
     const created_at = new Date();
 
     const result = await sequelize.query(
-      `INSERT INTO "${tenant}".risk_history (parameter, snapshot_data, recorded_at, triggered_by_user_id, created_at)
-       VALUES (:parameter, :snapshot_data, :recorded_at, :triggered_by_user_id, :created_at)
+      `INSERT INTO risk_history (organization_id, parameter, snapshot_data, recorded_at, triggered_by_user_id, created_at)
+       VALUES (:organizationId, :parameter, :snapshot_data, :recorded_at, :triggered_by_user_id, :created_at)
        RETURNING *`,
       {
         replacements: {
+          organizationId,
           parameter,
           snapshot_data: JSON.stringify(snapshot_data),
           recorded_at,
@@ -56,7 +57,7 @@ export async function recordHistorySnapshot(
  */
 export async function getCurrentParameterCounts(
   parameter: string,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<Record<string, number>> {
   try {
@@ -66,10 +67,11 @@ export async function getCurrentParameterCounts(
       // Get counts for each severity level
       const severityCounts = (await sequelize.query(
         `SELECT severity, COUNT(*) as count
-         FROM "${tenant}".risks
-         WHERE is_deleted = false
+         FROM risks
+         WHERE organization_id = :organizationId AND is_deleted = false
          GROUP BY severity`,
         {
+          replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
         }
@@ -97,10 +99,11 @@ export async function getCurrentParameterCounts(
       // Get counts for each likelihood level
       const likelihoodCounts = (await sequelize.query(
         `SELECT likelihood, COUNT(*) as count
-         FROM "${tenant}".risks
-         WHERE is_deleted = false
+         FROM risks
+         WHERE organization_id = :organizationId AND is_deleted = false
          GROUP BY likelihood`,
         {
+          replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
         }
@@ -128,10 +131,11 @@ export async function getCurrentParameterCounts(
       // Get counts for each mitigation status
       const mitigationCounts = (await sequelize.query(
         `SELECT mitigation_status, COUNT(*) as count
-         FROM "${tenant}".risks
-         WHERE is_deleted = false
+         FROM risks
+         WHERE organization_id = :organizationId AND is_deleted = false
          GROUP BY mitigation_status`,
         {
+          replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
         }
@@ -161,10 +165,11 @@ export async function getCurrentParameterCounts(
       // Get counts for each risk level (using risk_level_autocalculated)
       const riskLevelCounts = (await sequelize.query(
         `SELECT risk_level_autocalculated, COUNT(*) as count
-         FROM "${tenant}".risks
-         WHERE is_deleted = false
+         FROM risks
+         WHERE organization_id = :organizationId AND is_deleted = false
          GROUP BY risk_level_autocalculated`,
         {
+          replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
         }
@@ -193,10 +198,11 @@ export async function getCurrentParameterCounts(
       // Generic handling for other parameters
       const paramCounts = (await sequelize.query(
         `SELECT ${parameter}, COUNT(*) as count
-         FROM "${tenant}".risks
-         WHERE is_deleted = false
+         FROM risks
+         WHERE organization_id = :organizationId AND is_deleted = false
          GROUP BY ${parameter}`,
         {
+          replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
         }
@@ -225,7 +231,7 @@ export async function getTimeseriesData(
   parameter: string,
   _startDate: Date,
   endDate: Date,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<RiskHistoryModel[]> {
   try {
@@ -233,12 +239,14 @@ export async function getTimeseriesData(
     // This allows us to use historical data for time points that don't have exact snapshots
     const snapshots = (await sequelize.query(
       `SELECT DISTINCT ON (recorded_at::date) *, recorded_at::date AS recorded_at_date
-        FROM "${tenant}".risk_history
-        WHERE parameter = :parameter
+        FROM risk_history
+        WHERE organization_id = :organizationId
+          AND parameter = :parameter
           AND recorded_at <= :endDate
         ORDER BY recorded_at::date, recorded_at DESC;`,
       {
         replacements: {
+          organizationId,
           parameter,
           endDate,
         },
@@ -256,17 +264,19 @@ export async function getTimeseriesData(
 async function getTimeseriesDataAtATime(
   parameter: string,
   date: Date,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<RiskHistoryModel> {
   try {
     const snapshots = (await sequelize.query(
-      `SELECT * FROM "${tenant}".risk_history
-        WHERE parameter = :parameter
+      `SELECT * FROM risk_history
+        WHERE organization_id = :organizationId
+        AND parameter = :parameter
         AND recorded_at::date < :date::date
         ORDER BY recorded_at DESC LIMIT 1`,
       {
         replacements: {
+          organizationId,
           parameter,
           date,
         },
@@ -288,7 +298,7 @@ export async function getTimeseriesWithInterpolation(
   parameter: string,
   startDate: Date,
   endDate: Date,
-  tenant: string,
+  organizationId: number,
   intervalHours: number = 24,
   transaction?: Transaction
 ): Promise<Array<{ timestamp: Date; data: Record<string, number> }>> {
@@ -302,7 +312,7 @@ export async function getTimeseriesWithInterpolation(
       parameter,
       startDate,
       endDateInclusive,
-      tenant,
+      organizationId,
       transaction
     );
 
@@ -372,7 +382,7 @@ export async function getTimeseriesWithInterpolation(
           const snapshotBefore = await getTimeseriesDataAtATime(
             parameter,
             timePoint,
-            tenant,
+            organizationId,
             transaction
           );
           if (snapshotBefore) {
@@ -411,7 +421,7 @@ export async function getTimeseriesWithInterpolation(
 export async function getTimeseriesForTimeframe(
   parameter: string,
   timeframe: "7days" | "15days" | "1month" | "3months" | "6months" | "1year",
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<Array<{ timestamp: Date; data: Record<string, number> }>> {
   const endDate = new Date();
@@ -451,7 +461,7 @@ export async function getTimeseriesForTimeframe(
     parameter,
     startDate,
     endDate,
-    tenant,
+    organizationId,
     intervalHours,
     transaction
   );
@@ -462,17 +472,17 @@ export async function getTimeseriesForTimeframe(
  */
 export async function getLatestSnapshot(
   parameter: string,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<RiskHistoryModel | null> {
   try {
     const snapshots = await sequelize.query(
-      `SELECT * FROM "${tenant}".risk_history
-       WHERE parameter = :parameter
+      `SELECT * FROM risk_history
+       WHERE organization_id = :organizationId AND parameter = :parameter
        ORDER BY recorded_at DESC
        LIMIT 1`,
       {
-        replacements: { parameter },
+        replacements: { organizationId, parameter },
         mapToModel: true,
         model: RiskHistoryModel,
         transaction,
@@ -492,18 +502,19 @@ export async function getLatestSnapshot(
 export async function getSnapshotAtTime(
   parameter: string,
   timestamp: Date,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<RiskHistoryModel | null> {
   try {
     const snapshots = await sequelize.query(
-      `SELECT * FROM "${tenant}".risk_history
-       WHERE parameter = :parameter
+      `SELECT * FROM risk_history
+       WHERE organization_id = :organizationId AND parameter = :parameter
        AND recorded_at <= :timestamp
        ORDER BY recorded_at DESC
        LIMIT 1`,
       {
         replacements: {
+          organizationId,
           parameter,
           timestamp,
         },
@@ -525,13 +536,13 @@ export async function getSnapshotAtTime(
  */
 export async function shouldRecordSnapshot(
   parameter: string,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> {
   try {
     const latestSnapshot = await getLatestSnapshot(
       parameter,
-      tenant,
+      organizationId,
       transaction
     );
 
@@ -542,7 +553,7 @@ export async function shouldRecordSnapshot(
 
     const currentCounts = await getCurrentParameterCounts(
       parameter,
-      tenant,
+      organizationId,
       transaction
     );
     const previousCounts = latestSnapshot.snapshot_data;
@@ -576,20 +587,20 @@ export async function shouldRecordSnapshot(
  */
 export async function recordSnapshotIfChanged(
   parameter: string,
-  tenant: string,
+  organizationId: number,
   triggered_by_user_id?: number,
   transaction?: Transaction
 ): Promise<RiskHistoryModel | null> {
   const shouldRecord = await shouldRecordSnapshot(
     parameter,
-    tenant,
+    organizationId,
     transaction
   );
 
   if (shouldRecord) {
     return await recordHistorySnapshot(
       parameter,
-      tenant,
+      organizationId,
       triggered_by_user_id,
       transaction
     );

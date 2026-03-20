@@ -1,7 +1,7 @@
 export interface IISO27001SubClause {
   id?: number;
   implementation_description: string;
-  evidence_links: Object[];
+  // NOTE: evidence_links are now stored in file_entity_links table
   status: string;
   owner: number;
   reviewer: number;

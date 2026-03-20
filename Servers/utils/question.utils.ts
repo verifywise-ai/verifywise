@@ -4,55 +4,85 @@ import { deleteFileById } from "./fileUpload.utils";
 import { Request } from "express";
 import { QueryTypes, Transaction } from "sequelize";
 import { IQuestion } from "../domain.layer/interfaces/I.question";
+import {
+  getEvidenceFilesForEntity,
+  getEvidenceFilesForEntities,
+  createFileEntityLink,
+  deleteFileEntityLink,
+} from "./files/evidenceFiles.utils";
+
+// Framework type for generic assessment questions
+const FRAMEWORK_TYPE = "generic_assessment";
+const ENTITY_TYPE = "question";
 
 export const getAllQuestionsQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<(IQuestion & { evidence_files: Object[] })[]> => {
   const questions = await sequelize.query(
-    `SELECT * FROM "${tenant}".questions ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM questions WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: QuestionModel,
     }
   );
-  const questionsUpdated = (await Promise.all(
-    questions.map(async (question) => {
-      let evidenceFiles: Object[] = [];
-      await Promise.all(
-        (question.evidence_files || []).map(async (f) => {
-          // const file = await getFileById(parseInt(f.id));
-          evidenceFiles.push({ id: f.id, filename: f.fileName });
-        })
-      );
-      return { ...question.dataValues, evidence_files: evidenceFiles };
-    })
-  )) as (QuestionModel & { evidence_files: string[] })[];
+
+  // Batch fetch evidence files from file_entity_links
+  const questionIds = questions.map((q) => q.id!);
+  let filesMap = new Map<number, any[]>();
+
+  if (questionIds.length > 0) {
+    filesMap = await getEvidenceFilesForEntities(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      questionIds,
+      "evidence"
+    );
+  }
+
+  // Attach evidence_files to each question for backward compatibility
+  const questionsUpdated = questions.map((question) => {
+    const evidenceFiles = filesMap.get(question.id!) || [];
+    return {
+      ...question.dataValues,
+      evidence_files: evidenceFiles.map((f) => ({ id: f.id, filename: f.filename })),
+    };
+  }) as (QuestionModel & { evidence_files: Object[] })[];
+
   return questionsUpdated;
 };
 
 export const getQuestionByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<IQuestion & { evidence_files: Object[] }> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".questions WHERE id = :id`,
+    `SELECT * FROM questions WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: QuestionModel,
     }
   );
-  let evidenceFiles: Object[] = [];
-  await Promise.all(
-    (result[0].evidence_files || []).map(async (f) => {
-      // const file = await getFileById(parseInt(f.id));
-      evidenceFiles.push({ id: f.id, filename: f.fileName });
-    })
+
+  if (!result.length) {
+    return null as any;
+  }
+
+  // Fetch evidence_files from file_entity_links
+  const evidenceFiles = await getEvidenceFilesForEntity(
+    organizationId,
+    FRAMEWORK_TYPE,
+    ENTITY_TYPE,
+    id,
+    "evidence"
   );
+
   return {
     ...result[0].dataValues,
-    evidence_files: evidenceFiles,
-  } as QuestionModel & { evidence_files: string[] };
+    evidence_files: evidenceFiles.map((f) => ({ id: f.id, filename: f.fileName })),
+  } as QuestionModel & { evidence_files: Object[] };
 };
 
 export interface UploadedFile {
@@ -74,19 +104,20 @@ export type RequestWithFile = Omit<Request, "file" | "files"> & {
 
 export const createNewQuestionQuery = async (
   question: QuestionModel,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<QuestionModel> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".questions (
-      subtopic_id, question, answer_type, evidence_required,
+    `INSERT INTO questions (
+      organization_id, subtopic_id, question, answer_type, evidence_required,
       hint, is_required, priority_level, answer
     ) VALUES (
-      :subtopic_id, :question, :answer_type, :evidence_required,
+      :organizationId, :subtopic_id, :question, :answer_type, :evidence_required,
       :hint, :is_required, :priority_level, :answer
     ) RETURNING *`,
     {
       replacements: {
+        organizationId,
         subtopic_id: question.subtopic_id,
         question: question.question,
         answer_type: question.answer_type,
@@ -98,10 +129,13 @@ export const createNewQuestionQuery = async (
       },
       mapToModel: true,
       model: QuestionModel,
-      // type: QueryTypes.INSERT
       transaction,
     }
   );
+
+  // Attach empty array for backward compatibility
+  (result[0] as any).evidence_files = [];
+
   return result[0];
 };
 
@@ -115,65 +149,70 @@ export const addFileToQuestion = async (
     uploaded_time: Date;
   }[],
   deletedFiles: number[],
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<QuestionModel> => {
-  // get the existing evidence files
-  const evidenceFilesResult = await sequelize.query(
-    `SELECT evidence_files FROM "${tenant}".questions WHERE id = :id`,
-    {
-      replacements: { id },
-      mapToModel: true,
-      model: QuestionModel,
-      transaction,
-    }
-  );
+  // Delete file entity links for deleted files
+  for (const fileId of deletedFiles) {
+    await deleteFileEntityLink(
+      organizationId,
+      fileId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      id,
+      transaction
+    );
+  }
 
-  // convert to list of objects
-  let evidenceFiles = (
-    evidenceFilesResult[0].evidence_files
-      ? evidenceFilesResult[0].evidence_files
-      : []
-  ) as {
-    id: string;
-    fileName: string;
-    project_id: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[];
+  // Create file entity links for new uploaded files
+  for (const file of uploadedFiles) {
+    const fileId = typeof file.id === "string" ? parseInt(file.id) : file.id;
+    await createFileEntityLink(
+      organizationId,
+      fileId as number,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      id,
+      "evidence",
+      file.project_id,
+      transaction
+    );
+  }
 
-  // remove the deleted file ids
-  evidenceFiles = evidenceFiles.filter(
-    (f) => !deletedFiles.includes(parseInt(f.id))
-  );
-
-  // combine the files lists
-  evidenceFiles = evidenceFiles.concat(uploadedFiles);
-
-  // update
+  // Fetch the question with updated files
   const result = await sequelize.query(
-    `UPDATE "${tenant}".questions SET evidence_files = :evidence_files WHERE id = :id RETURNING *;`,
+    `SELECT * FROM questions WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: {
-        evidence_files: JSON.stringify(evidenceFiles),
-        id,
-      },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: QuestionModel,
-      // type: QueryTypes.UPDATE
       transaction,
     }
   );
+
+  // Fetch evidence_files for response
+  const evidenceFiles = await getEvidenceFilesForEntity(
+    organizationId,
+    FRAMEWORK_TYPE,
+    ENTITY_TYPE,
+    id,
+    "evidence"
+  );
+
+  (result[0] as any).evidence_files = evidenceFiles;
+
   return result[0];
 };
 
 export const updateQuestionByIdQuery = async (
   id: number,
   question: Partial<QuestionModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<QuestionModel | null> => {
-  const updateQuestion: Partial<Record<keyof QuestionModel, any>> = {};
+  const updateQuestion: Partial<Record<keyof QuestionModel, any>> & {
+    organizationId?: number;
+  } = {};
   const setClause = ["answer", "status"]
     .filter((f) => {
       if (question[f as keyof QuestionModel] !== undefined) {
@@ -189,73 +228,185 @@ export const updateQuestionByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE "${tenant}".questions SET ${setClause} WHERE id = :id RETURNING *;`;
+  if (!setClause) {
+    // No fields to update, just fetch current state
+    const result = await sequelize.query(
+      `SELECT * FROM questions WHERE organization_id = :organizationId AND id = :id`,
+      {
+        replacements: { organizationId, id },
+        mapToModel: true,
+        model: QuestionModel,
+        transaction,
+      }
+    );
+
+    if (!result.length) return null;
+
+    // Fetch evidence_files for response
+    const evidenceFiles = await getEvidenceFilesForEntity(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      id,
+      "evidence"
+    );
+
+    (result[0] as any).evidence_files = evidenceFiles;
+
+    return result[0];
+  }
+
+  const query = `UPDATE questions SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateQuestion.id = id;
+  updateQuestion.organizationId = organizationId;
 
   const result = await sequelize.query(query, {
     replacements: updateQuestion,
     mapToModel: true,
     model: QuestionModel,
-    // type: QueryTypes.UPDATE,
     transaction,
   });
+
+  if (!result.length) return null;
+
+  // Fetch evidence_files for response (backward compatibility)
+  const evidenceFiles = await getEvidenceFilesForEntity(
+    organizationId,
+    FRAMEWORK_TYPE,
+    ENTITY_TYPE,
+    id,
+    "evidence"
+  );
+
+  (result[0] as any).evidence_files = evidenceFiles;
 
   return result[0];
 };
 
 export const deleteQuestionByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
-  const result = await sequelize.query(
-    `DELETE FROM "${tenant}".questions WHERE id = :id RETURNING *`,
+  // First get the linked files so we can delete them after
+  const linkedFiles = await getEvidenceFilesForEntity(
+    organizationId,
+    FRAMEWORK_TYPE,
+    ENTITY_TYPE,
+    id,
+    "evidence"
+  );
+
+  // Clean up file_entity_links first
+  await sequelize.query(
+    `DELETE FROM file_entity_links
+     WHERE organization_id = :organizationId
+       AND framework_type = :frameworkType
+       AND entity_type = :entityType
+       AND entity_id = :entityId`,
     {
-      replacements: { id },
+      replacements: {
+        organizationId,
+        frameworkType: FRAMEWORK_TYPE,
+        entityType: ENTITY_TYPE,
+        entityId: id,
+      },
+      transaction,
+    }
+  );
+
+  const result = await sequelize.query(
+    `DELETE FROM questions WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+    {
+      replacements: { organizationId, id },
       mapToModel: true,
       model: QuestionModel,
       type: QueryTypes.DELETE,
       transaction,
     }
   );
-  if (result.length) {
-    Promise.all(
-      (result[0].evidence_files || []).map(async (f) => {
-        await deleteFileById(parseInt(f.id), tenant, transaction);
+
+  // Delete the actual files
+  if (result.length && linkedFiles.length > 0) {
+    await Promise.all(
+      linkedFiles.map(async (f) => {
+        const fileId = typeof f.id === 'string' ? parseInt(f.id) : f.id;
+        await deleteFileById(fileId, organizationId, transaction);
       })
     );
   }
+
   return result.length > 0;
 };
 
 export const getQuestionBySubTopicIdQuery = async (
   subTopicId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IQuestion[]> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".questions WHERE subtopic_id = :subtopic_id ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM questions WHERE organization_id = :organizationId AND subtopic_id = :subtopic_id ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { subtopic_id: subTopicId },
+      replacements: { organizationId, subtopic_id: subTopicId },
       mapToModel: true,
       model: QuestionModel,
     }
   );
+
+  // Batch fetch evidence files
+  const questionIds = result.map((q) => q.id!);
+  let filesMap = new Map<number, any[]>();
+
+  if (questionIds.length > 0) {
+    filesMap = await getEvidenceFilesForEntities(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      questionIds,
+      "evidence"
+    );
+  }
+
+  // Attach evidence_files for backward compatibility
+  for (const question of result) {
+    (question as any).evidence_files = filesMap.get(question.id!) || [];
+  }
+
   return result;
 };
 
 export const getQuestionByTopicIdQuery = async (
   topicId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IQuestion[]> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".questions WHERE subtopic_id IN (SELECT id FROM "${tenant}".subtopics WHERE topic_id = :topic_id) ORDER BY created_at DESC, id ASC;`,
+    `SELECT * FROM questions WHERE organization_id = :organizationId AND subtopic_id IN (SELECT id FROM subtopics WHERE organization_id = :organizationId AND topic_id = :topic_id) ORDER BY created_at DESC, id ASC;`,
     {
-      replacements: { topic_id: topicId },
+      replacements: { organizationId, topic_id: topicId },
       mapToModel: true,
       model: QuestionModel,
     }
   );
+
+  // Batch fetch evidence files
+  const questionIds = result.map((q) => q.id!);
+  let filesMap = new Map<number, any[]>();
+
+  if (questionIds.length > 0) {
+    filesMap = await getEvidenceFilesForEntities(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      questionIds,
+      "evidence"
+    );
+  }
+
+  // Attach evidence_files for backward compatibility
+  for (const question of result) {
+    (question as any).evidence_files = filesMap.get(question.id!) || [];
+  }
+
   return result;
 };
 
@@ -275,21 +426,22 @@ export const createNewQuestionsQuery = async (
     answer: string;
   }[],
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   let query = `
-    INSERT INTO "${tenant}".questions(
-      subtopic_id, question, answer_type, evidence_required,
+    INSERT INTO questions(
+      organization_id, subtopic_id, question, answer_type, evidence_required,
       hint, is_required, priority_level, answer, order_no, input_type
     ) VALUES (
-      :subtopic_id, :question, :answer_type, :evidence_required,
+      :organizationId, :subtopic_id, :question, :answer_type, :evidence_required,
       :hint, :is_required, :priority_level, :answer, :order_no, :input_type
     ) RETURNING *`;
   let createdQuestions: QuestionModel[] = [];
   for (let question of questions) {
     const result = await sequelize.query(query, {
       replacements: {
+        organizationId,
         subtopic_id: subTopicId,
         question: question.question,
         answer_type: question.answer_type,
@@ -303,9 +455,12 @@ export const createNewQuestionsQuery = async (
       },
       mapToModel: true,
       model: QuestionModel,
-      // type: QueryTypes.INSERT
       transaction,
     });
+
+    // Attach empty array for backward compatibility
+    (result[0] as any).evidence_files = [];
+
     createdQuestions = createdQuestions.concat(result);
   }
   return createdQuestions;

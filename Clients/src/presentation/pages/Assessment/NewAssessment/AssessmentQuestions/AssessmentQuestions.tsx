@@ -15,6 +15,7 @@ import { Info as GreyCircleInfoIcon } from "lucide-react";
 import RichTextEditor from "../../../../components/RichTextEditor";
 import { priorities, PriorityLevel } from "../priorities";
 import { Topic } from "../../../../../application/hooks/useAssessmentAnswers";
+import { text, background, border as borderPalette } from "../../../../themes/palette";
 
 interface AssessmentQuestionsProps {
   assessmentsValues: Topic[];
@@ -70,7 +71,7 @@ const AssessmentQuestions = ({
     <>
       {assessmentsValues[activeTab]?.subtopics.map((subtopic) => (
         <Stack key={subtopic.id} mb={15}>
-          <Typography sx={{ fontSize: 16, color: "#344054" }}>
+          <Typography sx={{ fontSize: 16, color: `${text.secondary}` }}>
             {subtopic.name}
           </Typography>
           {subtopic.questions.map((question) => (
@@ -82,14 +83,14 @@ const AssessmentQuestions = ({
                 alignItems="center"
                 bgcolor={"#FBFAFA"}
                 sx={{
-                  border: "1px solid #D0D5DD",
+                  border: `1px solid ${borderPalette.dark}`,
                   borderBottom: "none",
                   borderRadius: "4px 4px 0 0",
                   gap: 4,
                   justifyContent: "space-between",
                 }}
               >
-                <Typography sx={{ fontSize: 13, color: "#344054" }}>
+                <Typography sx={{ fontSize: 13, color: `${text.secondary}` }}>
                   {question.questionText}
                   {question.hint && (
                     <Box component="span" ml={2}>
@@ -114,13 +115,14 @@ const AssessmentQuestions = ({
                   sx={{
                     backgroundColor:
                       priorities[question.priorityLevel as PriorityLevel].color,
-                    color: "#FFFFFF",
+                    color: `${background.main}`,
                   }}
                   size="small"
                 />
               </Box>
 
               <RichTextEditor
+                toolbar="full"
                 key={`${assessmentsValues[activeTab].id}-${subtopic.id}-${question.id}`}
                 onContentChange={(content: string) => {
                   const cleanedContent =
@@ -136,10 +138,10 @@ const AssessmentQuestions = ({
                 headerSx={{
                   borderRadius: 0,
                   BorderTop: "none",
-                  borderColor: "#D0D5DD",
+                  borderColor: "border.dark",
                 }}
                 bodySx={{
-                  borderColor: "#D0D5DD",
+                  borderColor: "border.dark",
                   borderRadius: "0 0 4px 4px",
                   "& .ProseMirror > p": {
                     margin: 0,
@@ -163,12 +165,12 @@ const AssessmentQuestions = ({
                     minWidth: 155,      // ✅ minimum width
                     height: 25,
                     fontSize: 11,
-                    border: "1px solid #D0D5DD",
+                    border: "1px solid #d0d5dd",
                     backgroundColor: "white",
-                    color: "#344054",
+                    color: "text.secondary",
                     "&:hover": {
-                      backgroundColor: "#F9FAFB",
-                      border: "1px solid #D0D5DD",
+                      backgroundColor: "background.accent",
+                      border: "1px solid #d0d5dd",
                     },
                   }}
                   disableRipple={
@@ -179,7 +181,7 @@ const AssessmentQuestions = ({
                   Add, remove or download evidence
                 </Button>
                 <Typography
-                  sx={{ fontSize: 11, color: "#344054", fontWeight: "300" }}
+                  sx={{ fontSize: 11, color: "text.secondary", fontWeight: "300" }}
                 >
                   {question.isRequired === true ? "required" : ""}
                 </Typography>

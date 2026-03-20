@@ -62,9 +62,10 @@ interface Plugin {
  */
 export interface PluginRouteContext {
   // Authentication
-  tenantId: string;
-  userId: number;
   organizationId: number;
+  userId: number;
+  /** @deprecated Use organizationId instead. Kept for backward compatibility during migration. */
+  tenantId?: string;
 
   // Request details
   method: string;           // HTTP method (GET, POST, PUT, PATCH, DELETE)
@@ -221,7 +222,7 @@ export class PluginService {
   static async installPlugin(
     pluginKey: string,
     userId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<any> {
     try {
       // Verify plugin exists in marketplace or built-in registry
@@ -242,7 +243,7 @@ export class PluginService {
           const context = {
             sequelize,
           };
-          const result = await pluginCode.install(userId, tenantId, {}, context);
+          const result = await pluginCode.install(userId, organizationId, {}, context);
           console.log(
             `[PluginService] Plugin ${sanitizeForLog(pluginKey)} installed:`,
             result
@@ -255,7 +256,7 @@ export class PluginService {
       // Create installation record (only after successful plugin installation)
       const installation = await createInstallation(
         pluginKey,
-        tenantId
+        organizationId
       );
 
       return toJSON(installation);
@@ -274,13 +275,13 @@ export class PluginService {
   static async uninstallPlugin(
     installationId: number,
     userId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<void> {
     try {
       const installation =
         await findByIdWithValidation(
           installationId,
-          tenantId
+          organizationId
         );
 
       // Skip remote code for built-in plugins
@@ -295,7 +296,7 @@ export class PluginService {
             };
             const result = await pluginCode.uninstall(
               userId,
-              tenantId,
+              organizationId,
               context
             );
             console.log(
@@ -309,7 +310,7 @@ export class PluginService {
       }
 
       // Delete installation record
-      await deleteInstallation(installationId, tenantId);
+      await deleteInstallation(installationId, organizationId);
     } catch (error: any) {
       console.error(
         `[PluginService] Error uninstalling plugin ${installationId}:`,
@@ -320,14 +321,14 @@ export class PluginService {
   }
 
   /**
-   * Get installed plugins for a tenant
+   * Get installed plugins for an organization
    */
   static async getInstalledPlugins(
-    tenantId: string
+    organizationId: number
   ): Promise<any[]> {
     try {
       const installations = await getInstalledPlugins(
-        tenantId
+        organizationId
       );
 
       // Fetch plugin metadata from built-in registry or marketplace for each installation
@@ -357,18 +358,20 @@ export class PluginService {
    * Get data from plugin data providers
    * This allows plugins to contribute data to core VerifyWise features
    * @param providerType - The type of data provider (e.g., "use-cases")
-   * @param tenantId - The tenant ID
+   * @param organizationId - The organization ID
    * @param sequelize - Sequelize instance for database access
    */
   static async getDataFromProviders(
     providerType: string,
-    tenantId: string,
+    organizationId: number,
     sequelize: any
   ): Promise<any[]> {
     try {
-      // Get all installed plugins for this tenant
-      const installations = await getInstalledPlugins(tenantId);
+      // Get all installed plugins for this organization
+      const installations = await getInstalledPlugins(organizationId);
       const results: any[] = [];
+      // Pass organizationId for shared-schema queries
+      // Note: tenantId is deprecated but kept for backward compatibility with existing plugins
 
       for (const installation of installations) {
         if (installation.status !== "installed") continue;
@@ -394,7 +397,7 @@ export class PluginService {
 
           // Call the provider's getData function
           console.log(`[PluginService] Fetching ${providerType} data from plugin: ${installation.plugin_key}`);
-          const data = await provider.getData({ sequelize, tenantId });
+          const data = await provider.getData({ sequelize, organizationId });
 
           if (Array.isArray(data)) {
             results.push(...data);
@@ -450,7 +453,7 @@ export class PluginService {
   static async updateConfiguration(
     installationId: number,
     userId: number,
-    tenantId: string,
+    organizationId: number,
     configuration: Record<string, any>
   ): Promise<any> {
     try {
@@ -458,7 +461,7 @@ export class PluginService {
       const installation =
         await findByIdWithValidation(
           installationId,
-          tenantId
+          organizationId
         );
 
       // Validate that plugin is installed
@@ -473,7 +476,7 @@ export class PluginService {
       // Update configuration
       const updated = await updateConfiguration(
         installationId,
-        tenantId,
+        organizationId,
         configuration
       );
 
@@ -488,7 +491,7 @@ export class PluginService {
             };
             const result = await pluginCode.configure(
               userId,
-              tenantId,
+              organizationId,
               configuration,
               context
             );
@@ -516,7 +519,7 @@ export class PluginService {
   static async testConnection(
     pluginKey: string,
     configuration: Record<string, any>,
-    context?: { userId: number; tenantId: string }
+    context?: { userId: number; organizationId: number }
   ): Promise<any> {
     try {
       // Verify plugin exists in marketplace
@@ -863,8 +866,8 @@ export class PluginService {
     context: PluginRouteContext
   ): Promise<PluginRouteResponse> {
     try {
-      // Check if plugin is installed for this tenant
-      const installation = await findByPlugin(pluginKey, context.tenantId);
+      // Check if plugin is installed for this organization
+      const installation = await findByPlugin(pluginKey, context.organizationId);
       if (!installation) {
         throw new NotFoundException(`Plugin '${pluginKey}' is not installed`);
       }

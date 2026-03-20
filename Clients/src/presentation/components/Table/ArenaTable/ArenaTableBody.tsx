@@ -149,7 +149,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               ...singleTheme.tableStyles.primary.body.row,
               cursor: onRowClick ? "pointer" : "default",
               "&:hover": {
-                backgroundColor: "#F9FAFB",
+                backgroundColor: "background.accent",
               },
             }}
           >
@@ -193,7 +193,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                   );
                 })}
                 {row.contestants?.length > 4 && (
-                  <Typography sx={{ fontSize: 11, color: "#9ca3af" }}>
+                  <Typography sx={{ fontSize: 11, color: "text.disabled" }}>
                     +{row.contestants.length - 4} more
                   </Typography>
                 )}
@@ -254,7 +254,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                   —
                 </Typography>
               ) : (
-                <Typography sx={{ fontSize: 12, color: "#9ca3af" }}>
+                <Typography sx={{ fontSize: 12, color: "text.disabled" }}>
                   —
                 </Typography>
               )}
@@ -268,7 +268,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 textTransform: "none",
               }}
             >
-              <Typography sx={{ fontSize: "12px", color: "#6B7280" }}>
+              <Typography sx={{ fontSize: "12px", color: "status.default.text" }}>
                 {formatDate(row.createdAt)}
               </Typography>
             </TableCell>
@@ -329,13 +329,13 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 fontSize: "13px",
                 fontWeight: 500,
                 color: "#374151",
-                borderColor: "#d0d5dd",
+                borderColor: "border.dark",
                 backgroundColor: "transparent",
                 justifyContent: "flex-start",
                 "&:hover": {
                   backgroundColor: "#F0FDF4",
-                  borderColor: "#13715B",
-                  color: "#13715B",
+                  borderColor: "brand.primary",
+                  color: "brand.primary",
                 },
               }}
             >
@@ -352,13 +352,13 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 fontSize: "13px",
                 fontWeight: 500,
                 color: "#374151",
-                borderColor: "#d0d5dd",
+                borderColor: "border.dark",
                 backgroundColor: "transparent",
                 justifyContent: "flex-start",
                 "&:hover": {
                   backgroundColor: "#F0FDF4",
-                  borderColor: "#13715B",
-                  color: "#13715B",
+                  borderColor: "brand.primary",
+                  color: "brand.primary",
                 },
               }}
             >
@@ -375,13 +375,13 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 fontSize: "13px",
                 fontWeight: 500,
                 color: "#374151",
-                borderColor: "#d0d5dd",
+                borderColor: "border.dark",
                 backgroundColor: "transparent",
                 justifyContent: "flex-start",
                 "&:hover": {
                   backgroundColor: "#F0FDF4",
-                  borderColor: "#13715B",
-                  color: "#13715B",
+                  borderColor: "brand.primary",
+                  color: "brand.primary",
                 },
               }}
             >
@@ -398,7 +398,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 fontSize: "13px",
                 fontWeight: 500,
                 color: "#DC2626",
-                borderColor: "#d0d5dd",
+                borderColor: "border.dark",
                 backgroundColor: "transparent",
                 justifyContent: "flex-start",
                 "&:hover": {
@@ -418,7 +418,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
         isOpen={deleteConfirmOpen}
         title="Delete Arena Battle"
         body={
-          <Typography sx={{ fontSize: 14, color: "#667085" }}>
+          <Typography sx={{ fontSize: 14, color: "text.icon" }}>
             Are you sure you want to delete "{rowToDelete?.name}"? This action cannot be undone.
           </Typography>
         }

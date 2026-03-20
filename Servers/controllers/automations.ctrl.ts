@@ -49,7 +49,7 @@ export const getAllAutomationActionsByTriggerId = async (
 
 export const getAllAutomations = async (req: Request, res: Response) => {
   try {
-    const result = await getAllAutomationsQuery(req.tenantId!);
+    const result = await getAllAutomationsQuery(req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
     console.error("Error fetching automations:", error);
@@ -65,7 +65,7 @@ export const getAutomationById = async (req: Request, res: Response) => {
   }
 
   try {
-    const automation = await getAutomationByIdQuery(id, req.tenantId!);
+    const automation = await getAutomationByIdQuery(id, req.organizationId!);
     if (!automation) {
       return res
         .status(404)
@@ -125,7 +125,7 @@ export const createAutomation = async (req: Request, res: Response) => {
       { name, trigger_id: triggerId, params },
       actions,
       req.userId!,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -181,7 +181,7 @@ export const updateAutomation = async (req: Request, res: Response) => {
         params: JSON.parse(req.body.params || "{}") as Record<string, any>,
       },
       actions,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -207,7 +207,7 @@ export const deleteAutomationById = async (req: Request, res: Response) => {
   try {
     const deleted = await deleteAutomationByIdQuery(
       id,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
     if (!deleted) {
@@ -244,7 +244,7 @@ export const getAutomationHistory = async (req: Request, res: Response) => {
       id,
       limit,
       offset,
-      req.tenantId!
+      req.organizationId!
     );
 
     // Map action_results to actions for frontend compatibility
@@ -277,7 +277,7 @@ export const getAutomationStats = async (req: Request, res: Response) => {
   }
 
   try {
-    const stats = await getAutomationExecutionStats(id, req.tenantId!);
+    const stats = await getAutomationExecutionStats(id, req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](stats));
   } catch (error) {
     console.error(`Error fetching automation stats for ID ${id}:`, error);

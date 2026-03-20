@@ -43,7 +43,8 @@ const CustomizableButton = memo(
       {
         variant = "contained",
         size = "medium",
-        isDisabled = false,
+        isDisabled: isDisabledProp = false,
+        disabled: disabledAlias,
         isLink = false,
         color = "primary",
         onClick,
@@ -68,6 +69,9 @@ const CustomizableButton = memo(
       },
       ref
     ) {
+      // Merge disabled alias with isDisabled
+      const isDisabled = isDisabledProp || disabledAlias || false;
+
       // Handle click events with error boundary
       const handleClick = useCallback(
         (event: React.MouseEvent<HTMLButtonElement>) => {

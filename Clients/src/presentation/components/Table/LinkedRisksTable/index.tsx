@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import TableHeader from "../TableHead";
 import { TITLE_OF_COLUMNS } from "../../LinkedRisks/constants";
+import { ShieldAlert } from "lucide-react";
 import { EmptyState } from "../../EmptyState";
 
 import LinkedRisksTableBody from "./TableBody";
@@ -61,7 +62,7 @@ const LinkedRisksTable: React.FC<ILinkedRisksTableProps> = ({
                       align="center"
                       sx={{ border: "none", p: 0 }}
                     >
-                      <EmptyState message="There is currently no data in this table." />
+                      <EmptyState icon={ShieldAlert} message="There is currently no data in this table." />
                     </TableCell>
                   </TableRow>
                 </TableBody>

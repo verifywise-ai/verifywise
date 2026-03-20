@@ -11,16 +11,16 @@ import crypto from "crypto";
 import { IShadowAiApiKey } from "../domain.layer/interfaces/i.shadowAi";
 
 /**
- * Generate a new API key with format: vw_sk_{tenantHash}_{random}
+ * Generate a new API key with format: vw_sk_{orgId}_{random}
  * Returns both the full key (shown once) and its SHA-256 hash (stored).
  */
-export function generateApiKey(tenantHash: string): {
+export function generateApiKey(organizationId: number): {
   key: string;
   keyHash: string;
   keyPrefix: string;
 } {
   const randomPart = crypto.randomBytes(24).toString("hex");
-  const key = `vw_sk_${tenantHash}_${randomPart}`;
+  const key = `vw_sk_${organizationId}_${randomPart}`;
   const keyHash = crypto.createHash("sha256").update(key).digest("hex");
   const keyPrefix = key.substring(0, 15);
 
@@ -35,23 +35,32 @@ export function hashApiKey(key: string): string {
 }
 
 /**
- * Extract the tenant hash from an API key.
- * Key format: vw_sk_{tenantHash}_{random}
+ * Extract the organization ID from an API key.
+ * Key format: vw_sk_{orgId}_{random}
  */
-export function extractTenantFromKey(key: string): string | null {
+export function extractOrganizationFromKey(key: string): number | null {
   const parts = key.split("_");
-  // vw_sk_{tenantHash}_{random}
+  // vw_sk_{orgId}_{random}
   if (parts.length < 4 || parts[0] !== "vw" || parts[1] !== "sk") {
     return null;
   }
-  return parts[2];
+  const orgId = parseInt(parts[2], 10);
+  return isNaN(orgId) ? null : orgId;
 }
 
 /**
- * Create a new API key for the tenant.
+ * @deprecated Use extractOrganizationFromKey instead
+ */
+export function extractTenantFromKey(key: string): string | null {
+  const orgId = extractOrganizationFromKey(key);
+  return orgId !== null ? String(orgId) : null;
+}
+
+/**
+ * Create a new API key for the organization.
  */
 export async function createApiKeyQuery(
-  tenant: string,
+  organizationId: number,
   keyHash: string,
   keyPrefix: string,
   label: string | null,
@@ -59,13 +68,13 @@ export async function createApiKeyQuery(
   transaction?: Transaction
 ): Promise<IShadowAiApiKey> {
   const [result] = await sequelize.query(
-    `INSERT INTO "${tenant}".shadow_ai_api_keys
-       (key_hash, key_prefix, label, created_by, is_active)
+    `INSERT INTO shadow_ai_api_keys
+       (organization_id, key_hash, key_prefix, label, created_by, is_active)
      VALUES
-       (:keyHash, :keyPrefix, :label, :createdBy, true)
+       (:organizationId, :keyHash, :keyPrefix, :label, :createdBy, true)
      RETURNING *`,
     {
-      replacements: { keyHash, keyPrefix, label, createdBy },
+      replacements: { organizationId, keyHash, keyPrefix, label, createdBy },
       ...(transaction ? { transaction } : {}),
     }
   );
@@ -74,15 +83,17 @@ export async function createApiKeyQuery(
 }
 
 /**
- * List all API keys for the tenant (without key_hash for security).
+ * List all API keys for the organization (without key_hash for security).
  */
 export async function listApiKeysQuery(
-  tenant: string
+  organizationId: number
 ): Promise<IShadowAiApiKey[]> {
   const [rows] = await sequelize.query(
     `SELECT id, key_prefix, label, created_by, last_used_at, is_active, created_at
-     FROM "${tenant}".shadow_ai_api_keys
-     ORDER BY created_at DESC`
+     FROM shadow_ai_api_keys
+     WHERE organization_id = :organizationId
+     ORDER BY created_at DESC`,
+    { replacements: { organizationId } }
   );
 
   return rows as IShadowAiApiKey[];
@@ -92,17 +103,17 @@ export async function listApiKeysQuery(
  * Revoke (soft-delete) an API key by setting is_active to false.
  */
 export async function revokeApiKeyQuery(
-  tenant: string,
+  organizationId: number,
   keyId: number,
   transaction?: Transaction
 ): Promise<boolean> {
   const [rows] = await sequelize.query(
-    `UPDATE "${tenant}".shadow_ai_api_keys
+    `UPDATE shadow_ai_api_keys
      SET is_active = false
-     WHERE id = :keyId AND is_active = true
+     WHERE organization_id = :organizationId AND id = :keyId AND is_active = true
      RETURNING id`,
     {
-      replacements: { keyId },
+      replacements: { organizationId, keyId },
       ...(transaction ? { transaction } : {}),
     }
   );
@@ -115,16 +126,16 @@ export async function revokeApiKeyQuery(
  * Only allows deletion of keys that have already been revoked (is_active = false).
  */
 export async function deleteApiKeyQuery(
-  tenant: string,
+  organizationId: number,
   keyId: number,
   transaction?: Transaction
 ): Promise<boolean> {
   const [rows] = await sequelize.query(
-    `DELETE FROM "${tenant}".shadow_ai_api_keys
-     WHERE id = :keyId AND is_active = false
+    `DELETE FROM shadow_ai_api_keys
+     WHERE organization_id = :organizationId AND id = :keyId AND is_active = false
      RETURNING id`,
     {
-      replacements: { keyId },
+      replacements: { organizationId, keyId },
       ...(transaction ? { transaction } : {}),
     }
   );
@@ -137,16 +148,16 @@ export async function deleteApiKeyQuery(
  * Updates last_used_at on successful validation.
  */
 export async function validateApiKeyQuery(
-  tenant: string,
+  organizationId: number,
   keyHash: string
 ): Promise<IShadowAiApiKey | null> {
   const [rows] = await sequelize.query(
-    `UPDATE "${tenant}".shadow_ai_api_keys
+    `UPDATE shadow_ai_api_keys
      SET last_used_at = NOW()
-     WHERE key_hash = :keyHash AND is_active = true
+     WHERE organization_id = :organizationId AND key_hash = :keyHash AND is_active = true
      RETURNING id, key_prefix, label, created_by, last_used_at, is_active, created_at`,
     {
-      replacements: { keyHash },
+      replacements: { organizationId, keyHash },
     }
   );
 
@@ -158,7 +169,7 @@ export async function validateApiKeyQuery(
 // Caches valid key hashes to avoid DB lookups on every ingestion request.
 
 interface CachedKey {
-  tenant: string;
+  organizationId: number;
   validatedAt: number;
 }
 
@@ -168,30 +179,27 @@ const KEY_CACHE_MAX_SIZE = 10000;
 
 /**
  * Validate an API key with caching.
- * Returns the tenant hash if valid, null otherwise.
+ * Returns the organization ID if valid, null otherwise.
  */
 export async function validateApiKeyWithCache(
   key: string
-): Promise<string | null> {
-  // Validate full key format: vw_sk_{10-char-hash}_{48-char-hex}
-  if (!/^vw_sk_[a-zA-Z0-9]{10}_[a-f0-9]{48}$/.test(key)) return null;
+): Promise<number | null> {
+  // Validate full key format: vw_sk_{orgId}_{48-char-hex}
+  if (!/^vw_sk_\d+_[a-f0-9]{48}$/.test(key)) return null;
 
-  const tenant = extractTenantFromKey(key);
-  if (!tenant) return null;
-
-  // Validate tenant hash format
-  if (!/^[a-zA-Z0-9]{10}$/.test(tenant)) return null;
+  const organizationId = extractOrganizationFromKey(key);
+  if (!organizationId) return null;
 
   const hash = hashApiKey(key);
   const cached = keyCache.get(hash);
   const now = Date.now();
 
   if (cached && now - cached.validatedAt < KEY_CACHE_TTL_MS) {
-    return cached.tenant;
+    return cached.organizationId;
   }
 
   // Validate against DB
-  const apiKey = await validateApiKeyQuery(tenant, hash);
+  const apiKey = await validateApiKeyQuery(organizationId, hash);
   if (!apiKey) {
     keyCache.delete(hash);
     return null;
@@ -202,21 +210,21 @@ export async function validateApiKeyWithCache(
     const firstKey = keyCache.keys().next().value;
     if (firstKey) keyCache.delete(firstKey);
   }
-  keyCache.set(hash, { tenant, validatedAt: now });
-  return tenant;
+  keyCache.set(hash, { organizationId, validatedAt: now });
+  return organizationId;
 }
 
 /**
- * Clear the key validation cache for a specific tenant,
- * or all tenants if no tenant is specified.
+ * Clear the key validation cache for a specific organization,
+ * or all organizations if no organizationId is specified.
  */
-export function clearApiKeyCache(tenant?: string): void {
-  if (!tenant) {
+export function clearApiKeyCache(organizationId?: number): void {
+  if (!organizationId) {
     keyCache.clear();
     return;
   }
   for (const [hash, cached] of keyCache.entries()) {
-    if (cached.tenant === tenant) {
+    if (cached.organizationId === organizationId) {
       keyCache.delete(hash);
     }
   }

@@ -20,6 +20,12 @@ declare module "@mui/material/styles" {
     background: TypeBackground;
     text: TypeText;
     status: StatusPalette;
+    brand: {
+      primary: string;
+      primaryHover: string;
+      primaryLight: string;
+      primaryDark: string;
+    };
     other: {
       icon: string;
       line: string;
@@ -36,6 +42,12 @@ declare module "@mui/material/styles" {
     background?: TypeBackground;
     text?: TypeText;
     status?: StatusPaletteOptions;
+    brand?: {
+      primary?: string;
+      primaryHover?: string;
+      primaryLight?: string;
+      primaryDark?: string;
+    };
     other?: {
       icon?: string;
       line?: string;
@@ -50,12 +62,20 @@ declare module "@mui/material/styles" {
     modal: string;
     fill: string;
     accent: string;
+    surface: string;
+    hover: string;
+    selected: string;
+    gradientStop: string;
   }
   interface TypeText {
     primary: string;
     secondary: string;
     tertiary: string;
     accent: string;
+    black: string;
+    icon: string;
+    muted: string;
+    subdued: string;
   }
   interface PaletteColor {
     text?: string;

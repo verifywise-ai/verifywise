@@ -1,6 +1,5 @@
 import { Response } from "express";
 import { generateToken, generateRefreshToken } from "./jwt.utils";
-import { getTenantHash } from "../tools/getTenantHash";
 
 export interface UserTokenData {
   id: number;
@@ -16,7 +15,11 @@ export interface AuthTokenResult {
 
 /**
  * Generates access and refresh tokens and sets refresh token cookie
- * 
+ *
+ * Token payload includes organizationId for tenant isolation.
+ * With shared-schema multi-tenancy, we use organization_id directly
+ * in database queries instead of tenant hash schemas.
+ *
  * @param userData - User data for token generation
  * @param res - Express response object for setting cookies
  * @returns Object containing both tokens
@@ -29,7 +32,6 @@ export function generateUserTokens(
     id: userData.id,
     email: userData.email,
     roleName: userData.roleName,
-    tenantId: getTenantHash(userData.organizationId),
     organizationId: userData.organizationId,
   };
 

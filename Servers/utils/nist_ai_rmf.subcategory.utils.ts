@@ -1,35 +1,110 @@
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { NISTAIMRFSubcategoryModel } from "../domain.layer/frameworks/NIST-AI-RMF/nist_ai_rmf_subcategory.model";
+import { getEvidenceFilesForEntity } from "./files/evidenceFiles.utils";
 
-export const getAllNISTAIRMFSubcategoriesBycategoryIdAndtitleQuery = async (
+/**
+ * Get all subcategories for a category (using function and category_id from struct)
+ * Returns fields aliased for frontend compatibility: index, title, category_id
+ */
+export const getAllNISTAIRMFSubcategoriesByCategoryQuery = async (
+  functionName: string,
   categoryId: number,
-  title: string,
-  tenant: string
+  organizationId: number
 ): Promise<NISTAIMRFSubcategoryModel[]> => {
-  const subcategories = await sequelize.query(
-    `SELECT * FROM "${tenant}".nist_ai_rmf_subcategories WHERE category_id = :categoryId AND title = :title ORDER BY created_at DESC, id ASC`,
+  const results = await sequelize.query(
+    `SELECT s.*,
+            ss.function,
+            ss.subcategory_id as index,
+            ss.description as title,
+            ss.description as description,
+            cs.id as category_id
+     FROM nist_ai_rmf_subcategories s
+     JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
+     JOIN nist_ai_rmf_categories_struct cs ON ss.category_struct_id = cs.id
+     WHERE s.organization_id = :organizationId
+       AND cs.function = :functionName
+       AND cs.category_id = :categoryId
+     ORDER BY ss.order_no ASC, ss.subcategory_id ASC`,
     {
-      replacements: { categoryId: categoryId, title: title },
+      replacements: { organizationId, functionName, categoryId },
       mapToModel: true,
       model: NISTAIMRFSubcategoryModel,
     }
   );
-  return subcategories;
+  return Array.isArray(results)
+    ? (results as NISTAIMRFSubcategoryModel[])
+    : [];
+};
+
+/**
+ * Legacy function - kept for backward compatibility
+ * Maps categoryId to struct category lookup
+ * Returns fields aliased for frontend compatibility: index, title, category_id
+ */
+export const getAllNISTAIRMFSubcategoriesBycategoryIdAndtitleQuery = async (
+  categoryStructId: number,
+  _title: string,
+  organizationId: number
+): Promise<NISTAIMRFSubcategoryModel[]> => {
+  const results = await sequelize.query(
+    `SELECT s.*,
+            ss.function,
+            ss.subcategory_id as index,
+            ss.description as title,
+            ss.description as description,
+            ss.category_struct_id as category_id
+     FROM nist_ai_rmf_subcategories s
+     JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
+     WHERE s.organization_id = :organizationId
+       AND ss.category_struct_id = :categoryStructId
+     ORDER BY ss.order_no ASC, ss.subcategory_id ASC`,
+    {
+      replacements: { organizationId, categoryStructId },
+      mapToModel: true,
+      model: NISTAIMRFSubcategoryModel,
+    }
+  );
+  return Array.isArray(results)
+    ? (results as NISTAIMRFSubcategoryModel[])
+    : [];
 };
 
 export const getNISTAIRMFSubcategoryByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ) => {
   const subcategory = await sequelize.query(
-    `SELECT * FROM "${tenant}".nist_ai_rmf_subcategories WHERE id = :id`,
+    `SELECT s.*,
+            ss.function,
+            ss.subcategory_id as index,
+            ss.description as title,
+            ss.description as description,
+            ss.category_struct_id as category_id
+     FROM nist_ai_rmf_subcategories s
+     LEFT JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
+     WHERE s.organization_id = :organizationId AND s.id = :id`,
     {
-      replacements: { id: id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: NISTAIMRFSubcategoryModel,
     }
   );
+
+  if (!subcategory[0]) {
+    return null;
+  }
+
+  // Fetch evidence files from file_entity_links
+  const evidenceFiles = await getEvidenceFilesForEntity(
+    organizationId,
+    "nist_ai_rmf",
+    "subcategory",
+    id,
+    "evidence"
+  );
+  (subcategory[0] as any).evidence_links = evidenceFiles;
+
   return subcategory[0];
 };
 
@@ -38,17 +113,17 @@ export const getNISTAIRMFSubcategoryByIdQuery = async (
  */
 export const getNISTAIRMFSubcategoryRisksQuery = async (
   subcategoryId: number,
-  tenant: string
+  organizationId: number
 ): Promise<any[]> => {
   const risks = await sequelize.query(
     `SELECT pr.*
-     FROM "${tenant}".risks pr
-     INNER JOIN "${tenant}".nist_ai_rmf_subcategories__risks nsr
-       ON pr.id = nsr.projects_risks_id
-     WHERE nsr.nist_ai_rmf_subcategory_id = :subcategoryId
+     FROM risks pr
+     INNER JOIN nist_ai_rmf_subcategories__risks nsr
+       ON pr.organization_id = nsr.organization_id AND pr.id = nsr.projects_risks_id
+     WHERE nsr.organization_id = :organizationId AND nsr.nist_ai_rmf_subcategory_id = :subcategoryId
      ORDER BY pr.id ASC`,
     {
-      replacements: { subcategoryId },
+      replacements: { organizationId, subcategoryId },
     }
   );
   return risks[0] as any[];
@@ -84,44 +159,13 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
     source: string;
   }[] = [],
   deletedFiles: string[] = [],
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
-  const updateFields: Partial<Record<keyof NISTAIMRFSubcategoryModel, any>> =
+  const updateFields: Partial<Record<keyof NISTAIMRFSubcategoryModel, any>> & { organizationId?: number } =
     {};
-  // Get current evidence_links for this subcategory
-  const currentCategoryFiles = await sequelize.query(
-    `SELECT evidence_links FROM "${tenant}".nist_ai_rmf_subcategories WHERE id = :id`,
-    {
-      replacements: { id },
-      mapToModel: true,
-      model: NISTAIMRFSubcategoryModel,
-      transaction,
-    }
-  );
 
-  let currentFiles = (
-    currentCategoryFiles[0]?.evidence_links
-      ? currentCategoryFiles[0].evidence_links
-      : []
-  ) as {
-    id: string;
-    fileName: string;
-    project_id?: number;
-    uploaded_by: number;
-    uploaded_time: string;
-    type: string;
-    source: string;
-  }[];
-
-  // Filter out deleted files
-  currentFiles = currentFiles.filter((f) => !deletedFiles.includes(f.id));
-
-  // Add new uploaded files
-  currentFiles = currentFiles.concat(uploadedFiles);
   const setClause = [
-    "title",
-    "description",
     "implementation_description",
     "status",
     "owner",
@@ -129,36 +173,8 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
     "approver",
     "due_date",
     "auditor_feedback",
-    "tags",
-    "evidence_links",
   ]
     .filter((f) => {
-      if (f === "tags") {
-        // Handle tags array specifically
-        const tags = subcategory[
-          f as keyof NISTAIMRFSubcategoryModel
-        ] as string[];
-        if (tags !== undefined && tags !== null) {
-          // For empty arrays, use PostgreSQL explicit type casting
-          if (tags.length === 0) {
-            updateFields[f as keyof NISTAIMRFSubcategoryModel] = [];
-            return `${f} = ARRAY[]::TEXT[]`; // Explicit type for empty array
-          } else {
-            updateFields[f as keyof NISTAIMRFSubcategoryModel] = tags;
-            return `${f} = ARRAY[:${f}]`; // Array with content
-          }
-        }
-        return false;
-      }
-
-      if (f === "evidence_links") {
-        // Handle evidence_links array specifically - use the combined files
-        // Must stringify for JSONB fields in PostgreSQL
-        updateFields[f as keyof NISTAIMRFSubcategoryModel] =
-          JSON.stringify(currentFiles);
-        return `${f} = :${f}`; // JSONB field - Sequelize handles the casting
-      }
-
       // Handle other fields
       if (
         subcategory[f as keyof NISTAIMRFSubcategoryModel] !== undefined &&
@@ -184,34 +200,35 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
       }
       return false;
     })
-    .map((f) => {
-      if (f === "tags") {
-        const tags = subcategory[
-          f as keyof NISTAIMRFSubcategoryModel
-        ] as string[];
-        if (tags && tags.length === 0) {
-          return `${f} = ARRAY[]::TEXT[]`; // Already handled in filter
-        } else {
-          return `${f} = ARRAY[:${f}]`;
-        }
-      }
-      if (f === "evidence_links") {
-        return `${f} = :${f}`; // Already handled in filter
-      }
-      return `${f} = :${f}`;
-    })
+    .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE "${tenant}".nist_ai_rmf_subcategories SET ${setClause}, updated_at = NOW() WHERE id = :id RETURNING *;`;
+  let subcategoryResult: NISTAIMRFSubcategoryModel & { risks: number[] };
 
-  updateFields.id = id;
+  if (setClause.length > 0) {
+    const query = `UPDATE nist_ai_rmf_subcategories SET ${setClause}, updated_at = NOW() WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
-  const result = (await sequelize.query(query, {
-    replacements: updateFields,
-    transaction,
-  })) as [NISTAIMRFSubcategoryModel[], number];
+    updateFields.id = id;
+    updateFields.organizationId = organizationId;
 
-  const subcategoryResult = result[0][0] as NISTAIMRFSubcategoryModel & { risks: number[] };
+    const result = (await sequelize.query(query, {
+      replacements: updateFields,
+      transaction,
+    })) as [NISTAIMRFSubcategoryModel[], number];
+
+    subcategoryResult = result[0][0] as NISTAIMRFSubcategoryModel & { risks: number[] };
+  } else {
+    // No fields to update, fetch current record
+    const result = (await sequelize.query(
+      `SELECT * FROM nist_ai_rmf_subcategories WHERE organization_id = :organizationId AND id = :id`,
+      {
+        replacements: { organizationId, id },
+        transaction,
+      }
+    )) as [NISTAIMRFSubcategoryModel[], number];
+    subcategoryResult = result[0][0] as NISTAIMRFSubcategoryModel & { risks: number[] };
+  }
+
   (subcategoryResult as any).risks = [];
 
   // Handle risk linking (following ISO 27001 pattern)
@@ -224,9 +241,9 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
 
   // Get current risks for this subcategory
   const risks = (await sequelize.query(
-    `SELECT projects_risks_id FROM "${tenant}".nist_ai_rmf_subcategories__risks WHERE nist_ai_rmf_subcategory_id = :id`,
+    `SELECT projects_risks_id FROM nist_ai_rmf_subcategories__risks WHERE organization_id = :organizationId AND nist_ai_rmf_subcategory_id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       transaction,
     }
   )) as [{ projects_risks_id: number }[], number];
@@ -240,9 +257,9 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
 
   // Delete old associations
   await sequelize.query(
-    `DELETE FROM "${tenant}".nist_ai_rmf_subcategories__risks WHERE nist_ai_rmf_subcategory_id = :id;`,
+    `DELETE FROM nist_ai_rmf_subcategories__risks WHERE organization_id = :organizationId AND nist_ai_rmf_subcategory_id = :id;`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       transaction,
     }
   );
@@ -250,9 +267,9 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
   // Insert new associations
   if (currentRisks.length > 0) {
     const placeholders = currentRisks
-      .map((_, i) => `(:subcategory_id${i}, :projects_risks_id${i})`)
+      .map((_, i) => `(:organizationId, :subcategory_id${i}, :projects_risks_id${i})`)
       .join(", ");
-    const replacements: { [key: string]: any } = {};
+    const replacements: { [key: string]: any } = { organizationId };
 
     currentRisks.forEach((risk, i) => {
       replacements[`subcategory_id${i}`] = id;
@@ -260,7 +277,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
     });
 
     const subCategoryRisksInsertResult = (await sequelize.query(
-      `INSERT INTO "${tenant}".nist_ai_rmf_subcategories__risks (nist_ai_rmf_subcategory_id, projects_risks_id) VALUES ${placeholders} RETURNING projects_risks_id;`,
+      `INSERT INTO nist_ai_rmf_subcategories__risks (organization_id, nist_ai_rmf_subcategory_id, projects_risks_id) VALUES ${placeholders} RETURNING projects_risks_id;`,
       {
         replacements,
         transaction,
@@ -277,9 +294,9 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
     for (const riskId of currentRisks) {
       // Check if the framework association already exists
       const existingAssoc = await sequelize.query(
-        `SELECT 1 FROM "${tenant}".frameworks_risks WHERE risk_id = :riskId AND framework_id = :frameworkId`,
+        `SELECT 1 FROM frameworks_risks WHERE organization_id = :organizationId AND risk_id = :riskId AND framework_id = :frameworkId`,
         {
-          replacements: { riskId, frameworkId: NIST_AI_RMF_FRAMEWORK_ID },
+          replacements: { organizationId, riskId, frameworkId: NIST_AI_RMF_FRAMEWORK_ID },
           transaction,
         }
       );
@@ -287,9 +304,9 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
       // Only insert if association doesn't exist
       if ((existingAssoc[0] as any[]).length === 0) {
         await sequelize.query(
-          `INSERT INTO "${tenant}".frameworks_risks (risk_id, framework_id) VALUES (:riskId, :frameworkId)`,
+          `INSERT INTO frameworks_risks (organization_id, risk_id, framework_id) VALUES (:organizationId, :riskId, :frameworkId)`,
           {
-            replacements: { riskId, frameworkId: NIST_AI_RMF_FRAMEWORK_ID },
+            replacements: { organizationId, riskId, frameworkId: NIST_AI_RMF_FRAMEWORK_ID },
             transaction,
           }
         );
@@ -300,12 +317,12 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
   // Create file entity links for new uploaded files
   for (const file of uploadedFiles) {
     await sequelize.query(
-      `INSERT INTO "${tenant}".file_entity_links
-        (file_id, framework_type, entity_type, entity_id, link_type, created_at)
-       VALUES (:fileId, 'nist_ai', 'subcategory', :entityId, 'evidence', NOW())
+      `INSERT INTO file_entity_links
+        (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_at)
+       VALUES (:organizationId, :fileId, 'nist_ai_rmf', 'subcategory', :entityId, 'evidence', NOW())
        ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
       {
-        replacements: { fileId: parseInt(file.id), entityId: id },
+        replacements: { organizationId, fileId: parseInt(file.id), entityId: id },
         transaction,
       }
     );
@@ -316,15 +333,28 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
     const fileId = parseInt(fileIdStr);
     if (!isNaN(fileId)) {
       await sequelize.query(
-        `DELETE FROM "${tenant}".file_entity_links
-         WHERE file_id = :fileId AND entity_type = 'subcategory' AND entity_id = :entityId`,
+        `DELETE FROM file_entity_links
+         WHERE organization_id = :organizationId
+           AND file_id = :fileId
+           AND framework_type = 'nist_ai_rmf'
+           AND entity_type = 'subcategory'
+           AND entity_id = :entityId`,
         {
-          replacements: { fileId, entityId: id },
+          replacements: { organizationId, fileId, entityId: id },
           transaction,
         }
       );
     }
   }
+
+  // Fetch evidence_links from file_entity_links for backward compatibility with response
+  const evidenceLinks = await getEvidenceFilesForEntity(
+    organizationId,
+    "nist_ai_rmf",
+    "subcategory",
+    id
+  );
+  (subcategoryResult as any).evidence_links = evidenceLinks;
 
   return subcategoryResult;
 };
@@ -334,7 +364,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
  * A subcategory is considered "done" when its status is "Implemented"
  */
 export const countNISTAIRMFSubcategoriesProgress = async (
-  tenant: string
+  organizationId: number
 ): Promise<{
   totalSubcategories: number;
   doneSubcategories: number;
@@ -343,8 +373,9 @@ export const countNISTAIRMFSubcategoriesProgress = async (
     `SELECT
       COUNT(*) AS "totalSubcategories",
       SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) AS "doneSubcategories"
-    FROM "${tenant}".nist_ai_rmf_subcategories`,
-    {}
+    FROM nist_ai_rmf_subcategories
+    WHERE organization_id = :organizationId`,
+    { replacements: { organizationId } }
   )) as [{ totalSubcategories: string; doneSubcategories: string }[], number];
 
   return {
@@ -358,7 +389,7 @@ export const countNISTAIRMFSubcategoriesProgress = async (
  * A subcategory is considered "assigned" when it has an owner
  */
 export const countNISTAIRMFSubcategoriesAssignments = async (
-  tenant: string
+  organizationId: number
 ): Promise<{
   totalSubcategories: number;
   assignedSubcategories: number;
@@ -367,8 +398,9 @@ export const countNISTAIRMFSubcategoriesAssignments = async (
     `SELECT
       COUNT(*) AS "totalSubcategories",
       SUM(CASE WHEN owner IS NOT NULL THEN 1 ELSE 0 END) AS "assignedSubcategories"
-    FROM "${tenant}".nist_ai_rmf_subcategories`,
-    {}
+    FROM nist_ai_rmf_subcategories
+    WHERE organization_id = :organizationId`,
+    { replacements: { organizationId } }
   )) as [{ totalSubcategories: string; assignedSubcategories: string }[], number];
 
   return {
@@ -383,7 +415,7 @@ export const countNISTAIRMFSubcategoriesAssignments = async (
  * Returns counts for Govern, Map, Measure, Manage functions
  */
 export const countNISTAIRMFSubcategoriesAssignmentsByFunction = async (
-  tenant: string
+  organizationId: number
 ): Promise<{
   govern: { total: number; assigned: number };
   map: { total: number; assigned: number };
@@ -392,15 +424,22 @@ export const countNISTAIRMFSubcategoriesAssignmentsByFunction = async (
 }> => {
   const result = (await sequelize.query(
     `SELECT
-      f.type AS function_type,
+      ss.function AS function_type,
       COUNT(s.id) AS total,
       SUM(CASE WHEN s.owner IS NOT NULL THEN 1 ELSE 0 END) AS assigned
-    FROM "${tenant}".nist_ai_rmf_subcategories s
-    JOIN public.nist_ai_rmf_categories c ON s.category_id = c.id
-    JOIN public.nist_ai_rmf_functions f ON c.function_id = f.id
-    GROUP BY f.type, f.index
-    ORDER BY f.index ASC`,
-    {}
+    FROM nist_ai_rmf_subcategories s
+    JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
+    WHERE s.organization_id = :organizationId
+    GROUP BY ss.function
+    ORDER BY
+      CASE ss.function
+        WHEN 'GOVERN' THEN 1
+        WHEN 'MAP' THEN 2
+        WHEN 'MEASURE' THEN 3
+        WHEN 'MANAGE' THEN 4
+        ELSE 5
+      END`,
+    { replacements: { organizationId } }
   )) as [{ function_type: string; total: string; assigned: string }[], number];
 
   const defaultValue = { total: 0, assigned: 0 };
@@ -435,7 +474,7 @@ export const countNISTAIRMFSubcategoriesAssignmentsByFunction = async (
  * Returns counts for Govern, Map, Measure, Manage functions
  */
 export const countNISTAIRMFSubcategoriesProgressByFunction = async (
-  tenant: string
+  organizationId: number
 ): Promise<{
   govern: { total: number; done: number };
   map: { total: number; done: number };
@@ -444,15 +483,22 @@ export const countNISTAIRMFSubcategoriesProgressByFunction = async (
 }> => {
   const result = (await sequelize.query(
     `SELECT
-      f.type AS function_type,
+      ss.function AS function_type,
       COUNT(s.id) AS total,
       SUM(CASE WHEN s.status = 'Implemented' THEN 1 ELSE 0 END) AS done
-    FROM "${tenant}".nist_ai_rmf_subcategories s
-    JOIN public.nist_ai_rmf_categories c ON s.category_id = c.id
-    JOIN public.nist_ai_rmf_functions f ON c.function_id = f.id
-    GROUP BY f.type, f.index
-    ORDER BY f.index ASC`,
-    {}
+    FROM nist_ai_rmf_subcategories s
+    JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
+    WHERE s.organization_id = :organizationId
+    GROUP BY ss.function
+    ORDER BY
+      CASE ss.function
+        WHEN 'GOVERN' THEN 1
+        WHEN 'MAP' THEN 2
+        WHEN 'MEASURE' THEN 3
+        WHEN 'MANAGE' THEN 4
+        ELSE 5
+      END`,
+    { replacements: { organizationId } }
   )) as [{ function_type: string; total: string; done: string }[], number];
 
   const defaultValue = { total: 0, done: 0 };
@@ -485,7 +531,7 @@ export const countNISTAIRMFSubcategoriesProgressByFunction = async (
  * Get status breakdown for NIST AI RMF subcategories
  */
 export const getNISTAIRMFSubcategoriesStatusBreakdown = async (
-  tenant: string
+  organizationId: number
 ): Promise<{
   notStarted: number;
   draft: number;
@@ -504,8 +550,9 @@ export const getNISTAIRMFSubcategoriesStatusBreakdown = async (
       SUM(CASE WHEN status = 'Awaiting approval' THEN 1 ELSE 0 END) AS "awaitingApproval",
       SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) AS "implemented",
       SUM(CASE WHEN status = 'Needs rework' THEN 1 ELSE 0 END) AS "needsRework"
-    FROM "${tenant}".nist_ai_rmf_subcategories`,
-    {}
+    FROM nist_ai_rmf_subcategories
+    WHERE organization_id = :organizationId`,
+    { replacements: { organizationId } }
   )) as [
     {
       notStarted: string;
@@ -532,59 +579,96 @@ export const getNISTAIRMFSubcategoriesStatusBreakdown = async (
 
 /**
  * Get all NIST AI RMF functions with their categories and subcategories for dashboard overview
+ * Uses struct tables for hierarchy and joins with implementation data
  */
 export const getNISTAIRMFDashboardOverview = async (
-  tenant: string
+  organizationId: number
 ): Promise<{
   functions: {
-    id: number;
-    type: string;
+    function: string;
     title: string;
     categories: {
       id: number;
-      title: string;
+      category_id: number;
+      description: string;
       subcategories: {
         id: number;
-        title: string;
+        subcategory_id: number;
+        description: string;
         status: string;
         owner: number | null;
       }[];
     }[];
   }[];
 }> => {
-  // Get all functions (from public schema)
-  const functions = (await sequelize.query(
-    `SELECT id, type, title FROM public.nist_ai_rmf_functions ORDER BY index ASC, id ASC`,
-    {}
-  )) as [{ id: number; type: string; title: string }[], number];
+  // Function metadata for display
+  const FUNCTION_METADATA: Record<string, string> = {
+    'GOVERN': 'Govern',
+    'MAP': 'Map',
+    'MEASURE': 'Measure',
+    'MANAGE': 'Manage',
+  };
 
-  // Get all categories (from public schema)
+  // Get all categories from struct (public schema)
   const categories = (await sequelize.query(
-    `SELECT id, title, function_id FROM public.nist_ai_rmf_categories ORDER BY index ASC, id ASC`,
+    `SELECT id, function, category_id, description, order_no
+     FROM nist_ai_rmf_categories_struct
+     ORDER BY
+       CASE function
+         WHEN 'GOVERN' THEN 1
+         WHEN 'MAP' THEN 2
+         WHEN 'MEASURE' THEN 3
+         WHEN 'MANAGE' THEN 4
+         ELSE 5
+       END,
+       order_no ASC, category_id ASC`,
     {}
-  )) as [{ id: number; title: string; function_id: number }[], number];
+  )) as [{ id: number; function: string; category_id: number; description: string; order_no: number }[], number];
 
-  // Get all subcategories (from tenant schema)
+  // Get all subcategories with implementation data
   const subcategories = (await sequelize.query(
-    `SELECT id, title, status, owner, category_id FROM "${tenant}".nist_ai_rmf_subcategories ORDER BY index ASC, id ASC`,
-    {}
-  )) as [{ id: number; title: string; status: string; owner: number | null; category_id: number }[], number];
+    `SELECT
+      s.id,
+      s.status,
+      s.owner,
+      ss.id as struct_id,
+      ss.function,
+      ss.subcategory_id,
+      ss.description,
+      ss.category_struct_id
+     FROM nist_ai_rmf_subcategories_struct ss
+     LEFT JOIN nist_ai_rmf_subcategories s
+       ON s.subcategory_meta_id = ss.id AND s.organization_id = :organizationId
+     ORDER BY ss.order_no ASC, ss.subcategory_id ASC`,
+    { replacements: { organizationId } }
+  )) as [{
+    id: number | null;
+    status: string | null;
+    owner: number | null;
+    struct_id: number;
+    function: string;
+    subcategory_id: number;
+    description: string;
+    category_struct_id: number;
+  }[], number];
 
-  // Build the nested structure
-  const result = functions[0].map((func) => ({
-    id: func.id,
-    type: func.type,
-    title: func.title,
+  // Build the nested structure grouped by function
+  const functionOrder = ['GOVERN', 'MAP', 'MEASURE', 'MANAGE'];
+  const result = functionOrder.map((func) => ({
+    function: func,
+    title: FUNCTION_METADATA[func] || func,
     categories: categories[0]
-      .filter((cat) => cat.function_id === func.id)
+      .filter((cat) => cat.function === func)
       .map((cat) => ({
         id: cat.id,
-        title: cat.title,
+        category_id: cat.category_id,
+        description: cat.description,
         subcategories: subcategories[0]
-          .filter((sub) => sub.category_id === cat.id)
+          .filter((sub) => sub.category_struct_id === cat.id)
           .map((sub) => ({
-            id: sub.id,
-            title: sub.title,
+            id: sub.id || 0,  // 0 if no implementation record exists
+            subcategory_id: sub.subcategory_id,
+            description: sub.description,
             status: sub.status || 'Not started',
             owner: sub.owner,
           })),
@@ -597,7 +681,7 @@ export const getNISTAIRMFDashboardOverview = async (
 export const updateNISTAIRMFSubcategoryStatusByIdQuery = async (
   id: number,
   status: string,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<NISTAIMRFSubcategoryModel> => {
   // Validate status against allowed values from the frontend StatusDropdown component
@@ -618,14 +702,14 @@ export const updateNISTAIRMFSubcategoryStatusByIdQuery = async (
   }
 
   const query = `
-    UPDATE "${tenant}".nist_ai_rmf_subcategories
+    UPDATE nist_ai_rmf_subcategories
     SET status = :status, updated_at = NOW()
-    WHERE id = :id
+    WHERE organization_id = :organizationId AND id = :id
     RETURNING *
   `;
 
   const result = (await sequelize.query(query, {
-    replacements: { id, status },
+    replacements: { organizationId, id, status },
     transaction,
     mapToModel: true,
     model: NISTAIMRFSubcategoryModel,

@@ -3,6 +3,7 @@ import type { GridProps } from "@mui/material";
 import { Gauge as SpeedGreenIcon } from "lucide-react";
 
 import { RiskMetrics } from "../../../../domain/interfaces/i.riskSummary";
+import { background, status } from "../../../themes/palette";
 
 interface RiskMetricsCardProps {
   metrics: RiskMetrics;
@@ -15,8 +16,8 @@ interface RiskMetricsCardProps {
 
 const metricBoxStyle = {
   p: 2,
-  backgroundColor: "#FFFFFF",
-  border: "1px solid #E5E7EB",
+  backgroundColor: `${background.main}`,
+  border: `1px solid ${status.default.border}`,
   borderRadius: 2,
   textAlign: "center",
   height: "100%",
@@ -36,7 +37,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
   const getVelocityColor = (velocity: number): string => {
     if (velocity > 0) return "#EF4444"; // Red - increasing risks
     if (velocity < 0) return "#10B981"; // Green - decreasing risks
-    return "#6B7280"; // Gray - stable
+    return `${status.default.text}`; // Gray - stable
   };
 
   const getVelocityDirection = (velocity: number): string => {
@@ -70,7 +71,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
             <Typography
               variant="caption"
               sx={{
-                color: "#6B7280",
+                color: `${status.default.text}`,
                 fontWeight: 500,
                 mb: 1,
                 fontSize: 11,
@@ -103,7 +104,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
             <Typography
               variant="caption"
               sx={{
-                color: "#6B7280",
+                color: `${status.default.text}`,
                 fontWeight: 500,
                 mb: 1,
                 fontSize: 11,
@@ -133,7 +134,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
               <Typography
                 variant="caption"
                 sx={{
-                  color: "#6B7280",
+                  color: `${status.default.text}`,
                   fontWeight: 500,
                   mb: 1,
                   fontSize: 11,
@@ -164,7 +165,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
               <Typography
                 variant="caption"
                 sx={{
-                  color: "#6B7280",
+                  color: `${status.default.text}`,
                   fontWeight: 500,
                   mb: 1,
                   fontSize: 11,

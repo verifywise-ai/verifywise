@@ -63,6 +63,7 @@ import {
   frameworkTypeChip,
   frameworkTypeDescription,
 } from "./style";
+import { brand, background, status } from "../../../themes/palette";
 
 const PluginManagement: React.FC = () => {
   const { pluginKey } = useParams<{ pluginKey: string }>();
@@ -484,7 +485,7 @@ const PluginManagement: React.FC = () => {
                             display: "flex",
                             gap: "12px",
                             padding: "12px",
-                            backgroundColor: "#f9fafb",
+                            backgroundColor: "background.accent",
                             borderRadius: "6px",
                           }}
                         >
@@ -500,7 +501,7 @@ const PluginManagement: React.FC = () => {
                               flexShrink: 0,
                             }}
                           >
-                            <CheckIcon size={16} color="#13715B" />
+                            <CheckIcon size={16} color={brand.primary} />
                           </Box>
                           <Box>
                             <Typography variant="body2" fontWeight={500} fontSize={13}>
@@ -529,8 +530,8 @@ const PluginManagement: React.FC = () => {
                           label={tag}
                           size="small"
                           uppercase={false}
-                          backgroundColor="#F3F4F6"
-                          textColor="#6B7280"
+                          backgroundColor={background.hover}
+                          textColor={status.default.text}
                         />
                       ))}
                     </Box>
@@ -616,7 +617,7 @@ const PluginManagement: React.FC = () => {
                 <Stack spacing={3}>
                   {/* Configuration Header */}
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <SettingsIcon size={20} color="#13715B" />
+                    <SettingsIcon size={20} color={brand.primary} />
                     <Typography variant="h6" fontWeight={600} fontSize={15}>
                       Configuration
                     </Typography>
@@ -759,7 +760,7 @@ const PluginManagement: React.FC = () => {
                                       />
                                     }
                                     label={
-                                      <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ color: "#344054" }}>
+                                      <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ color: "text.secondary" }}>
                                         {field.label}
                                       </Typography>
                                     }

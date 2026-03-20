@@ -32,15 +32,15 @@ async def main():
     args = json.loads(sys.argv[1])
     experiment_id = args["experiment_id"]
     config = args["config"]
-    tenant = args["tenant"]
-    
+    organization_id = args["organization_id"]
+
     # Run evaluation with standard asyncio loop
     async with get_db() as db:
         await run_evaluation(
             db=db,
             experiment_id=experiment_id,
             config=config,
-            tenant=tenant,
+            organization_id=organization_id,
         )
 
 

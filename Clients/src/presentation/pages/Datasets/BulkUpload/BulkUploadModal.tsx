@@ -6,6 +6,7 @@ import FilePreviewAndMetadata from "./FilePreviewAndMetadata";
 import UploadProgress, { FileUploadResult } from "./UploadProgress";
 import { useFileAnalysis } from "./useFileAnalysis";
 import { useAuth } from "../../../../application/hooks/useAuth";
+import { brand, text } from "../../../themes/palette";
 
 interface BulkUploadModalProps {
   open: boolean;
@@ -151,8 +152,8 @@ export default function BulkUploadModal({
             py: 4,
           }}
         >
-          <CircularProgress size={32} sx={{ color: "#13715B" }} />
-          <Typography sx={{ mt: 1, fontSize: 13, color: "#475467" }}>
+          <CircularProgress size={32} sx={{ color: `${brand.primary}` }} />
+          <Typography sx={{ mt: 1, fontSize: 13, color: `${text.tertiary}` }}>
             Analyzing files...
           </Typography>
         </Box>

@@ -11,6 +11,7 @@ import {
   trendIconStable,
 } from "./style";
 import { risksSummary, EnhancedRiskSummary, RiskTrend } from "../../../../domain/interfaces/i.riskSummary";
+import { status, border as borderPalette } from "../../../themes/palette";
 
 interface RisksCardProps {
   risksSummary: risksSummary | EnhancedRiskSummary;
@@ -26,7 +27,7 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
       return (
         <Typography sx={trendIndicator}>
           <TrendingFlatGreyIcon size={16} style={trendIconStable} />
-          <span style={{ color: "#6B7280" }}>
+          <span style={{ color: `${status.default.text}` }}>
             {trend?.change === 0 ? "0" : "—"}
           </span>
         </Typography>
@@ -141,7 +142,7 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
                   ...projectRisksTileCard,
                   color: level.color,
                   cursor: isClickable ? 'pointer' : 'default',
-                  border: isSelected ? `1px solid ${level.color}` : '1px solid #d0d5dd',
+                  border: isSelected ? `1px solid ${level.color}` : `1px solid ${borderPalette.dark}`,
                   background: isSelected ? 'rgba(146, 247, 224, 0.08)' : undefined,
                 }}
               >

@@ -106,7 +106,7 @@ export async function runAdvisor(req: Request, res: Response) {
 
   try {
     const prompt = req.body.prompt;
-    const tenantId = req.tenantId!;
+    const organizationId = req.organizationId!;
     const userId = req.userId ? Number(req.userId) : undefined;
     const llmKeyId = req.query.llmKeyId ? Number(Array.isArray(req.query.llmKeyId) ? req.query.llmKeyId[0] : req.query.llmKeyId) : undefined;
 
@@ -115,21 +115,21 @@ export async function runAdvisor(req: Request, res: Response) {
       return res.status(400).json({ error: "Prompt is required" });
     }
 
-    if (!tenantId) {
-      return res.status(400).json({ error: "Tenant context is required" });
+    if (!organizationId) {
+      return res.status(400).json({ error: "Organization context is required" });
     }
 
     logger.debug(
-      `Running advisor for tenant: ${tenantId}, user: ${userId}, llmKeyId: ${llmKeyId}`,
+      `Running advisor for organization: ${organizationId}, user: ${userId}, llmKeyId: ${llmKeyId}`,
     );
 
-    const clients = await getLLMKeysWithKeyQuery(tenantId);
+    const clients = await getLLMKeysWithKeyQuery(organizationId);
 
     if (clients.length === 0) {
-      logger.debug(`No LLM keys found for tenant: ${tenantId}`);
+      logger.debug(`No LLM keys found for organization: ${organizationId}`);
       return res
         .status(400)
-        .json({ error: "No LLM keys configured for this tenant." });
+        .json({ error: "No LLM keys configured for this organization." });
     }
 
     const apiKey = selectLLMKey(clients, llmKeyId);
@@ -140,7 +140,7 @@ export async function runAdvisor(req: Request, res: Response) {
       baseURL: url,
       model: apiKey.model,
       userPrompt: prompt,
-      tenant: tenantId,
+      tenant: organizationId,
       availableTools,
       toolsDefinition,
       provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
@@ -178,7 +178,7 @@ export async function getConversation(req: Request, res: Response) {
   const functionName = "getConversation";
 
   try {
-    const tenantId = req.tenantId!;
+    const organizationId = req.organizationId!;
     const userId = req.userId ? Number(req.userId) : undefined;
     const domain = Array.isArray(req.params.domain) ? req.params.domain[0] : req.params.domain;
 
@@ -190,9 +190,9 @@ export async function getConversation(req: Request, res: Response) {
       return res.status(400).json({ error: "Domain is required" });
     }
 
-    logger.debug(`Getting conversation for tenant: ${tenantId}, user: ${userId}, domain: ${domain}`);
+    logger.debug(`Getting conversation for organization: ${organizationId}, user: ${userId}, domain: ${domain}`);
 
-    const conversation = await getConversationQuery(tenantId, userId, domain);
+    const conversation = await getConversationQuery(organizationId, userId, domain);
 
     if (!conversation) {
       // Return empty messages array if no conversation exists
@@ -232,7 +232,7 @@ export async function saveConversation(req: Request, res: Response) {
   const functionName = "saveConversation";
 
   try {
-    const tenantId = req.tenantId!;
+    const organizationId = req.organizationId!;
     const userId = req.userId ? Number(req.userId) : undefined;
     const domain = Array.isArray(req.params.domain) ? req.params.domain[0] : req.params.domain;
     const messages: IAdvisorMessage[] = req.body.messages;
@@ -249,9 +249,9 @@ export async function saveConversation(req: Request, res: Response) {
       return res.status(400).json({ error: "Messages array is required" });
     }
 
-    logger.debug(`Saving conversation for tenant: ${tenantId}, user: ${userId}, domain: ${domain}, messages: ${messages.length}`);
+    logger.debug(`Saving conversation for organization: ${organizationId}, user: ${userId}, domain: ${domain}, messages: ${messages.length}`);
 
-    const conversation = await upsertConversationQuery(tenantId, userId, domain, messages);
+    const conversation = await upsertConversationQuery(organizationId, userId, domain, messages);
 
     logStructured(
       "successful",
@@ -291,7 +291,7 @@ export async function streamAdvisor(req: Request, res: Response) {
 
   try {
     const prompt = req.body.prompt;
-    const tenantId = req.tenantId!;
+    const organizationId = req.organizationId!;
     const userId = req.userId ? Number(req.userId) : undefined;
     const llmKeyId = req.query.llmKeyId
       ? Number(Array.isArray(req.query.llmKeyId) ? req.query.llmKeyId[0] : req.query.llmKeyId)
@@ -302,19 +302,19 @@ export async function streamAdvisor(req: Request, res: Response) {
       return;
     }
 
-    if (!tenantId) {
-      res.status(400).json({ error: "Tenant context is required" });
+    if (!organizationId) {
+      res.status(400).json({ error: "Organization context is required" });
       return;
     }
 
     logger.debug(
-      `Streaming advisor for tenant: ${tenantId}, user: ${userId}, llmKeyId: ${llmKeyId}`,
+      `Streaming advisor for organization: ${organizationId}, user: ${userId}, llmKeyId: ${llmKeyId}`,
     );
 
-    const clients = await getLLMKeysWithKeyQuery(tenantId);
+    const clients = await getLLMKeysWithKeyQuery(organizationId);
 
     if (clients.length === 0) {
-      res.status(400).json({ error: "No LLM keys configured for this tenant." });
+      res.status(400).json({ error: "No LLM keys configured for this organization." });
       return;
     }
 
@@ -343,7 +343,7 @@ export async function streamAdvisor(req: Request, res: Response) {
       baseURL: url,
       model: apiKey.model,
       userPrompt: prompt,
-      tenant: tenantId,
+      tenant: organizationId,
       availableTools,
       toolsDefinition,
       provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
@@ -425,7 +425,7 @@ export async function streamAdvisorV2(req: Request, res: Response) {
   try {
     const messages: UIMessage[] = req.body.messages || [];
     const llmKeyId = req.body.llmKeyId as number | undefined;
-    const tenantId = req.tenantId!;
+    const organizationId = req.organizationId!;
 
     // Extract the last user message as the prompt
     const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
@@ -439,19 +439,19 @@ export async function streamAdvisorV2(req: Request, res: Response) {
       return;
     }
 
-    if (!tenantId) {
-      res.status(400).json({ error: "Tenant context is required" });
+    if (!organizationId) {
+      res.status(400).json({ error: "Organization context is required" });
       return;
     }
 
     logger.debug(
-      `AI SDK streaming advisor for tenant: ${tenantId}, llmKeyId: ${llmKeyId}`,
+      `AI SDK streaming advisor for organization: ${organizationId}, llmKeyId: ${llmKeyId}`,
     );
 
-    const clients = await getLLMKeysWithKeyQuery(tenantId);
+    const clients = await getLLMKeysWithKeyQuery(organizationId);
 
     if (clients.length === 0) {
-      res.status(400).json({ error: "No LLM keys configured for this tenant." });
+      res.status(400).json({ error: "No LLM keys configured for this organization." });
       return;
     }
 
@@ -463,7 +463,7 @@ export async function streamAdvisorV2(req: Request, res: Response) {
       baseURL: url,
       model: apiKey.model,
       userPrompt: prompt,
-      tenant: tenantId,
+      tenant: organizationId,
       availableTools,
       toolsDefinition,
       provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",

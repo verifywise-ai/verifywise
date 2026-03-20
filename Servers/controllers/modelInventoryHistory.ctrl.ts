@@ -61,7 +61,7 @@ export async function getTimeseries(req: Request, res: Response) {
       timeseriesData = await getTimeseriesForTimeframe(
         parameter,
         timeframe as '7days' | '15days' | '1month' | '3months' | '6months' | '1year',
-        req.tenantId!
+        req.organizationId!
       );
     } else if (req.query.startDate && req.query.endDate) {
       const startDate = new Date(req.query.startDate as string);
@@ -98,12 +98,12 @@ export async function getTimeseries(req: Request, res: Response) {
         parameter,
         startDate,
         endDate,
-        req.tenantId!,
+        req.organizationId!,
         intervalHours
       );
     } else {
       // Default to 7 days
-      timeseriesData = await getTimeseriesForTimeframe(parameter, '7days', req.tenantId!);
+      timeseriesData = await getTimeseriesForTimeframe(parameter, '7days', req.organizationId!);
     }
 
     logStructured(
@@ -159,7 +159,7 @@ export async function getCurrentCounts(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Parameter is required"));
     }
 
-    const counts = await getCurrentParameterCounts(parameter, req.tenantId!);
+    const counts = await getCurrentParameterCounts(parameter, req.organizationId!);
 
     logStructured(
       "successful",
@@ -215,7 +215,7 @@ export async function createSnapshot(req: Request, res: Response) {
     }
 
     const userId = req.userId!;
-    const snapshot = await recordHistorySnapshot(parameter, req.tenantId!, userId);
+    const snapshot = await recordHistorySnapshot(parameter, req.organizationId!, userId);
 
     logStructured(
       "successful",

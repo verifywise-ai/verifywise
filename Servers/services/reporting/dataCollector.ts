@@ -71,20 +71,20 @@ const RISK_LEVEL_COLORS: Record<string, string> = {
 // };
 
 export class ReportDataCollector {
-  private tenantId: string;
+  private organizationId: number;
   private projectId: number;
   private frameworkId: number;
   private projectFrameworkId: number;
   private userId: number;
 
   constructor(
-    tenantId: string,
+    organizationId: number,
     projectId: number,
     frameworkId: number,
     projectFrameworkId: number,
     userId: number
   ) {
-    this.tenantId = tenantId;
+    this.organizationId = organizationId;
     this.projectId = projectId;
     this.frameworkId = frameworkId;
     this.projectFrameworkId = projectFrameworkId;
@@ -249,8 +249,8 @@ export class ReportDataCollector {
    * Collect report metadata
    */
   private async collectMetadata(): Promise<ReportMetadata> {
-    const project = await getProjectByIdQuery(this.projectId, this.tenantId);
-    const framework = await getAllFrameworkByIdQuery(this.frameworkId, this.tenantId);
+    const project = await getProjectByIdQuery(this.projectId, this.organizationId);
+    const framework = await getAllFrameworkByIdQuery(this.frameworkId, this.organizationId);
     const user = await getUserByIdQuery(this.userId);
 
     // Get project owner name
@@ -271,7 +271,7 @@ export class ReportDataCollector {
       projectFrameworkId: this.projectFrameworkId,
       generatedAt: new Date(),
       generatedBy: user ? `${user.name || ""} ${user.surname || ""}`.trim() : "System",
-      tenantId: this.tenantId,
+      organizationId: this.organizationId,
       isOrganizational: project?.is_organizational || false,
     };
   }
@@ -333,7 +333,7 @@ export class ReportDataCollector {
    * Collect risk distribution data for charts
    */
   private async collectRiskDistribution(): Promise<RiskDistributionData[]> {
-    const risks = await getProjectRisksReportQuery(this.projectId, this.tenantId);
+    const risks = await getProjectRisksReportQuery(this.projectId, this.organizationId);
     const distribution: Record<string, number> = {};
 
     (risks as any[]).forEach((risk) => {
@@ -358,7 +358,7 @@ export class ReportDataCollector {
     try {
       const controlCategories = await getComplianceReportQuery(
         this.projectFrameworkId,
-        this.tenantId
+        this.organizationId
       );
 
       // Calculate progress per control category
@@ -404,7 +404,7 @@ export class ReportDataCollector {
       const assessmentData = await getAssessmentReportQuery(
         this.projectId,
         this.frameworkId,
-        this.tenantId
+        this.organizationId
       );
 
       let answered = 0;
@@ -438,7 +438,7 @@ export class ReportDataCollector {
   private async collectProjectRisks(): Promise<ProjectRisksSectionData> {
     const risks = (await getProjectRisksReportQuery(
       this.projectId,
-      this.tenantId
+      this.organizationId
     )) as any[];
 
     const risksByLevel: Record<string, number> = {};
@@ -481,21 +481,23 @@ export class ReportDataCollector {
         // Get all vendors for organizational reports
         vendorsQuery = `
           SELECT v.*, u.name as assignee_name, u.surname as assignee_surname
-          FROM "${this.tenantId}".vendors v
-          LEFT JOIN public.users u ON v.assignee = u.id
+          FROM vendors v
+          LEFT JOIN users u ON v.assignee = u.id
+          WHERE v.organization_id = :organizationId
           ORDER BY v.vendor_name ASC
         `;
+        replacements = { organizationId: this.organizationId };
       } else {
         // Get only project-linked vendors for use case reports
         vendorsQuery = `
           SELECT v.*, u.name as assignee_name, u.surname as assignee_surname
-          FROM "${this.tenantId}".vendors v
-          JOIN "${this.tenantId}".vendors_projects vp ON v.id = vp.vendor_id
-          LEFT JOIN public.users u ON v.assignee = u.id
-          WHERE vp.project_id = :projectId
+          FROM vendors v
+          JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = v.organization_id
+          LEFT JOIN users u ON v.assignee = u.id
+          WHERE v.organization_id = :organizationId AND vp.project_id = :projectId
           ORDER BY v.vendor_name ASC
         `;
-        replacements = { projectId: this.projectId };
+        replacements = { organizationId: this.organizationId, projectId: this.projectId };
       }
 
       const vendors = (await sequelize.query(vendorsQuery, {
@@ -536,24 +538,25 @@ export class ReportDataCollector {
         // For organizational reports, get ALL vendor risks
         vendorRisksQuery = `
           SELECT vr.*, v.vendor_name as vendor_name, u.name as owner_name, u.surname as owner_surname
-          FROM "${this.tenantId}".vendor_risks vr
-          JOIN "${this.tenantId}".vendors v ON vr.vendor_id = v.id
-          LEFT JOIN public.users u ON vr.action_owner = u.id
+          FROM vendor_risks vr
+          JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = vr.organization_id
+          LEFT JOIN users u ON vr.action_owner = u.id
+          WHERE vr.organization_id = :organizationId
           ORDER BY vr.id ASC
         `;
-        replacements = {};
+        replacements = { organizationId: this.organizationId };
       } else {
         // For use case reports, filter by project
         vendorRisksQuery = `
           SELECT vr.*, v.vendor_name as vendor_name, u.name as owner_name, u.surname as owner_surname
-          FROM "${this.tenantId}".vendor_risks vr
-          JOIN "${this.tenantId}".vendors v ON vr.vendor_id = v.id
-          LEFT JOIN public.users u ON vr.action_owner = u.id
-          JOIN "${this.tenantId}".vendors_projects vp ON v.id = vp.vendor_id
-          WHERE vp.project_id = :projectId
+          FROM vendor_risks vr
+          JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = vr.organization_id
+          LEFT JOIN users u ON vr.action_owner = u.id
+          JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = v.organization_id
+          WHERE vr.organization_id = :organizationId AND vp.project_id = :projectId
           ORDER BY vr.id ASC
         `;
-        replacements = { projectId: this.projectId };
+        replacements = { organizationId: this.organizationId, projectId: this.projectId };
       }
 
       const vendorRisks = (await sequelize.query(vendorRisksQuery, {
@@ -587,7 +590,7 @@ export class ReportDataCollector {
   private async collectCompliance(): Promise<ComplianceSectionData> {
     const controlCategories = (await getComplianceReportQuery(
       this.projectFrameworkId,
-      this.tenantId
+      this.organizationId
     )) as any[];
 
     // Flatten controls from all categories
@@ -633,7 +636,7 @@ export class ReportDataCollector {
     const assessmentData = await getAssessmentReportQuery(
       this.projectId,
       this.frameworkId,
-      this.tenantId
+      this.organizationId
     );
 
     let totalQuestions = 0;
@@ -697,11 +700,11 @@ export class ReportDataCollector {
     try {
       const clauses = await getClausesReportQuery(
         this.projectFrameworkId,
-        this.tenantId
+        this.organizationId
       );
       const annexes = await getAnnexesReportQuery(
         this.projectFrameworkId,
-        this.tenantId
+        this.organizationId
       );
 
       return {
@@ -749,21 +752,23 @@ export class ReportDataCollector {
         // Get all models for organizational reports
         modelsQuery = `
           SELECT mi.*, u.name as owner_name, u.surname as owner_surname
-          FROM "${this.tenantId}".model_inventories mi
-          LEFT JOIN public.users u ON mi.owner = u.id
+          FROM model_inventories mi
+          LEFT JOIN users u ON mi.owner = u.id
+          WHERE mi.organization_id = :organizationId
           ORDER BY mi.name ASC
         `;
+        replacements = { organizationId: this.organizationId };
       } else {
         // Get only project-linked models for use case reports
         modelsQuery = `
           SELECT mi.*, u.name as owner_name, u.surname as owner_surname
-          FROM "${this.tenantId}".model_inventories mi
-          JOIN "${this.tenantId}".model_inventory_projects mip ON mi.id = mip.model_id
-          LEFT JOIN public.users u ON mi.owner = u.id
-          WHERE mip.project_id = :projectId
+          FROM model_inventories mi
+          JOIN model_inventory_projects mip ON mi.id = mip.model_id AND mip.organization_id = mi.organization_id
+          LEFT JOIN users u ON mi.owner = u.id
+          WHERE mi.organization_id = :organizationId AND mip.project_id = :projectId
           ORDER BY mi.name ASC
         `;
-        replacements = { projectId: this.projectId };
+        replacements = { organizationId: this.organizationId, projectId: this.projectId };
       }
 
       const models = (await sequelize.query(modelsQuery, {
@@ -804,22 +809,23 @@ export class ReportDataCollector {
         // For organizational reports, get ALL model risks
         modelRisksQuery = `
           SELECT mr.*, mi.name as model_name
-          FROM "${this.tenantId}".model_risks mr
-          JOIN "${this.tenantId}".model_inventories mi ON mr.model_id = mi.id
+          FROM model_risks mr
+          JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
+          WHERE mr.organization_id = :organizationId
           ORDER BY mr.id ASC
         `;
-        replacements = {};
+        replacements = { organizationId: this.organizationId };
       } else {
         // For use case reports, filter by project
         modelRisksQuery = `
           SELECT mr.*, mi.name as model_name
-          FROM "${this.tenantId}".model_risks mr
-          JOIN "${this.tenantId}".model_inventories mi ON mr.model_id = mi.id
-          JOIN "${this.tenantId}".model_inventory_projects mip ON mi.id = mip.model_id
-          WHERE mip.project_id = :projectId
+          FROM model_risks mr
+          JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
+          JOIN model_inventory_projects mip ON mi.id = mip.model_id AND mip.organization_id = mi.organization_id
+          WHERE mr.organization_id = :organizationId AND mip.project_id = :projectId
           ORDER BY mr.id ASC
         `;
-        replacements = { projectId: this.projectId };
+        replacements = { organizationId: this.organizationId, projectId: this.projectId };
       }
 
       const modelRisks = (await sequelize.query(modelRisksQuery, {
@@ -850,12 +856,14 @@ export class ReportDataCollector {
     try {
       const trainingQuery = `
         SELECT tr.*, u.name as assignee_name, u.surname as assignee_surname
-        FROM "${this.tenantId}".training_registrar tr
-        LEFT JOIN public.users u ON tr.assignee = u.id
+        FROM training_registrar tr
+        LEFT JOIN users u ON tr.assignee = u.id
+        WHERE tr.organization_id = :organizationId
         ORDER BY tr.id ASC
       `;
 
       const records = (await sequelize.query(trainingQuery, {
+        replacements: { organizationId: this.organizationId },
         type: QueryTypes.SELECT,
       })) as any[];
 
@@ -886,12 +894,14 @@ export class ReportDataCollector {
     try {
       const policiesQuery = `
         SELECT p.*, u.name as owner_name, u.surname as owner_surname
-        FROM "${this.tenantId}".policies p
-        LEFT JOIN public.users u ON p.owner = u.id
+        FROM policies p
+        LEFT JOIN users u ON p.owner = u.id
+        WHERE p.organization_id = :organizationId
         ORDER BY p.title ASC
       `;
 
       const policies = (await sequelize.query(policiesQuery, {
+        replacements: { organizationId: this.organizationId },
         type: QueryTypes.SELECT,
       })) as any[];
 
@@ -934,14 +944,14 @@ export class ReportDataCollector {
           nsr.id as risk_id,
           nsr.risk_name,
           nsr.risk_level
-        FROM "${this.tenantId}".nist_ai_rmf_subcategories ns
-        LEFT JOIN "${this.tenantId}".nist_ai_rmf_subcategories_risks nsr ON ns.id = nsr.subcategory_id
-        WHERE ns.project_framework_id = :projectFrameworkId
+        FROM nist_ai_rmf_subcategories ns
+        LEFT JOIN nist_ai_rmf_subcategories_risks nsr ON ns.id = nsr.subcategory_id AND nsr.organization_id = ns.organization_id
+        WHERE ns.organization_id = :organizationId AND ns.project_framework_id = :projectFrameworkId
         ORDER BY ns.function, ns.category, ns.sub_id
       `;
 
       const results = (await sequelize.query(subcategoriesQuery, {
-        replacements: { projectFrameworkId: this.projectFrameworkId },
+        replacements: { organizationId: this.organizationId, projectFrameworkId: this.projectFrameworkId },
         type: QueryTypes.SELECT,
       })) as any[];
 
@@ -1029,20 +1039,22 @@ export class ReportDataCollector {
         // Get all incidents for organizational reports
         incidentsQuery = `
           SELECT aim.*, u.name as assignee_name, u.surname as assignee_surname
-          FROM "${this.tenantId}".ai_incident_managements aim
-          LEFT JOIN public.users u ON aim.assignee = u.id
+          FROM ai_incident_managements aim
+          LEFT JOIN users u ON aim.assignee = u.id
+          WHERE aim.organization_id = :organizationId
           ORDER BY aim.created_at DESC
         `;
+        replacements = { organizationId: this.organizationId };
       } else {
         // Get only project-linked incidents for use case reports
         incidentsQuery = `
           SELECT aim.*, u.name as assignee_name, u.surname as assignee_surname
-          FROM "${this.tenantId}".ai_incident_managements aim
-          LEFT JOIN public.users u ON aim.assignee = u.id
-          WHERE aim.ai_project = :projectId
+          FROM ai_incident_managements aim
+          LEFT JOIN users u ON aim.assignee = u.id
+          WHERE aim.organization_id = :organizationId AND aim.ai_project = :projectId
           ORDER BY aim.created_at DESC
         `;
-        replacements = { projectId: this.projectId };
+        replacements = { organizationId: this.organizationId, projectId: this.projectId };
       }
 
       const incidents = (await sequelize.query(incidentsQuery, {
@@ -1081,14 +1093,14 @@ export class ReportDataCollector {
  * Factory function to create a data collector instance
  */
 export function createDataCollector(
-  tenantId: string,
+  organizationId: number,
   projectId: number,
   frameworkId: number,
   projectFrameworkId: number,
   userId: number
 ): ReportDataCollector {
   return new ReportDataCollector(
-    tenantId,
+    organizationId,
     projectId,
     frameworkId,
     projectFrameworkId,

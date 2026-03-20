@@ -25,6 +25,9 @@ import {
   AIDetectionStats,
   DependencyGraphResponse,
   ComplianceMappingResponse,
+  Finding,
+  VulnerabilityFindingType,
+  VULNERABILITY_FINDING_TYPES,
 } from "../../domain/ai-detection/types";
 import {
   RiskScore,
@@ -568,7 +571,7 @@ export async function getRiskScoringConfig(
  * Update risk scoring configuration
  */
 export async function updateRiskScoringConfig(
-  config: Partial<Pick<RiskScoringConfig, "llm_enabled" | "llm_key_id" | "dimension_weights">>,
+  config: Partial<Pick<RiskScoringConfig, "llm_enabled" | "llm_key_id" | "dimension_weights" | "vulnerability_scan_enabled" | "vulnerability_types_enabled">>,
   signal?: AbortSignal,
 ): Promise<RiskScoringConfig> {
   const response = await apiServices.patch<{ data: RiskScoringConfig }>(
@@ -577,4 +580,23 @@ export async function updateRiskScoringConfig(
     { signal }
   );
   return response.data.data;
+}
+
+// ============================================================================
+// Vulnerability Findings Operations
+// ============================================================================
+
+/**
+ * Get all vulnerability findings for a scan (prompt_injection, pii_exposure, excessive_agency, jailbreak_risk)
+ */
+export async function getScanVulnerabilityFindings(
+  scanId: number,
+  signal?: AbortSignal,
+): Promise<Finding[]> {
+  const responses = await Promise.all(
+    VULNERABILITY_FINDING_TYPES.map((type) =>
+      getScanFindings(scanId, { page: 1, limit: 50, finding_type: type as VulnerabilityFindingType }, signal)
+    )
+  );
+  return responses.flatMap((r) => r.findings);
 }

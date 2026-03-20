@@ -164,7 +164,7 @@ export const useStyles = (theme: Theme): StylesType => ({
     alignSelf: "flex-end",
     width: "fit-content",
     gap: 2,
-    backgroundColor: '#13715B',
+    backgroundColor: 'brand.primary',
     border: `1px solid #13715B`,
   },
 
@@ -214,9 +214,9 @@ export const useStyles = (theme: Theme): StylesType => ({
 
   fileUploadButton: {
     mt: 10,
-    backgroundColor: '#13715B',
+    backgroundColor: 'brand.primary',
     border: `1px solid #13715B`,
-    color: '#fff',
+    color: 'background.main',
   },
 
   fileName: {
@@ -237,11 +237,11 @@ export const useStyles = (theme: Theme): StylesType => ({
   },
 
   modalActionButton: {
-    backgroundColor: '#13715B',
+    backgroundColor: 'brand.primary',
     border: `1px solid #13715B`,
     gap: 1,
     '&:hover': {
-      backgroundColor: '#13715B',
+      backgroundColor: 'brand.primary',
     },
     '&:disabled': {
       backgroundColor: theme.palette.grey[300],

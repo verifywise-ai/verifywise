@@ -2,6 +2,7 @@
 DeepEval Projects Controller
 
 Manages DeepEval projects (CRUD operations).
+Shared-schema multi-tenancy: Uses organization_id for tenant isolation.
 """
 
 import json
@@ -21,15 +22,15 @@ from crud.deepeval_projects import (
 
 async def create_project_controller(
     project_data: dict,
-    tenant: str
+    organization_id: int
 ) -> JSONResponse:
     """
     Create a new DeepEval project.
-    
+
     Args:
         project_data: Project configuration
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with created project
     """
@@ -37,38 +38,35 @@ async def create_project_controller(
         # Generate project ID
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         project_id = f"project_{timestamp}"
-        
+
         # Get database session
         async with get_db() as db:
             # Create project with name, description, and use case
-            # Model configs, datasets, metrics will be part of eval runs
-            # useCase is required from the frontend
             use_case = project_data.get("useCase")
             if not use_case:
                 raise HTTPException(
                     status_code=400,
                     detail="useCase is required (chatbot, rag, or agent)"
                 )
-            
+
             project = await create_project(
                 project_id=project_id,
                 name=project_data.get("name"),
                 description=project_data.get("description", ""),
-                org_id=project_data.get("orgId"),
-                tenant=tenant,
+                organization_id=organization_id,
                 created_by=project_data.get("createdBy") or "",
                 db=db,
                 use_case=use_case
             )
-            
+
             await db.commit()
-            
+
             if not project:
                 raise HTTPException(
                     status_code=500,
                     detail="Failed to create project in database"
                 )
-            
+
             return JSONResponse(
                 status_code=201,
                 content={
@@ -76,7 +74,7 @@ async def create_project_controller(
                     "message": "Project created successfully"
                 }
             )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -86,20 +84,20 @@ async def create_project_controller(
         )
 
 
-async def get_all_projects_controller(tenant: str) -> JSONResponse:
+async def get_all_projects_controller(organization_id: int) -> JSONResponse:
     """
-    Get all projects for a tenant.
-    
+    Get all projects for an organization.
+
     Args:
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with projects list
     """
     try:
         async with get_db() as db:
-            projects = await get_all_projects(tenant=tenant, db=db)
-            
+            projects = await get_all_projects(organization_id=organization_id, db=db)
+
             return JSONResponse(
                 status_code=200,
                 content={"projects": projects}
@@ -113,15 +111,15 @@ async def get_all_projects_controller(tenant: str) -> JSONResponse:
 
 async def get_project_controller(
     project_id: str,
-    tenant: str
+    organization_id: int
 ) -> JSONResponse:
     """
     Get a specific project.
-    
+
     Args:
         project_id: Project ID
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with project data
     """
@@ -129,16 +127,16 @@ async def get_project_controller(
         async with get_db() as db:
             project = await get_project_by_id(
                 project_id=project_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 db=db
             )
-            
+
             if not project:
                 raise HTTPException(
                     status_code=404,
                     detail=f"Project {project_id} not found"
                 )
-            
+
             return JSONResponse(
                 status_code=200,
                 content={"project": project}
@@ -155,16 +153,16 @@ async def get_project_controller(
 async def update_project_controller(
     project_id: str,
     project_data: dict,
-    tenant: str
+    organization_id: int
 ) -> JSONResponse:
     """
     Update an existing project.
-    
+
     Args:
         project_id: Project ID
         project_data: Updated project data
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with updated project
     """
@@ -175,19 +173,19 @@ async def update_project_controller(
                 project_id=project_id,
                 name=project_data.get("name"),
                 description=project_data.get("description"),
-                tenant=tenant,
+                organization_id=organization_id,
                 db=db,
                 use_case=project_data.get("useCase")
             )
-            
+
             await db.commit()
-            
+
             if not project:
                 raise HTTPException(
                     status_code=404,
                     detail=f"Project {project_id} not found"
                 )
-            
+
             return JSONResponse(
                 status_code=200,
                 content={
@@ -206,15 +204,15 @@ async def update_project_controller(
 
 async def delete_project_controller(
     project_id: str,
-    tenant: str
+    organization_id: int
 ) -> JSONResponse:
     """
     Delete a project.
-    
+
     Args:
         project_id: Project ID
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with deletion confirmation
     """
@@ -223,20 +221,18 @@ async def delete_project_controller(
             # Delete project from database
             deleted = await delete_project_db(
                 project_id=project_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 db=db
             )
-            
+
             await db.commit()
-            
+
             if not deleted:
                 raise HTTPException(
                     status_code=404,
                     detail=f"Project {project_id} not found"
                 )
-            
-            # TODO: Also delete associated experiments
-            
+
             return JSONResponse(
                 status_code=200,
                 content={
@@ -255,15 +251,15 @@ async def delete_project_controller(
 
 async def get_project_stats_controller(
     project_id: str,
-    tenant: str
+    organization_id: int
 ) -> JSONResponse:
     """
     Get statistics for a project (number of experiments, avg scores, etc.).
-    
+
     Args:
         project_id: Project ID
-        tenant: Tenant ID
-        
+        organization_id: Organization ID for tenant isolation
+
     Returns:
         JSONResponse with project statistics
     """
@@ -272,25 +268,24 @@ async def get_project_stats_controller(
             # Verify project exists
             project = await get_project_by_id(
                 project_id=project_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 db=db
             )
-            
+
             if not project:
                 raise HTTPException(
                     status_code=404,
                     detail=f"Project {project_id} not found"
                 )
-            
+
             # TODO: Calculate stats from experiments
-            # For now, return mock data
             stats = {
                 "projectId": project_id,
                 "totalExperiments": 0,
                 "lastRunDate": None,
                 "avgMetrics": {},
             }
-            
+
             return JSONResponse(
                 status_code=200,
                 content={"stats": stats}
@@ -302,4 +297,3 @@ async def get_project_stats_controller(
             status_code=500,
             detail=f"Failed to fetch project stats: {str(e)}"
         )
-

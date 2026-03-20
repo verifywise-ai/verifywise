@@ -56,6 +56,7 @@ import NISTAIRMFGovern from "./NIST-AI-RMF/Govern";
 import NISTAIRMFMap from "./NIST-AI-RMF/Map";
 import NISTAIRMFMeasure from "./NIST-AI-RMF/Measure";
 import NISTAIRMFManage from "./NIST-AI-RMF/Manage";
+import { brand } from "../../themes/palette";
 
 // Tab styles following ProjectFrameworks pattern
 const tabStyle = {
@@ -67,7 +68,7 @@ const tabStyle = {
   minHeight: "20px",
   minWidth: "auto",
   "&.Mui-selected": {
-    color: "#13715B",
+    color: `${brand.primary}`,
   },
 };
 
@@ -568,9 +569,9 @@ const Framework = () => {
           sx={{
             textAlign: "center",
             py: 8,
-            backgroundColor: "#F9FAFB",
+            backgroundColor: "background.accent",
             borderRadius: 2,
-            border: "1px solid #E5E7EB",
+            border: "1px solid status.default.border",
           }}
         >
           <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
@@ -600,7 +601,7 @@ const Framework = () => {
               <TabList
                 data-joyride-id="framework-clause-tabs"
                 onChange={handleIso27001TabChange}
-                TabIndicatorProps={{ style: { backgroundColor: "#13715B" } }}
+                TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
                 sx={tabListStyle}
               >
                 <Tab
@@ -680,7 +681,7 @@ const Framework = () => {
               <TabList
                 data-joyride-id="framework-clause-tabs"
                 onChange={handleIso42001TabChange}
-                TabIndicatorProps={{ style: { backgroundColor: "#13715B" } }}
+                TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
                 sx={tabListStyle}
               >
                 <Tab
@@ -760,7 +761,7 @@ const Framework = () => {
               <TabList
                 data-joyride-id="framework-nist-ai-rmf-tabs"
                 onChange={handleNistAiRmfTabChange}
-                TabIndicatorProps={{ style: { backgroundColor: "#13715B" } }}
+                TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
                 sx={tabListStyle}
               >
                 <Tab
@@ -847,7 +848,7 @@ const Framework = () => {
       <Box
         sx={{
           p: 6,
-          backgroundColor: "#000000",
+          backgroundColor: "text.black",
           borderRadius: 3,
           minHeight: "400px",
           display: "flex",
@@ -858,7 +859,7 @@ const Framework = () => {
         <Typography
           variant="h5"
           sx={{
-            color: "#FFFFFF",
+            color: "background.main",
             textAlign: "center",
             maxWidth: "600px",
           }}
@@ -895,8 +896,8 @@ const Framework = () => {
                   !allowedRoles.projects.delete.includes(userRoleName)
                 }
                 sx={{
-                  backgroundColor: "#13715B",
-                  border: "1px solid #13715B",
+                  backgroundColor: "brand.primary",
+                  border: "1px solid brand.primary",
                   gap: 2,
                   "&:hover": {
                     backgroundColor: "#0e5c47",
@@ -922,7 +923,7 @@ const Framework = () => {
                     boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
                     border: "1px solid #d0d5dd",
                     overflow: "visible",
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.main",
                   },
                 }}
               >

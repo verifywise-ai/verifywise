@@ -40,3 +40,13 @@ export interface RiskMetrics {
   overdueCount: number;
   totalFinancialImpact: number;
 }
+
+/** Quantitative portfolio metrics for dashboard display */
+export interface PortfolioRiskMetrics {
+  portfolioALE: number;
+  portfolioResidualALE: number;
+  portfolioMitigationCost: number;
+  portfolioRiskCount: number;
+  portfolioRiskReduction: number;
+  portfolioROI: number | null;
+}

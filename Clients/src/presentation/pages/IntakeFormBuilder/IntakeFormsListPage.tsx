@@ -35,6 +35,8 @@ import {
   FolderTree,
   ListIcon,
   ChevronsUpDown,
+  ClipboardList,
+  Inbox,
 } from "lucide-react";
 import {
   getAllIntakeForms,
@@ -420,7 +422,7 @@ export function IntakeFormsListPage() {
                 height: 34,
                 fontSize: "13px",
                 backgroundColor: theme.palette.primary.main,
-                "&:hover": { backgroundColor: "#0F5A47" },
+                "&:hover": { backgroundColor: "brand.primaryHover" },
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
@@ -437,6 +439,7 @@ export function IntakeFormsListPage() {
             </Box>
           ) : filteredForms.length === 0 ? (
             <EmptyState
+              icon={ClipboardList}
               message={
                 searchQuery
                   ? "No forms match your search. Try adjusting your query."
@@ -600,6 +603,7 @@ export function IntakeFormsListPage() {
             </Box>
           ) : filteredSubmissions.length === 0 ? (
             <EmptyState
+              icon={Inbox}
               message="Submissions will appear here when external users fill in your published forms."
               showBorder
             />

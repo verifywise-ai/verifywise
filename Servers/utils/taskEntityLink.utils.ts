@@ -61,13 +61,14 @@ function getEntityTableName(entityType: EntityType): string {
 
 /**
  * Get the name/title column for an entity type
+ * Note: nist_subcategory uses struct table join, so this is just a placeholder
  */
 function getEntityNameColumn(entityType: EntityType): string {
   const columnMap: Record<EntityType, string> = {
     vendor: "vendor_name",
     model: "model",
     policy: "title",
-    nist_subcategory: "title",
+    nist_subcategory: "implementation_description", // actual name comes from struct table
     iso42001_subclause: "implementation_description",
     iso42001_annexcategory: "implementation_description",
     iso27001_subclause: "implementation_description",
@@ -84,15 +85,15 @@ function getEntityNameColumn(entityType: EntityType): string {
 export async function entityExistsQuery(
   entityId: number,
   entityType: EntityType,
-  tenantHash: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> {
   const tableName = getEntityTableName(entityType);
 
   const result = await sequelize.query<{ exists: boolean }>(
-    `SELECT EXISTS(SELECT 1 FROM "${tenantHash}".${tableName} WHERE id = :entityId) as exists`,
+    `SELECT EXISTS(SELECT 1 FROM ${tableName} WHERE organization_id = :organizationId AND id = :entityId) as exists`,
     {
-      replacements: { entityId },
+      replacements: { organizationId, entityId },
       type: QueryTypes.SELECT,
       transaction,
     }
@@ -106,15 +107,16 @@ export async function entityExistsQuery(
  */
 export async function createTaskEntityLinkQuery(
   link: Omit<ITaskEntityLink, "id" | "created_at" | "updated_at"> & { entity_name?: string },
-  tenantHash: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<ITaskEntityLink> {
   const result = await sequelize.query<ITaskEntityLink>(
-    `INSERT INTO "${tenantHash}".task_entity_links (task_id, entity_id, entity_type, entity_name, created_at, updated_at)
-     VALUES (:task_id, :entity_id, :entity_type, :entity_name, NOW(), NOW())
+    `INSERT INTO task_entity_links (organization_id, task_id, entity_id, entity_type, entity_name, created_at, updated_at)
+     VALUES (:organization_id, :task_id, :entity_id, :entity_type, :entity_name, NOW(), NOW())
      RETURNING *`,
     {
       replacements: {
+        organization_id: organizationId,
         task_id: link.task_id,
         entity_id: link.entity_id,
         entity_type: link.entity_type,
@@ -133,15 +135,15 @@ export async function createTaskEntityLinkQuery(
  */
 export async function getTaskEntityLinksQuery(
   taskId: number,
-  tenantHash: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<ITaskEntityLinkWithDetails[]> {
   const links = await sequelize.query<ITaskEntityLink & { entity_name?: string }>(
-    `SELECT * FROM "${tenantHash}".task_entity_links
-     WHERE task_id = :taskId
+    `SELECT * FROM task_entity_links
+     WHERE organization_id = :organizationId AND task_id = :taskId
      ORDER BY created_at DESC`,
     {
-      replacements: { taskId },
+      replacements: { organizationId, taskId },
       type: QueryTypes.SELECT,
       transaction,
     }
@@ -165,45 +167,42 @@ export async function getTaskEntityLinksQuery(
 
       // Special handling for NIST subcategories to build detailed name
       if (link.entity_type === "nist_subcategory") {
-        // Functions and categories are in public schema, subcategories in tenant schema
+        // NIST uses struct tables in public schema - join through subcategory_meta_id
         const nistResult = await sequelize.query<{
-          sub_title: string;
-          sub_index: number;
-          cat_index: number;
+          subcategory_id: string;
+          category_id: string;
           func_type: string;
+          description: string;
         }>(
           `SELECT
-            s.title as sub_title,
-            s.index as sub_index,
-            c.index as cat_index,
-            f.type as func_type
-          FROM "${tenantHash}".nist_ai_rmf_subcategories s
-          JOIN public.nist_ai_rmf_categories c ON s.category_id = c.id
-          JOIN public.nist_ai_rmf_functions f ON c.function_id = f.id
-          WHERE s.id = :entityId`,
+            ss.subcategory_id,
+            cs.category_id,
+            ss.function as func_type,
+            ss.description
+          FROM nist_ai_rmf_subcategories s
+          JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
+          JOIN nist_ai_rmf_categories_struct cs ON ss.category_struct_id = cs.id
+          WHERE s.organization_id = :organizationId AND s.id = :entityId`,
           {
-            replacements: { entityId: link.entity_id },
+            replacements: { organizationId, entityId: link.entity_id },
             type: QueryTypes.SELECT,
             transaction,
           }
         );
         if (nistResult[0]) {
-          const { func_type, cat_index, sub_index, sub_title } = nistResult[0];
-          // Build detailed name like "GOVERN 1.1: Subcategory description"
-          const funcUpper = func_type?.toUpperCase() || "FUNC";
-          const catNum = cat_index || 1;
-          const subNum = sub_index || 1;
-          const titlePart = sub_title ? `: ${sub_title.substring(0, 50)}${sub_title.length > 50 ? "..." : ""}` : "";
-          entityName = `${funcUpper} ${catNum}.${subNum}${titlePart}`.trim();
+          const { subcategory_id, description } = nistResult[0];
+          // Build detailed name like "GV.1.1: Subcategory description"
+          const descPart = description ? `: ${description.substring(0, 50)}${description.length > 50 ? "..." : ""}` : "";
+          entityName = `${subcategory_id}${descPart}`.trim();
         }
       } else {
         // Default handling for other entity types
         const tableName = getEntityTableName(link.entity_type);
         const nameColumn = getEntityNameColumn(link.entity_type);
         const entityResult = await sequelize.query<{ name: string }>(
-          `SELECT ${nameColumn} as name FROM "${tenantHash}".${tableName} WHERE id = :entityId`,
+          `SELECT ${nameColumn} as name FROM ${tableName} WHERE organization_id = :organizationId AND id = :entityId`,
           {
-            replacements: { entityId: link.entity_id },
+            replacements: { organizationId, entityId: link.entity_id },
             type: QueryTypes.SELECT,
             transaction,
           }
@@ -233,15 +232,15 @@ export async function getTaskEntityLinksQuery(
 export async function deleteTaskEntityLinkQuery(
   linkId: number,
   taskId: number,
-  tenantHash: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> {
   const result = await sequelize.query(
-    `DELETE FROM "${tenantHash}".task_entity_links
-     WHERE id = :linkId AND task_id = :taskId
+    `DELETE FROM task_entity_links
+     WHERE organization_id = :organizationId AND id = :linkId AND task_id = :taskId
      RETURNING *`,
     {
-      replacements: { linkId, taskId },
+      replacements: { organizationId, linkId, taskId },
       type: QueryTypes.SELECT,
       transaction,
     }
@@ -255,13 +254,13 @@ export async function deleteTaskEntityLinkQuery(
  */
 export async function deleteAllTaskEntityLinksQuery(
   taskId: number,
-  tenantHash: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<number> {
   const result = await sequelize.query(
-    `DELETE FROM "${tenantHash}".task_entity_links WHERE task_id = :taskId`,
+    `DELETE FROM task_entity_links WHERE organization_id = :organizationId AND task_id = :taskId`,
     {
-      replacements: { taskId },
+      replacements: { organizationId, taskId },
       type: QueryTypes.DELETE,
       transaction,
     }
@@ -277,16 +276,16 @@ export async function linkExistsQuery(
   taskId: number,
   entityId: number,
   entityType: EntityType,
-  tenantHash: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> {
   const result = await sequelize.query<{ exists: boolean }>(
     `SELECT EXISTS(
-      SELECT 1 FROM "${tenantHash}".task_entity_links
-      WHERE task_id = :taskId AND entity_id = :entityId AND entity_type = :entityType
+      SELECT 1 FROM task_entity_links
+      WHERE organization_id = :organizationId AND task_id = :taskId AND entity_id = :entityId AND entity_type = :entityType
     ) as exists`,
     {
-      replacements: { taskId, entityId, entityType },
+      replacements: { organizationId, taskId, entityId, entityType },
       type: QueryTypes.SELECT,
       transaction,
     }
@@ -301,14 +300,14 @@ export async function linkExistsQuery(
 export async function getTasksForEntityQuery(
   entityId: number,
   entityType: EntityType,
-  tenantHash: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<number[]> {
   const result = await sequelize.query<{ task_id: number }>(
-    `SELECT task_id FROM "${tenantHash}".task_entity_links
-     WHERE entity_id = :entityId AND entity_type = :entityType`,
+    `SELECT task_id FROM task_entity_links
+     WHERE organization_id = :organizationId AND entity_id = :entityId AND entity_type = :entityType`,
     {
-      replacements: { entityId, entityType },
+      replacements: { organizationId, entityId, entityType },
       type: QueryTypes.SELECT,
       transaction,
     }

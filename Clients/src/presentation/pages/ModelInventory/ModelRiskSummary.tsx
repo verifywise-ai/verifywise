@@ -29,6 +29,7 @@ const ModelRiskSummary: React.FC<ModelRiskSummaryProps> = ({
   return (
     <StatusTileCards
       items={items}
+      size="small"
       entityName="risk"
       onCardClick={onCardClick}
       selectedKey={selectedRiskLevel}

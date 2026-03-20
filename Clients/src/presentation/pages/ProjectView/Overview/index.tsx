@@ -13,6 +13,7 @@ import useProjectData from "../../../../application/hooks/useProjectData";
 import useProjectStatus from "../../../../application/hooks/useProjectStatus";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import getProjectData from "../../../../application/tools/getProjectData";
+import { text } from "../../../themes/palette";
 
 export type RiskData = {
   veryHighRisks: number;
@@ -155,7 +156,7 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
         </Stack>
         <Stack sx={{ mb: 0 }} data-joyride-id="risk-summary">
           <Typography
-            sx={{ color: "#1A1919", fontWeight: 600, mb: "10px", fontSize: 16 }}
+            sx={{ color: `${text.primary}`, fontWeight: 600, mb: "10px", fontSize: 16 }}
           >
             Use case risks
           </Typography>

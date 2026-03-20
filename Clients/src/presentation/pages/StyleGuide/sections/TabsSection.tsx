@@ -241,7 +241,7 @@ const TabsSection: React.FC = () => {
                 { property: "tabs", value: "TabItem[] (required)" },
                 { property: "activeTab", value: "string (required)" },
                 { property: "onChange", value: "(event, value) => void" },
-                { property: "indicatorColor", value: "#13715B (default)" },
+                { property: "indicatorColor", value: "brand.primary (default)" },
                 { property: "disableRipple", value: "true (default)" },
                 { property: "tabListSx", value: "SxProps for container" },
                 { property: "tabSx", value: "SxProps for tabs" },
@@ -261,7 +261,7 @@ const TabsSection: React.FC = () => {
                 { property: "Min height", value: "20px" },
                 { property: "Text transform", value: "none" },
                 { property: "Font weight", value: "400 (500 when selected)" },
-                { property: "Selected color", value: "#13715B" },
+                { property: "Selected color", value: "brand.primary" },
               ]}
             />
           </Box>
@@ -506,7 +506,7 @@ const TabsSection: React.FC = () => {
             "Pass icon names as strings (e.g., icon: \"User\"), not components",
             "Set isLoading: true on tabs when fetching count data",
             "Use disabled: true for tabs that shouldn't be accessible yet",
-            "Indicator color defaults to #13715B - override with indicatorColor prop",
+            "Indicator color defaults to brand.primary - override with indicatorColor prop",
             "Tab values must be unique strings within the same TabBar",
             "Development mode warns if activeTab doesn't match any tab value",
           ].map((item, index) => (

@@ -16,8 +16,9 @@ import {
 import { useCallback, useMemo, useState, useEffect } from "react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { EmptyState } from "../../EmptyState";
+import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import TablePaginationActions from "../../TablePagination";
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronsUpDown, ChevronUp, ChevronDown, ListTodo, UserPlus, Tag, Link2 } from "lucide-react";
 import { CustomSelect } from "../../CustomSelect";
 import IconButtonComponent from "../../IconButton";
 import Chip from "../../Chip";
@@ -30,6 +31,7 @@ import { CategoryChip } from "../../Chip/CategoryChip/CategoryChip";
 import { DISPLAY_TO_PRIORITY_MAP, PRIORITY_DISPLAY_MAP } from "../../../constants/priorityOptions";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import { taskTableStyles } from "./styles";
+import { text } from "../../../themes/palette";
 
 const SelectorVertical = (props: any) => (
   <ChevronsUpDown size={16} {...props} />
@@ -128,7 +130,7 @@ const SortableTableHeader: React.FC<{
                     display: "flex",
                     alignItems: "center",
                     color:
-                      sortConfig.key === column.id ? "primary.main" : "#9CA3AF",
+                      sortConfig.key === column.id ? "primary.main" : `${text.disabled}`,
                   }}
                 >
                   {sortConfig.key === column.id &&
@@ -500,14 +502,14 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                                 width: 28,
                                 height: 28,
                                 borderRadius: "50%",
-                                backgroundColor: "#f3f4f6",
+                                backgroundColor: "background.hover",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 fontSize: 11,
                                 fontWeight: 500,
                                 color: "#374151",
-                                border: "2px solid #fff",
+                                border: "2px solid background.main",
                               }}
                             >
                               {initials}
@@ -520,14 +522,14 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                               width: 28,
                               height: 28,
                               borderRadius: "50%",
-                              backgroundColor: "#e5e7eb",
+                              backgroundColor: "status.default.border",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                               fontSize: 10,
                               fontWeight: 500,
-                              color: "#6b7280",
-                              border: "2px solid #fff",
+                              color: "status.default.text",
+                              border: "2px solid background.main",
                             }}
                           >
                             +{task.assignees.length - 3}
@@ -602,9 +604,26 @@ const TasksTable: React.FC<ITasksTableProps> = ({
     <>
       {!sortedTasks || sortedTasks.length === 0 ? (
         <EmptyState
-          message="There is currently no data in this table."
+          icon={ListTodo}
+          message="No tasks yet. Tasks help you track action items across your governance program."
           showBorder
-        />
+        >
+          <EmptyStateTip
+            icon={UserPlus}
+            title="Assign tasks to team members"
+            description="Each task can be assigned to a workspace member with a priority and due date. They'll be notified when assigned."
+          />
+          <EmptyStateTip
+            icon={Tag}
+            title="Use priorities to stay organized"
+            description="Set priorities (low, medium, high, urgent) and group tasks by status, assignee, or due date to track progress."
+          />
+          <EmptyStateTip
+            icon={Link2}
+            title="Link tasks to controls or risks"
+            description="Associate tasks with specific controls, risks, or other resources to maintain traceability for auditors."
+          />
+        </EmptyState>
       ) : (
         <TableContainer>
           <Table sx={singleTheme.tableStyles.primary.frame}>

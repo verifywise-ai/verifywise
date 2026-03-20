@@ -1,7 +1,7 @@
 /**
  * Feature Settings Controller
  *
- * Handles GET and PATCH for per-tenant feature toggles.
+ * Handles GET and PATCH for per-organization feature toggles.
  */
 
 import { Request, Response } from "express";
@@ -20,18 +20,18 @@ export async function getFeatureSettings(
 ): Promise<any> {
   const fn = "getFeatureSettings";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logProcessing({
     description: "fetching feature settings",
     functionName: fn,
     fileName: FILE_NAME,
     userId,
-    tenantId,
+    organizationId,
   });
 
   try {
-    const settings = await getFeatureSettingsQuery(tenantId);
+    const settings = await getFeatureSettingsQuery(organizationId);
 
     await logSuccess({
       eventType: "Read",
@@ -39,7 +39,7 @@ export async function getFeatureSettings(
       functionName: fn,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
     });
 
     return res.status(200).json(STATUS_CODE[200](settings));
@@ -50,7 +50,7 @@ export async function getFeatureSettings(
       functionName: fn,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
       error: error as Error,
     });
 
@@ -64,14 +64,14 @@ export async function updateFeatureSettings(
 ): Promise<any> {
   const fn = "updateFeatureSettings";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logProcessing({
     description: "updating feature settings",
     functionName: fn,
     fileName: FILE_NAME,
     userId,
-    tenantId,
+    organizationId,
   });
 
   try {
@@ -107,7 +107,7 @@ export async function updateFeatureSettings(
         .json(STATUS_CODE[400]("No valid fields to update"));
     }
 
-    const updated = await updateFeatureSettingsQuery(tenantId, {
+    const updated = await updateFeatureSettingsQuery(organizationId, {
       lifecycle_enabled,
       audit_ledger_enabled,
       updated_by: userId,
@@ -119,7 +119,7 @@ export async function updateFeatureSettings(
       functionName: fn,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
     });
 
     return res.status(200).json(STATUS_CODE[200](updated));
@@ -130,7 +130,7 @@ export async function updateFeatureSettings(
       functionName: fn,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
       error: error as Error,
     });
 

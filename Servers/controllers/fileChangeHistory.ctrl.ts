@@ -34,7 +34,7 @@ export async function getFileChangeHistoryById(
     const result = await getEntityChangeHistory(
       "file",
       fileId,
-      req.tenantId!,
+      req.organizationId!,
       limit,
       offset
     );

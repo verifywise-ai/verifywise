@@ -5,6 +5,7 @@ import {
   projectRisksTileCardKey,
   projectRisksTileCardvalue,
 } from "../RisksCard/style";
+import { border as borderPalette } from "../../../themes/palette";
 
 export interface StatusTileItem {
   key: string;
@@ -78,7 +79,7 @@ export function StatusTileCards({
                 ...projectRisksTileCard,
                 ...sizeOverrides,
                 color: item.color,
-                border: selectedKey === item.key ? `1px solid ${item.color}` : "1px solid #d0d5dd",
+                border: selectedKey === item.key ? `1px solid ${item.color}` : `1px solid ${borderPalette.dark}`,
                 cursor: onCardClick ? "pointer" : "default",
                 background: selectedKey === item.key ? "rgba(146, 247, 224, 0.08)" : undefined,
                 ...cardSx,

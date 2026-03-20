@@ -21,4 +21,4 @@ COPY ./EvaluationModule/data/datasets /app/datasets
 # Create uploads directory for user datasets (will be mounted as volume)
 RUN mkdir -p /app/data/uploads
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4"]

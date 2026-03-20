@@ -13,7 +13,6 @@
  */
 
 import logger from "../../utils/logger/fileLogger";
-import { getTenantHash } from "../../tools/getTenantHash";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 import {
   getRepositoriesDueForScanQuery,
@@ -61,35 +60,35 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
     console.log(`[ScheduledScan] Found ${organizations.length} organization(s) to check`);
 
     for (const org of organizations) {
-      const tenantHash = getTenantHash(org.id!);
-      const lockKey = `ai-detection-scan-lock:${tenantHash}`;
+      const orgId = org.id!;
+      const lockKey = `ai-detection-scan-lock:org-${orgId}`;
 
-      // Acquire distributed lock — only one worker processes per tenant
+      // Acquire distributed lock — only one worker processes per organization
       const locked = await acquireLock(lockKey);
       if (!locked) {
-        console.log(`[ScheduledScan] Lock held for tenant ${tenantHash}, skipping`);
+        console.log(`[ScheduledScan] Lock held for org ${orgId}, skipping`);
         logger.info(
-          `Another worker is processing scheduled scans for tenant ${tenantHash}, skipping`
+          `Another worker is processing scheduled scans for org ${orgId}, skipping`
         );
         continue;
       }
-      console.log(`[ScheduledScan] Acquired lock for tenant ${tenantHash}`);
+      console.log(`[ScheduledScan] Acquired lock for org ${orgId}`);
 
       try {
         // Recover stale scans stuck in active states (server crash/restart)
-        const staleCount = await markStaleScansFailed(tenantHash, STALE_SCAN_TIMEOUT_MINUTES);
+        const staleCount = await markStaleScansFailed(orgId, STALE_SCAN_TIMEOUT_MINUTES);
         if (staleCount > 0) {
-          console.log(`[ScheduledScan] Tenant ${tenantHash}: marked ${staleCount} stale scan(s) as failed`);
-          logger.warn(`Marked ${staleCount} stale scan(s) as failed for tenant ${tenantHash}`);
+          console.log(`[ScheduledScan] Org ${orgId}: marked ${staleCount} stale scan(s) as failed`);
+          logger.warn(`Marked ${staleCount} stale scan(s) as failed for org ${orgId}`);
         }
 
-        const dueRepos = await getRepositoriesDueForScanQuery(tenantHash);
-        console.log(`[ScheduledScan] Tenant ${tenantHash}: ${dueRepos.length} repo(s) due for scan`);
+        const dueRepos = await getRepositoriesDueForScanQuery(orgId);
+        console.log(`[ScheduledScan] Org ${orgId}: ${dueRepos.length} repo(s) due for scan`);
 
         if (dueRepos.length === 0) continue;
 
         logger.info(
-          `Found ${dueRepos.length} repositories due for scheduled scan in tenant ${tenantHash}`
+          `Found ${dueRepos.length} repositories due for scheduled scan in org ${orgId}`
         );
 
         for (const repo of dueRepos) {
@@ -98,7 +97,7 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
             const activeScan = await getActiveScanForRepoQuery(
               repo.repository_owner,
               repo.repository_name,
-              tenantHash
+              orgId
             );
 
             if (activeScan) {
@@ -119,7 +118,7 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
                 repo.schedule_hour,
                 repo.schedule_minute
               );
-              await updateRepositoryNextScanAtQuery(repo.id!, nextScanAt, tenantHash);
+              await updateRepositoryNextScanAtQuery(repo.id!, nextScanAt, orgId);
               console.log(`[ScheduledScan] Next scan for ${repo.repository_owner}/${repo.repository_name}: ${nextScanAt.toISOString()}`);
               logger.info(
                 `Next scheduled scan for ${repo.repository_owner}/${repo.repository_name}: ${nextScanAt.toISOString()}`
@@ -130,7 +129,8 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
             const ctx: IServiceContext = {
               userId: repo.created_by,
               role: "Admin",
-              tenantId: tenantHash,
+              organizationId: orgId,
+              tenantId: orgId.toString(),  // For interface compatibility
             };
 
             console.log(`[ScheduledScan] STARTING scan for ${repo.repository_owner}/${repo.repository_name} (repo #${repo.id}, user #${repo.created_by})`);
@@ -153,7 +153,7 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
         }
       } catch (tenantError) {
         logger.error(
-          `Error processing scheduled scans for tenant ${tenantHash}:`,
+          `Error processing scheduled scans for org ${orgId}:`,
           tenantError
         );
       } finally {

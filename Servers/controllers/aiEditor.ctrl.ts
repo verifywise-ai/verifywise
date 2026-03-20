@@ -41,20 +41,20 @@ function createModel(provider: string, apiKey: string, baseURL: string, model: s
 export async function editorAICommand(req: Request, res: Response): Promise<void> {
   try {
     const { prompt } = req.body;
-    const tenantId = req.tenantId!;
     const llmKeyId = req.body.llmKeyId as number | undefined;
+    const organizationId = req.organizationId;
 
     if (!prompt) {
       res.status(400).json({ error: "Prompt is required" });
       return;
     }
 
-    if (!tenantId) {
-      res.status(400).json({ error: "Tenant context is required" });
+    if (!organizationId) {
+      res.status(400).json({ error: "Organization context is required" });
       return;
     }
 
-    const clients = await getLLMKeysWithKeyQuery(tenantId);
+    const clients = await getLLMKeysWithKeyQuery(organizationId);
 
     if (clients.length === 0) {
       res.status(400).json({ error: "No LLM keys configured. Ask your admin to add one in Settings > LLM keys." });
@@ -65,7 +65,7 @@ export async function editorAICommand(req: Request, res: Response): Promise<void
     const url = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
     const model = createModel(apiKey.name, apiKey.key || "", url, apiKey.model);
 
-    logger.debug(`[AI Editor] Streaming for tenant: ${tenantId}, provider: ${apiKey.name}, model: ${apiKey.model}`);
+    logger.debug(`[AI Editor] Streaming for org: ${organizationId}, provider: ${apiKey.name}, model: ${apiKey.model}`);
 
     const result = streamText({
       model,

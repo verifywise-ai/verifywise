@@ -838,7 +838,7 @@ const Tasks: React.FC = () => {
           justifyContent="space-between"
           alignItems="center"
         >
-          <Stack direction="row" gap={2} alignItems="center">
+          <Stack direction="row" gap="8px" alignItems="center">
             {/* FilterBy */}
             <Box data-joyride-id="task-filters">
               <FilterBy
@@ -876,11 +876,33 @@ const Tasks: React.FC = () => {
               />
             </Box>
 
-            {/* My Tasks toggle - Admin only */}
-            {userRoleName === "Admin" && (
+            {/* Toggles group with 16px spacing */}
+            <Stack direction="row" gap="16px" alignItems="center" sx={{ ml: "8px" }}>
+              {/* My Tasks toggle - Admin only */}
+              {userRoleName === "Admin" && (
+                <Stack
+                  sx={toggleContainerStyle}
+                  data-joyride-id="my-tasks-toggle"
+                >
+                  <Typography
+                    component="span"
+                    variant="body2"
+                    color="text.secondary"
+                    sx={toggleLabelStyle}
+                  >
+                    My tasks only
+                  </Typography>
+                  <Toggle
+                    checked={showMyTasksOnly}
+                    onChange={(_, checked) => setShowMyTasksOnly(checked)}
+                  />
+                </Stack>
+              )}
+
+              {/* Include archived toggle */}
               <Stack
                 sx={toggleContainerStyle}
-                data-joyride-id="my-tasks-toggle"
+                data-joyride-id="include-archived-toggle"
               >
                 <Typography
                   component="span"
@@ -888,32 +910,13 @@ const Tasks: React.FC = () => {
                   color="text.secondary"
                   sx={toggleLabelStyle}
                 >
-                  My tasks only
+                  Include archived
                 </Typography>
                 <Toggle
-                  checked={showMyTasksOnly}
-                  onChange={(_, checked) => setShowMyTasksOnly(checked)}
+                  checked={includeArchived}
+                  onChange={(_, checked) => setIncludeArchived(checked)}
                 />
               </Stack>
-            )}
-
-            {/* Include archived toggle */}
-            <Stack
-              sx={toggleContainerStyle}
-              data-joyride-id="include-archived-toggle"
-            >
-              <Typography
-                component="span"
-                variant="body2"
-                color="text.secondary"
-                sx={toggleLabelStyle}
-              >
-                Include archived
-              </Typography>
-              <Toggle
-                checked={includeArchived}
-                onChange={(_, checked) => setIncludeArchived(checked)}
-              />
             </Stack>
           </Stack>
 
@@ -934,8 +937,8 @@ const Tasks: React.FC = () => {
               variant="contained"
               text="Add new task"
               sx={{
-                backgroundColor: "#13715B",
-                border: "1px solid #13715B",
+                backgroundColor: "brand.primary",
+                border: "1px solid brand.primary",
                 gap: 2,
               }}
               icon={<AddCircleIcon size={16} />}

@@ -1,3 +1,4 @@
+import { text } from "../../../themes/palette";
 export const bannerBoxStyle = {
   position: "fixed",
   bottom: 16,
@@ -10,12 +11,12 @@ export const bannerPaperStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  color: "#475467",
+  color: `${text.tertiary}`,
 };
 
 export const bannerTextStyle = {
   fontSize: "13px",
-  color: "#475467",
+  color: `${text.tertiary}`,
   whiteSpace: "nowrap",
   display: "flex",
   justifyContent: "space-between",

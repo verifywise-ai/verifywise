@@ -324,4 +324,108 @@ export const ENTITY_TIPS: EntityTips = {
       content: "Periodically compare scorer results to human evaluations. If scorers and humans disagree consistently, adjust thresholds or scorer configurations. Well-calibrated scorers save time while maintaining quality standards.",
     },
   ],
+  "ai-gateway-endpoints": [
+    {
+      header: "Endpoints route LLM requests through a unified gateway.",
+      content: "Each endpoint maps to a specific provider and model combination. Configure endpoints for different use cases — a production endpoint for GPT-4o, a testing endpoint for a lighter model. All requests are logged with cost and token usage.",
+    },
+    {
+      header: "Use slugs to reference endpoints in your applications.",
+      content: "When you create an endpoint, it gets a URL-safe slug (e.g., prod-gpt4o). Your applications use this slug to route requests through the gateway. Changing the underlying model only requires updating the endpoint configuration, not your application code.",
+    },
+    {
+      header: "System prompts are prepended to every request automatically.",
+      content: "Add a system prompt to an endpoint to enforce consistent behavior across all requests. This is useful for adding safety guardrails, response formatting instructions, or context that should apply to every interaction.",
+    },
+  ],
+  "ai-gateway-dashboard": [
+    {
+      header: "Analytics gives you a unified view of all LLM usage and costs.",
+      content: "The analytics dashboard aggregates costs, request volume, token usage, and latency from every provider and model into a single view. Use the period selector to compare daily, weekly, or monthly trends and identify unexpected usage spikes.",
+    },
+    {
+      header: "Cost breakdowns by model help optimize your provider strategy.",
+      content: "See which models consume the most budget. Often, switching to a lighter model for simple tasks can dramatically reduce costs without affecting quality. Use the per-model breakdown to identify optimization opportunities.",
+    },
+    {
+      header: "Top users and endpoint breakdowns reveal usage patterns.",
+      content: "Understand who is consuming the most tokens and which endpoints handle the most traffic. These insights help you allocate budgets, identify power users, and plan capacity for high-traffic endpoints.",
+    },
+  ],
+  "ai-gateway-playground": [
+    {
+      header: "Test endpoints before deploying them in production.",
+      content: "The playground lets you send test messages to any configured endpoint and see the response in real-time. Use it to verify model behavior, test system prompts, and compare responses across different endpoints before routing production traffic.",
+    },
+    {
+      header: "Cost per message helps you estimate production expenses.",
+      content: "Every playground message shows its cost and token usage. Use this to estimate what production traffic will cost at scale. If a conversation costs $0.02 per exchange, multiply by your expected daily volume to forecast monthly spend.",
+    },
+  ],
+  "ai-gateway-settings": [
+    {
+      header: "API keys connect the gateway to LLM providers.",
+      content: "Add your provider API keys here — OpenAI, Anthropic, Google, and more. Keys are encrypted at rest and never exposed in logs. Each key is labeled so you can track which key is used by which endpoints.",
+    },
+    {
+      header: "Budgets prevent unexpected cost overruns.",
+      content: "Set a monthly spending limit to control costs. When the hard limit is enabled, requests are rejected once the budget is exceeded. Use the alert threshold to get early warnings before hitting the limit.",
+    },
+  ],
+  "ai-gateway-virtual-keys": [
+    {
+      header: "Give every developer a governed AI endpoint in minutes.",
+      content: "Create a virtual key, share it with a developer, and they swap their OpenAI base URL to the gateway. Every request flows through your guardrails, budget controls, and audit logs — without anyone needing a VerifyWise account.",
+    },
+    {
+      header: "Control costs per team, project, or environment.",
+      content: "Each virtual key can carry its own monthly budget cap and rate limit. When a key exhausts its budget only that key is blocked — other keys and the Playground keep working. Budgets reset automatically on the 1st of each month.",
+    },
+    {
+      header: "Works with any OpenAI-compatible SDK or HTTP client.",
+      content: "Virtual keys follow the OpenAI API format. Set the base URL to the gateway, pass the virtual key as the API key, and use your endpoint slug as the model name. Python, Node, Go, curl — anything that speaks the OpenAI protocol works out of the box.",
+    },
+  ],
+  "ai-gateway-prompts": [
+    {
+      header: "Version your system prompts without changing application code.",
+      content: "Create message templates with {{variables}} that get resolved at request time. Each save creates a new version, so you can compare results, roll back, or A/B test different instructions.",
+    },
+    {
+      header: "Test with real responses before you publish.",
+      content: "The editor has a built-in test chat. Pick an endpoint, fill in your variables, and send a message. You'll see the streaming response, token count, and cost right there.",
+    },
+    {
+      header: "Bind a prompt to an endpoint and it just works.",
+      content: "Published prompts are resolved server-side. The gateway prepends the prompt's messages to every request through the bound endpoint. Variables come from the request metadata.",
+    },
+  ],
+  "ai-gateway-logs": [
+    {
+      header: "Every request through the gateway is logged here.",
+      content: "Each log entry shows the endpoint, model, user or virtual key, token counts, cost, status, and timestamp. Click a row to expand and see the full request messages, response text, and any errors.",
+    },
+    {
+      header: "Use filters to find what you're looking for.",
+      content: "Filter by status (success or error), source (playground or virtual key), and search by endpoint name or model. Logs are grouped by day with Today and Yesterday labels.",
+    },
+    {
+      header: "Turn on live updates to watch requests come in.",
+      content: "The \"Live updates\" toggle refreshes the log list every 10 seconds. Useful when you're testing a new endpoint or prompt and want to see requests as they happen.",
+    },
+  ],
+  "ai-gateway-guardrails": [
+    {
+      header: "Guardrails protect every AI request automatically.",
+      content: "PII detection and content filters run on every request before it reaches the LLM provider. Scanning happens within your gateway infrastructure, so no data leaves your network. Use the Test button to preview what your rules catch before enabling them.",
+    },
+    {
+      header: "PII detection stays within your infrastructure.",
+      content: "Text is analyzed for personal data patterns (email, phone, credit card, names, IBAN, Turkish TCKN) within your gateway infrastructure. No data leaves your network for scanning.",
+    },
+    {
+      header: "Content filters support exact keywords and regex patterns.",
+      content: "Block specific words with word-boundary matching (prevents false positives like 'kill' matching 'skilled'). Or define regex patterns to catch formats like internal project codes, employee IDs, or API keys.",
+    },
+  ],
 };

@@ -88,11 +88,14 @@ import { isModelFileExtension } from "../config/modelSecurityPatterns";
 import { getLicenseForFinding } from "../utils/licenseDetection.utils";
 import {
   cacheAside,
-  buildTenantCacheKey,
+  buildOrgCacheKey,
   deleteByPattern,
   CACHE_KEYS,
 } from "../utils/cache.utils";
 import { calculateAndStoreRiskScore } from "./aiDetection/riskScoring";
+import { scanFileForVulnerabilityIndicators, buildAnalysisContext, VulnerabilityCandidate } from "./aiDetection/vulnerabilityPreFilter";
+import { analyzeVulnerabilities } from "./aiDetection/vulnerabilityAnalyzer";
+import { getRiskScoringConfigQuery } from "../utils/aiDetectionRiskScoring.utils";
 
 // ============================================================================
 // Types
@@ -136,13 +139,13 @@ const scanProgressMap = new Map<number, ScanProgressEntry>();
 async function updateLinkedRepositoryLastScan(
   scanId: number,
   scanStatus: string,
-  tenantId: string
+  organizationId: number
 ): Promise<void> {
   try {
-    const scan = await getScanByIdQuery(scanId, tenantId);
+    const scan = await getScanByIdQuery(scanId, organizationId);
     if (scan?.repository_id) {
       const { updateRepositoryLastScanQuery } = require("../utils/aiDetectionRepository.utils");
-      await updateRepositoryLastScanQuery(scan.repository_id, scanId, scanStatus, tenantId);
+      await updateRepositoryLastScanQuery(scan.repository_id, scanId, scanStatus, organizationId);
     }
   } catch (error) {
     logger.error(`Failed to update repository last scan for scan ${scanId}:`, error);
@@ -1012,7 +1015,7 @@ export async function startScan(
   // The cloneRepository function will throw if repo doesn't exist or is private
 
   // Check for existing active scan
-  const activeScan = await getActiveScanForRepoQuery(owner, repo, ctx.tenantId);
+  const activeScan = await getActiveScanForRepoQuery(owner, repo, ctx.organizationId);
   if (activeScan) {
     throw new BusinessLogicException(
       `A scan is already in progress for ${owner}/${repo}. Please wait for it to complete.`
@@ -1026,7 +1029,7 @@ export async function startScan(
   if (!repositoryId) {
     // Check if this repo is in the registry
     const { getRepositoryByOwnerNameQuery } = require("../utils/aiDetectionRepository.utils");
-    const registeredRepo = await getRepositoryByOwnerNameQuery(owner, repo, ctx.tenantId);
+    const registeredRepo = await getRepositoryByOwnerNameQuery(owner, repo, ctx.organizationId);
     if (registeredRepo) {
       repositoryId = registeredRepo.id;
     }
@@ -1047,7 +1050,7 @@ export async function startScan(
 
     let scan: IScan;
     try {
-      scan = await createScanQuery(scanInput, ctx.tenantId, transaction);
+      scan = await createScanQuery(scanInput, ctx.organizationId, transaction);
       await transaction.commit();
     } catch (dbError: unknown) {
       await transaction.rollback();
@@ -1099,6 +1102,80 @@ export async function startScan(
 }
 
 /**
+ * Cross-reference vulnerability findings with non-vulnerability findings
+ * that share the same file paths. Updates vulnerability_details JSONB
+ * with related_finding_ids and related_finding_types so the UI can
+ * show connections between vulnerability and library/agent/security tabs.
+ */
+async function crossReferenceFindings(scanId: number, organizationId: number): Promise<void> {
+  // 1. Get all findings for this scan
+  const [allFindings] = await sequelize.query(
+    `SELECT id, finding_type, file_paths, vulnerability_details
+     FROM ai_detection_findings
+     WHERE scan_id = :scanId AND organization_id = :organizationId`,
+    { replacements: { scanId, organizationId } }
+  ) as [Array<{
+    id: number;
+    finding_type: string;
+    file_paths: Array<{ path: string; line_number: number | null; matched_text: string }> | null;
+    vulnerability_details: Record<string, unknown> | null;
+  }>, unknown];
+
+  // 2. Separate vulnerability vs non-vulnerability findings
+  const vulnTypes = new Set([
+    "prompt_injection", "jailbreak_risk", "training_data_poisoning", "model_dos",
+    "supply_chain", "pii_exposure", "insecure_plugin", "excessive_agency",
+    "overreliance", "model_theft",
+  ]);
+
+  const vulnFindings = allFindings.filter((f) => vulnTypes.has(f.finding_type));
+  const otherFindings = allFindings.filter((f) => !vulnTypes.has(f.finding_type));
+
+  if (vulnFindings.length === 0 || otherFindings.length === 0) return;
+
+  // 3. Build a map of file paths to non-vuln finding IDs
+  const fileToFindings = new Map<string, { id: number; finding_type: string }[]>();
+  for (const f of otherFindings) {
+    const paths = f.file_paths || [];
+    for (const fp of paths) {
+      const key = fp.path;
+      if (!fileToFindings.has(key)) fileToFindings.set(key, []);
+      fileToFindings.get(key)!.push({ id: f.id, finding_type: f.finding_type });
+    }
+  }
+
+  // 4. For each vuln finding, find related non-vuln findings by shared file paths
+  for (const vf of vulnFindings) {
+    const vfPaths = vf.file_paths || [];
+    const relatedSet = new Map<number, string>(); // id -> finding_type
+
+    for (const fp of vfPaths) {
+      const matches = fileToFindings.get(fp.path) || [];
+      for (const m of matches) {
+        relatedSet.set(m.id, m.finding_type);
+      }
+    }
+
+    if (relatedSet.size === 0) continue;
+
+    // 5. Merge into existing vulnerability_details
+    const existingDetails = vf.vulnerability_details || {};
+    const updatedDetails = {
+      ...existingDetails,
+      related_finding_ids: Array.from(relatedSet.keys()),
+      related_finding_types: [...new Set(relatedSet.values())],
+    };
+
+    await sequelize.query(
+      `UPDATE ai_detection_findings
+       SET vulnerability_details = :details
+       WHERE id = :id AND organization_id = :organizationId`,
+      { replacements: { details: JSON.stringify(updatedDetails), id: vf.id, organizationId } }
+    );
+  }
+}
+
+/**
  * Execute the actual scan process asynchronously using git clone
  */
 async function executeScan(
@@ -1122,11 +1199,11 @@ async function executeScan(
     await updateScanProgressQuery(
       scanId,
       { status: "cloning", started_at: startedAt },
-      ctx.tenantId
+      ctx.organizationId
     );
 
     // Fetch GitHub token for private repository support
-    const githubToken = await getDecryptedGitHubToken(ctx.tenantId);
+    const githubToken = await getDecryptedGitHubToken(ctx.organizationId);
 
     // Check repository size before cloning (max 2.5 GB)
     await checkRepositorySize(owner, repo, githubToken || undefined);
@@ -1136,7 +1213,7 @@ async function executeScan(
 
     // Update last used timestamp if token was used
     if (githubToken) {
-      await updateGitHubTokenLastUsed(ctx.tenantId);
+      await updateGitHubTokenLastUsed(ctx.organizationId);
     }
 
     // Get all files from cloned repository
@@ -1151,7 +1228,7 @@ async function executeScan(
     await updateScanProgressQuery(
       scanId,
       { status: "scanning", total_files: filesToScan.length },
-      ctx.tenantId
+      ctx.organizationId
     );
 
     // Collect findings (aggregated by pattern and finding type)
@@ -1235,13 +1312,74 @@ async function executeScan(
         await updateScanProgressQuery(
           scanId,
           { files_scanned: i + 1, findings_count: findingsMap.size },
-          ctx.tenantId
+          ctx.organizationId
         );
       }
     }
 
     // ========================================================================
-    // Model Security Scanning (Phase 2)
+    // LLM Vulnerability Pre-Filter (Phase 2)
+    // ========================================================================
+    let vulnerabilityCandidates: VulnerabilityCandidate[] = [];
+    const vulnerabilityFileContents = new Map<string, string>();
+    let vulnerabilityFindings: ICreateFindingInput[] = [];
+
+    try {
+      // Check if vulnerability scanning is enabled for this org
+      const riskConfig = await getRiskScoringConfigQuery(ctx.organizationId);
+      const vulnScanEnabled = riskConfig?.vulnerability_scan_enabled &&
+        riskConfig?.llm_enabled && riskConfig?.llm_key_id;
+
+      // Determine which vulnerability types are enabled
+      const enabledTypes = riskConfig?.vulnerability_types_enabled ?? {
+        prompt_injection: true,
+        pii_exposure: true,
+        excessive_agency: true,
+        jailbreak_risk: true,
+        training_data_poisoning: true,
+        model_dos: true,
+        supply_chain: true,
+        insecure_plugin: true,
+        overreliance: true,
+        model_theft: true,
+      };
+
+      if (vulnScanEnabled && !signal?.aborted) {
+        // Re-scan code files for vulnerability indicators
+        for (const file of filesToScan) {
+          if (signal?.aborted) break;
+          try {
+            const content = await readFileContent(file.fullPath);
+            const candidates = scanFileForVulnerabilityIndicators(content, file.path)
+              .filter((c) => enabledTypes[c.vulnerabilityType as keyof typeof enabledTypes] !== false);
+            if (candidates.length > 0) {
+              vulnerabilityCandidates.push(...candidates);
+              vulnerabilityFileContents.set(file.path, content);
+            }
+          } catch {
+            // Skip unreadable files
+          }
+        }
+
+        // Run LLM analysis on candidates
+        if (vulnerabilityCandidates.length > 0 && riskConfig!.llm_key_id) {
+          const context = buildAnalysisContext(vulnerabilityCandidates, vulnerabilityFileContents);
+          vulnerabilityFindings = await analyzeVulnerabilities(
+            context,
+            riskConfig!.llm_key_id,
+            ctx.organizationId,
+            scanId
+          );
+        }
+      }
+    } catch (err) {
+      // Graceful degradation: vulnerability scan failure does not fail the overall scan
+      logger.warn(`Vulnerability scan failed for scan ${scanId}, continuing without vulnerability findings:`, err);
+      vulnerabilityFindings = [];
+    }
+
+    // ========================================================================
+    // Model Security Scanning (Phase 3)
     // ========================================================================
     const modelSecurityFindings: ICreateModelSecurityFindingInput[] = [];
     const MAX_MODEL_FILE_SIZE = 500 * 1024 * 1024; // 500MB local limit (more generous than API)
@@ -1431,7 +1569,12 @@ async function executeScan(
         await Promise.all(licensePromises);
         console.log(`[LICENSE] Total licenses found: ${licensesFound}/${findingInputs.length}`);
 
-        await createFindingsBatchQuery(findingInputs, ctx.tenantId, transaction);
+        await createFindingsBatchQuery(findingInputs, ctx.organizationId, transaction);
+      }
+
+      // Store vulnerability findings
+      if (vulnerabilityFindings.length > 0) {
+        await createFindingsBatchQuery(vulnerabilityFindings, ctx.organizationId, transaction);
       }
 
       // Store model security findings (deduplicate by name+provider to avoid ON CONFLICT errors)
@@ -1453,14 +1596,14 @@ async function executeScan(
           }
         }
         const deduplicatedSecurityFindings = Array.from(securityFindingsMap.values());
-        await createModelSecurityFindingsBatchQuery(deduplicatedSecurityFindings, ctx.tenantId, transaction);
+        await createModelSecurityFindingsBatchQuery(deduplicatedSecurityFindings, ctx.organizationId, transaction);
       }
 
       // Mark scan as completed (include both library and security findings)
       const deduplicatedSecurityCount = modelSecurityFindings.length > 0
         ? new Set(modelSecurityFindings.map(f => `${f.name}::${f.provider}`)).size
         : 0;
-      const totalFindings = findingsMap.size + deduplicatedSecurityCount;
+      const totalFindings = findingsMap.size + deduplicatedSecurityCount + vulnerabilityFindings.length;
       const completedAt = new Date();
       const durationMs = progressState.startedAt
         ? completedAt.getTime() - progressState.startedAt.getTime()
@@ -1474,7 +1617,7 @@ async function executeScan(
           completed_at: completedAt,
           duration_ms: durationMs,
         },
-        ctx.tenantId,
+        ctx.organizationId,
         transaction
       );
 
@@ -1483,13 +1626,19 @@ async function executeScan(
       progressState.status = "completed";
       progressState.progress = 100;
 
+      // Cross-reference vulnerability findings with library/agent/security findings
+      // that share file paths (fire-and-forget, non-blocking)
+      crossReferenceFindings(scanId, ctx.organizationId).catch((err) => {
+        logger.warn(`Cross-reference pass failed for scan ${scanId}, skipping:`, err);
+      });
+
       // Update linked repository's last_scan fields
-      updateLinkedRepositoryLastScan(scanId, "completed", ctx.tenantId).catch((err) => {
+      updateLinkedRepositoryLastScan(scanId, "completed", ctx.organizationId).catch((err) => {
         logger.error(`Failed to update repository last scan for scan ${scanId}:`, err);
       });
 
       // Invalidate stats cache after successful scan completion
-      invalidateAIDetectionStatsCache(ctx.tenantId).catch(() => {
+      invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {
         // Silently ignore cache invalidation errors
       });
 
@@ -1522,7 +1671,7 @@ async function executeScan(
         completed_at: errorCompletedAt,
         duration_ms: errorDurationMs,
       },
-      ctx.tenantId
+      ctx.organizationId
     );
 
     progressState.status = status;
@@ -1530,7 +1679,7 @@ async function executeScan(
     progressState.errorMessage = errorMessage;
 
     // Update linked repository's last_scan fields on failure too
-    updateLinkedRepositoryLastScan(scanId, status, ctx.tenantId).catch((err) => {
+    updateLinkedRepositoryLastScan(scanId, status, ctx.organizationId).catch((err) => {
       logger.error(`Failed to update repository last scan for scan ${scanId}:`, err);
     });
   } finally {
@@ -1573,7 +1722,7 @@ export async function getScanStatus(
   }
 
   // Fall back to database
-  const scan = await getScanByIdQuery(scanId, ctx.tenantId);
+  const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
@@ -1600,12 +1749,12 @@ export async function getScan(
   scanId: number,
   ctx: IServiceContext
 ): Promise<IScanResponse> {
-  const scan = await getScanWithUserQuery(scanId, ctx.tenantId);
+  const scan = await getScanWithUserQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
 
-  const summary = await getFindingsSummaryQuery(scanId, ctx.tenantId);
+  const summary = await getFindingsSummaryQuery(scanId, ctx.organizationId);
 
   return {
     scan: {
@@ -1653,14 +1802,14 @@ export async function getScanFindings(
   findingType?: string
 ): Promise<IFindingsResponse> {
   // Verify scan exists
-  const scan = await getScanByIdQuery(scanId, ctx.tenantId);
+  const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
 
   const { findings, total } = await getFindingsForScanQuery(
     scanId,
-    ctx.tenantId,
+    ctx.organizationId,
     page,
     limit,
     confidence,
@@ -1713,7 +1862,7 @@ export async function getScans(
   limit: number = 20,
   status?: ScanStatus
 ): Promise<IScansResponse> {
-  const { scans, total } = await getScansListQuery(ctx.tenantId, page, limit, status);
+  const { scans, total } = await getScansListQuery(ctx.organizationId, page, limit, status);
 
   return {
     scans: scans.map((s) => ({
@@ -1757,13 +1906,13 @@ export async function getActiveScan(
   // Note: users table is in public schema, not tenant schema
   const [scan] = await sequelize.query<IScan>(
     `SELECT s.*
-     FROM "${ctx.tenantId}"."ai_detection_scans" s
-     WHERE s.status IN (:statuses)
+     FROM ai_detection_scans s
+     WHERE s.organization_id = :organizationId AND s.status IN (:statuses)
      ORDER BY s.created_at DESC
      LIMIT 1`,
     {
       type: QueryTypes.SELECT,
-      replacements: { statuses: activeStatuses },
+      replacements: { organizationId: ctx.organizationId, statuses: activeStatuses },
     }
   );
 
@@ -1786,7 +1935,7 @@ export async function cancelScan(
   scanId: number,
   ctx: IServiceContext
 ): Promise<{ id: number; status: "cancelled"; message: string }> {
-  const scan = await getScanByIdQuery(scanId, ctx.tenantId);
+  const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
@@ -1823,7 +1972,7 @@ export async function cancelScan(
   await updateScanProgressQuery(
     scanId,
     { status: "cancelled", completed_at: cancelledAt, duration_ms: cancelDurationMs },
-    ctx.tenantId
+    ctx.organizationId
   );
 
   return {
@@ -1844,7 +1993,7 @@ export async function deleteScan(
   scanId: number,
   ctx: IServiceContext
 ): Promise<{ message: string }> {
-  const scan = await getScanByIdQuery(scanId, ctx.tenantId);
+  const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
@@ -1857,11 +2006,11 @@ export async function deleteScan(
 
   const transaction = await sequelize.transaction();
   try {
-    await deleteScanQuery(scanId, ctx.tenantId, transaction);
+    await deleteScanQuery(scanId, ctx.organizationId, transaction);
     await transaction.commit();
 
     // Invalidate stats cache after successful deletion
-    invalidateAIDetectionStatsCache(ctx.tenantId).catch(() => {
+    invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {
       // Silently ignore cache invalidation errors
     });
 
@@ -1896,24 +2045,24 @@ export async function getSecurityFindings(
   findings: IModelSecurityFindingRecord[];
   pagination: { total: number; page: number; limit: number; total_pages: number };
 }> {
-  const scan = await getScanByIdQuery(scanId, ctx.tenantId);
+  const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
 
   // Build WHERE clause for findings query - filter by finding_type = 'model_security'
-  let whereClause = `WHERE scan_id = $1 AND finding_type = 'model_security'`;
-  const countParams: (number | string)[] = [scanId];
+  let whereClause = `WHERE organization_id = $1 AND scan_id = $2 AND finding_type = 'model_security'`;
+  const countParams: (number | string)[] = [ctx.organizationId, scanId];
 
   if (severity) {
-    whereClause += ` AND severity = $2`;
+    whereClause += ` AND severity = $3`;
     countParams.push(severity);
   }
 
   // Get total count
   const countQuery = `
     SELECT COUNT(*) as total
-    FROM "${ctx.tenantId}".ai_detection_findings
+    FROM ai_detection_findings
     ${whereClause}
   `;
   const countResult = await sequelize.query(countQuery, {
@@ -1925,8 +2074,8 @@ export async function getSecurityFindings(
   // Get paginated findings
   const offset = (page - 1) * limit;
   const paginatedParams: (number | string)[] = [...countParams, limit, offset];
-  const limitParamIndex = severity ? 3 : 2;
-  const offsetParamIndex = severity ? 4 : 3;
+  const limitParamIndex = severity ? 4 : 3;
+  const offsetParamIndex = severity ? 5 : 4;
 
   const findingsQuery = `
     SELECT
@@ -1949,7 +2098,7 @@ export async function getSecurityFindings(
       operator_name,
       module_name,
       created_at
-    FROM "${ctx.tenantId}".ai_detection_findings
+    FROM ai_detection_findings
     ${whereClause}
     ORDER BY
       CASE severity
@@ -2008,7 +2157,7 @@ export async function getSecuritySummary(
   by_threat_type: Record<string, number>;
   model_files_scanned: number;
 }> {
-  const scan = await getScanByIdQuery(scanId, ctx.tenantId);
+  const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
@@ -2016,24 +2165,24 @@ export async function getSecuritySummary(
   // Get counts by severity - filter by finding_type = 'model_security'
   const severityQuery = `
     SELECT severity, COUNT(*) as count
-    FROM "${ctx.tenantId}".ai_detection_findings
-    WHERE scan_id = $1 AND finding_type = 'model_security'
+    FROM ai_detection_findings
+    WHERE organization_id = $1 AND scan_id = $2 AND finding_type = 'model_security'
     GROUP BY severity
   `;
   const severityCounts = await sequelize.query(severityQuery, {
-    bind: [scanId],
+    bind: [ctx.organizationId, scanId],
     type: QueryTypes.SELECT,
   }) as Array<{ severity: string; count: string }>;
 
   // Get counts by threat type - filter by finding_type = 'model_security'
   const threatTypeQuery = `
     SELECT threat_type, COUNT(*) as count
-    FROM "${ctx.tenantId}".ai_detection_findings
-    WHERE scan_id = $1 AND finding_type = 'model_security'
+    FROM ai_detection_findings
+    WHERE organization_id = $1 AND scan_id = $2 AND finding_type = 'model_security'
     GROUP BY threat_type
   `;
   const threatTypeCounts = await sequelize.query(threatTypeQuery, {
-    bind: [scanId],
+    bind: [ctx.organizationId, scanId],
     type: QueryTypes.SELECT,
   }) as Array<{ threat_type: string; count: string }>;
 
@@ -2041,11 +2190,11 @@ export async function getSecuritySummary(
   // Note: model_files_scanned column is not yet in the schema, so we derive from findings
   const modelFilesQuery = `
     SELECT COUNT(DISTINCT file_paths) as model_files_scanned
-    FROM "${ctx.tenantId}".ai_detection_findings
-    WHERE scan_id = $1 AND finding_type = 'model_security'
+    FROM ai_detection_findings
+    WHERE organization_id = $1 AND scan_id = $2 AND finding_type = 'model_security'
   `;
   const modelFilesResult = await sequelize.query(modelFilesQuery, {
-    bind: [scanId],
+    bind: [ctx.organizationId, scanId],
     type: QueryTypes.SELECT,
   }) as Array<{ model_files_scanned: string }>;
 
@@ -2098,7 +2247,7 @@ export async function updateFindingGovernanceStatus(
   ctx: IServiceContext
 ): Promise<IUpdateGovernanceStatusResponse> {
   // Verify scan exists and belongs to tenant
-  const scan = await getScanByIdQuery(scanId, ctx.tenantId);
+  const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan ${scanId} not found`);
   }
@@ -2114,7 +2263,7 @@ export async function updateFindingGovernanceStatus(
     scanId,
     governanceStatus,
     ctx.userId,
-    ctx.tenantId
+    ctx.organizationId
   );
 
   if (!updatedFinding) {
@@ -2147,12 +2296,12 @@ export async function getGovernanceSummary(
   unreviewed: number;
 }> {
   // Verify scan exists
-  const scan = await getScanByIdQuery(scanId, ctx.tenantId);
+  const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan ${scanId} not found`);
   }
 
-  return getGovernanceSummaryQuery(scanId, ctx.tenantId);
+  return getGovernanceSummaryQuery(scanId, ctx.organizationId);
 }
 
 // ============================================================================
@@ -2174,11 +2323,11 @@ const AI_DETECTION_STATS_CACHE_TTL = 120;
 export async function getAIDetectionStats(
   ctx: IServiceContext
 ): Promise<IAIDetectionStats> {
-  const cacheKey = buildTenantCacheKey(CACHE_KEYS.AI_DETECTION_STATS, ctx.tenantId);
+  const cacheKey = buildOrgCacheKey(CACHE_KEYS.AI_DETECTION_STATS, ctx.organizationId);
 
   return cacheAside(
     cacheKey,
-    () => getAIDetectionStatsQuery(ctx.tenantId),
+    () => getAIDetectionStatsQuery(ctx.organizationId),
     AI_DETECTION_STATS_CACHE_TTL
   );
 }
@@ -2190,12 +2339,12 @@ export async function getAIDetectionStats(
  * - Scan created/completed/deleted
  * - Findings added/modified
  *
- * @param tenantId - Tenant identifier
+ * @param organizationId - Tenant identifier
  */
 export async function invalidateAIDetectionStatsCache(
-  tenantId: string
+  organizationId: number
 ): Promise<void> {
-  const pattern = `${CACHE_KEYS.AI_DETECTION_STATS}:${tenantId}`;
+  const pattern = `${CACHE_KEYS.AI_DETECTION_STATS}:${organizationId}`;
   await deleteByPattern(pattern);
 }
 
@@ -2296,7 +2445,7 @@ export async function exportScanAsAIBOM(
   ctx: IServiceContext
 ): Promise<AIBOMExport> {
   // Get scan details
-  const scan = await getScanWithUserQuery(scanId, ctx.tenantId);
+  const scan = await getScanWithUserQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
@@ -2305,7 +2454,7 @@ export async function exportScanAsAIBOM(
   // Exclude secrets and model_security from AI-BOM using batched query
   const relevantFindings = await getAllFindingsForExportQuery(
     scanId,
-    ctx.tenantId,
+    ctx.organizationId,
     ["secret", "model_security"] // Exclude these types
   );
 
@@ -2578,7 +2727,7 @@ export async function getDependencyGraph(
   ctx: IServiceContext
 ): Promise<DependencyGraphResponse> {
   // Get scan details
-  const scan = await getScanWithUserQuery(scanId, ctx.tenantId);
+  const scan = await getScanWithUserQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
@@ -2586,7 +2735,7 @@ export async function getDependencyGraph(
   // Get all findings for the scan using batched query
   const allFindings = await getAllFindingsForExportQuery(
     scanId,
-    ctx.tenantId
+    ctx.organizationId
     // No exclusions - include all finding types in graph
   );
 
@@ -2703,7 +2852,7 @@ export async function getComplianceMapping(
   ctx: IServiceContext
 ): Promise<ComplianceMappingResponse> {
   // Verify scan exists and is completed
-  const scan = await getScanWithUserQuery(scanId, ctx.tenantId);
+  const scan = await getScanWithUserQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
   }
@@ -2717,7 +2866,7 @@ export async function getComplianceMapping(
   // Get all findings for the scan using batched query
   const findings = await getAllFindingsForExportQuery(
     scanId,
-    ctx.tenantId
+    ctx.organizationId
     // No exclusions - include all finding types for compliance mapping
   );
 

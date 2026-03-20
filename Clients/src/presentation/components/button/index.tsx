@@ -6,6 +6,7 @@ import {
   SxProps,
   Theme,
 } from "@mui/material";
+import { brand } from "../../themes/palette";
 
 /**
  * Extended props interface for the Button component
@@ -74,7 +75,7 @@ const Button = memo(React.forwardRef<HTMLButtonElement, ButtonProps>(function Bu
     px: 2, // Horizontal padding for better spacing
     py: 0.5, // Vertical padding for better text spacing
     border: `1px solid ${theme.palette.primary.main || '#13715B'}`,
-    backgroundColor: theme.palette.primary.main || '#13715B',
+    backgroundColor: theme.palette.primary.main || brand.primary,
     color: theme.palette.primary.contrastText || 'white',
     textTransform: 'none', // Prevent uppercase transformation
     fontWeight: 500,

@@ -50,18 +50,20 @@ function calculateDataPolicyScore(tool: {
 }
 
 /**
- * Calculate risk scores for all tools in a tenant.
+ * Calculate risk scores for all tools in an organization.
  * Updates the risk_score column in shadow_ai_tools.
  */
-export async function calculateRiskScoresForTenant(
-  tenant: string
+export async function calculateRiskScoresForOrganization(
+  organizationId: number
 ): Promise<void> {
   // Get all tools
   const [tools] = await sequelize.query(
     `SELECT id, name, model_inventory_id, status,
             trains_on_data, soc2_certified, gdpr_compliant,
             sso_support, encryption_at_rest, total_events
-     FROM "${tenant}".shadow_ai_tools`
+     FROM shadow_ai_tools
+     WHERE organization_id = :organizationId`,
+    { replacements: { organizationId } }
   );
 
   if ((tools as any[]).length === 0) return;
@@ -76,10 +78,12 @@ export async function calculateRiskScoresForTenant(
   // Get department usage per tool
   const [deptUsage] = await sequelize.query(
     `SELECT detected_tool_id, department
-     FROM "${tenant}".shadow_ai_events
-     WHERE event_timestamp > NOW() - INTERVAL '30 days'
+     FROM shadow_ai_events
+     WHERE organization_id = :organizationId
+       AND event_timestamp > NOW() - INTERVAL '30 days'
        AND department IS NOT NULL
-     GROUP BY detected_tool_id, department`
+     GROUP BY detected_tool_id, department`,
+    { replacements: { organizationId } }
   );
 
   // Build department map per tool
@@ -124,10 +128,10 @@ export async function calculateRiskScoresForTenant(
     );
 
     await sequelize.query(
-      `UPDATE "${tenant}".shadow_ai_tools
+      `UPDATE shadow_ai_tools
        SET risk_score = :riskScore, updated_at = NOW()
-       WHERE id = :toolId`,
-      { replacements: { riskScore, toolId: tool.id } }
+       WHERE organization_id = :organizationId AND id = :toolId`,
+      { replacements: { organizationId, riskScore, toolId: tool.id } }
     );
   }
 }

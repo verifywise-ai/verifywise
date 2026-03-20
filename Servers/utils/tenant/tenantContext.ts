@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 
 export interface TenantContext {
-  tenantId?: string;
+  tenantId?: number;  // Now stores organizationId (number) instead of tenant hash (string)
   organizationId?: number;
   userId?: number;
 }
@@ -28,7 +28,8 @@ export function getCurrentTenantContext(): TenantContext {
 export function getTenantIdForLogging(): string {
     try {
         const context = getCurrentTenantContext();
-        return context.tenantId || 'default';
+        // Convert organizationId to string for logging directory
+        return context.organizationId?.toString() || context.tenantId?.toString() || 'default';
     } catch (error) {
         // If we're outside of a request context, use 'default'
         return 'default';

@@ -129,7 +129,6 @@ export async function installPlugin(
   const { pluginKey } = req.body;
   const userId = (req as any).userId;
   const organizationId = (req as any).organizationId;
-  const tenantId = (req as any).tenantId;
 
   const functionName = "installPlugin";
 
@@ -148,7 +147,7 @@ export async function installPlugin(
     fileName
   );
 
-  if (!userId || !organizationId || !tenantId) {
+  if (!userId || !organizationId) {
     return res
       .status(401)
       .json(STATUS_CODE[401]("User not authenticated"));
@@ -158,7 +157,7 @@ export async function installPlugin(
     const installation = await PluginService.installPlugin(
       pluginKey,
       userId,
-      tenantId
+      organizationId
     );
 
     logStructured(
@@ -190,7 +189,6 @@ export async function uninstallPlugin(
   const installationId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const userId = (req as any).userId;
   const organizationId = (req as any).organizationId;
-  const tenantId = (req as any).tenantId;
 
   const functionName = "uninstallPlugin";
   logStructured(
@@ -200,14 +198,14 @@ export async function uninstallPlugin(
     fileName
   );
 
-  if (!userId || !organizationId || !tenantId) {
+  if (!userId || !organizationId) {
     return res
       .status(401)
       .json(STATUS_CODE[401]("User not authenticated"));
   }
 
   try {
-    await PluginService.uninstallPlugin(installationId, userId, tenantId);
+    await PluginService.uninstallPlugin(installationId, userId, organizationId);
 
     logStructured(
       "successful",
@@ -229,23 +227,23 @@ export async function uninstallPlugin(
 }
 
 /**
- * Get installed plugins for tenant
+ * Get installed plugins for organization
  */
 export async function getInstalledPlugins(
   req: Request,
   res: Response
 ): Promise<any> {
-  const tenantId = (req as any).tenantId;
+  const organizationId = (req as any).organizationId;
 
   const functionName = "getInstalledPlugins";
   logStructured(
     "processing",
-    `fetching installed plugins for tenant ${tenantId}`,
+    `fetching installed plugins for organization ${organizationId}`,
     functionName,
     fileName
   );
 
-  if (!tenantId) {
+  if (!organizationId) {
     return res
       .status(401)
       .json(STATUS_CODE[401]("User not authenticated"));
@@ -253,7 +251,7 @@ export async function getInstalledPlugins(
 
   try {
     const installations = await PluginService.getInstalledPlugins(
-      tenantId
+      organizationId
     );
 
     logStructured(
@@ -315,7 +313,6 @@ export async function updatePluginConfiguration(
   const { configuration } = req.body;
   const userId = (req as any).userId;
   const organizationId = (req as any).organizationId;
-  const tenantId = (req as any).tenantId;
 
   const functionName = "updatePluginConfiguration";
   logStructured(
@@ -331,7 +328,7 @@ export async function updatePluginConfiguration(
       .json(STATUS_CODE[400]("Configuration object is required"));
   }
 
-  if (!userId || !organizationId || !tenantId) {
+  if (!userId || !organizationId) {
     return res
       .status(401)
       .json(STATUS_CODE[401]("User not authenticated"));
@@ -341,7 +338,7 @@ export async function updatePluginConfiguration(
     const updated = await PluginService.updateConfiguration(
       installationId,
       userId,
-      tenantId,
+      organizationId,
       configuration
     );
 
@@ -380,7 +377,6 @@ export async function testPluginConnection(
   const { configuration } = req.body;
   const userId = (req as any).userId;
   const organizationId = (req as any).organizationId;
-  const tenantId = (req as any).tenantId;
 
   const functionName = "testPluginConnection";
 
@@ -401,7 +397,7 @@ export async function testPluginConnection(
       .json(STATUS_CODE[400]("Configuration object is required"));
   }
 
-  if (!userId || !organizationId || !tenantId) {
+  if (!userId || !organizationId) {
     return res
       .status(401)
       .json(STATUS_CODE[401]("User not authenticated"));
@@ -411,7 +407,7 @@ export async function testPluginConnection(
     const result = await PluginService.testConnection(
       pluginKey,
       configuration,
-      { userId, tenantId }
+      { userId, organizationId }
     );
 
     logStructured(
@@ -449,7 +445,6 @@ export async function forwardToPlugin(
   const pluginKey = Array.isArray(req.params.key) ? req.params.key[0] : req.params.key;
   const userId = (req as any).userId;
   const organizationId = (req as any).organizationId;
-  const tenantId = (req as any).tenantId;
 
   const functionName = "forwardToPlugin";
 
@@ -480,7 +475,7 @@ export async function forwardToPlugin(
     fileName
   );
 
-  if (!tenantId || !userId) {
+  if (!organizationId || !userId) {
     return res
       .status(401)
       .json(STATUS_CODE[401]("User not authenticated"));
@@ -489,9 +484,8 @@ export async function forwardToPlugin(
   try {
     // Build the context for the plugin handler
     const context: PluginRouteContext = {
-      tenantId,
-      userId,
       organizationId,
+      userId,
       method: req.method,
       path: pluginPath,
       params: {},  // Will be populated by route matching

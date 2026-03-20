@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { aiTrustCenterTableCell } from "../style";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { brand, text, background } from "../../../themes/palette";
 
 const SUBPROCESSORS_SORTING_KEY = "verifywise_subprocessors_sorting";
 
@@ -120,7 +121,7 @@ const Subprocessors = ({
     <Box width="100%">
       <Typography
         variant="subtitle2"
-        color="#13715B"
+        color={brand.primary}
         sx={{ fontWeight: 600, mb: 2 }}
       >
         Subprocessors
@@ -135,7 +136,7 @@ const Subprocessors = ({
               <TableCell
                 sx={{
                   fontWeight: 400,
-                  color: "#667085",
+                  color: `${text.icon}`,
                   fontSize: 12,
                   textTransform: "uppercase",
                   px: 4,
@@ -156,7 +157,7 @@ const Subprocessors = ({
                       color:
                         sortConfig.key === "company name"
                           ? "#1976D2"
-                          : "#9CA3AF",
+                          : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "company name" &&
@@ -174,7 +175,7 @@ const Subprocessors = ({
               <TableCell
                 sx={{
                   fontWeight: 400,
-                  color: "#667085",
+                  color: `${text.icon}`,
                   fontSize: 12,
                   textTransform: "uppercase",
                   px: 4,
@@ -192,7 +193,7 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "url" ? "#1976D2" : "#9CA3AF",
+                      color: sortConfig.key === "url" ? "#1976D2" : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "url" &&
@@ -208,7 +209,7 @@ const Subprocessors = ({
               <TableCell
                 sx={{
                   fontWeight: 400,
-                  color: "#667085",
+                  color: `${text.icon}`,
                   fontSize: 12,
                   textTransform: "uppercase",
                   px: 4,
@@ -227,7 +228,7 @@ const Subprocessors = ({
                       display: "flex",
                       alignItems: "center",
                       color:
-                        sortConfig.key === "purpose" ? "#1976D2" : "#9CA3AF",
+                        sortConfig.key === "purpose" ? "#1976D2" : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "purpose" &&
@@ -245,7 +246,7 @@ const Subprocessors = ({
               <TableCell
                 sx={{
                   fontWeight: 400,
-                  color: "#667085",
+                  color: `${text.icon}`,
                   fontSize: 12,
                   textTransform: "uppercase",
                   px: 4,
@@ -264,7 +265,7 @@ const Subprocessors = ({
                       display: "flex",
                       alignItems: "center",
                       color:
-                        sortConfig.key === "location" ? "#1976D2" : "#9CA3AF",
+                        sortConfig.key === "location" ? "#1976D2" : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "location" &&
@@ -297,7 +298,7 @@ const Subprocessors = ({
                 <TableCell
                   sx={{
                     ...aiTrustCenterTableCell,
-                    backgroundColor: sortConfig.key === "url" ? "#f5f5f5" : "inherit",
+                    backgroundColor: sortConfig.key === "url" ? `${background.surface}` : "inherit",
                   }}
                 >
                   <Typography variant="body2" sx={{ fontSize: 13 }}>
@@ -307,7 +308,7 @@ const Subprocessors = ({
                 <TableCell
                   sx={{
                     ...aiTrustCenterTableCell,
-                    backgroundColor: sortConfig.key === "purpose" ? "#f5f5f5" : "inherit",
+                    backgroundColor: sortConfig.key === "purpose" ? `${background.surface}` : "inherit",
                   }}
                 >
                   <Typography variant="body2" sx={{ fontSize: 13 }}>
@@ -317,7 +318,7 @@ const Subprocessors = ({
                 <TableCell
                   sx={{
                     ...aiTrustCenterTableCell,
-                    backgroundColor: sortConfig.key === "location" ? "#f5f5f5" : "inherit",
+                    backgroundColor: sortConfig.key === "location" ? `${background.surface}` : "inherit",
                   }}
                 >
                   <Typography variant="body2" sx={{ fontSize: 13 }}>

@@ -1238,7 +1238,7 @@ const ProjectSettings = React.memo(
                                         paddingRight: "9px",
                                       },
                                       "& .MuiAutocomplete-option.Mui-focused": {
-                                        background: "#f9fafb",
+                                        background: "background.accent",
                                       },
                                     },
                                     "& .MuiAutocomplete-noOptions": {
@@ -1388,7 +1388,7 @@ const ProjectSettings = React.memo(
                               paddingRight: "9px",
                             },
                             "& .MuiAutocomplete-option.Mui-focused": {
-                              background: "#f9fafb",
+                              background: "background.accent",
                             },
                           },
                           "& .MuiAutocomplete-noOptions": {
@@ -1473,10 +1473,10 @@ const ProjectSettings = React.memo(
                       ...styles.saveButton,
                       backgroundColor: isSaveDisabled
                         ? "#ccc"
-                        : "#13715B",
+                        : "brand.primary",
                       border: isSaveDisabled
                         ? "1px solid rgba(0, 0, 0, 0.26)"
-                        : "1px solid #13715B",
+                        : "1px solid brand.primary",
                     }}
                     icon={<SaveIcon size={16} />}
                     variant="contained"
@@ -1502,7 +1502,7 @@ const ProjectSettings = React.memo(
                 <Typography
                   sx={{
                     fontSize: theme.typography.fontSize,
-                    color: "#667085",
+                    color: "text.icon",
                     mb: 8,
                   }}
                 >
@@ -1515,7 +1515,7 @@ const ProjectSettings = React.memo(
                     width: { xs: "100%", sm: theme.spacing(80) },
                     mb: theme.spacing(4),
                     backgroundColor: "#DB504A",
-                    color: "#fff",
+                    color: "background.main",
                     border: "1px solid #DB504A",
                     gap: 2,
                   }}

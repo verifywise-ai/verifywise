@@ -190,7 +190,7 @@ export async function generateAndUploadPMMReport(
   reportData: IPMMReportData,
   userId: number,
   projectId: number,
-  tenant: string
+  organizationId: number
 ): Promise<{ success: boolean; fileId?: number; filename?: string; error?: string }> {
   try {
     // Generate PDF buffer
@@ -223,7 +223,7 @@ export async function generateAndUploadPMMReport(
       userId,
       projectId,
       "Post-Market Monitoring report",
-      tenant
+      organizationId
     );
 
     return {
