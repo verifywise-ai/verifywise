@@ -84,7 +84,7 @@
     "react-cookie": "^8.0.1",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.69.0",
-    "react-joyride": "^3.0.0-7",
+    "react-joyride": "^3.0.0",
     "react-markdown": "^10.1.0",
     "react-plotly.js": "^2.6.0",
     "react-redux": "^9.1.2",
