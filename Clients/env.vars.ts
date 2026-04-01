@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 export const ENV_VARs = {
   URL:
     import.meta.env.VITE_APP_API_BASE_URL ?? // keep empty string if set

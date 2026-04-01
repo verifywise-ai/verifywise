@@ -27,12 +27,14 @@ function createWrapper(authToken: string) {
         expirationDate: null,
         onboardingStatus: "completed",
         isOrgCreator: false,
+        isSuperAdmin: false,
+        activeOrganizationId: null,
       },
     },
   });
 
   return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(Provider, { store }, children);
+    React.createElement(Provider, { store, children });
 }
 
 describe("useIsAdmin", () => {

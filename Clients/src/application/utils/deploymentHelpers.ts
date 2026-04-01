@@ -1,3 +1,4 @@
+/// <reference path="../../vite-env.d.ts" />
 import React from "react";
 import { ENV_VARs } from "../../../env.vars";
 

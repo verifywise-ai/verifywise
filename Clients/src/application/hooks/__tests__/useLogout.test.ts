@@ -29,16 +29,16 @@ function createWrapper() {
         expirationDate: Date.now() + 3600000,
         onboardingStatus: "completed",
         isOrgCreator: false,
+        isSuperAdmin: false,
+        activeOrganizationId: null,
       },
     },
   });
 
-  const Wrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(
-      Provider,
-      { store },
-      React.createElement(MemoryRouter, null, children)
-    );
+  const Wrapper = ({ children }: { children: React.ReactNode }) => {
+    const inner = React.createElement(MemoryRouter, null, children);
+    return React.createElement(Provider, { store, children: inner });
+  };
 
   return { Wrapper, store };
 }

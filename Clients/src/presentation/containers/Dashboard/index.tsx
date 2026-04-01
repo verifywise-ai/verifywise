@@ -40,7 +40,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
   const { userRoleName, isSuperAdmin, activeOrganizationId } = useAuth();
   const isAdmin = userRoleName === "Admin";
   const dispatch = useDispatch();
-  const [superAdminHasNoOrgs, setSuperAdminHasNoOrgs] = useState(false);
+  const [_superAdminHasNoOrgs, setSuperAdminHasNoOrgs] = useState(false);
 
   // Demo data state
   const [showToastNotification, setShowToastNotification] =

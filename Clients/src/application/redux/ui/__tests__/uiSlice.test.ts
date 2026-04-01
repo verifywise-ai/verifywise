@@ -64,7 +64,7 @@ describe("uiSlice", () => {
       const state = uiReducer(
         stateWithTable,
         setRowsPerPage({ table: "vendors", value: 25 })
-      );
+      ) as any;
       expect(state.vendors.rowsPerPage).toBe(25);
     });
 

@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 /// <reference path="./types/lucide-react.d.ts" />
+/// <reference path="./presentation/themes/theme.d.ts" />
+/// <reference path="./presentation/configs/declarations.d.ts" />
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }

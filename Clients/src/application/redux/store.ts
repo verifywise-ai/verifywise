@@ -1,3 +1,4 @@
+/// <reference path="../../vite-env.d.ts" />
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore } from "redux-persist";
 import storage from "redux-persist/es/storage";

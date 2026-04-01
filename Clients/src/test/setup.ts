@@ -9,8 +9,7 @@ expect.extend(matchers as unknown as MatchersObject);
 // In jsdom, window.location.port is "" which produces "http://localhost:/api"
 // (invalid URL). Ensure a clean base URL for customAxios.
 if (!import.meta.env.VITE_APP_API_BASE_URL) {
-  // @ts-expect-error — Vite env is readonly at the type level
-  import.meta.env.VITE_APP_API_BASE_URL = "http://localhost:3000";
+  (import.meta.env as Record<string, string>).VITE_APP_API_BASE_URL = "http://localhost:3000";
 }
 
 // ---- Global stubs ----
