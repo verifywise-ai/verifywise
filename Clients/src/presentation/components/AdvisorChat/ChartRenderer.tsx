@@ -1,12 +1,23 @@
-import { FC, memo, useMemo } from 'react';
-import { Box, Typography, Paper, useTheme, Theme } from '@mui/material';
-import { BarChart, PieChart, LineChart } from '@mui/x-charts';
+import { FC, memo } from 'react';
+import { Box, Typography, Paper, useTheme } from '@mui/material';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from 'recharts';
+import { VWDonutChart, vwTooltipStyle, axisTick, axisLine, gridStroke } from '../Charts/VWCharts';
+import palette, { chart as chartPalette } from '../../themes/palette';
 
 interface ChartData {
   type: 'bar' | 'pie' | 'table' | 'donut' | 'line';
   data: {label: string, value: number, color?: string}[] ;
   title: string;
-  // For line charts with multiple series (timeseries data)
   series?: Array<{
     label: string;
     data: number[];
@@ -18,33 +29,8 @@ interface ChartRendererProps {
   chartData: ChartData;
 }
 
-// Create tooltip styles with theme
-const createTooltipSlotProps = (theme: Theme) => ({
-  tooltip: {
-    sx: {
-      '& .MuiChartsTooltip-table': {
-        fontSize: theme.typography.body2.fontSize,
-      },
-      '& .MuiChartsTooltip-cell': {
-        fontSize: theme.typography.body2.fontSize,
-      },
-      '& .MuiChartsTooltip-labelCell': {
-        fontSize: theme.typography.body2.fontSize,
-      },
-      '& .MuiChartsTooltip-valueCell': {
-        fontSize: theme.typography.body2.fontSize,
-      },
-      '& .MuiChartsTooltip-mark': {
-        width: 10,
-        height: 10,
-      },
-    },
-  },
-});
-
 const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
   const theme = useTheme();
-  const tooltipSlotProps = useMemo(() => createTooltipSlotProps(theme), [theme]);
   const size = 200;
 
   // Return null if no chart data at all
@@ -72,99 +58,104 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
   }
 
   const renderChart = () => {
-    // Only compute labels/values if data exists
-    const labels = hasValidData ? data.map(item => item.label) : [];
-    const dataValues = hasValidData ? data.map(item => item.value) : [];
-
     switch (type) {
-      case 'line':
+      case 'line': {
         // Line chart for timeseries data with series
         if (hasValidSeries) {
+          // Transform series + xAxisLabels into Recharts-compatible data array
+          const lineData = xAxisLabels!.map((label, i) => {
+            const point: Record<string, string | number> = { label };
+            series!.forEach(s => {
+              point[s.label] = s.data[i] ?? 0;
+            });
+            return point;
+          });
+
           return (
-            <LineChart
-              xAxis={[{
-                scaleType: 'point',
-                data: xAxisLabels,
-              }]}
-              series={series!.map(s => ({
-                data: s.data,
-                label: s.label,
-                curve: 'linear',
-              }))}
-              height={250}
-              width={300}
-              margin={{ left: 0, right: 20, top: 20, bottom: 0 }}
-              slotProps={tooltipSlotProps}
-            />
+            <ResponsiveContainer width={300} height={250} minWidth={0}>
+              <LineChart data={lineData} margin={{ left: 0, right: 20, top: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={axisLine} />
+                <YAxis tick={axisTick} tickLine={false} axisLine={axisLine} />
+                <Tooltip contentStyle={vwTooltipStyle} />
+                {series!.map((s, i) => (
+                  <Line
+                    key={s.label}
+                    type="linear"
+                    dataKey={s.label}
+                    stroke={chartPalette[i % chartPalette.length]}
+                    strokeWidth={1.5}
+                    dot={{ r: 3 }}
+                    isAnimationActive={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
           );
         }
+
         // Fallback for simple line chart using data array
         if (!hasValidData) return null;
+        const simpleLineData = data.map(item => ({ label: item.label, value: item.value }));
         return (
-          <LineChart
-            xAxis={[{ scaleType: 'point', data: labels }]}
-            series={[{ data: dataValues, curve: 'linear' }]}
-            height={250}
-            width={320}
-            margin={{ left: 0, right: 20, top: 20, bottom: 0 }}
-            slotProps={tooltipSlotProps}
-          />
+          <ResponsiveContainer width={320} height={250} minWidth={0}>
+            <LineChart data={simpleLineData} margin={{ left: 0, right: 20, top: 20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+              <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={axisLine} />
+              <YAxis tick={axisTick} tickLine={false} axisLine={axisLine} />
+              <Tooltip contentStyle={vwTooltipStyle} />
+              <Line
+                type="linear"
+                dataKey="value"
+                stroke={palette.brand.primary}
+                strokeWidth={1.5}
+                dot={{ r: 3 }}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         );
+      }
 
-      case 'bar':
+      case 'bar': {
+        const barChartData = data.map(item => ({ label: item.label, value: item.value }));
         return (
-          <BarChart
-            xAxis={[{ scaleType: 'band', data: labels }]}
-            series={[{ data: dataValues }]}
-            height={size}
-            width={300}
-            margin={{ left: 0, right: 20, top: 20 }}
-            slotProps={tooltipSlotProps}
-          />
+          <ResponsiveContainer width={300} height={size} minWidth={0}>
+            <BarChart data={barChartData} margin={{ left: 0, right: 20, top: 20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+              <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={axisLine} />
+              <YAxis tick={axisTick} tickLine={false} axisLine={axisLine} />
+              <Tooltip contentStyle={vwTooltipStyle} />
+              <Bar
+                dataKey="value"
+                fill={palette.brand.primary}
+                radius={[4, 4, 0, 0]}
+                maxBarSize={28}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         );
+      }
 
       case 'pie':
+      case 'donut': {
+        const isPie = type === 'pie';
+        const chartData = data.map(item => ({ name: item.label, value: item.value }));
+        const colors = data.map(
+          (item, i) => item.color || chartPalette[i % chartPalette.length]
+        );
         return (
-          <PieChart
-            series={[
-              {
-                data: data.map((item, index) => ({
-                  id: index,
-                  value: item.value,
-                  label: item.label,
-                  color: item.color,
-                })),
-                faded: { innerRadius: 30, additionalRadius: -30 },
-              },
-            ]}
-            width={size}
-            height={size}
-            slotProps={tooltipSlotProps}
+          <VWDonutChart
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            colors={colors}
+            size={size}
+            innerRadius={isPie ? 0 : Math.floor(size * 0.35)}
+            outerRadius={isPie ? Math.floor(size / 2) - 5 : Math.floor(size * 0.45)}
           />
         );
-
-      case 'donut':
-        return (
-          <PieChart
-            series={[
-              {
-                data: data.map((item, index) => ({
-                  id: index,
-                  value: item.value,
-                  label: item.label,
-                  color: item.color,
-                })),
-                innerRadius: size * 0.35,
-                outerRadius: size * 0.45,
-                paddingAngle: 2,
-                cornerRadius: 2,
-              },
-            ]}
-            width={size}
-            height={size}
-            slotProps={tooltipSlotProps}
-          />
-        );
+      }
 
       case 'table':
         return (

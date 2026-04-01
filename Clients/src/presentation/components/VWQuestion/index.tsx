@@ -28,6 +28,7 @@ import AuditRiskPopup from "../RiskPopup/AuditRiskPopup";
 import { updateEUAIActAnswerById } from "../../../application/repository/question.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { IQuestionProps } from "../../../domain/interfaces/i.question";
+import { border as borderPalette } from "../../themes/palette";
 
 /**
  * QuestionFrame Component
@@ -224,13 +225,13 @@ const QuestionFrame = ({
           justifyContent: "space-between",
           alignItems: "center",
           backgroundColor: "#FBFAFA",
-          border: "1px solid #D0D5DD",
+          border: `1px solid ${borderPalette.dark}`,
           borderBottom: "none",
           borderRadius: `${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0 0`,
           gap: 4,
         }}
       >
-        <Typography sx={{ fontSize: 13, color: "#344054" }}>
+        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
           {question.question || ""}
           {question.hint && (
             <Box component="span" ml={2}>
@@ -273,7 +274,7 @@ const QuestionFrame = ({
                 priorities[
                   (question.priority_level || "low priority") as PriorityLevel
                 ]?.color || "#666",
-              color: "#FFFFFF",
+              color: "background.main",
               borderRadius: theme.shape.borderRadius,
             }}
             size="small"
@@ -281,15 +282,16 @@ const QuestionFrame = ({
         </Stack>
       </Box>
       <RichTextEditor
+        toolbar="full"
         key={question.question_id || "default"}
         onContentChange={handleContentChange}
         headerSx={{
           borderRadius: 0,
           borderTop: "none",
-          borderColor: "#D0D5DD",
+          borderColor: "border.dark",
         }}
         bodySx={{
-          borderColor: "#D0D5DD",
+          borderColor: "border.dark",
           borderRadius: `0 0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px`,
           "& .ProseMirror > p": {
             margin: 0,
@@ -326,13 +328,13 @@ const QuestionFrame = ({
             variant="contained"
             sx={{
               minWidth: 155, // minimum width
-              border: "1px solid #D0D5DD",
+              border: "1px solid #d0d5dd",
               backgroundColor: "white",
-              color: "#344054",
+              color: "text.secondary",
               flexShrink: 0, //  prevent shrinking in flex layouts
               "&:hover": {
-                backgroundColor: "#F9FAFB",
-                border: "1px solid #D0D5DD",
+                backgroundColor: "background.accent",
+                border: "1px solid #d0d5dd",
               },
             }}
             disableRipple
@@ -344,7 +346,7 @@ const QuestionFrame = ({
           <Typography
             sx={{
               fontSize: 11,
-              color: "#344054",
+              color: "text.secondary",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
@@ -359,7 +361,7 @@ const QuestionFrame = ({
             <Typography
               sx={{
                 fontSize: 11,
-                color: "#13715B",
+                color: "brand.primary",
                 display: "flex",
                 alignItems: "center",
               }}
@@ -371,7 +373,7 @@ const QuestionFrame = ({
             <Typography
               sx={{
                 fontSize: 11,
-                color: "#D32F2F",
+                color: "status.error.text",
                 display: "flex",
                 alignItems: "center",
               }}
@@ -389,12 +391,12 @@ const QuestionFrame = ({
                 width: 155,
                 height: 25,
                 fontSize: 11,
-                border: "1px solid #D0D5DD",
+                border: "1px solid #d0d5dd",
                 backgroundColor: "white",
-                color: "#344054",
+                color: "text.secondary",
                 "&:hover": {
-                  backgroundColor: "#F9FAFB",
-                  border: "1px solid #D0D5DD",
+                  backgroundColor: "background.accent",
+                  border: "1px solid #d0d5dd",
                 },
               }}
               disableRipple
@@ -407,7 +409,7 @@ const QuestionFrame = ({
               <Typography
                 sx={{
                   fontSize: 11,
-                  color: "#344054",
+                  color: "text.secondary",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
@@ -422,7 +424,7 @@ const QuestionFrame = ({
                 <Typography
                   sx={{
                     fontSize: 11,
-                    color: "#344054",
+                    color: "text.secondary",
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
@@ -440,7 +442,7 @@ const QuestionFrame = ({
                 <Typography
                   sx={{
                     fontSize: 11,
-                    color: "#344054",
+                    color: "text.secondary",
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
@@ -457,7 +459,7 @@ const QuestionFrame = ({
             </Stack>
           </Stack>
         </Stack>
-        <Typography sx={{ fontSize: 11, color: "#344054", fontWeight: "300" }}>
+        <Typography sx={{ fontSize: 11, color: "text.secondary", fontWeight: "300" }}>
           {question.is_required === true ? "required" : ""}
         </Typography>
       </Stack>

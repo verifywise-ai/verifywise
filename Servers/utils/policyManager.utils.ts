@@ -17,7 +17,7 @@ import {
 export type PolicyReviewStatus = "pending_review" | "approved" | "changes_requested";
 
 export const updatePolicyReviewStatusQuery = async (
-  tenant: string,
+  organizationId: number,
   policyId: number,
   reviewStatus: PolicyReviewStatus,
   reviewerId: number,
@@ -26,6 +26,7 @@ export const updatePolicyReviewStatusQuery = async (
 ) => {
   const queryOptions: any = {
     replacements: {
+      organizationId,
       reviewStatus,
       reviewerId,
       comment: comment || null,
@@ -39,17 +40,17 @@ export const updatePolicyReviewStatusQuery = async (
   }
 
   await sequelize.query(
-    `UPDATE "${tenant}".policy_manager
+    `UPDATE policy_manager
      SET review_status = :reviewStatus,
          review_comment = :comment,
          reviewed_by = :reviewerId,
          reviewed_at = :reviewedAt
-     WHERE id = :policyId`,
+     WHERE organization_id = :organizationId AND id = :policyId`,
     queryOptions
   );
 };
 
-export const getAllPoliciesQuery = async (tenant: string) => {
+export const getAllPoliciesQuery = async (organizationId: number) => {
   const result = await sequelize.query(
     `SELECT
       pm.*,
@@ -57,12 +58,13 @@ export const getAllPoliciesQuery = async (tenant: string) => {
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
       ) as assigned_reviewer_ids
-    FROM "${tenant}".policy_manager pm
-    LEFT JOIN "${tenant}".policy_manager__assigned_reviewer_ids pmr
-      ON pm.id = pmr.policy_manager_id
+    FROM policy_manager pm
+    LEFT JOIN policy_manager__assigned_reviewer_ids pmr
+      ON pm.id = pmr.policy_manager_id AND pmr.organization_id = :organizationId
+    WHERE pm.organization_id = :organizationId
     GROUP BY pm.id`,
     {
-      replacements: { tenant },
+      replacements: { organizationId },
       type: QueryTypes.SELECT,
     }
   );
@@ -71,17 +73,18 @@ export const getAllPoliciesQuery = async (tenant: string) => {
 };
 
 export const getAllPoliciesDueSoonQuery = async (
-  tenant: string,
+  organizationId: number,
   daysAhead: number = 7
 ) => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".policy_manager
-     WHERE next_review_date IS NOT NULL
+    `SELECT * FROM policy_manager
+     WHERE organization_id = :organizationId
+     AND next_review_date IS NOT NULL
      AND next_review_date <= NOW() + INTERVAL '${daysAhead} days'
      AND next_review_date >= NOW()
      ORDER BY next_review_date ASC`,
     {
-      replacements: { tenant },
+      replacements: { organizationId },
       mapToModel: true,
       model: PolicyManagerModel,
     }
@@ -90,7 +93,7 @@ export const getAllPoliciesDueSoonQuery = async (
   return result;
 };
 
-export const getPolicyByIdQuery = async (tenant: string, id: number) => {
+export const getPolicyByIdQuery = async (organizationId: number, id: number) => {
   const result = await sequelize.query(
     `SELECT
       pm.*,
@@ -98,13 +101,13 @@ export const getPolicyByIdQuery = async (tenant: string, id: number) => {
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
       ) as assigned_reviewer_ids
-    FROM "${tenant}".policy_manager pm
-    LEFT JOIN "${tenant}".policy_manager__assigned_reviewer_ids pmr
-      ON pm.id = pmr.policy_manager_id
-    WHERE pm.id = :id
+    FROM policy_manager pm
+    LEFT JOIN policy_manager__assigned_reviewer_ids pmr
+      ON pm.id = pmr.policy_manager_id AND pmr.organization_id = :organizationId
+    WHERE pm.organization_id = :organizationId AND pm.id = :id
     GROUP BY pm.id`,
     {
-      replacements: { tenant, id },
+      replacements: { organizationId, id },
       type: QueryTypes.SELECT,
     }
   ) as any[];
@@ -122,7 +125,7 @@ const verifyPolicyTags = (policyTags: PolicyTag[]) => {
 
 export const createPolicyQuery = async (
   policy: IPolicy,
-  tenant: string,
+  organizationId: number,
   userId: number,
   transaction: Transaction
 ) => {
@@ -130,13 +133,14 @@ export const createPolicyQuery = async (
 
   // Insert policy without assigned_reviewer_ids
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".policy_manager (
-      title, content_html, status, tags, next_review_date, author_id, last_updated_by, last_updated_at, is_demo
+    `INSERT INTO policy_manager (
+      organization_id, title, content_html, status, tags, next_review_date, author_id, last_updated_by, last_updated_at, is_demo
     ) VALUES (
-      :title, :content_html, :status, ARRAY[:tags], :next_review_date, :author_id, :last_updated_by, :last_updated_at, :is_demo
+      :organization_id, :title, :content_html, :status, ARRAY[:tags], :next_review_date, :author_id, :last_updated_by, :last_updated_at, :is_demo
     ) RETURNING *`,
     {
       replacements: {
+        organization_id: organizationId,
         title: policy.title,
         content_html: policy.content_html,
         status: policy.status,
@@ -159,11 +163,11 @@ export const createPolicyQuery = async (
   if (policy.assigned_reviewer_ids && policy.assigned_reviewer_ids.length > 0) {
     for (const reviewerId of policy.assigned_reviewer_ids) {
       await sequelize.query(
-        `INSERT INTO "${tenant}".policy_manager__assigned_reviewer_ids
-         (policy_manager_id, user_id)
-         VALUES (:policyId, :userId)`,
+        `INSERT INTO policy_manager__assigned_reviewer_ids
+         (organization_id, policy_manager_id, user_id)
+         VALUES (:organizationId, :policyId, :userId)`,
         {
-          replacements: { policyId, userId: reviewerId },
+          replacements: { organizationId, policyId, userId: reviewerId },
           transaction,
         }
       );
@@ -179,8 +183,8 @@ export const createPolicyQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_added' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -193,7 +197,7 @@ export const createPolicyQuery = async (
     const automation = automations[0][0];
     if (automation["trigger_key"] === "policy_added") {
       const reviewer_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id IN(:reviewer_ids);`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN(:reviewer_ids);`,
         {
           replacements: {
             reviewer_ids: createdPolicy.assigned_reviewer_ids || [],
@@ -222,7 +226,7 @@ export const createPolicyQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -237,12 +241,12 @@ export const createPolicyQuery = async (
 export const updatePolicyByIdQuery = async (
   id: number,
   policy: Partial<IPolicy>,
-  tenant: string,
+  organizationId: number,
   userId: number,
   transaction: Transaction
 ) => {
-  const existingPolicy = await getPolicyByIdQuery(tenant, id);
-  const updatePolicy: Partial<Record<keyof IPolicy, any>> = {};
+  const existingPolicy = await getPolicyByIdQuery(organizationId, id);
+  const updatePolicy: Partial<Record<keyof IPolicy, any>> & { organizationId?: number } = {};
   const setClause = [
     "title",
     "content_html",
@@ -277,9 +281,10 @@ export const updatePolicyByIdQuery = async (
     })
     .join(", ");
 
-  const query = `UPDATE "${tenant}".policy_manager SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE policy_manager SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updatePolicy.id = id;
+  updatePolicy.organizationId = organizationId;
   updatePolicy.last_updated_by = userId;
   updatePolicy.last_updated_at = new Date();
 
@@ -293,10 +298,10 @@ export const updatePolicyByIdQuery = async (
   if (policy.assigned_reviewer_ids !== undefined) {
     // Delete existing reviewer mappings
     await sequelize.query(
-      `DELETE FROM "${tenant}".policy_manager__assigned_reviewer_ids
-       WHERE policy_manager_id = :policyId`,
+      `DELETE FROM policy_manager__assigned_reviewer_ids
+       WHERE organization_id = :organizationId AND policy_manager_id = :policyId`,
       {
-        replacements: { policyId: id },
+        replacements: { organizationId, policyId: id },
         transaction,
       }
     );
@@ -305,11 +310,11 @@ export const updatePolicyByIdQuery = async (
     if (policy.assigned_reviewer_ids && policy.assigned_reviewer_ids.length > 0) {
       for (const reviewerId of policy.assigned_reviewer_ids) {
         await sequelize.query(
-          `INSERT INTO "${tenant}".policy_manager__assigned_reviewer_ids
-           (policy_manager_id, user_id)
-           VALUES (:policyId, :userId)`,
+          `INSERT INTO policy_manager__assigned_reviewer_ids
+           (organization_id, policy_manager_id, user_id)
+           VALUES (:organizationId, :policyId, :userId)`,
           {
-            replacements: { policyId: id, userId: reviewerId },
+            replacements: { organizationId, policyId: id, userId: reviewerId },
             transaction,
           }
         );
@@ -318,7 +323,7 @@ export const updatePolicyByIdQuery = async (
   }
 
   // Get the updated policy with reviewer IDs
-  const updatedPolicyResult = await getPolicyByIdQuery(tenant, id);
+  const updatedPolicyResult = await getPolicyByIdQuery(organizationId, id);
   if (!updatedPolicyResult || updatedPolicyResult.length === 0) {
     throw new Error('Policy not found after update');
   }
@@ -329,8 +334,8 @@ export const updatePolicyByIdQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_updated' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -343,7 +348,7 @@ export const updatePolicyByIdQuery = async (
     const automation = automations[0][0];
     if (automation["trigger_key"] === "policy_updated") {
       const reviewer_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id IN(:reviewer_ids);`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN(:reviewer_ids);`,
         {
           replacements: {
             reviewer_ids: (updatedPolicy as any).assigned_reviewer_ids || [],
@@ -372,7 +377,7 @@ export const updatePolicyByIdQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -384,12 +389,12 @@ export const updatePolicyByIdQuery = async (
 };
 
 export const deletePolicyByIdQuery = async (
-  tenant: string,
+  organizationId: number,
   id: number,
   transaction: Transaction
 ) => {
   // Get policy data with reviewer IDs BEFORE deleting (CASCADE will delete mappings)
-  const policyToDelete = await getPolicyByIdQuery(tenant, id);
+  const policyToDelete = await getPolicyByIdQuery(organizationId, id);
 
   if (!policyToDelete || policyToDelete.length === 0) {
     return false;
@@ -399,9 +404,9 @@ export const deletePolicyByIdQuery = async (
 
   // Delete the policy (CASCADE will handle mapping table deletion)
   await sequelize.query(
-    `DELETE FROM "${tenant}".policy_manager WHERE id = :id RETURNING *`,
+    `DELETE FROM policy_manager WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
-      replacements: { tenant, id },
+      replacements: { organizationId, id },
       transaction,
       type: QueryTypes.DELETE,
     }
@@ -413,8 +418,8 @@ export const deletePolicyByIdQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -427,7 +432,7 @@ export const deletePolicyByIdQuery = async (
     const automation = automations[0][0];
     if (automation["trigger_key"] === "policy_deleted") {
       const reviewer_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id IN(:reviewer_ids);`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN(:reviewer_ids);`,
         {
           replacements: {
             reviewer_ids: deletedPolicyData.assigned_reviewer_ids || [],
@@ -456,7 +461,7 @@ export const deletePolicyByIdQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(

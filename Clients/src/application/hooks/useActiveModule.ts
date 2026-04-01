@@ -31,6 +31,12 @@ export function useActiveModule() {
     if (pathname.startsWith("/shadow-ai")) {
       return "shadow-ai";
     }
+    if (pathname.startsWith("/ai-gateway")) {
+      return "ai-gateway";
+    }
+    if (pathname.startsWith("/super-admin")) {
+      return "super-admin";
+    }
     return "main";
   }, []);
 
@@ -62,6 +68,12 @@ export function useActiveModule() {
         case "shadow-ai":
           navigate("/shadow-ai/insights");
           break;
+        case "ai-gateway":
+          navigate("/ai-gateway/dashboard");
+          break;
+        case "super-admin":
+          navigate("/super-admin");
+          break;
         case "main":
         default:
           navigate("/");
@@ -74,7 +86,7 @@ export function useActiveModule() {
   // Initialize from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as AppModule | null;
-    if (stored && ["main", "evals", "ai-detection", "shadow-ai"].includes(stored)) {
+    if (stored && ["main", "evals", "ai-detection", "shadow-ai", "ai-gateway", "super-admin"].includes(stored)) {
       // Only set if URL doesn't already indicate a different module
       const urlModule = getModuleFromPath(location.pathname);
       if (urlModule === "main" && stored !== "main") {

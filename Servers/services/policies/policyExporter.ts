@@ -66,13 +66,13 @@ export async function closeBrowser(): Promise<void> {
  */
 async function fetchImageAsBase64(
   fileId: string,
-  tenant: string
+  organizationId: number
 ): Promise<{ base64: string; mimeType: string } | null> {
   try {
     const fileIdNum = parseInt(fileId, 10);
     if (isNaN(fileIdNum)) return null;
 
-    const file = await getFileById(fileIdNum, tenant);
+    const file = await getFileById(fileIdNum, organizationId);
     if (!file || !file.content) return null;
 
     const base64 = file.content.toString("base64");
@@ -90,7 +90,7 @@ async function fetchImageAsBase64(
  */
 async function processImagesInHtml(
   html: string,
-  tenant: string
+  organizationId: number
 ): Promise<string> {
   // Match file-manager URLs: /api/file-manager/123 or similar patterns
   const imgRegex = /<img[^>]+src=["']([^"']*\/api\/file-manager\/(\d+)[^"']*)["'][^>]*>/gi;
@@ -109,7 +109,7 @@ async function processImagesInHtml(
     const fullMatch = matchArr[0];
     const fileId = matchArr[2];
 
-    const imageData = await fetchImageAsBase64(fileId, tenant);
+    const imageData = await fetchImageAsBase64(fileId, organizationId);
     if (imageData) {
       const dataUrl = `data:${imageData.mimeType};base64,${imageData.base64}`;
       const newImgTag = fullMatch.replace(matchArr[1], dataUrl);
@@ -126,10 +126,10 @@ async function processImagesInHtml(
 export async function generatePolicyPDF(
   title: string,
   contentHtml: string,
-  tenant: string
+  organizationId: number
 ): Promise<Buffer> {
   // Process images - replace file-manager URLs with base64
-  const processedHtml = await processImagesInHtml(contentHtml, tenant);
+  const processedHtml = await processImagesInHtml(contentHtml, organizationId);
 
   // Build full HTML document with styling
   const fullHtml = `
@@ -301,7 +301,7 @@ export async function generatePolicyPDF(
  */
 async function parseHtmlToDocxElements(
   html: string,
-  tenant: string
+  organizationId: number
 ): Promise<(Paragraph | Table)[]> {
   const dom = new JSDOM(html);
   const document = dom.window.document;
@@ -398,7 +398,7 @@ async function parseHtmlToDocxElements(
         break;
 
       case "p":
-        const pChildren = await parseInlineElements(element, tenant);
+        const pChildren = await parseInlineElements(element, organizationId);
         if (pChildren.length > 0) {
           elements.push(
             new Paragraph({
@@ -414,7 +414,7 @@ async function parseHtmlToDocxElements(
         const listItems = element.querySelectorAll(":scope > li");
         for (let i = 0; i < listItems.length; i++) {
           const li = listItems[i];
-          const liChildren = await parseInlineElements(li, tenant);
+          const liChildren = await parseInlineElements(li, organizationId);
           elements.push(
             new Paragraph({
               children: [
@@ -431,7 +431,7 @@ async function parseHtmlToDocxElements(
         break;
 
       case "table":
-        const tableElement = await parseTable(element, tenant);
+        const tableElement = await parseTable(element, organizationId);
         if (tableElement) {
           // Add spacing before table
           elements.push(createTableSpacing());
@@ -464,7 +464,7 @@ async function parseHtmlToDocxElements(
         break;
 
       case "img":
-        const imgElement = await parseImage(element, tenant);
+        const imgElement = await parseImage(element, organizationId);
         if (imgElement) {
           elements.push(imgElement);
         }
@@ -491,7 +491,7 @@ async function parseHtmlToDocxElements(
         if (nestedTables.length > 0 || nestedImages.length > 0) {
           // Process nested tables
           for (const nestedTable of Array.from(nestedTables)) {
-            const tableElement = await parseTable(nestedTable, tenant);
+            const tableElement = await parseTable(nestedTable, organizationId);
             if (tableElement) {
               // Add spacing before table
               elements.push(createTableSpacing());
@@ -500,7 +500,7 @@ async function parseHtmlToDocxElements(
           }
           // Process nested images
           for (const nestedImg of Array.from(nestedImages)) {
-            const imgElement = await parseImage(nestedImg, tenant);
+            const imgElement = await parseImage(nestedImg, organizationId);
             if (imgElement) {
               elements.push(imgElement);
             }
@@ -532,7 +532,7 @@ async function parseHtmlToDocxElements(
  */
 async function parseInlineElements(
   element: Element,
-  _tenant: string
+  _organizationId: number
 ): Promise<TextRun[]> {
   const runs: TextRun[] = [];
 
@@ -596,7 +596,7 @@ async function parseInlineElements(
  */
 async function parseTable(
   tableEl: Element,
-  _tenant: string
+  _organizationId: number
 ): Promise<Table | null> {
   console.log("Processing table element");
   const rows: TableRow[] = [];
@@ -720,7 +720,7 @@ function getImageDimensions(buffer: Buffer): { width: number; height: number } |
  */
 async function parseImage(
   imgEl: Element,
-  tenant: string
+  organizationId: number
 ): Promise<Paragraph | null> {
   const src = imgEl.getAttribute("src");
   if (!src) {
@@ -739,7 +739,7 @@ async function parseImage(
 
   if (fileManagerMatch) {
     console.log("Matched file-manager URL, fileId:", fileManagerMatch[1]);
-    const imageData = await fetchImageAsBase64(fileManagerMatch[1], tenant);
+    const imageData = await fetchImageAsBase64(fileManagerMatch[1], organizationId);
     if (imageData) {
       imageBuffer = Buffer.from(imageData.base64, "base64");
       console.log("Successfully fetched image from file-manager");
@@ -827,14 +827,14 @@ async function parseImage(
 export async function generatePolicyDOCX(
   title: string,
   contentHtml: string,
-  tenant: string
+  organizationId: number
 ): Promise<Buffer> {
   console.log("Generating DOCX for policy:", title);
   console.log("Content HTML length:", contentHtml.length);
   console.log("Content HTML preview:", contentHtml.substring(0, 500));
 
   // Parse HTML content to DOCX elements
-  const contentElements = await parseHtmlToDocxElements(contentHtml, tenant);
+  const contentElements = await parseHtmlToDocxElements(contentHtml, organizationId);
   console.log("Generated", contentElements.length, "DOCX elements");
 
   // Build document

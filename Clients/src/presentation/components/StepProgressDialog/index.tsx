@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Box, Typography, LinearProgress, Dialog } from "@mui/material";
-import { palette } from "../../themes/palette";
+import { brand, text, border as borderPalette } from "../../themes/palette";
 
 export interface ProgressStep {
   label: string;
@@ -75,7 +75,7 @@ export function StepProgressDialog({
         sx={{
           fontSize: "15px",
           fontWeight: 600,
-          color: palette.text.primary,
+          color: text.primary,
           mb: "4px",
         }}
       >
@@ -84,7 +84,7 @@ export function StepProgressDialog({
       <Typography
         sx={{
           fontSize: "13px",
-          color: palette.text.tertiary,
+          color: text.tertiary,
           mb: "20px",
         }}
       >
@@ -96,10 +96,10 @@ export function StepProgressDialog({
         sx={{
           height: 6,
           borderRadius: 3,
-          backgroundColor: palette.border.light,
+          backgroundColor: borderPalette.light,
           "& .MuiLinearProgress-bar": {
             borderRadius: 3,
-            background: "linear-gradient(90deg, #13715B 0%, #1a9e7a 100%)",
+            background: `linear-gradient(90deg, ${brand.primary} 0%, #1a9e7a 100%)`,
             transition: "transform 0.8s ease",
           },
         }}
@@ -111,10 +111,10 @@ export function StepProgressDialog({
           mt: "8px",
         }}
       >
-        <Typography sx={{ fontSize: "12px", color: palette.text.accent }}>
+        <Typography sx={{ fontSize: "12px", color: text.accent }}>
           Step {activeStep + 1} of {steps.length}
         </Typography>
-        <Typography sx={{ fontSize: "12px", color: palette.text.accent }}>
+        <Typography sx={{ fontSize: "12px", color: text.accent }}>
           {step.progress}%
         </Typography>
       </Box>

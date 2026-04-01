@@ -1,21 +1,15 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Table,
   TableBody,
   TableCell,
   TableContainer,
-  TableHead,
-  TablePagination,
   TableRow,
   useTheme,
   Stack,
   Typography,
-  TableFooter,
   Tooltip,
-  Box,
 } from "@mui/material";
-import TablePaginationActions from "../../components/TablePagination";
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
@@ -24,26 +18,19 @@ import PluginSlot from "../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
 import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
-
-const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
+import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
-import { ModelInventoryTableProps } from "../../../domain/interfaces/i.modelInventory";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
+import {
+  ModelInventoryTableProps,
+  IModelInventory,
+} from "../../../domain/interfaces/i.modelInventory";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
-import {
-  getPaginationRowCount,
-  setPaginationRowCount,
-} from "../../../application/utils/paginationStorage";
 import {
   tableRowHoverStyle,
   tableRowDeletingStyle,
   loadingContainerStyle,
-  tableFooterRowStyle,
-  showingTextCellStyle,
-  paginationMenuProps,
-  paginationSelectStyle,
-  paginationStyle,
 } from "./style";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -53,21 +40,15 @@ import Chip from "../../components/Chip";
 import { VWLink } from "../../components/Link";
 import ModelRisksDialog from "../../components/ModelRisksDialog";
 import { palette } from "../../themes/palette";
+import { useStandardTable } from "../../../application/hooks/useStandardTable";
+import type { StandardColumn } from "../../../domain/types/standardTable";
+import StandardTableHead from "../../components/Table/StandardTableHead";
+import StandardTablePagination from "../../components/Table/StandardTablePagination";
 
 dayjs.extend(utc);
 
-// LocalStorage keys
-const MODEL_INVENTORY_SORTING_KEY = "verifywise_model_inventory_sorting";
-
-// Types for sorting
-type SortDirection = "asc" | "desc" | null;
-type SortConfig = {
-  key: string;
-  direction: SortDirection;
-};
-
 // Constants for table
-const TABLE_COLUMNS = [
+const TABLE_COLUMNS: StandardColumn[] = [
   { id: "provider", label: "PROVIDER", sortable: true },
   { id: "model", label: "MODEL", sortable: true },
   { id: "version", label: "VERSION", sortable: true },
@@ -78,8 +59,6 @@ const TABLE_COLUMNS = [
   { id: "status_date", label: "STATUS DATE", sortable: true },
   { id: "actions", label: "", sortable: false },
 ];
-
-const DEFAULT_ROWS_PER_PAGE = 10;
 
 const TooltipCell: React.FC<{ value: string | null | undefined }> = ({
   value,
@@ -108,30 +87,6 @@ const SecurityAssessmentBadge: React.FC<{ assessment: boolean }> = ({
   return <Chip label={assessment ? "Yes" : "No"} />;
 };
 
-// const CapabilitiesChips: React.FC<{ capabilities: string[] }> = ({
-//   capabilities,
-// }) => {
-//   return (
-//     <Stack direction="row" flexWrap="wrap" sx={capabilitiesChipContainerStyle}>
-//       {capabilities.slice(0, 3).map((capability, index) => (
-//         <Chip
-//           key={index}
-//           label={capability}
-//           size="small"
-//           sx={capabilityChipStyle}
-//         />
-//       ))}
-//       {capabilities.length > 3 && (
-//         <Chip
-//           label={`+${capabilities.length - 3}`}
-//           size="small"
-//           sx={capabilityChipExtraStyle}
-//         />
-//       )}
-//     </Stack>
-//   );
-// };
-
 const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   data,
   isLoading,
@@ -144,32 +99,11 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   hidePagination = false,
   modelRisks = [],
   flashRowId,
+  visibleColumns,
 }) => {
   const theme = useTheme();
   const { userRoleName } = useAuth();
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount("modelInventory", DEFAULT_ROWS_PER_PAGE)
-  );
   const [users, setUsers] = useState<User[]>([]);
-
-  // Initialize sorting state from localStorage or default to no sorting
-  const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
-    const saved = localStorage.getItem(MODEL_INVENTORY_SORTING_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return { key: "", direction: null };
-      }
-    }
-    return { key: "", direction: null };
-  });
-
-  // Save sorting state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem(MODEL_INVENTORY_SORTING_KEY, JSON.stringify(sortConfig));
-  }, [sortConfig]);
 
   // Model risks dialog state
   const [showModelRisks, setShowModelRisks] = useState(false);
@@ -194,6 +128,21 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     }
   };
 
+  // Filter TABLE_COLUMNS based on visibleColumns
+  const visibleTableColumns = useMemo(() => {
+    if (!visibleColumns || visibleColumns.size === 0) return TABLE_COLUMNS;
+    return TABLE_COLUMNS.filter((col) => visibleColumns.has(col.id));
+  }, [visibleColumns]);
+
+  // Helper to check if a column is visible
+  const isColVisible = useCallback(
+    (columnId: string) => {
+      if (!visibleColumns || visibleColumns.size === 0) return true;
+      return visibleColumns.has(columnId);
+    },
+    [visibleColumns]
+  );
+
   // Create a mapping of user IDs to user names
   const userMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -211,20 +160,6 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     return modelRisks.filter(risk => risk.model_id === modelId).length;
   }, [modelRisks]);
 
-  // Sorting handler
-  const handleSort = useCallback((columnId: string) => {
-    setSortConfig((prevConfig) => {
-      if (prevConfig.key === columnId) {
-        if (prevConfig.direction === "asc") {
-          return { key: columnId, direction: "desc" };
-        } else if (prevConfig.direction === "desc") {
-          return { key: "", direction: null };
-        }
-      }
-      return { key: columnId, direction: "asc" };
-    });
-  }, []);
-
   // Status order for sorting
   const getStatusOrder = useCallback((status: ModelInventoryStatus) => {
     switch (status) {
@@ -241,19 +176,13 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     }
   }, []);
 
-  // Sort the data based on current sort configuration
-  const sortedData = useMemo(() => {
-    if (!data || !sortConfig.key || !sortConfig.direction) {
-      return data || [];
-    }
-
-    const sortableData = [...data];
-
-    return sortableData.sort((a, b) => {
+  // Sort comparator — returns raw comparison (hook handles direction)
+  const sortComparator = useCallback(
+    (a: IModelInventory, b: IModelInventory, key: string): number => {
       let aValue: string | number;
       let bValue: string | number;
 
-      switch (sortConfig.key) {
+      switch (key) {
         case "provider":
           aValue = (a.provider || "").toLowerCase();
           bValue = (b.provider || "").toLowerCase();
@@ -291,15 +220,32 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       }
 
       if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue);
-        return sortConfig.direction === "asc" ? comparison : -comparison;
+        return aValue.localeCompare(bValue);
       }
-
-      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      if (aValue < bValue) return -1;
+      if (aValue > bValue) return 1;
       return 0;
-    });
-  }, [data, sortConfig, userMap, getModelRiskCount, getStatusOrder]);
+    },
+    [userMap, getModelRiskCount, getStatusOrder]
+  );
+
+  const {
+    sortConfig,
+    handleSort,
+    sortedRows,
+    validPage,
+    rowsPerPage,
+    handleChangePage,
+    handleChangeRowsPerPage,
+    getRange,
+    totalCount,
+  } = useStandardTable<IModelInventory>({
+    rows: data || [],
+    storageKey: "modelInventory",
+    defaultSortColumn: "",
+    defaultSortDirection: null,
+    sortComparator,
+  });
 
   const openModelRisksDialog = useCallback(
     (modelId: number, modelName: string) => {
@@ -314,99 +260,14 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     setSelectedModel(null);
   }, []);
 
-  const handleChangePage = useCallback((_: unknown, newPage: number) => {
-    setPage(newPage);
-  }, []);
-
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newRowsPerPage = parseInt(event.target.value, 10);
-      setRowsPerPage(newRowsPerPage);
-      setPaginationRowCount("modelInventory", newRowsPerPage);
-      setPage(0);
-    },
-    []
-  );
-
-  const getRange = useMemo(() => {
-    const start = page * rowsPerPage + 1;
-    const end = Math.min(page * rowsPerPage + rowsPerPage, data?.length ?? 0);
-    return `${start} - ${end}`;
-  }, [page, rowsPerPage, data?.length]);
-
-  const tableHeader = useMemo(
-    () => (
-      <TableHead
-        sx={{
-          backgroundColor:
-            singleTheme.tableStyles.primary.header.backgroundColors,
-        }}
-      >
-        <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-          {TABLE_COLUMNS.map((column) => (
-            <TableCell
-              component={"td"}
-              className="model-inventory-table-header-cel"
-              key={column.id}
-              sx={{
-                ...singleTheme.tableStyles.primary.header.cell,
-                ...(column.sortable && {
-                  cursor: "pointer",
-                  userSelect: "none",
-                  "&:hover": {
-                    backgroundColor: "rgba(0, 0, 0, 0.04)",
-                  },
-                }),
-              }}
-              onClick={() => column.sortable && handleSort(column.id)}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                {column.label}
-                {column.sortable && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      color:
-                        sortConfig.key === column.id
-                          ? theme.palette.text.primary
-                          : theme.palette.text.disabled,
-                    }}
-                  >
-                    {sortConfig.key === column.id ? (
-                      sortConfig.direction === "asc" ? (
-                        <ChevronUp size={16} />
-                      ) : (
-                        <ChevronDown size={16} />
-                      )
-                    ) : (
-                      <ChevronsUpDown size={16} />
-                    )}
-                  </Box>
-                )}
-              </Box>
-            </TableCell>
-          ))}
-        </TableRow>
-      </TableHead>
-    ),
-    [sortConfig, handleSort, theme]
-  );
-
   const tableBody = useMemo(
     () => (
       <TableBody>
-        {sortedData?.length > 0 ? (
-          sortedData
+        {sortedRows?.length > 0 ? (
+          sortedRows
             .slice(
-              hidePagination ? 0 : page * rowsPerPage,
-              hidePagination ? Math.min(sortedData.length, 100) : page * rowsPerPage + rowsPerPage
+              hidePagination ? 0 : validPage * rowsPerPage,
+              hidePagination ? Math.min(sortedRows.length, 100) : validPage * rowsPerPage + rowsPerPage
             )
             .map((modelInventory) => (
               <TableRow
@@ -435,111 +296,124 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                   }
                 }}
               >
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "provider" ? singleTheme.tableColors.sortedColumnFirst : undefined,
-                  }}
-                >
-                  <TooltipCell value={modelInventory.provider} />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "model" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <TooltipCell value={modelInventory.model} />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "version" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <TooltipCell value={modelInventory.version} />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "approver" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <TooltipCell
-                    value={userMap.get(modelInventory.approver?.toString() ?? "")}
-                  />
-                </TableCell>
-                {/* <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  <CapabilitiesChips capabilities={modelInventory.capabilities} />
-                </TableCell> */}
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "security_assessment" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <SecurityAssessmentBadge
-                    assessment={modelInventory.security_assessment}
-                  />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "risks" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  {(() => {
-                    const riskCount = getModelRiskCount(modelInventory.id || 0);
-                    return riskCount > 0 ? (
-                      <VWLink
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openModelRisksDialog(
-                            modelInventory.id || 0,
-                            modelInventory.model || ""
-                          );
-                        }}
-                        showIcon={false}
-                      >
-                        {riskCount} risk{riskCount !== 1 ? "s" : ""}
-                      </VWLink>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: palette.text.disabled }}>
-                        No risks
-                      </Typography>
-                    );
-                  })()}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "status" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <StatusBadge status={modelInventory.status} />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key === "status_date" ? singleTheme.tableColors.sortedColumn : undefined,
-                  }}
-                >
-                  <TooltipCell
-                    value={
-                      modelInventory.status_date
-                        ? displayFormattedDate(modelInventory.status_date)
-                        : "-"
-                    }
-                  />
-                </TableCell>
+                {isColVisible("provider") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "provider" ? singleTheme.tableColors.sortedColumnFirst : undefined,
+                    }}
+                  >
+                    <TooltipCell value={modelInventory.provider} />
+                  </TableCell>
+                )}
+                {isColVisible("model") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "model" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <TooltipCell value={modelInventory.model} />
+                  </TableCell>
+                )}
+                {isColVisible("version") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "version" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <TooltipCell value={modelInventory.version} />
+                  </TableCell>
+                )}
+                {isColVisible("approver") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "approver" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <TooltipCell
+                      value={userMap.get(modelInventory.approver?.toString() ?? "")}
+                    />
+                  </TableCell>
+                )}
+                {isColVisible("security_assessment") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "security_assessment" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <SecurityAssessmentBadge
+                      assessment={modelInventory.security_assessment}
+                    />
+                  </TableCell>
+                )}
+                {isColVisible("risks") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "risks" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    {(() => {
+                      const riskCount = getModelRiskCount(modelInventory.id || 0);
+                      return riskCount > 0 ? (
+                        <VWLink
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openModelRisksDialog(
+                              modelInventory.id || 0,
+                              modelInventory.model || ""
+                            );
+                          }}
+                          showIcon={false}
+                        >
+                          {riskCount} risk{riskCount !== 1 ? "s" : ""}
+                        </VWLink>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: palette.text.disabled }}>
+                          No risks
+                        </Typography>
+                      );
+                    })()}
+                  </TableCell>
+                )}
+                {isColVisible("status") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "status" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <StatusBadge status={modelInventory.status} />
+                  </TableCell>
+                )}
+                {isColVisible("status_date") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor: sortConfig.key === "status_date" ? singleTheme.tableColors.sortedColumn : undefined,
+                    }}
+                  >
+                    <TooltipCell
+                      value={
+                        modelInventory.status_date
+                          ? displayFormattedDate(modelInventory.status_date)
+                          : "-"
+                      }
+                    />
+                  </TableCell>
+                )}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
@@ -603,7 +477,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
         ) : (
           <TableRow>
             <TableCell
-              colSpan={TABLE_COLUMNS.length}
+              colSpan={visibleTableColumns.length}
               align="center"
               sx={{ py: 4 }}
             >
@@ -614,9 +488,9 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       </TableBody>
     ),
     [
-      sortedData,
+      sortedRows,
       sortConfig,
-      page,
+      validPage,
       rowsPerPage,
       isDeletingAllowed,
       onEdit,
@@ -628,6 +502,8 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       hidePagination,
       openModelRisksDialog,
       flashRowId,
+      isColVisible,
+      visibleTableColumns,
     ]
   );
 
@@ -644,50 +520,48 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   }
 
   if (!data || data.length === 0) {
-    return <EmptyState message="There is currently no data in this table." />;
+    return (
+      <EmptyState icon={Cpu} message="No models registered yet. Maintain a complete inventory of all AI models your organization uses.">
+        <EmptyStateTip
+          icon={Layers}
+          title="What counts as a model?"
+          description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
+        />
+        <EmptyStateTip
+          icon={BarChart3}
+          title="Track model status"
+          description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
+        />
+        <EmptyStateTip
+          icon={Link2}
+          title="Link to vendors and risks"
+          description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
+        />
+      </EmptyState>
+    );
   }
 
   return (
     <>
       <TableContainer sx={{ overflowX: "auto" }}>
         <Table sx={singleTheme.tableStyles.primary.frame}>
-          {tableHeader}
+          <StandardTableHead
+            columns={visibleTableColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
           {tableBody}
           {paginated && !hidePagination && (
-            <TableFooter>
-              <TableRow sx={tableFooterRowStyle(theme)}>
-                <TableCell sx={showingTextCellStyle(theme)}>
-                  Showing {getRange} of {data?.length} model(s)
-                </TableCell>
-                <TablePagination
-                  count={data?.length ?? 0}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  rowsPerPage={rowsPerPage}
-                  rowsPerPageOptions={[5, 10, 15, 25]}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={(props) => (
-                    <TablePaginationActions {...props} />
-                  )}
-                  labelRowsPerPage="Rows per page"
-                  labelDisplayedRows={({ page, count }) =>
-                    `Page ${page + 1} of ${Math.max(
-                      0,
-                      Math.ceil(count / rowsPerPage)
-                    )}`
-                  }
-                  slotProps={{
-                    select: {
-                      MenuProps: paginationMenuProps(theme),
-                      inputProps: { id: "pagination-dropdown" },
-                      IconComponent: SelectorVertical,
-                      sx: paginationSelectStyle(theme),
-                    },
-                  }}
-                  sx={paginationStyle(theme)}
-                />
-              </TableRow>
-            </TableFooter>
+            <StandardTablePagination
+              totalCount={totalCount}
+              page={validPage}
+              rowsPerPage={rowsPerPage}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              getRange={getRange}
+              entityLabel="model"
+              colSpan={visibleTableColumns.length}
+            />
           )}
         </Table>
       </TableContainer>

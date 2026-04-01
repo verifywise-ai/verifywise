@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Box } from "@mui/material";
 import { Copy, Check } from "lucide-react";
 import Prism from "prismjs";
+import { text, background } from "../../../themes/palette";
 import "prismjs/components/prism-jsx";
 import "prismjs/components/prism-tsx";
 import "prismjs/themes/prism-tomorrow.css";
@@ -49,14 +50,14 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
           top: "8px",
           right: "8px",
           cursor: "pointer",
-          color: copied ? "#4ade80" : "#9ca3af",
+          color: copied ? "#4ade80" : `${text.disabled}`,
           display: "flex",
           alignItems: "center",
           gap: "4px",
           fontSize: 11,
           zIndex: 1,
           "&:hover": {
-            color: copied ? "#4ade80" : "#fff",
+            color: copied ? "#4ade80" : `${background.main}`,
           },
         }}
       >

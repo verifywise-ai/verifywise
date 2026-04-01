@@ -1,0 +1,12 @@
+version: grs_scenarios_v0.1
+
+stages:
+  render:
+    seed: 42             # --seed
+    per_obligation: 5    # --per-obligation
+  perturb:
+    k_per_base: 2        # --k-per-base
+    coverage: per_family # --coverage (random | per_family)
+  validate:
+    provider: openrouter          # --provider (mock | openrouter)
+    validator_model_id: openai/gpt-4o-mini  # --validator-model-id

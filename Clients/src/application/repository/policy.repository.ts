@@ -30,8 +30,9 @@ export async function getAllTags(): Promise<string[]> {
 
 export async function getPolicyById(id: string): Promise<PolicyManagerModel> {
   try {
-    const response = await apiServices.get<{message: string; data: PolicyManagerModel}>(`/policies/${id}`);
-    return extractData<PolicyManagerModel>(response);
+    const response = await apiServices.get<{message: string; data: PolicyManagerModel | PolicyManagerModel[]}>(`/policies/${id}`);
+    const data = extractData<PolicyManagerModel | PolicyManagerModel[]>(response);
+    return Array.isArray(data) ? data[0] : data;
   } catch (error: any) {
     throw new APIError(`Failed to fetch policy with ID ${id}`, error?.response?.status, error);
   }
@@ -60,5 +61,20 @@ export async function deletePolicy(id: number): Promise<void> {
     await apiServices.delete(`/policies/${id}`);
   } catch (error: any) {
     throw new APIError(`Failed to delete policy with ID ${id}`, error?.response?.status, error);
+  }
+}
+
+export async function importDocxToHtml(file: File): Promise<{ html: string; warnings: string[] }> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiServices.post<{ message: string; data: { html: string; warnings: string[] } }>(
+      "/policies/import/docx",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return extractData<{ html: string; warnings: string[] }>(response);
+  } catch (error: any) {
+    throw new APIError("Failed to import DOCX file", error?.response?.status, error);
   }
 }

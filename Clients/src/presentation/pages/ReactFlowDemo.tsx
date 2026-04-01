@@ -12,6 +12,7 @@ import {
   type OnConnect,
   BackgroundVariant,
 } from '@xyflow/react';
+import { brand, background, border as borderPalette } from "../themes/palette";
 import '@xyflow/react/dist/style.css';
 
 const initialNodes: Node[] = [
@@ -20,31 +21,31 @@ const initialNodes: Node[] = [
     type: 'input',
     data: { label: 'AI Model' },
     position: { x: 250, y: 0 },
-    style: { background: '#13715B', color: 'white', border: 'none' },
+    style: { background: `${brand.primary}`, color: 'white', border: 'none' },
   },
   {
     id: '2',
     data: { label: 'Risk Assessment' },
     position: { x: 100, y: 100 },
-    style: { background: '#fff', border: '1px solid #d0d5dd' },
+    style: { background: `${background.main}`, border: `1px solid ${borderPalette.dark}` },
   },
   {
     id: '3',
     data: { label: 'Compliance Check' },
     position: { x: 400, y: 100 },
-    style: { background: '#fff', border: '1px solid #d0d5dd' },
+    style: { background: `${background.main}`, border: `1px solid ${borderPalette.dark}` },
   },
   {
     id: '4',
     data: { label: 'Evidence Collection' },
     position: { x: 100, y: 200 },
-    style: { background: '#fff', border: '1px solid #d0d5dd' },
+    style: { background: `${background.main}`, border: `1px solid ${borderPalette.dark}` },
   },
   {
     id: '5',
     data: { label: 'Policy Validation' },
     position: { x: 400, y: 200 },
-    style: { background: '#fff', border: '1px solid #d0d5dd' },
+    style: { background: `${background.main}`, border: `1px solid ${borderPalette.dark}` },
   },
   {
     id: '6',

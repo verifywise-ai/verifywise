@@ -5,10 +5,11 @@ const Field = lazy(() => import("../../Inputs/Field"));
 import Select from "../../Inputs/Select";
 
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import {
   TrainingRegistarDTO,
   NewTrainingProps,
-  NewTrainingFormErrors,
 } from "../../../../domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { TrainingStatus } from "../../../../domain/enums/status.enum";
 import StandardModal from "../StandardModal";
@@ -17,23 +18,8 @@ import { TabContext } from "@mui/lab";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { logEngine } from "../../../../application/tools/log.engine";
 
-// Constants for validation (DRY + Maintainability)
-const VALIDATION_RULES = {
-  MIN_PEOPLE: 1,
-  // DURATION_PATTERN: /^\d+\s*(hour|hours|day|days|week|weeks|month|months|minute|minutes|h|hr|hrs|d|w|m)$/i,
-} as const;
 
-const ERROR_MESSAGES = {
-  REQUIRED_FIELD: (field: string) => `${field} is required.`,
-  INVALID_DURATION:
-    "Invalid duration format. Use formats like '2 hours, 3 days, 4 weeks'.",
-  INVALID_PEOPLE_COUNT:
-    "Number of people is required and must be a positive number.",
-} as const;
 
-type FormField = keyof NewTrainingFormErrors;
-
-// Form state: status is always required (has default value), other fields optional during editing
 type TrainingFormState = Omit<Partial<TrainingRegistarDTO>, "status"> & {
   status: TrainingStatus;
 };
@@ -54,37 +40,6 @@ const statusOptions: Array<{ _id: string; name: string }> = [
   { _id: TrainingStatus.Completed, name: "Completed" },
 ];
 
-// Utility: Validate required text field (DRY)
-const validateRequiredField = (
-  value: unknown,
-  fieldName: string
-): string | undefined => {
-  if (!value || typeof value !== "string" || !value.trim()) {
-    return ERROR_MESSAGES.REQUIRED_FIELD(fieldName);
-  }
-  return undefined;
-};
-
-// Utility: Validate duration format (Single Responsibility)
-const validateDuration = (duration: string): string | undefined => {
-  const requiredError = validateRequiredField(duration, "Duration");
-  if (requiredError) return requiredError;
-
-  // const parts = duration.split(",").map(p => p.trim()).filter(Boolean);
-  // const invalidParts = parts.filter(part => !VALIDATION_RULES.DURATION_PATTERN.test(part));
-
-  // return invalidParts.length > 0 ? ERROR_MESSAGES.INVALID_DURATION : undefined;
-  return undefined;
-};
-
-// Utility: Validate people count (Single Responsibility)
-const validatePeopleCount = (count: unknown): string | undefined => {
-  const numValue = Number(count);
-  if (!count || isNaN(numValue) || numValue < VALIDATION_RULES.MIN_PEOPLE) {
-    return ERROR_MESSAGES.INVALID_PEOPLE_COUNT;
-  }
-  return undefined;
-};
 
 const NewTraining: FC<NewTrainingProps> = ({
   isOpen,
@@ -98,7 +53,37 @@ const NewTraining: FC<NewTrainingProps> = ({
   const [values, setValues] = useState<TrainingFormState>(
     initialData || initialState
   );
-  const [errors, setErrors] = useState<NewTrainingFormErrors>({});
+  const validators = useMemo(
+    () => ({
+      training_name: (v: unknown) => {
+        const r = checkStringValidation("Training name", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      duration: (v: unknown) => {
+        const r = checkStringValidation("Duration", v as string, 1, 128);
+        return r.accepted ? "" : r.message;
+      },
+      provider: (v: unknown) => {
+        const r = checkStringValidation("Provider", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      department: (v: unknown) => {
+        const r = checkStringValidation("Department", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      status: (v: unknown) => (!v ? "Status is required." : ""),
+      numberOfPeople: (v: unknown) => {
+        const numValue = Number(v);
+        if (!v || isNaN(numValue) || numValue < 1) {
+          return "Number of people is required and must be a positive number.";
+        }
+        return "";
+      },
+    }),
+    []
+  );
+  const { errors, validateAll, clearFieldError, resetErrors } =
+    useFormValidation<TrainingFormState>(validators);
   const [activeTab, setActiveTab] = useState("details");
 
   useEffect(() => {
@@ -112,7 +97,7 @@ const NewTraining: FC<NewTrainingProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setValues(initialState);
-      setErrors({});
+      resetErrors();
     }
   }, [isOpen]);
 
@@ -137,9 +122,9 @@ const NewTraining: FC<NewTrainingProps> = ({
         }
 
         // Clear error for this field
-        setErrors((prev) => ({ ...prev, [prop as FormField]: "" }));
+        clearFieldError(prop as keyof TrainingFormState);
       },
-    []
+    [clearFieldError]
   );
 
   // Handler: Select change with proper typing (Type Safety)
@@ -149,43 +134,10 @@ const NewTraining: FC<NewTrainingProps> = ({
       (event: SelectChangeEvent<string | number>) => {
         const value = event.target.value as TrainingStatus;
         setValues((prev) => ({ ...prev, [prop]: value }));
-        setErrors((prev) => ({ ...prev, [prop as FormField]: "" }));
+        clearFieldError(prop as keyof TrainingFormState);
       },
-    []
+    [clearFieldError]
   );
-
-  // Validation: Use utility functions (DRY + KISS)
-  const validateForm = (): boolean => {
-    const newErrors: NewTrainingFormErrors = {};
-
-    // Validate required fields using utility
-    const trainingNameError = validateRequiredField(
-      values.training_name,
-      "Training name"
-    );
-    if (trainingNameError) newErrors.training_name = trainingNameError;
-
-    const durationError = validateDuration(values.duration ?? "");
-    if (durationError) newErrors.duration = durationError;
-
-    const providerError = validateRequiredField(values.provider, "Provider");
-    if (providerError) newErrors.provider = providerError;
-
-    const departmentError = validateRequiredField(
-      values.department,
-      "Department"
-    );
-    if (departmentError) newErrors.department = departmentError;
-
-    const statusError = validateRequiredField(values.status, "Status");
-    if (statusError) newErrors.status = statusError;
-
-    const peopleError = validatePeopleCount(values.numberOfPeople);
-    if (peopleError) newErrors.numberOfPeople = peopleError;
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
@@ -198,7 +150,7 @@ const NewTraining: FC<NewTrainingProps> = ({
     async (event?: React.FormEvent) => {
       if (event) event.preventDefault();
 
-      if (!validateForm()) return;
+      if (!validateAll(values)) return;
 
       // Defensive: Guard against undefined callback
       if (!onSuccess) {
@@ -232,13 +184,10 @@ const NewTraining: FC<NewTrainingProps> = ({
           type: "error",
           message: `Error in onSuccess callback: ${error}`,
         });
-        setErrors({
-          training_name: "An error occurred while saving. Please try again.",
-        });
         // Keep modal open to preserve user input
       }
     },
-    [values, onSuccess, handleClose]
+    [values, onSuccess, handleClose, validateAll]
   );
 
   const fieldStyle = useMemo(

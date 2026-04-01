@@ -22,10 +22,10 @@ export class ISO27001AnnexStructModel
   id?: number;
 
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.STRING,
     allowNull: false,
   })
-  arrangement!: number;
+  arrangement!: string;
 
   @Column({
     type: DataType.STRING,

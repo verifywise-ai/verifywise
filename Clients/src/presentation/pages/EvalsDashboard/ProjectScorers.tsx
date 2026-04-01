@@ -172,7 +172,16 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
         provider: provider || "",
         model: model || "",
         modelParams,
-        messages: scorerConfig.messages || [{ role: "system", content: "You are a helpful assistant" }],
+        messages: scorerConfig.messages || [
+          {
+            role: "system",
+            content: "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
+          },
+          {
+            role: "user",
+            content: "Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {\"verdict\": \"PASS\", \"reason\": \"brief explanation\"}",
+          },
+        ],
         useChainOfThought: scorerConfig.useChainOfThought ?? true,
         choiceScores: scorerConfig.choiceScores || [{ label: "", score: 0 }],
         passThreshold: scorer.defaultThreshold ?? 0.5,

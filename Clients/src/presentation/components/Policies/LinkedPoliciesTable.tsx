@@ -19,6 +19,7 @@ import {
     ChevronUp,
     ChevronDown,
     ChevronsUpDown,
+    Link2,
 } from "lucide-react";
 import CustomIconButton from "../../components/IconButton";
 import { FileIcon } from "../../components/FileIcon";
@@ -37,6 +38,7 @@ import {
 
 import { singleTheme } from "../../themes";
 import { useUserMap } from "../../../presentation/hooks/userMap";
+import { text } from "../../themes/palette";
 
 interface LinkedObjectsTableProps {
     items: any[];
@@ -140,7 +142,7 @@ const SortableTableHead = ({
                                       color:
                                           sortConfig.key === column.id
                                               ? "primary.main"
-                                              : "#9CA3AF",
+                                              : `${text.disabled}`,
                                   }}
                               >
                                   {sortConfig.key === column.id &&
@@ -411,7 +413,7 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
                             colSpan={TABLE_COLUMNS.filter(c => !(c.id === "due_date" && type !== "risk")).length}
                             align="center"
                             >
-                            <EmptyState message="No linked items found." />
+                            <EmptyState message="No linked items found." icon={Link2} />
                         </TableCell>
                     </TableRow>
                 )}

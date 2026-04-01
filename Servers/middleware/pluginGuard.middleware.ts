@@ -18,12 +18,12 @@ import { findByPlugin } from "../utils/pluginInstallation.utils";
 export function requirePlugin(pluginKey: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const tenantId = req.tenantId;
-      if (!tenantId) {
+      const organizationId = req.organizationId;
+      if (!organizationId) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const installation = await findByPlugin(pluginKey, tenantId);
+      const installation = await findByPlugin(pluginKey, organizationId);
       if (!installation || installation.status !== "installed") {
         return res.status(404).json({
           message: `The '${pluginKey}' plugin is not installed`,

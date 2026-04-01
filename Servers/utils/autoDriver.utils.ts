@@ -2,18 +2,18 @@ import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { VendorModel } from "../domain.layer/models/vendor/vendor.model";
 
-export async function checkOrganizationalProjectExists(tenant: string, transaction: Transaction): Promise<number> {
+export async function checkOrganizationalProjectExists(organizationId: number, transaction: Transaction): Promise<number> {
   const result = await sequelize.query(
-    `SELECT COUNT(*) as count FROM "${tenant}".projects WHERE is_organizational;`,
-    { transaction }
+    `SELECT COUNT(*) as count FROM projects WHERE organization_id = :organizationId AND is_organizational;`,
+    { replacements: { organizationId }, transaction }
   ) as [{ count: string }[], number];
   return parseInt(result[0][0].count) || 0;
 }
 
-export async function getData(tableName: string, tenant: string, transaction: Transaction): Promise<any[]> {
+export async function getData(tableName: string, organizationId: number, transaction: Transaction): Promise<any[]> {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".${tableName} WHERE is_demo;`,
-    { transaction }
+    `SELECT * FROM ${tableName} WHERE organization_id = :organizationId AND is_demo;`,
+    { replacements: { organizationId }, transaction }
   );
   return result[0];
 }
@@ -26,10 +26,11 @@ export async function insertData(
   return result;
 }
 
-export async function deleteDemoVendorsData(tenant: string, transaction: Transaction): Promise<void> {
+export async function deleteDemoVendorsData(organizationId: number, transaction: Transaction): Promise<void> {
   const result = await sequelize.query(
-    `SELECT id FROM "${tenant}".vendors WHERE is_demo;`,
+    `SELECT id FROM vendors WHERE organization_id = :organizationId AND is_demo;`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: VendorModel,
       transaction,
@@ -40,9 +41,9 @@ export async function deleteDemoVendorsData(tenant: string, transaction: Transac
   await Promise.all(
     result.map(async (r) => {
       await sequelize.query(
-        `DELETE FROM "${tenant}".vendors_projects WHERE vendor_id = :vendor_id`,
+        `DELETE FROM vendors_projects WHERE organization_id = :organizationId AND vendor_id = :vendor_id`,
         {
-          replacements: { vendor_id: r.id },
+          replacements: { organizationId, vendor_id: r.id },
           transaction,
         }
       );
@@ -51,10 +52,10 @@ export async function deleteDemoVendorsData(tenant: string, transaction: Transac
 
   // Delete demo vendor risks directly by is_demo flag (more robust than by vendor_id)
   await sequelize.query(
-    `DELETE FROM "${tenant}".vendorrisks WHERE is_demo = true`,
-    { transaction }
+    `DELETE FROM vendorrisks WHERE organization_id = :organizationId AND is_demo = true`,
+    { replacements: { organizationId }, transaction }
   );
 
   // Delete demo vendors
-  await sequelize.query(`DELETE FROM "${tenant}".vendors WHERE is_demo;`, { transaction });
+  await sequelize.query(`DELETE FROM vendors WHERE organization_id = :organizationId AND is_demo;`, { replacements: { organizationId }, transaction });
 }

@@ -48,7 +48,9 @@ export type EntityType =
   | "task"
   | "training"
   | "model_risk"
-  | "dataset";
+  | "dataset"
+  | "ai_gateway_endpoint"
+  | "ai_gateway_guardrail";
 
 /**
  * Field formatter function type
@@ -125,7 +127,7 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
     if (typeof value === "number") {
       try {
         const users = await sequelize.query<UserQueryResult>(
-          `SELECT id, name, surname, email FROM public.users WHERE id = :userId`,
+          `SELECT id, name, surname, email FROM users WHERE id = :userId`,
           {
             replacements: { userId: value },
             type: QueryTypes.SELECT,
@@ -181,7 +183,7 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
 
     try {
       const users = await sequelize.query<UserQueryResult>(
-        `SELECT id, name, surname, email FROM public.users WHERE id IN (:userIds)`,
+        `SELECT id, name, surname, email FROM users WHERE id IN (:userIds)`,
         {
           replacements: { userIds },
           type: QueryTypes.SELECT,
@@ -741,6 +743,66 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     fieldFormatters: {
       contains_pii: GENERIC_FORMATTERS.boolean,
       pii_types: GENERIC_FORMATTERS.array,
+    },
+  },
+  ai_gateway_endpoint: {
+    tableName: "ai_gateway_endpoint_change_history",
+    foreignKeyField: "endpoint_id",
+    fieldsToTrack: [
+      "display_name",
+      "slug",
+      "provider",
+      "model",
+      "api_key_id",
+      "max_tokens",
+      "temperature",
+      "system_prompt",
+      "rate_limit_rpm",
+      "is_active",
+      "fallback_endpoint_id",
+      "allowed_role_ids",
+    ],
+    fieldLabels: {
+      display_name: "Display name",
+      slug: "Slug",
+      provider: "Provider",
+      model: "Model",
+      api_key_id: "API key",
+      max_tokens: "Max tokens",
+      temperature: "Temperature",
+      system_prompt: "System prompt",
+      rate_limit_rpm: "Rate limit (RPM)",
+      is_active: "Active",
+      fallback_endpoint_id: "Fallback endpoint",
+      allowed_role_ids: "Allowed roles",
+    },
+    fieldFormatters: {
+      is_active: GENERIC_FORMATTERS.boolean,
+      allowed_role_ids: GENERIC_FORMATTERS.array,
+    },
+  },
+
+  ai_gateway_guardrail: {
+    tableName: "ai_gateway_guardrail_change_history",
+    foreignKeyField: "guardrail_id",
+    fieldsToTrack: [
+      "name",
+      "guardrail_type",
+      "action",
+      "scope",
+      "is_active",
+      "config",
+    ],
+    fieldLabels: {
+      name: "Name",
+      guardrail_type: "Type",
+      action: "Action",
+      scope: "Scope",
+      is_active: "Active",
+      config: "Configuration",
+    },
+    fieldFormatters: {
+      is_active: GENERIC_FORMATTERS.boolean,
     },
   },
 };

@@ -1,4 +1,5 @@
 import { Theme } from "@mui/material";
+import { text, background } from "../../themes/palette";
 
 // Define styles as constants to improve readability and reusability
 const getStyles = (theme: Theme) => ({
@@ -15,19 +16,19 @@ const getStyles = (theme: Theme) => ({
         fontSize: '16px',
         lineHeight: '24px',
         letterSpacing: '0%',
-        color: '#FFFFFF',
+        color: `${background.main}`,
     },
     description: {
         fontWeight: 400,
         fontSize: '13px',
         lineHeight: '20px',
         letterSpacing: '0%',
-        color: '#FFFFFF',
+        color: `${background.main}`,
     },
     button: {
         border: '1px solid #A1A1A1',
         backgroundColor: theme.palette.background.main,
-        color: '#344054',
+        color: `${text.secondary}`,
         padding: '4px',
         borderRadius: '4px'
     }

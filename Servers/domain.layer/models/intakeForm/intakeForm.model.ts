@@ -97,7 +97,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
   @Column({
     type: DataType.STRING(20),
     allowNull: false,
-    defaultValue: "generic",
+    defaultValue: "eu_ai_act",
     field: "risk_tier_system",
   })
   riskTierSystem!: string;

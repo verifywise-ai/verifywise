@@ -1,8 +1,9 @@
 import { Box, Typography, Stack, IconButton } from "@mui/material";
-import { PieChart } from "@mui/x-charts/PieChart";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { frameworkDashboardCardStyles } from "./styles";
+import { brand, text, border as borderPalette, status } from "../../../themes/palette";
+import { VWDonutChart } from "../../../components/Charts/VWCharts";
 
 interface FrameworkData {
   frameworkId: number;
@@ -44,6 +45,15 @@ interface StatusData {
   "implemented": number;
   "needs rework": number;
 }
+
+const STATUS_COLORS = [
+  `${text.disabled}`,
+  "#D1D5DB",
+  "#F59E0B",
+  "#3B82F6",
+  `${brand.primary}`,
+  "#EA580C",
+];
 
 const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
   const [clauseStatusData, setClauseStatusData] = useState<Map<number, StatusData>>(new Map());
@@ -127,23 +137,23 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
     if (total === 0) return [];
 
     return [
-      { id: 0, value: data["not started"], label: "Not started", color: "#9CA3AF" },
-      { id: 1, value: data["draft"], label: "Draft", color: "#D1D5DB" },
-      { id: 2, value: data["in progress"], label: "In progress", color: "#F59E0B" },
-      { id: 3, value: data["awaiting review"], label: "Awaiting review", color: "#3B82F6" },
-      { id: 4, value: data["implemented"], label: "Implemented", color: "#13715B" },
-      { id: 5, value: data["needs rework"], label: "Needs rework", color: "#EA580C" },
+      { name: "Not started", value: data["not started"] },
+      { name: "Draft", value: data["draft"] },
+      { name: "In progress", value: data["in progress"] },
+      { name: "Awaiting review", value: data["awaiting review"] },
+      { name: "Implemented", value: data["implemented"] },
+      { name: "Needs rework", value: data["needs rework"] },
     ];
   };
 
   const getAllStatuses = (data: StatusData) => {
     return [
-      { id: 0, value: data["not started"], label: "Not started", color: "#9CA3AF" },
-      { id: 1, value: data["draft"], label: "Draft", color: "#D1D5DB" },
-      { id: 2, value: data["in progress"], label: "In progress", color: "#F59E0B" },
-      { id: 3, value: data["awaiting review"], label: "Awaiting review", color: "#3B82F6" },
-      { id: 4, value: data["implemented"], label: "Implemented", color: "#13715B" },
-      { id: 5, value: data["needs rework"], label: "Needs rework", color: "#EA580C" },
+      { id: 0, value: data["not started"], label: "Not started", color: STATUS_COLORS[0] },
+      { id: 1, value: data["draft"], label: "Draft", color: STATUS_COLORS[1] },
+      { id: 2, value: data["in progress"], label: "In progress", color: STATUS_COLORS[2] },
+      { id: 3, value: data["awaiting review"], label: "Awaiting review", color: STATUS_COLORS[3] },
+      { id: 4, value: data["implemented"], label: "Implemented", color: STATUS_COLORS[4] },
+      { id: 5, value: data["needs rework"], label: "Needs rework", color: STATUS_COLORS[5] },
     ];
   };
 
@@ -152,7 +162,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
       <Box
         sx={{
           background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
-          border: "1px solid #d0d5dd",
+          border: `1px solid ${borderPalette.dark}`,
           borderRadius: "4px",
           p: "16px",
           display: "flex",
@@ -174,7 +184,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
           sx={{
             fontSize: 15,
             fontWeight: 600,
-            color: "#000000",
+            color: `${text.black}`,
             lineHeight: "16px",
             m: 0,
           }}
@@ -227,7 +237,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                     <Box
                       sx={{
                         height: "1px",
-                        backgroundColor: "#E5E7EB",
+                        backgroundColor: `${status.default.border}`,
                         mx: "-16px", // Extend to card edges
                         mb: 4,
                         mt: 1,
@@ -239,7 +249,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                     sx={{
                       fontSize: 13,
                       fontWeight: 500,
-                      color: "#000000",
+                      color: `${text.black}`,
                       mb: 2,
                     }}
                   >
@@ -262,7 +272,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                   <Box
                     sx={{
                       height: "1px",
-                      backgroundColor: "#E5E7EB",
+                      backgroundColor: `${status.default.border}`,
                       mx: "-16px", // Extend to card edges
                       mb: 4,
                       mt: 1,
@@ -274,7 +284,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                   sx={{
                     fontSize: 13,
                     fontWeight: 500,
-                    color: "#000000",
+                    color: `${text.black}`,
                     mb: 1,
                   }}
                 >
@@ -291,55 +301,15 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                 >
                   {/* Donut Chart Column */}
                   <Box sx={{ display: "flex", justifyContent: "center" }}>
-                    <Box sx={{ position: "relative", width: "120px", height: "120px" }}>
-                      <PieChart
-                        series={[
-                          {
-                            data: pieData,
-                            innerRadius: 30,
-                            outerRadius: 48,
-                            paddingAngle: 2,
-                            cornerRadius: 3,
-                            cx: 60,
-                            cy: 60,
-                          },
-                        ]}
-                        width={120}
-                        height={120}
-                        slotProps={{
-                          legend: { hidden: true } as any,
-                        }}
-                        sx={{
-                          "& .MuiChartsLegend-root": {
-                            display: "none !important",
-                          },
-                          "& .MuiChartsTooltip-root": {
-                            fontSize: "13px !important",
-                          },
-                          "& .MuiChartsTooltip-root *": {
-                            fontSize: "13px !important",
-                          },
-                          "& .MuiChartsTooltip-mark": {
-                            fontSize: "13px !important",
-                          },
-                          "& .MuiChartsTooltip-labelCell": {
-                            fontSize: "13px !important",
-                          },
-                          "& .MuiChartsTooltip-valueCell": {
-                            fontSize: "13px !important",
-                          },
-                          "& .MuiChartsTooltip-table": {
-                            fontSize: "13px !important",
-                          },
-                          "& .MuiChartsTooltip-table td": {
-                            fontSize: "13px !important",
-                          },
-                          "& .MuiChartsTooltip-table th": {
-                            fontSize: "13px !important",
-                          },
-                        }}
-                      />
-                    </Box>
+                    <VWDonutChart
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      colors={STATUS_COLORS}
+                      size={120}
+                      innerRadius={30}
+                      outerRadius={48}
+                    />
                   </Box>
 
                   {/* Status Table Column */}
@@ -366,7 +336,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                             {item.label}
                           </Typography>
                         </Box>
-                        <Typography sx={{ fontSize: 12, color: "#000000", fontWeight: 500 }}>
+                        <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
                           {item.value}
                         </Typography>
                       </Box>
@@ -405,7 +375,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                   <Box
                     sx={{
                       height: "1px",
-                      backgroundColor: "#E5E7EB",
+                      backgroundColor: `${status.default.border}`,
                       mx: "-16px", // Extend to card edges
                       mb: 4,
                       mt: 1,
@@ -418,7 +388,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                     sx={{
                       fontSize: 13,
                       fontWeight: 500,
-                      color: "#000000",
+                      color: `${text.black}`,
                     }}
                   >
                     {framework.frameworkName} {currentViewMode}
@@ -459,7 +429,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                 <Box
                   sx={{
                     height: "1px",
-                    backgroundColor: "#E5E7EB",
+                    backgroundColor: `${status.default.border}`,
                     mx: "-16px", // Extend to card edges
                     mb: 4,
                     mt: 1,
@@ -472,7 +442,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                   sx={{
                     fontSize: 13,
                     fontWeight: 500,
-                    color: "#000000",
+                    color: `${text.black}`,
                   }}
                 >
                   {framework.frameworkName} {currentViewMode}
@@ -505,55 +475,15 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
               >
                 {/* Donut Chart Column */}
                 <Box sx={{ display: "flex", justifyContent: "center" }}>
-                  <Box sx={{ position: "relative", width: "120px", height: "120px" }}>
-                    <PieChart
-                      series={[
-                        {
-                          data: pieData,
-                          innerRadius: 30,
-                          outerRadius: 48,
-                          paddingAngle: 2,
-                          cornerRadius: 3,
-                          cx: 60,
-                          cy: 60,
-                        },
-                      ]}
-                      width={120}
-                      height={120}
-                      slotProps={{
-                        legend: { hidden: true } as any,
-                      }}
-                      sx={{
-                        "& .MuiChartsLegend-root": {
-                          display: "none !important",
-                        },
-                        "& .MuiChartsTooltip-root": {
-                          fontSize: "13px !important",
-                        },
-                        "& .MuiChartsTooltip-root *": {
-                          fontSize: "13px !important",
-                        },
-                        "& .MuiChartsTooltip-mark": {
-                          fontSize: "13px !important",
-                        },
-                        "& .MuiChartsTooltip-labelCell": {
-                          fontSize: "13px !important",
-                        },
-                        "& .MuiChartsTooltip-valueCell": {
-                          fontSize: "13px !important",
-                        },
-                        "& .MuiChartsTooltip-table": {
-                          fontSize: "13px !important",
-                        },
-                        "& .MuiChartsTooltip-table td": {
-                          fontSize: "13px !important",
-                        },
-                        "& .MuiChartsTooltip-table th": {
-                          fontSize: "13px !important",
-                        },
-                      }}
-                    />
-                  </Box>
+                  <VWDonutChart
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    colors={STATUS_COLORS}
+                    size={120}
+                    innerRadius={30}
+                    outerRadius={48}
+                  />
                 </Box>
 
                 {/* Status Table Column */}
@@ -580,7 +510,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                           {item.label}
                         </Typography>
                       </Box>
-                      <Typography sx={{ fontSize: 12, color: "#000000", fontWeight: 500 }}>
+                      <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
                         {item.value}
                       </Typography>
                     </Box>

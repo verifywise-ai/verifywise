@@ -1,5 +1,6 @@
 import React from "react";
 import singleTheme from "../../themes/v1SingleTheme";
+import { background } from "../../themes/palette";
 
 // A. Main Layout
 export const riskMainStackStyle = {
@@ -16,7 +17,7 @@ export const riskFilterRowStyle = {
 export const analyticsIconButtonStyle = {
   ...singleTheme.iconButtonsRectangle,
   "&:hover": {
-    backgroundColor: "#f9fafb",
+    backgroundColor: `${background.accent}`,
   },
 };
 
@@ -33,7 +34,7 @@ export const riskPopoverStyle = {
     borderRadius: singleTheme.borderRadius,
     boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
     overflow: "visible",
-    backgroundColor: "#fff",
+    backgroundColor: "background.main",
   },
 };
 
@@ -50,11 +51,11 @@ export const riskMenuItemStyle = {
   borderRadius: singleTheme.borderRadius,
   cursor: "pointer",
   border: "1px solid rgba(0, 0, 0, 0.08)",
-  backgroundColor: "#fff",
+  backgroundColor: "background.main",
   transition: "all 0.2s ease",
   mb: 2,
   "&:hover": {
-    backgroundColor: "#f9fafb",
+    backgroundColor: "background.accent",
     border: "1px solid rgba(0, 0, 0, 0.12)",
   },
 };

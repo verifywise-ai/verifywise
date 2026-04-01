@@ -721,6 +721,59 @@ export const fileOperationsLimiter = rateLimit({
 | Images | 10MB |
 | Videos | Consider external storage |
 
+## File Entity Links (Generic Linking)
+
+The `file_entity_links` table provides a generic way to associate files with any entity (frameworks, plugins, controls, etc.) without modifying the core files table.
+
+### Linking a File to an Entity
+
+```typescript
+// Link file to a framework control or plugin entity
+await sequelize.query(`
+  INSERT INTO "${tenantId}".file_entity_links
+  (file_id, framework_type, entity_type, entity_id, project_id, created_by)
+  VALUES (:fileId, :frameworkType, :entityType, :entityId, :projectId, :userId)
+`, {
+  replacements: {
+    fileId,
+    frameworkType: "eu-ai-act",  // or plugin key like "nyc-local-law-144"
+    entityType: "control",        // or "level2", "assessment", etc.
+    entityId,
+    projectId,
+    userId,
+  },
+  transaction
+});
+```
+
+### Getting Files for an Entity
+
+```typescript
+const files = await sequelize.query(`
+  SELECT f.* FROM "${tenantId}".files f
+  INNER JOIN "${tenantId}".file_entity_links fel ON f.id = fel.file_id
+  WHERE fel.framework_type = :frameworkType
+    AND fel.entity_type = :entityType
+    AND fel.entity_id = :entityId
+`, { replacements: { frameworkType, entityType, entityId } });
+```
+
+### Unlinking a File
+
+```typescript
+await sequelize.query(`
+  DELETE FROM "${tenantId}".file_entity_links
+  WHERE file_id = :fileId
+    AND framework_type = :frameworkType
+    AND entity_type = :entityType
+    AND entity_id = :entityId
+`, { replacements: { fileId, frameworkType, entityType, entityId }, transaction });
+```
+
+This is particularly important for **plugin file associations** — see [Plugin System](./plugin-system.md#file-linking-for-plugins).
+
+---
+
 ## Key Files
 
 | File | Purpose |

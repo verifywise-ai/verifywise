@@ -22,6 +22,7 @@ import {
 import { useCompletion } from "@ai-sdk/react";
 import { CustomizableButton } from "../button/customizable-button";
 import { store } from "../../../application/redux/store";
+import { text } from "../../themes/palette";
 
 interface AIEditorMenuProps {
   anchorEl: HTMLElement | null;
@@ -212,7 +213,7 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
             "&:hover": { backgroundColor: theme.palette.background.accent },
           }}
         >
-          <X size={14} color="#98A2B3" strokeWidth={1.5} />
+          <X size={14} color={text.muted} strokeWidth={1.5} />
         </Box>
       </Box>
 
@@ -301,7 +302,7 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
                     fontSize: 12,
                     backgroundColor: theme.palette.primary.main,
                     border: `1px solid ${theme.palette.primary.main}`,
-                    "&:hover": { backgroundColor: "#0F5A47" },
+                    "&:hover": { backgroundColor: "brand.primaryHover" },
                   }}
                 />
                 <CustomizableButton
@@ -312,7 +313,7 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
                   sx={{
                     height: 30,
                     fontSize: 12,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.main",
                     border: `1px solid ${theme.palette.border.dark}`,
                     color: theme.palette.text.tertiary,
                     "&:hover": { backgroundColor: theme.palette.background.accent },
@@ -329,7 +330,7 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
                 sx={{
                   height: 30,
                   fontSize: 12,
-                  backgroundColor: "#fff",
+                  backgroundColor: "background.main",
                   border: `1px solid ${theme.palette.border.dark}`,
                   color: theme.palette.text.tertiary,
                   "&:hover": { backgroundColor: theme.palette.background.accent },

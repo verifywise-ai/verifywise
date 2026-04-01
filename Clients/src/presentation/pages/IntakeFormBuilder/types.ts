@@ -1,4 +1,5 @@
 import { IntakeFormStatus, IntakeEntityType } from "../../../domain/intake/enums";
+import { brand } from "../../themes/palette";
 
 /**
  * Field types supported in the intake form builder
@@ -79,11 +80,11 @@ export interface FormDesignSettings {
 export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
   format: "narrow",
   alignment: "left",
-  colorTheme: "#13715B",
+  colorTheme: `${brand.primary}`,
   backgroundColor: "#fafafa",
   logoUrl: "",
   fontFamily: "Inter",
-  collectContactInfo: false,
+  collectContactInfo: true,
 };
 
 /**
@@ -167,6 +168,8 @@ export interface EntityFieldMapping {
   label: string;
   description: string;
   requiredFieldType: FieldType[];
+  /** Whether this field is NOT NULL in the database (required for entity creation) */
+  entityRequired?: boolean;
 }
 
 /**
@@ -174,22 +177,20 @@ export interface EntityFieldMapping {
  */
 export const ENTITY_FIELD_MAPPINGS: Record<IntakeEntityType, EntityFieldMapping[]> = {
   [IntakeEntityType.MODEL]: [
-    { field: "name", label: "Model name", description: "Name of the AI model", requiredFieldType: ["text"] },
-    { field: "description", label: "Description", description: "Model description", requiredFieldType: ["text", "textarea"] },
+    { field: "name", label: "Model name", description: "Name of the AI model", requiredFieldType: ["text"], entityRequired: true },
+    { field: "description", label: "Description", description: "Model description", requiredFieldType: ["textarea", "text"] },
     { field: "modelVersion", label: "Model version", description: "Version of the model", requiredFieldType: ["text"] },
     { field: "provider", label: "Provider", description: "Model provider/vendor", requiredFieldType: ["text", "select"] },
-    { field: "owner", label: "Owner", description: "Model owner", requiredFieldType: ["text", "email"] },
     { field: "modelType", label: "Model type", description: "Type of AI model", requiredFieldType: ["text", "select"] },
-    { field: "intendedUse", label: "Intended use", description: "Intended use of the model", requiredFieldType: ["text", "textarea"] },
-    { field: "riskLevel", label: "Risk level", description: "Risk classification", requiredFieldType: ["select"] },
+    { field: "intendedUse", label: "Intended use", description: "Intended use of the model", requiredFieldType: ["textarea", "text"] },
   ],
   [IntakeEntityType.USE_CASE]: [
-    { field: "project_title", label: "Project title", description: "Title of the use case/project", requiredFieldType: ["text"] },
-    { field: "goal", label: "Goal", description: "Goal of the project", requiredFieldType: ["text", "textarea"] },
-    { field: "owner", label: "Owner", description: "Project owner", requiredFieldType: ["text", "email"] },
+    { field: "project_title", label: "Project title", description: "Title of the use case/project", requiredFieldType: ["text"], entityRequired: true },
+    { field: "goal", label: "Goal", description: "Goal of the project", requiredFieldType: ["text", "textarea"], entityRequired: true },
     { field: "start_date", label: "Start date", description: "Project start date", requiredFieldType: ["date"] },
     { field: "ai_risk_classification", label: "AI risk classification", description: "Risk classification", requiredFieldType: ["select"] },
-    { field: "type_of_high_risk_role", label: "High risk role type", description: "Type of high-risk role", requiredFieldType: ["text", "select"] },
+    { field: "type_of_high_risk_role", label: "High risk role type", description: "Type of high-risk role", requiredFieldType: ["select"] },
+    { field: "geography", label: "Geography", description: "Geographic scope of the use case", requiredFieldType: ["select"] },
   ],
 };
 
@@ -320,6 +321,22 @@ export function createFieldFromPalette(paletteItem: PaletteItem, order: number):
 }
 
 /**
+ * Create a form field from an entity field mapping definition
+ */
+export function createFieldFromMapping(mapping: EntityFieldMapping, order: number): FormField {
+  const type = mapping.requiredFieldType[0];
+  return {
+    id: generateFieldId(),
+    type,
+    label: mapping.label,
+    placeholder: mapping.description,
+    validation: mapping.entityRequired ? { required: true } : undefined,
+    entityFieldMapping: mapping.field,
+    order,
+  };
+}
+
+/**
  * Default use case fields pre-populated for new forms
  */
 export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
@@ -370,6 +387,38 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
   {
     id: generateFieldId(),
     type: "select",
+    label: "High risk role type",
+    guidanceText: "Under the EU AI Act, your role determines your compliance obligations.",
+    options: [
+      { label: "Deployer", value: "Deployer" },
+      { label: "Provider", value: "Provider" },
+      { label: "Distributor", value: "Distributor" },
+      { label: "Importer", value: "Importer" },
+      { label: "Product manufacturer", value: "Product manufacturer" },
+      { label: "Authorized representative", value: "Authorized representative" },
+    ],
+    entityFieldMapping: "type_of_high_risk_role",
+    order: 4,
+  },
+  {
+    id: generateFieldId(),
+    type: "select",
+    label: "Geography",
+    guidanceText: "The geographic scope affects which regulations apply to this use case.",
+    options: [
+      { label: "Global", value: "1" },
+      { label: "Europe", value: "2" },
+      { label: "North America", value: "3" },
+      { label: "South America", value: "4" },
+      { label: "Asia", value: "5" },
+      { label: "Africa", value: "6" },
+    ],
+    entityFieldMapping: "geography",
+    order: 5,
+  },
+  {
+    id: generateFieldId(),
+    type: "select",
     label: "Does this system make autonomous decisions?",
     guidanceText: "Autonomous decision-making increases risk and may require human oversight measures.",
     options: [
@@ -377,7 +426,7 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
       { label: "Partially — recommends but human decides", value: "partial" },
       { label: "Yes — makes decisions without human review", value: "yes" },
     ],
-    order: 4,
+    order: 6,
   },
   {
     id: generateFieldId(),
@@ -390,9 +439,128 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
       { label: "Sensitive personal data (health, biometric)", value: "sensitive" },
       { label: "Special category data (racial, political)", value: "special" },
     ],
+    order: 7,
+  },
+];
+
+/**
+ * Default model inventory fields pre-populated for new forms
+ */
+export const DEFAULT_MODEL_FIELDS: FormField[] = [
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "Model name",
+    placeholder: "Enter the name of your AI model",
+    guidanceText: "A clear name helps reviewers identify and track this model across the organization.",
+    validation: { required: true, maxLength: 255 },
+    entityFieldMapping: "name",
+    order: 0,
+  },
+  {
+    id: generateFieldId(),
+    type: "textarea",
+    label: "Description",
+    placeholder: "Describe what this model does and how it works",
+    guidanceText: "Include the model's purpose, training approach, and key capabilities.",
+    validation: { maxLength: 2000 },
+    entityFieldMapping: "description",
+    order: 1,
+  },
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "Model version",
+    placeholder: "e.g. v1.0, 2024-Q1",
+    guidanceText: "Version tracking is important for audit trails and rollback planning.",
+    entityFieldMapping: "modelVersion",
+    order: 2,
+  },
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "Provider",
+    placeholder: "e.g. OpenAI, Anthropic, in-house",
+    guidanceText: "Knowing the provider helps assess supply chain risk and vendor dependencies.",
+    entityFieldMapping: "provider",
+    order: 3,
+  },
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "Model type",
+    placeholder: "e.g. LLM, classification, regression, computer vision",
+    guidanceText: "The model type affects which governance controls and testing procedures apply.",
+    entityFieldMapping: "modelType",
+    order: 4,
+  },
+  {
+    id: generateFieldId(),
+    type: "textarea",
+    label: "Intended use",
+    placeholder: "Describe how this model will be used in production",
+    guidanceText: "Intended use determines whether the model falls under high-risk categories in the EU AI Act.",
+    validation: { maxLength: 2000 },
+    entityFieldMapping: "intendedUse",
     order: 5,
   },
 ];
+
+/**
+ * Mapping coverage analysis result
+ */
+export interface MappingCoverage {
+  /** Required entity fields that have no mapped form field */
+  missingRequired: EntityFieldMapping[];
+  /** Optional entity fields that have no mapped form field */
+  missingOptional: EntityFieldMapping[];
+  /** Fields where the form field type doesn't match the entity field's allowed types */
+  typeMismatches: Array<{
+    formField: FormField;
+    entityMapping: EntityFieldMapping;
+  }>;
+}
+
+/**
+ * Analyze mapping coverage for a form's fields against the entity field definitions
+ */
+export function analyzeMappingCoverage(
+  fields: FormField[],
+  entityType: IntakeEntityType
+): MappingCoverage {
+  const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
+  const mappedKeys = new Set(
+    fields
+      .filter((f) => f.entityFieldMapping)
+      .map((f) => f.entityFieldMapping!)
+  );
+
+  const missingRequired: EntityFieldMapping[] = [];
+  const missingOptional: EntityFieldMapping[] = [];
+
+  for (const mapping of entityMappings) {
+    if (!mappedKeys.has(mapping.field)) {
+      if (mapping.entityRequired) {
+        missingRequired.push(mapping);
+      } else {
+        missingOptional.push(mapping);
+      }
+    }
+  }
+
+  const typeMismatches: MappingCoverage["typeMismatches"] = [];
+  for (const field of fields) {
+    if (!field.entityFieldMapping) continue;
+    const mapping = entityMappings.find(
+      (m) => m.field === field.entityFieldMapping
+    );
+    if (mapping && !mapping.requiredFieldType.includes(field.type)) {
+      typeMismatches.push({ formField: field, entityMapping: mapping });
+    }
+  }
+
+  return { missingRequired, missingOptional, typeMismatches };
+}
 
 /**
  * Hardcoded suggested questions grouped by category
@@ -438,13 +606,15 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
       version: "1.0",
       fields: type === IntakeEntityType.USE_CASE
         ? DEFAULT_USE_CASE_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
+        : type === IntakeEntityType.MODEL
+        ? DEFAULT_MODEL_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
         : [],
     },
     submitButtonText: "Submit",
     status: IntakeFormStatus.DRAFT,
     ttlExpiresAt: null,
     recipients: [],
-    riskTierSystem: "generic",
+    riskTierSystem: "eu_ai_act",
     llmKeyId: null,
     suggestedQuestionsEnabled: false,
     designSettings: { ...DEFAULT_DESIGN_SETTINGS },

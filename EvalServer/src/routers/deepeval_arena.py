@@ -3,6 +3,8 @@ DeepEval Arena Router
 
 Endpoints for running LLM Arena comparisons using ArenaGEval.
 Based on DeepEval's LLM Arena: https://deepeval.com/docs/getting-started-llm-arena
+
+Shared-schema multi-tenancy: Uses organization_id from request.state.
 """
 
 from fastapi import APIRouter, BackgroundTasks, Request, Body, HTTPException
@@ -17,6 +19,14 @@ from controllers.deepeval_arena import (
 )
 
 router = APIRouter()
+
+
+def _get_organization_id(request: Request) -> int:
+    """Extract organization_id from request state (set by middleware)."""
+    org_id = getattr(request.state, "organization_id", None)
+    if org_id is None:
+        raise HTTPException(status_code=400, detail="Missing organization id")
+    return org_id
 
 
 @router.post("/arena/compare")
@@ -68,12 +78,12 @@ async def create_arena_comparison(
         "judgeModel": "gpt-4o"  // Model used as judge
     }
     """
-    tenant = request.state.tenant
+    organization_id = _get_organization_id(request)
     user_id = request.headers.get("x-user-id")
     return await create_arena_comparison_controller(
         background_tasks=background_tasks,
         config_data=config_data,
-        tenant=tenant,
+        organization_id=organization_id,
         user_id=user_id,
     )
 
@@ -102,8 +112,8 @@ async def list_arena_comparisons(
         ]
     }
     """
-    tenant = request.state.tenant
-    return await list_arena_comparisons_controller(tenant=tenant, org_id=org_id)
+    organization_id = _get_organization_id(request)
+    return await list_arena_comparisons_controller(organization_id=organization_id, org_id=org_id)
 
 
 @router.get("/arena/comparisons/{comparison_id}")
@@ -120,8 +130,8 @@ async def get_arena_comparison_status(comparison_id: str, request: Request):
         "updatedAt": "2025-01-30T12:01:30"
     }
     """
-    tenant = request.state.tenant
-    return await get_arena_comparison_status_controller(comparison_id, tenant=tenant)
+    organization_id = _get_organization_id(request)
+    return await get_arena_comparison_status_controller(comparison_id, organization_id=organization_id)
 
 
 @router.get("/arena/comparisons/{comparison_id}/results")
@@ -156,8 +166,8 @@ async def get_arena_comparison_results(comparison_id: str, request: Request):
         }
     }
     """
-    tenant = request.state.tenant
-    return await get_arena_comparison_results_controller(comparison_id, tenant=tenant)
+    organization_id = _get_organization_id(request)
+    return await get_arena_comparison_results_controller(comparison_id, organization_id=organization_id)
 
 
 @router.delete("/arena/comparisons/{comparison_id}")
@@ -171,6 +181,6 @@ async def delete_arena_comparison(comparison_id: str, request: Request):
         "id": "arena_20250130_120000"
     }
     """
-    tenant = request.state.tenant
-    return await delete_arena_comparison_controller(comparison_id, tenant=tenant)
+    organization_id = _get_organization_id(request)
+    return await delete_arena_comparison_controller(comparison_id, organization_id=organization_id)
 

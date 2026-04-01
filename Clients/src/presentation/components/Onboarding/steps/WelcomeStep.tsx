@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Typography, Stack } from "@mui/material";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
+import { brand, text, background } from "../../../themes/palette";
 
 const WELCOME_FEATURES = [
   "How to manage AI use cases and projects",
@@ -40,7 +41,7 @@ const WelcomeStep: React.FC<OnboardingStepProps> = () => {
             left: "50px",
             fontWeight: 600,
             fontSize: "28px",
-            color: "#FFFFFF",
+            color: `${background.main}`,
           }}
         >
           Welcome to VerifyWise
@@ -55,7 +56,7 @@ const WelcomeStep: React.FC<OnboardingStepProps> = () => {
         <Typography
           sx={{
             fontSize: "14px",
-            color: "#667085",
+            color: `${text.icon}`,
             marginBottom: 4,
             lineHeight: 1.6,
           }}
@@ -65,7 +66,7 @@ const WelcomeStep: React.FC<OnboardingStepProps> = () => {
         <Typography
           sx={{
             fontSize: "14px",
-            color: "#667085",
+            color: `${text.icon}`,
             fontWeight: 500,
             marginBottom: 4,
           }}
@@ -80,10 +81,10 @@ const WelcomeStep: React.FC<OnboardingStepProps> = () => {
                   width: "6px",
                   height: "6px",
                   borderRadius: "50%",
-                  backgroundColor: "#13715B",
+                  backgroundColor: `${brand.primary}`,
                 }}
               />
-              <Typography sx={{ fontSize: "14px", color: "#667085" }}>
+              <Typography sx={{ fontSize: "14px", color: `${text.icon}` }}>
                 {item}
               </Typography>
             </Box>

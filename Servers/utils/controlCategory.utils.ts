@@ -6,11 +6,12 @@ import { QueryTypes, Transaction } from "sequelize";
 import { IControlCategory } from "../domain.layer/interfaces/i.controlCategory";
 
 export const getAllControlCategoriesQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<ControlCategoryModel[]> => {
   const controlCategories = await sequelize.query(
-    `SELECT * FROM "${tenant}".controlcategories ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM controlcategories WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: ControlCategoryModel,
     }
@@ -20,12 +21,12 @@ export const getAllControlCategoriesQuery = async (
 
 export const getControlCategoryByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<IControlCategory | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".controlcategories WHERE id = :id`,
+    `SELECT * FROM controlcategories WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: ControlCategoryModel,
     }
@@ -35,12 +36,13 @@ export const getControlCategoryByIdQuery = async (
 
 export const getControlCategoryByTitleAndProjectIdQuery = async (
   title: string,
-  projectId: number
+  projectId: number,
+  organizationId: number
 ): Promise<IControlCategory | null> => {
   const result = await sequelize.query(
-    "SELECT * FROM controlcategories WHERE title = :title AND project_id = :project_id",
+    "SELECT * FROM controlcategories WHERE organization_id = :organizationId AND title = :title AND project_id = :project_id",
     {
-      replacements: { title, project_id: projectId },
+      replacements: { organizationId, title, project_id: projectId },
       mapToModel: true,
       model: ControlCategoryModel,
     }
@@ -50,12 +52,12 @@ export const getControlCategoryByTitleAndProjectIdQuery = async (
 
 export const getControlCategoryByProjectIdQuery = async (
   projectId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IControlCategory[]> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".controlcategories WHERE project_id = :project_id ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM controlcategories WHERE organization_id = :organizationId AND project_id = :project_id ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { project_id: projectId },
+      replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: ControlCategoryModel,
     }
@@ -65,15 +67,16 @@ export const getControlCategoryByProjectIdQuery = async (
 
 export const createControlCategoryQuery = async (
   controlCategory: ControlCategoryModel,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ControlCategoryModel> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".controlcategories (
-      project_id, title, order_no
-    ) VALUES (:project_id, :title, :order_no) RETURNING *`,
+    `INSERT INTO controlcategories (
+      organization_id, project_id, title, order_no
+    ) VALUES (:organizationId, :project_id, :title, :order_no) RETURNING *`,
     {
       replacements: {
+        organizationId,
         project_id: controlCategory.project_id,
         title: controlCategory.title,
         order_no: controlCategory.order_no || null,
@@ -90,12 +93,12 @@ export const createControlCategoryQuery = async (
 export const updateControlCategoryByIdQuery = async (
   id: number,
   controlCategory: Partial<ControlCategoryModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ControlCategoryModel | null> => {
   const updateControlCategory: Partial<
     Record<keyof ControlCategoryModel, any>
-  > = {};
+  > & { organizationId?: number } = {};
   const setClause = ["title"]
     .filter((f) => {
       if (
@@ -111,9 +114,10 @@ export const updateControlCategoryByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE "${tenant}".controlcategories SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE controlcategories SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateControlCategory.id = id;
+  updateControlCategory.organizationId = organizationId;
 
   const result = await sequelize.query(query, {
     replacements: updateControlCategory,
@@ -128,13 +132,13 @@ export const updateControlCategoryByIdQuery = async (
 
 export const deleteControlCategoryByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".controlcategories WHERE id = :id RETURNING *`,
+    `DELETE FROM controlcategories WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: ControlCategoryModel,
       type: QueryTypes.DELETE,
@@ -147,16 +151,17 @@ export const deleteControlCategoryByIdQuery = async (
 export const createNewControlCategories = async (
   projectId: number,
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const createdControlCategories = [];
-  let query = `INSERT INTO "${tenant}".controlcategories(
-    project_id, title, order_no
-  ) VALUES (:project_id, :title, :order_no) RETURNING *;`;
+  let query = `INSERT INTO controlcategories(
+    organization_id, project_id, title, order_no
+  ) VALUES (:organizationId, :project_id, :title, :order_no) RETURNING *;`;
   for (let controlCategoryStruct of ControlCategories) {
     const result = await sequelize.query(query, {
       replacements: {
+        organizationId,
         project_id: projectId,
         title: controlCategoryStruct.title,
         order_no: controlCategoryStruct.order_no,
@@ -171,7 +176,7 @@ export const createNewControlCategories = async (
       control_category_id,
       controlCategoryStruct.controls,
       enable_ai_data_insertion,
-      tenant,
+      organizationId,
       transaction
     );
     createdControlCategories.push({ ...result[0].dataValues, controls });

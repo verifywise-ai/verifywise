@@ -15,10 +15,11 @@ import {
   CircularProgress,
   InputAdornment,
   Skeleton,
+  FormControlLabel,
 } from "@mui/material";
 import {
   Search,
-  Github,
+  GitFork,
   AlertCircle,
   CheckCircle2,
   XCircle,
@@ -31,6 +32,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Field from "../../components/Inputs/Field";
+import Toggle from "../../components/Inputs/Toggle";
+import InfoBox from "../../components/InfoBox";
 import Alert from "../../components/Alert";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
@@ -66,6 +69,9 @@ export default function ScanPage() {
   const [isCheckingActive, setIsCheckingActive] = useState(true);
   const [stats, setStats] = useState<AIDetectionStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [isIncremental, setIsIncremental] = useState(false);
+  const [baseCommitSha, setBaseCommitSha] = useState("");
+  const [headCommitSha, setHeadCommitSha] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentScanIdRef = useRef<number | null>(null);
 
@@ -178,6 +184,18 @@ export default function ScanPage() {
       return;
     }
 
+    if (isIncremental) {
+      const shaPattern = /^[0-9a-f]{7,40}$/i;
+      if (!baseCommitSha.trim() || !headCommitSha.trim()) {
+        setError("Both commit SHAs are required for incremental scan");
+        return;
+      }
+      if (!shaPattern.test(baseCommitSha.trim()) || !shaPattern.test(headCommitSha.trim())) {
+        setError("Commit SHAs must be valid hex strings (7-40 characters)");
+        return;
+      }
+    }
+
     setError(null);
     setScanState("scanning");
     setProgress(null);
@@ -194,7 +212,14 @@ export default function ScanPage() {
       // Start the scan
       const scan = await startScan(
         normalizedUrl,
-        abortControllerRef.current.signal
+        abortControllerRef.current.signal,
+        isIncremental
+          ? {
+              scan_mode: "incremental",
+              base_commit_sha: baseCommitSha.trim(),
+              head_commit_sha: headCommitSha.trim(),
+            }
+          : undefined
       );
 
       // Store scan ID for cancellation
@@ -236,7 +261,7 @@ export default function ScanPage() {
       setError(errorMsg);
       showAlert("error", errorMsg);
     }
-  }, [repositoryUrl, refreshRecentScans]);
+  }, [repositoryUrl, isIncremental, baseCommitSha, headCommitSha, refreshRecentScans]);
 
   const handleCancel = useCallback(async () => {
     // Abort local HTTP requests
@@ -285,14 +310,14 @@ export default function ScanPage() {
       }
     >
 
-      {/* Statistics Cards - 6 cards in 3x2 grid (only show if there are scans) */}
-      {!isCheckingActive && scanState === "idle" && !statsLoading && stats && stats.total_scans > 0 && (
+      {/* Statistics Cards - 6 cards in 3x2 grid */}
+      {!isCheckingActive && scanState === "idle" && !statsLoading && stats && (
         <Box
           sx={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "8px",
-            mb: "16px",
+            gap: 1,
+            mb: 2,
           }}
         >
           <StatCard
@@ -346,8 +371,8 @@ export default function ScanPage() {
           sx={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "8px",
-            mb: "16px",
+            gap: 1,
+            mb: 2,
           }}
         >
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -355,7 +380,7 @@ export default function ScanPage() {
               key={i}
               variant="rectangular"
               height={90}
-              sx={{ borderRadius: "8px" }}
+              sx={{ borderRadius: "4px" }}
             />
           ))}
         </Box>
@@ -372,65 +397,128 @@ export default function ScanPage() {
       {!isCheckingActive && scanState === "idle" && (
         <Box
           sx={{
-            backgroundColor: palette.background.main,
-            border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
-            p: "16px",
+            pt: "16px",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography sx={{ fontSize: "13px", fontWeight: 600, mb: 0.5 }}>
-                Repository URL
-              </Typography>
-              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, mb: "8px" }}>
-                Configure a GitHub token in Settings to scan private repositories.{" "}
-                Try these examples:{" "}
-                {[
-                  "Shubhamsaboo/awesome-llm-apps",
-                  "langchain-ai/chat-langchain",
-                  "GitGuardian/sample_secrets",
-                  "nomic-ai/gpt4all",
-                ].map((repo, idx, arr) => (
-                  <span key={repo}>
-                    <span
-                      onClick={() => setRepositoryUrl(repo)}
-                      style={{
-                        color: palette.brand.primary,
-                        cursor: "pointer",
-                        textDecoration: "underline",
-                      }}
-                    >
-                      {repo}
-                    </span>
-                    {idx < arr.length - 1 && ", "}
+          {/* Repository URL section */}
+          <Box>
+            <Typography sx={{ fontSize: "13px", fontWeight: 600, mb: 0.5 }}>
+              Repository URL
+            </Typography>
+            <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, mb: "4px" }}>
+              Configure a GitHub token in Settings to scan private repositories.
+              Try these examples:
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: "20px", mb: "8px", display: "flex", flexDirection: "column", gap: "4px" }}>
+              {([
+                {
+                  repo: "Shubhamsaboo/awesome-llm-apps",
+                  description: "Curated LLM apps — detects AI libraries, API calls, and provider dependencies",
+                },
+                {
+                  repo: "langchain-ai/chat-langchain",
+                  description: "LangChain chatbot — reveals RAG components, agent patterns, and model references",
+                },
+                {
+                  repo: "verifywise-ai/llm-security-tester",
+                  description: "Intentionally vulnerable — triggers prompt injection, PII exposure, excessive agency, and jailbreak findings",
+                },
+              ] as const).map(({ repo, description }) => (
+                <Box component="li" key={repo} sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+                  <span
+                    onClick={() => setRepositoryUrl(repo)}
+                    style={{
+                      color: palette.brand.primary,
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {repo}
                   </span>
-                ))}
-              </Typography>
-              <Field
-                id="repository-url"
-                placeholder="e.g., https://github.com/owner/repo or owner/repo"
-                value={repositoryUrl}
-                onChange={(e) => setRepositoryUrl(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Github size={16} color={palette.text.tertiary} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 0 }}
-              />
+                  {" — "}
+                  {description}
+                </Box>
+              ))}
             </Box>
-            <Box sx={{ alignSelf: "flex-end" }}>
-              <CustomizableButton
-                text="Scan"
-                onClick={handleStartScan}
-                isDisabled={!repositoryUrl.trim()}
-                startIcon={<Search size={16} />}
-                sx={{ height: 34 }}
-              />
-            </Box>
+            <Field
+              id="repository-url"
+              placeholder="e.g., https://github.com/owner/repo or owner/repo"
+              value={repositoryUrl}
+              onChange={(e) => setRepositoryUrl(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <GitFork size={16} color={palette.text.tertiary} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ mb: 0, maxWidth: "480px" }}
+            />
+          </Box>
+
+          {/* Incremental scan section */}
+          <Box sx={{ mt: "16px" }}>
+            <FormControlLabel
+              control={
+                <Toggle
+                  size="small"
+                  checked={isIncremental}
+                  onChange={(e) => setIsIncremental(e.target.checked)}
+                />
+              }
+              label={
+                <Typography sx={{ fontSize: "13px", ml: "8px" }}>Incremental scan</Typography>
+              }
+              sx={{ ml: 0 }}
+            />
+            {isIncremental && (
+              <Box sx={{ mt: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <InfoBox
+                  message="Only scans files changed between two commits. Findings from unchanged files are carried forward from the most recent full scan. Requires a completed full scan of this repository as a baseline."
+                  storageKey="incremental-scan-tip"
+                  variant="info"
+                  header="How incremental scans work"
+                />
+                <Box sx={{ display: "flex", gap: "16px" }}>
+                  <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <Typography sx={{ fontSize: "12px", fontWeight: 500 }}>
+                      Base commit SHA (older)
+                    </Typography>
+                    <Field
+                      id="base-commit-sha"
+                      placeholder="e.g., abc1234..."
+                      value={baseCommitSha}
+                      onChange={(e) => setBaseCommitSha(e.target.value)}
+                      sx={{ mb: 0 }}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <Typography sx={{ fontSize: "12px", fontWeight: 500 }}>
+                      Head commit SHA (newer)
+                    </Typography>
+                    <Field
+                      id="head-commit-sha"
+                      placeholder="e.g., def5678..."
+                      value={headCommitSha}
+                      onChange={(e) => setHeadCommitSha(e.target.value)}
+                      sx={{ mb: 0 }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          </Box>
+
+          {/* Scan button */}
+          <Box sx={{ mt: "16px", display: "flex", justifyContent: "flex-end" }}>
+            <CustomizableButton
+              text="Scan"
+              onClick={handleStartScan}
+              isDisabled={!repositoryUrl.trim()}
+              startIcon={<Search size={16} />}
+              sx={{ height: 34 }}
+            />
           </Box>
 
           {error && (
@@ -447,7 +535,7 @@ export default function ScanPage() {
               }}
             >
               <AlertCircle size={16} color={palette.status.error.text} />
-              <Typography variant="body2" sx={{ color: palette.status.error.text }}>
+              <Typography sx={{ fontSize: "13px", color: palette.status.error.text }}>
                 {error}
               </Typography>
             </Box>
@@ -466,7 +554,7 @@ export default function ScanPage() {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-            <Typography variant="body1" sx={{ fontWeight: 500, fontSize: "13px" }}>
+            <Typography sx={{ fontWeight: 500, fontSize: "13px" }}>
               {progress.status === "cloning"
                 ? "Cloning repository..."
                 : `Scanning files... (${progress.files_scanned}${
@@ -491,16 +579,16 @@ export default function ScanPage() {
           />
 
           <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
-            <Typography variant="caption" sx={{ color: palette.text.tertiary }}>
+            <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
               {progress.current_file || "Processing..."}
             </Typography>
-            <Typography variant="caption" sx={{ color: palette.text.tertiary }}>
+            <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
               {progress.progress}%
             </Typography>
           </Box>
 
           {progress.findings_count > 0 && (
-            <Typography variant="body2" sx={{ mt: 2, color: palette.brand.primary }}>
+            <Typography sx={{ fontSize: "13px", mt: 2, color: palette.brand.primary }}>
               Found {progress.findings_count} AI/ML {progress.findings_count === 1 ? "library" : "libraries"} so far
             </Typography>
           )}
@@ -529,10 +617,10 @@ export default function ScanPage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
             <CheckCircle2 size={24} color={palette.status.success.text} />
             <Box>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+              <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>
                 Scan completed
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 {result.scan.repository_owner}/{result.scan.repository_name}
               </Typography>
             </Box>
@@ -555,10 +643,10 @@ export default function ScanPage() {
                 textAlign: "center",
               }}
             >
-              <Typography variant="h4" sx={{ fontWeight: 600, color: palette.text.primary }}>
+              <Typography sx={{ fontSize: "20px", fontWeight: 600, color: palette.text.primary }}>
                 {result.summary.total}
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 Total findings
               </Typography>
             </Box>
@@ -570,10 +658,10 @@ export default function ScanPage() {
                 textAlign: "center",
               }}
             >
-              <Typography variant="h4" sx={{ fontWeight: 600, color: palette.status.error.text }}>
+              <Typography sx={{ fontSize: "20px", fontWeight: 600, color: palette.status.error.text }}>
                 {result.summary.by_confidence.high}
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 High confidence
               </Typography>
             </Box>
@@ -585,17 +673,17 @@ export default function ScanPage() {
                 textAlign: "center",
               }}
             >
-              <Typography variant="h4" sx={{ fontWeight: 600, color: palette.text.primary }}>
+              <Typography sx={{ fontSize: "20px", fontWeight: 600, color: palette.text.primary }}>
                 {result.scan.files_scanned}
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 Files scanned
               </Typography>
             </Box>
           </Box>
 
           {/* Actions */}
-          <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: "16px" }}>
+          <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: 2 }}>
             <CustomizableButton
               text="Scan another"
               onClick={handleReset}
@@ -624,10 +712,10 @@ export default function ScanPage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
             <XCircle size={24} color={palette.status.error.text} />
             <Box>
-              <Typography variant="body1" sx={{ fontWeight: 500, color: palette.status.error.text }}>
+              <Typography sx={{ fontSize: "13px", fontWeight: 500, color: palette.status.error.text }}>
                 Scan failed
               </Typography>
-              <Typography variant="body2" sx={{ color: palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 {error || "An error occurred during the scan"}
               </Typography>
             </Box>

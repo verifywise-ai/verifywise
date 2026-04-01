@@ -89,7 +89,9 @@ export interface IntakeForm {
  * Risk dimension scores
  */
 export interface RiskDimensionScore {
-  name: string;
+  key: string;
+  label: string;
+  name?: string;
   score: number;
   weight: number;
   signals: string[];
@@ -133,6 +135,7 @@ export interface IntakeSubmission {
   createdEntityId?: number;
   createdEntityType?: string;
   resubmissionToken?: string;
+  originalSubmissionId?: number | null;
   resubmissionCount: number;
   ipAddress?: string;
   riskAssessment?: RiskAssessment | null;
@@ -264,6 +267,7 @@ export async function getPendingSubmissions(
     page?: number;
     limit?: number;
     formId?: number;
+    status?: string;
   } = {},
   signal?: AbortSignal
 ): Promise<{ data: IntakeSubmission[]; pagination?: { total: number; page: number; limit: number } }> {
@@ -271,6 +275,7 @@ export async function getPendingSubmissions(
   if (params.page) queryParams.append("page", String(params.page));
   if (params.limit) queryParams.append("limit", String(params.limit));
   if (params.formId) queryParams.append("formId", String(params.formId));
+  if (params.status) queryParams.append("status", params.status);
 
   const url = `${BASE_URL}/submissions${queryParams.toString() ? `?${queryParams}` : ""}`;
   const response = await apiServices.get(url, { signal });
@@ -357,6 +362,106 @@ export async function rejectSubmission(
   return response.data as { data: IntakeSubmission };
 }
 
+/**
+ * Intake submission field as returned by the by-entity endpoint
+ */
+export interface IntakeSubmissionField {
+  fieldId: string;
+  label: string;
+  type: string;
+  value: unknown;
+  options: Array<{ label: string; value: string }> | null;
+  entityFieldMapping: string | null;
+  isMapped: boolean;
+}
+
+/**
+ * Response from the by-entity intake submission endpoint
+ */
+export interface EntityIntakeSubmission {
+  submissionId: number;
+  formName: string;
+  submitterName: string | null;
+  submitterEmail: string | null;
+  submittedAt: string;
+  reviewedAt: string | null;
+  riskTier: string | null;
+  fields: IntakeSubmissionField[];
+}
+
+/**
+ * Get the original intake submission data for an entity (project/model).
+ * Returns null (via 404) if the entity was not created from an intake form.
+ */
+export async function getEntityIntakeSubmission(
+  entityType: "use_case" | "model",
+  entityId: number,
+  signal?: AbortSignal
+): Promise<EntityIntakeSubmission | null> {
+  try {
+    const response = await apiServices.get(
+      `${BASE_URL}/submissions/by-entity/${entityType}/${entityId}`,
+      { signal }
+    );
+    return (response.data as { data: EntityIntakeSubmission }).data;
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+// ============================================================================
+// LLM Features API (Admin - Authenticated)
+// ============================================================================
+
+/**
+ * LLM-suggested question returned by the backend
+ */
+export interface LLMSuggestedQuestion {
+  label: string;
+  fieldType: "text" | "textarea" | "select";
+  category: string;
+  entityFieldMapping?: string;
+  guidanceText?: string;
+  options?: Array<{ value: string; label: string }>;
+}
+
+/**
+ * Generate LLM-suggested questions for intake form building
+ */
+export async function getLLMSuggestedQuestions(
+  entityType: string,
+  context: string,
+  llmKeyId: number,
+  signal?: AbortSignal
+): Promise<{ data: LLMSuggestedQuestion[] }> {
+  const response = await apiServices.post(
+    `${BASE_URL}/forms/suggested-questions`,
+    { entityType, context, llmKeyId },
+    { signal }
+  );
+  return response.data as { data: LLMSuggestedQuestion[] };
+}
+
+/**
+ * Generate LLM guidance text for a field
+ */
+export async function getLLMFieldGuidance(
+  fieldLabel: string,
+  entityType: string,
+  llmKeyId: number,
+  signal?: AbortSignal
+): Promise<{ data: { guidanceText: string } }> {
+  const response = await apiServices.post(
+    `${BASE_URL}/forms/field-guidance`,
+    { fieldLabel, entityType, llmKeyId },
+    { signal }
+  );
+  return response.data as { data: { guidanceText: string } };
+}
+
 // ============================================================================
 // Public Form API (No authentication required)
 // ============================================================================
@@ -388,6 +493,7 @@ export async function getPublicForm(
       submitButtonText: string;
       designSettings?: FormDesignSettings | null;
     };
+    organizationLogo?: string | null;
     previousData?: Record<string, unknown>;
     previousSubmitterName?: string;
     previousSubmitterEmail?: string;
@@ -407,6 +513,7 @@ export async function getPublicForm(
         submitButtonText: string;
         designSettings?: FormDesignSettings | null;
       };
+      organizationLogo?: string | null;
       previousData?: Record<string, unknown>;
       previousSubmitterName?: string;
       previousSubmitterEmail?: string;
@@ -457,6 +564,7 @@ export async function getPublicFormById(
       submitButtonText: string;
       designSettings?: FormDesignSettings | null;
     };
+    organizationLogo?: string | null;
     previousData?: Record<string, unknown>;
     previousSubmitterName?: string;
     previousSubmitterEmail?: string;
@@ -476,6 +584,7 @@ export async function getPublicFormById(
         submitButtonText: string;
         designSettings?: FormDesignSettings | null;
       };
+      organizationLogo?: string | null;
       previousData?: Record<string, unknown>;
       previousSubmitterName?: string;
       previousSubmitterEmail?: string;

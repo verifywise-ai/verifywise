@@ -45,7 +45,7 @@ import logger from "../utils/logger/fileLogger";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM public.users WHERE id = :userId`,
+    `SELECT name, surname FROM users WHERE id = :userId`,
     { replacements: { userId }, type: QueryTypes.SELECT }
   );
   if (result[0]) {
@@ -78,11 +78,11 @@ async function notifyIso42001Assignment(
       // Query for parent clause info, subclause order_no for full identifier (e.g., "4.1 Understanding the organization"), and subclause summary
       const result = await sequelize.query<{ clause_id: number; clause_no: number; clause_title: string; subclause_order_no: number; summary: string }>(
         `SELECT scs.clause_id, c.clause_no, c.title as clause_title, scs.order_no as subclause_order_no, scs.summary
-         FROM "${req.tenantId!}".subclauses_iso sc
-         JOIN public.subclauses_struct_iso scs ON sc.subclause_meta_id = scs.id
-         JOIN public.clauses_struct_iso c ON scs.clause_id = c.id
-         WHERE sc.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM subclauses_iso sc
+         JOIN subclauses_struct_iso scs ON sc.subclause_meta_id = scs.id
+         JOIN clauses_struct_iso c ON scs.clause_id = c.id
+         WHERE sc.organization_id = :organizationId AND sc.id = :entityId`,
+        { replacements: { organizationId: req.organizationId!, entityId }, type: QueryTypes.SELECT }
       );
       const clauseId = result[0]?.clause_id;
       parentType = "Clause";
@@ -99,11 +99,11 @@ async function notifyIso42001Assignment(
       // Query for parent annex info, category sub_id for full identifier (e.g., "A.5.1 Policies for AI"), and category description
       const result = await sequelize.query<{ annex_id: number; annex_no: number; annex_title: string; category_sub_id: number; category_description: string }>(
         `SELECT acs.annex_id, a.annex_no, a.title as annex_title, acs.sub_id as category_sub_id, acs.description as category_description
-         FROM "${req.tenantId!}".annexcategories_iso ac
-         JOIN public.annexcategories_struct_iso acs ON ac.annexcategory_meta_id = acs.id
-         JOIN public.annex_struct_iso a ON acs.annex_id = a.id
-         WHERE ac.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM annexcategories_iso ac
+         JOIN annexcategories_struct_iso acs ON ac.annexcategory_meta_id = acs.id
+         JOIN annex_struct_iso a ON acs.annex_id = a.id
+         WHERE ac.organization_id = :organizationId AND ac.id = :entityId`,
+        { replacements: { organizationId: req.organizationId!, entityId }, type: QueryTypes.SELECT }
       );
       const annexId = result[0]?.annex_id;
       parentType = "Annex";
@@ -119,7 +119,7 @@ async function notifyIso42001Assignment(
     }
 
     notifyUserAssigned(
-      req.tenantId!,
+      req.organizationId!,
       newUserId,
       {
         entityType,
@@ -146,12 +146,12 @@ export async function getAllClauses(req: Request, res: Response): Promise<any> {
     functionName: "getAllClauses",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("🔍 Fetching all clauses");
 
   try {
-    const clauses = await getAllClausesQuery(req.tenantId!);
+    const clauses = await getAllClausesQuery(req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -159,7 +159,7 @@ export async function getAllClauses(req: Request, res: Response): Promise<any> {
       functionName: "getAllClauses",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(clauses);
@@ -171,7 +171,7 @@ export async function getAllClauses(req: Request, res: Response): Promise<any> {
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -188,7 +188,7 @@ export async function getAllClausesStructForProject(
     functionName: "getAllClausesStructForProject",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Fetching clauses structure for project framework ID ${projectFrameworkId}`
@@ -197,7 +197,7 @@ export async function getAllClausesStructForProject(
   try {
     const clauses = await getAllClausesWithSubClauseQuery(
       projectFrameworkId,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -206,7 +206,7 @@ export async function getAllClausesStructForProject(
       functionName: "getAllClausesStructForProject",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(clauses);
@@ -218,7 +218,7 @@ export async function getAllClausesStructForProject(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -235,7 +235,7 @@ export async function getAllAnnexesStructForProject(
     functionName: "getAllAnnexesStructForProject",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Fetching annexes structure for project framework ID ${projectFrameworkId}`
@@ -244,7 +244,7 @@ export async function getAllAnnexesStructForProject(
   try {
     const annexes = await getAllAnnexesWithCategoriesQuery(
       projectFrameworkId,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -253,7 +253,7 @@ export async function getAllAnnexesStructForProject(
       functionName: "getAllAnnexesStructForProject",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(annexes);
@@ -265,7 +265,7 @@ export async function getAllAnnexesStructForProject(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -277,12 +277,12 @@ export async function getAllAnnexes(req: Request, res: Response): Promise<any> {
     functionName: "getAllAnnexes",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("🔍 Fetching all annexes");
 
   try {
-    const annexes = await getAllAnnexesQuery(req.tenantId!);
+    const annexes = await getAllAnnexesQuery(req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -290,7 +290,7 @@ export async function getAllAnnexes(req: Request, res: Response): Promise<any> {
       functionName: "getAllAnnexes",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(annexes);
@@ -302,7 +302,7 @@ export async function getAllAnnexes(req: Request, res: Response): Promise<any> {
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -319,14 +319,14 @@ export async function getSubClausesByClauseId(
     functionName: "getSubClausesByClauseId",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(`🔍 Fetching sub-clauses for clause ID ${clauseId}`);
 
   try {
     const subClauses = await getSubClausesByClauseIdQuery(
       clauseId,
-      req.tenantId!
+      req.organizationId!
     );
     if (subClauses) {
       await logSuccess({
@@ -335,7 +335,7 @@ export async function getSubClausesByClauseId(
         functionName: "getSubClausesByClauseId",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](subClauses));
     }
@@ -346,7 +346,7 @@ export async function getSubClausesByClauseId(
       functionName: "getSubClausesByClauseId",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400]("No sub clauses found"));
   } catch (error) {
@@ -357,7 +357,7 @@ export async function getSubClausesByClauseId(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -374,14 +374,14 @@ export async function getAnnexCategoriesByAnnexId(
     functionName: "getAnnexCategoriesByAnnexId",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(`🔍 Fetching annex categories for annex ID ${annexId}`);
 
   try {
     const annexCategories = await getAnnexCategoriesByAnnexIdQuery(
       annexId,
-      req.tenantId!
+      req.organizationId!
     );
     if (annexCategories) {
       await logSuccess({
@@ -390,7 +390,7 @@ export async function getAnnexCategoriesByAnnexId(
         functionName: "getAnnexCategoriesByAnnexId",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](annexCategories));
     }
@@ -401,7 +401,7 @@ export async function getAnnexCategoriesByAnnexId(
       functionName: "getAnnexCategoriesByAnnexId",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400]("No annex categories found"));
   } catch (error) {
@@ -412,7 +412,7 @@ export async function getAnnexCategoriesByAnnexId(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -430,7 +430,7 @@ export async function getSubClauseById(
     functionName: "getSubClauseById",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Looking up sub-clause ID ${subClauseId} for project framework ID ${projectFrameworkId}`
@@ -440,7 +440,7 @@ export async function getSubClauseById(
     const subClause = await getSubClauseByIdForProjectQuery(
       subClauseId,
       projectFrameworkId,
-      req.tenantId!
+      req.organizationId!
     );
     if (subClause) {
       await logSuccess({
@@ -449,7 +449,7 @@ export async function getSubClauseById(
         functionName: "getSubClauseById",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](subClause));
     }
@@ -460,7 +460,7 @@ export async function getSubClauseById(
       functionName: "getSubClauseById",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400]("No sub clause found"));
   } catch (error) {
@@ -471,7 +471,7 @@ export async function getSubClauseById(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -489,7 +489,7 @@ export async function getAnnexCategoryById(
     functionName: "getAnnexCategoryById",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Looking up annex category ID ${annexCategoryId} for project framework ID ${projectFrameworkId}`
@@ -499,7 +499,7 @@ export async function getAnnexCategoryById(
     const annexCategory = await getAnnexCategoryByIdForProjectQuery(
       annexCategoryId,
       projectFrameworkId,
-      req.tenantId!
+      req.organizationId!
     );
     if (annexCategory) {
       await logSuccess({
@@ -508,7 +508,7 @@ export async function getAnnexCategoryById(
         functionName: "getAnnexCategoryById",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](annexCategory));
     }
@@ -519,7 +519,7 @@ export async function getAnnexCategoryById(
       functionName: "getAnnexCategoryById",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400]("No annex category found"));
   } catch (error) {
@@ -530,7 +530,7 @@ export async function getAnnexCategoryById(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -547,7 +547,7 @@ export async function getClausesByProjectId(
     functionName: "getClausesByProjectId",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Fetching clauses for project framework ID ${projectFrameworkId}`
@@ -556,7 +556,7 @@ export async function getClausesByProjectId(
   try {
     const subClauses = await getClausesByProjectIdQuery(
       projectFrameworkId,
-      req.tenantId!
+      req.organizationId!
     );
     if (subClauses) {
       await logSuccess({
@@ -565,7 +565,7 @@ export async function getClausesByProjectId(
         functionName: "getClausesByProjectId",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](subClauses));
     }
@@ -576,7 +576,7 @@ export async function getClausesByProjectId(
       functionName: "getClausesByProjectId",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400]("No sub clauses found"));
   } catch (error) {
@@ -587,7 +587,7 @@ export async function getClausesByProjectId(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -604,7 +604,7 @@ export async function getAnnexesByProjectId(
     functionName: "getAnnexesByProjectId",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Fetching annexes for project framework ID ${projectFrameworkId}`
@@ -613,7 +613,7 @@ export async function getAnnexesByProjectId(
   try {
     const annexCategories = await getAnnexesByProjectIdQuery(
       projectFrameworkId,
-      req.tenantId!
+      req.organizationId!
     );
     if (annexCategories) {
       await logSuccess({
@@ -622,7 +622,7 @@ export async function getAnnexesByProjectId(
         functionName: "getAnnexesByProjectId",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](annexCategories));
     }
@@ -633,7 +633,7 @@ export async function getAnnexesByProjectId(
       functionName: "getAnnexesByProjectId",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400]("No annex categories found"));
   } catch (error) {
@@ -644,7 +644,7 @@ export async function getAnnexesByProjectId(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -659,7 +659,7 @@ async function uploadFiles(
   userId: number,
   projectFrameworkId: number,
   source: "Management system clauses group" | "Reference controls group",
-  tenant: string,
+  organizationId: number,
   transaction: any
 ): Promise<FileType[]> {
   let uploadedFiles: FileType[] = [];
@@ -670,7 +670,7 @@ async function uploadFiles(
         userId,
         projectFrameworkId,
         source,
-        tenant,
+        organizationId,
         transaction
       );
 
@@ -703,13 +703,13 @@ export async function getSubClauseRisks(
     functionName: "getSubClauseRisks",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   logger.debug(`🔍 Fetching risks for ISO 42001 subclause ${subclauseId}`);
 
   try {
-    const risks = await getSubClauseRisksQuery(subclauseId, req.tenantId!);
+    const risks = await getSubClauseRisksQuery(subclauseId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -717,14 +717,14 @@ export async function getSubClauseRisks(
       functionName: "getSubClauseRisks",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json({
       message: "Risks retrieved successfully",
       data: risks,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
   } catch (error) {
     await logFailure({
@@ -734,7 +734,7 @@ export async function getSubClauseRisks(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     logger.error(`❌ Error fetching ISO 42001 subclause risks:`, error);
@@ -757,7 +757,7 @@ export async function getAnnexCategoryRisks(
     functionName: "getAnnexCategoryRisks",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   logger.debug(
@@ -767,7 +767,7 @@ export async function getAnnexCategoryRisks(
   try {
     const risks = await getAnnexCategoryRisksQuery(
       annexCategoryId,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -776,14 +776,14 @@ export async function getAnnexCategoryRisks(
       functionName: "getAnnexCategoryRisks",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json({
       message: "Risks retrieved successfully",
       data: risks,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
   } catch (error) {
     await logFailure({
@@ -793,7 +793,7 @@ export async function getAnnexCategoryRisks(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     logger.error(`❌ Error fetching ISO 42001 annex category risks:`, error);
@@ -813,7 +813,7 @@ export async function saveClauses(
     functionName: "saveClauses",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(`💾 Saving clauses for sub-clause ID ${subClauseId}`);
 
@@ -838,12 +838,12 @@ export async function saveClauses(
     // Get current subclause data for assignment change detection
     const currentSubClauseResult = (await sequelize.query(
       `SELECT sc.owner, sc.reviewer, sc.approver, pf.project_id as project_id, scs.title as title
-       FROM "${req.tenantId!}".subclauses_iso sc
-       JOIN "${req.tenantId!}".projects_frameworks pf ON pf.id = sc.projects_frameworks_id
-       LEFT JOIN public.subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
-       WHERE sc.id = :id;`,
+       FROM subclauses_iso sc
+       JOIN projects_frameworks pf ON pf.id = sc.projects_frameworks_id AND pf.organization_id = sc.organization_id
+       LEFT JOIN subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
+       WHERE sc.organization_id = :organizationId AND sc.id = :id;`,
       {
-        replacements: { id: subClauseId },
+        replacements: { organizationId: req.organizationId!, id: subClauseId },
         transaction,
         type: QueryTypes.SELECT,
       }
@@ -863,7 +863,7 @@ export async function saveClauses(
         parseInt(subClause.user_id),
         projectId,
         "Management system clauses group",
-        req.tenantId!,
+        req.organizationId!,
         transaction
       );
     }
@@ -873,7 +873,7 @@ export async function saveClauses(
       subClause,
       uploadedFiles,
       filesToUnlink,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -881,7 +881,7 @@ export async function saveClauses(
     await updateProjectUpdatedByIdQuery(
       subClauseId,
       "subclauses",
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
     await transaction.commit();
@@ -908,7 +908,7 @@ export async function saveClauses(
       functionName: "saveClauses",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](updatedSubClause));
@@ -921,7 +921,7 @@ export async function saveClauses(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -939,7 +939,7 @@ export async function saveAnnexes(
     functionName: "saveAnnexes",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(`💾 Saving annexes for annex category ID ${annexCategoryId}`);
 
@@ -964,12 +964,12 @@ export async function saveAnnexes(
     // Get current annex category data for assignment change detection
     const currentAnnexResult = (await sequelize.query(
       `SELECT ac.owner, ac.reviewer, ac.approver, pf.project_id as project_id, acs.title as title
-       FROM "${req.tenantId!}".annexcategories_iso ac
-       JOIN "${req.tenantId!}".projects_frameworks pf ON pf.id = ac.projects_frameworks_id
-       LEFT JOIN public.annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
-       WHERE ac.id = :id;`,
+       FROM annexcategories_iso ac
+       JOIN projects_frameworks pf ON pf.id = ac.projects_frameworks_id AND pf.organization_id = ac.organization_id
+       LEFT JOIN annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
+       WHERE ac.organization_id = :organizationId AND ac.id = :id;`,
       {
-        replacements: { id: annexCategoryId },
+        replacements: { organizationId: req.organizationId!, id: annexCategoryId },
         transaction,
         type: QueryTypes.SELECT,
       }
@@ -989,7 +989,7 @@ export async function saveAnnexes(
         parseInt(annexCategory.user_id),
         projectId,
         "Reference controls group",
-        req.tenantId!,
+        req.organizationId!,
         transaction
       );
     }
@@ -999,7 +999,7 @@ export async function saveAnnexes(
       annexCategory,
       uploadedFiles,
       filesToUnlink,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -1007,7 +1007,7 @@ export async function saveAnnexes(
     await updateProjectUpdatedByIdQuery(
       annexCategoryId,
       "annexcategories",
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
     await transaction.commit();
@@ -1034,7 +1034,7 @@ export async function saveAnnexes(
       functionName: "saveAnnexes",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](updatedAnnexCategory));
@@ -1047,7 +1047,7 @@ export async function saveAnnexes(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1065,7 +1065,7 @@ export async function deleteManagementSystemClauses(
     functionName: "deleteManagementSystemClauses",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🗑️ Deleting management system clauses for project framework ID ${projectFrameworkId}`
@@ -1074,7 +1074,7 @@ export async function deleteManagementSystemClauses(
   try {
     const result = await deleteSubClausesISOByProjectIdQuery(
       projectFrameworkId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -1086,7 +1086,7 @@ export async function deleteManagementSystemClauses(
         functionName: "deleteManagementSystemClauses",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](result));
     }
@@ -1099,7 +1099,7 @@ export async function deleteManagementSystemClauses(
       fileName: "iso42001.ctrl.ts",
       error: new Error("Delete operation failed"),
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400](result));
   } catch (error) {
@@ -1111,7 +1111,7 @@ export async function deleteManagementSystemClauses(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1129,7 +1129,7 @@ export async function deleteReferenceControls(
     functionName: "deleteReferenceControls",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🗑️ Deleting reference controls for project framework ID ${projectFrameworkId}`
@@ -1138,7 +1138,7 @@ export async function deleteReferenceControls(
   try {
     const result = await deleteAnnexCategoriesISOByProjectIdQuery(
       projectFrameworkId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -1150,7 +1150,7 @@ export async function deleteReferenceControls(
         functionName: "deleteReferenceControls",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](result));
     }
@@ -1163,7 +1163,7 @@ export async function deleteReferenceControls(
       fileName: "iso42001.ctrl.ts",
       error: new Error("Delete operation failed"),
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400](result));
   } catch (error) {
@@ -1175,7 +1175,7 @@ export async function deleteReferenceControls(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1192,7 +1192,7 @@ export async function getProjectClausesProgress(
     functionName: "getProjectClausesProgress",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `📊 Calculating clauses progress for project framework ID ${projectFrameworkId}`
@@ -1200,7 +1200,7 @@ export async function getProjectClausesProgress(
 
   try {
     const { totalSubclauses, doneSubclauses } =
-      await countSubClausesISOByProjectId(projectFrameworkId, req.tenantId!);
+      await countSubClausesISOByProjectId(projectFrameworkId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -1208,7 +1208,7 @@ export async function getProjectClausesProgress(
       functionName: "getProjectClausesProgress",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -1225,7 +1225,7 @@ export async function getProjectClausesProgress(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1242,7 +1242,7 @@ export async function getProjectAnnxesProgress(
     functionName: "getProjectAnnxesProgress",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `📊 Calculating annexes progress for project framework ID ${projectFrameworkId}`
@@ -1252,7 +1252,7 @@ export async function getProjectAnnxesProgress(
     const { totalAnnexcategories, doneAnnexcategories } =
       await countAnnexCategoriesISOByProjectId(
         projectFrameworkId,
-        req.tenantId!
+        req.organizationId!
       );
 
     await logSuccess({
@@ -1261,7 +1261,7 @@ export async function getProjectAnnxesProgress(
       functionName: "getProjectAnnxesProgress",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -1278,7 +1278,7 @@ export async function getProjectAnnxesProgress(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1296,7 +1296,7 @@ export async function getAllProjectsClausesProgress(
     functionName: "getAllProjectsClausesProgress",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("📊 Calculating clauses progress across all projects");
 
@@ -1311,12 +1311,12 @@ export async function getAllProjectsClausesProgress(
         fileName: "iso42001.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const projects = await getAllProjectsQuery({ userId, role }, req.tenantId!);
+    const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
     if (projects && projects.length > 0) {
       await Promise.all(
         projects.map(async (project) => {
@@ -1331,7 +1331,7 @@ export async function getAllProjectsClausesProgress(
           const { totalSubclauses, doneSubclauses } =
             await countSubClausesISOByProjectId(
               projectFrameworkId,
-              req.tenantId!
+              req.organizationId!
             );
           allSubclauses += parseInt(totalSubclauses);
           allDoneSubclauses += parseInt(doneSubclauses);
@@ -1344,7 +1344,7 @@ export async function getAllProjectsClausesProgress(
         functionName: "getAllProjectsClausesProgress",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res
@@ -1357,7 +1357,7 @@ export async function getAllProjectsClausesProgress(
         functionName: "getAllProjectsClausesProgress",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404](projects));
     }
@@ -1369,7 +1369,7 @@ export async function getAllProjectsClausesProgress(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1387,7 +1387,7 @@ export async function getAllProjectsAnnxesProgress(
     functionName: "getAllProjectsAnnxesProgress",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("📊 Calculating annexes progress across all projects");
 
@@ -1402,12 +1402,12 @@ export async function getAllProjectsAnnxesProgress(
         fileName: "iso42001.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const projects = await getAllProjectsQuery({ userId, role }, req.tenantId!);
+    const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
     if (projects && projects.length > 0) {
       await Promise.all(
         projects.map(async (project) => {
@@ -1422,7 +1422,7 @@ export async function getAllProjectsAnnxesProgress(
           const { totalAnnexcategories, doneAnnexcategories } =
             await countAnnexCategoriesISOByProjectId(
               projectFrameworkId,
-              req.tenantId!
+              req.organizationId!
             );
           allAnnexcategories += parseInt(totalAnnexcategories);
           allDoneAnnexcategories += parseInt(doneAnnexcategories);
@@ -1435,7 +1435,7 @@ export async function getAllProjectsAnnxesProgress(
         functionName: "getAllProjectsAnnxesProgress",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res
@@ -1448,7 +1448,7 @@ export async function getAllProjectsAnnxesProgress(
         functionName: "getAllProjectsAnnxesProgress",
         fileName: "iso42001.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404](projects));
     }
@@ -1460,7 +1460,7 @@ export async function getAllProjectsAnnxesProgress(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1486,7 +1486,7 @@ export async function getProjectClausesAssignments(
     functionName: "getProjectClausesAssignments",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `📊 Calculating clauses assignments for project framework ID ${projectFrameworkId}`
@@ -1496,7 +1496,7 @@ export async function getProjectClausesAssignments(
     const { totalSubclauses, assignedSubclauses } =
       await countSubClauseAssignmentsISOByProjectId(
         projectFrameworkId,
-        req.tenantId!
+        req.organizationId!
       );
 
     await logSuccess({
@@ -1505,7 +1505,7 @@ export async function getProjectClausesAssignments(
       functionName: "getProjectClausesAssignments",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -1522,7 +1522,7 @@ export async function getProjectClausesAssignments(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1548,7 +1548,7 @@ export async function getProjectAnnexesAssignments(
     functionName: "getProjectAnnexesAssignments",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `📊 Calculating annexes assignments for project framework ID ${projectFrameworkId}`
@@ -1558,7 +1558,7 @@ export async function getProjectAnnexesAssignments(
     const { totalAnnexcategories, assignedAnnexcategories } =
       await countAnnexCategoryAssignmentsISOByProjectId(
         projectFrameworkId,
-        req.tenantId!
+        req.organizationId!
       );
 
     await logSuccess({
@@ -1567,7 +1567,7 @@ export async function getProjectAnnexesAssignments(
       functionName: "getProjectAnnexesAssignments",
       fileName: "iso42001.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -1584,7 +1584,7 @@ export async function getProjectAnnexesAssignments(
       fileName: "iso42001.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

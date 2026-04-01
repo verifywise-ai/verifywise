@@ -5,6 +5,7 @@ import {
   useTheme,
   LinearProgress,
 } from "@mui/material";
+import { background } from "../../../themes/palette";
 
 interface ProgressTrackerProps {
   currentStep: number;
@@ -51,7 +52,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
             px: 2,
             py: 0.5,
             borderRadius: 2,
-            bgcolor: "#fff",
+            bgcolor: `${background.main}`,
             border: 1,
             borderColor: theme.palette.primary.main,
           }}

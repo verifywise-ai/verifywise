@@ -21,7 +21,7 @@ export interface ReportMetadata {
   projectFrameworkId: number;
   generatedAt: Date;
   generatedBy: string;
-  tenantId: string;
+  organizationId: number;
   isOrganizational: boolean;
 }
 
@@ -41,6 +41,8 @@ export interface ReportGenerationRequest {
   format: ReportFormat;
   branding?: Partial<ReportBranding>;
   sections?: ReportSection[];
+  aiEnhanced?: boolean;
+  llmKeyId?: number;
 }
 
 export interface ReportGenerationResult {
@@ -87,12 +89,22 @@ export interface RenderedCharts {
   assessmentLegend?: string;
 }
 
+// AI-generated summaries for enhanced reports
+export interface AISummaries {
+  executiveSummary?: string;
+  keyFindings?: string[];
+  recommendations?: string[];
+  sectionSummaries: Record<string, string>;
+  riskHighlights?: string;
+}
+
 // Unified report data structure
 export interface ReportData {
   metadata: ReportMetadata;
   branding: ReportBranding;
   charts: ChartData;
   renderedCharts: RenderedCharts;
+  aiSummaries?: AISummaries;
   sections: {
     // Risk Analysis group
     projectRisks?: ProjectRisksSectionData;

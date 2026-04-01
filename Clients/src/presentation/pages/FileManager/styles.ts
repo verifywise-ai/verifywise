@@ -1,5 +1,6 @@
+import { text } from "../../themes/palette";
 export const vwfileHeading = {
-  color: "#1A1919",
+  color: `${text.primary}`,
   fontSize: 16,
   fontWeight: 600,
   pb: 5.5,

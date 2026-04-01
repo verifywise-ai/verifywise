@@ -134,7 +134,7 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
             }}
             sx={file.approval_workflow_id ? {
               "&.Mui-disabled": {
-                backgroundColor: "#F9FAFB",
+                backgroundColor: "background.accent",
                 cursor: "not-allowed",
               },
               "& .MuiSelect-select.Mui-disabled": {
@@ -212,17 +212,17 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
         <Box
           sx={{
             padding: "12px",
-            backgroundColor: "#F9FAFB",
+            backgroundColor: "background.accent",
             borderRadius: "4px",
             border: "1px solid #E0E4E9",
           }}
         >
-          <Typography sx={{ fontSize: 12, color: "#667085" }}>
+          <Typography sx={{ fontSize: 12, color: "text.icon" }}>
             Editing metadata for:{" "}
-            <strong style={{ color: "#344054" }}>{file.filename}</strong>
+            <strong style={{ color: "text.secondary" }}>{file.filename}</strong>
           </Typography>
           {file.uploader_name && (
-            <Typography sx={{ fontSize: 12, color: "#667085", mt: 0.5 }}>
+            <Typography sx={{ fontSize: 12, color: "text.icon", mt: 0.5 }}>
               Uploaded by: {file.uploader_name} {file.uploader_surname}
             </Typography>
           )}

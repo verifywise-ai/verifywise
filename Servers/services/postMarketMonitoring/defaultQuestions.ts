@@ -126,13 +126,13 @@ export const getDefaultQuestionsAsTemplate = (): IPMMQuestionCreate[] => {
  */
 export const seedDefaultQuestions = async (
   configId: number,
-  tenant: string,
-  addQuestionFn: (question: IPMMQuestionCreate, tenant: string) => Promise<any>
+  organizationId: number,
+  addQuestionFn: (question: IPMMQuestionCreate, organizationId: number) => Promise<any>
 ): Promise<void> => {
   const questions = getDefaultQuestionsForConfig(configId);
 
   for (const question of questions) {
-    await addQuestionFn(question, tenant);
+    await addQuestionFn(question, organizationId);
   }
 };
 

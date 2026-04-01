@@ -17,7 +17,7 @@ export const getIncidentHistory = async (req: Request, res: Response) => {
 
     const result = await getIncidentChangeHistory(
       incidentId,
-      req.tenantId!,
+      req.organizationId!,
       limit,
       offset
     );

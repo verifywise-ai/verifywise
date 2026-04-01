@@ -224,6 +224,79 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
   })
   date_of_assessment!: Date;
 
+  // =============================================
+  // Quantitative Risk Assessment (FAIR) Fields
+  // =============================================
+
+  @Column({ type: DataType.DECIMAL(12, 4), allowNull: true })
+  event_frequency_min?: number | null;
+
+  @Column({ type: DataType.DECIMAL(12, 4), allowNull: true })
+  event_frequency_likely?: number | null;
+
+  @Column({ type: DataType.DECIMAL(12, 4), allowNull: true })
+  event_frequency_max?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_regulatory_min?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_regulatory_likely?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_regulatory_max?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_operational_min?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_operational_likely?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_operational_max?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_litigation_min?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_litigation_likely?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_litigation_max?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_reputational_min?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_reputational_likely?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  loss_reputational_max?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  total_loss_likely?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  ale_estimate?: number | null;
+
+  @Column({ type: DataType.DECIMAL(5, 2), allowNull: true })
+  control_effectiveness?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  residual_ale?: number | null;
+
+  @Column({ type: DataType.DECIMAL(14, 2), allowNull: true })
+  mitigation_cost_annual?: number | null;
+
+  @Column({ type: DataType.DECIMAL(8, 2), allowNull: true })
+  roi_percentage?: number | null;
+
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  benchmark_id?: number | null;
+
+  @Column({ type: DataType.STRING(3), allowNull: true, defaultValue: 'USD' })
+  currency?: string | null;
+
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
@@ -498,6 +571,30 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
       approval_status: this.approval_status,
       date_of_assessment: this.date_of_assessment,
       is_demo: this.is_demo,
+      // Quantitative (FAIR) fields
+      event_frequency_min: this.event_frequency_min,
+      event_frequency_likely: this.event_frequency_likely,
+      event_frequency_max: this.event_frequency_max,
+      loss_regulatory_min: this.loss_regulatory_min,
+      loss_regulatory_likely: this.loss_regulatory_likely,
+      loss_regulatory_max: this.loss_regulatory_max,
+      loss_operational_min: this.loss_operational_min,
+      loss_operational_likely: this.loss_operational_likely,
+      loss_operational_max: this.loss_operational_max,
+      loss_litigation_min: this.loss_litigation_min,
+      loss_litigation_likely: this.loss_litigation_likely,
+      loss_litigation_max: this.loss_litigation_max,
+      loss_reputational_min: this.loss_reputational_min,
+      loss_reputational_likely: this.loss_reputational_likely,
+      loss_reputational_max: this.loss_reputational_max,
+      total_loss_likely: this.total_loss_likely,
+      ale_estimate: this.ale_estimate,
+      control_effectiveness: this.control_effectiveness,
+      residual_ale: this.residual_ale,
+      mitigation_cost_annual: this.mitigation_cost_annual,
+      roi_percentage: this.roi_percentage,
+      benchmark_id: this.benchmark_id,
+      currency: this.currency,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
     };

@@ -6,6 +6,7 @@ import { createTabLabelWithCount } from "../../utils/tabUtils";
 import * as LucideIcons from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import VWTooltip from "../VWTooltip";
+import { brand } from "../../themes/palette";
 
 export interface TabItem {
   label: string;
@@ -41,7 +42,7 @@ const TAB_ICON_SIZE = 14;
 const TAB_ICON_STROKE_WIDTH = 1.5;
 const TAB_ICON_OPACITY = 1;
 const TAB_GAP = "34px";
-const DEFAULT_INDICATOR_COLOR = "#13715B";
+const DEFAULT_INDICATOR_COLOR = `${brand.primary}`;
 
 /**
  * Standardized TabBar component for VerifyWise.
@@ -127,7 +128,7 @@ const TabBar: React.FC<TabBarProps> = ({
   };
 
   return (
-    <Box sx={{ borderBottom: 1, borderColor: "#d0d5dd" }}>
+    <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
       <TabList
         onChange={handleChange}
         TabIndicatorProps={{ style: { backgroundColor: indicatorColor } }}

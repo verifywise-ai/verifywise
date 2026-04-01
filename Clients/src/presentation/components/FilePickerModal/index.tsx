@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { FileText as FileIcon, Image as ImageIcon, File as DefaultFileIcon, Search } from "lucide-react";
 import StandardModal from "../Modals/StandardModal";
-import { getUserFilesMetaData, FileMetadata } from "../../../application/repository/file.repository";
+import { getFilesWithMetadata, FileMetadata } from "../../../application/repository/file.repository";
 import { FileData } from "../../../domain/types/File";
 
 interface FilePickerModalProps {
@@ -73,8 +73,8 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const fileList = await getUserFilesMetaData();
-      setFiles(fileList || []);
+      const response = await getFilesWithMetadata();
+      setFiles(response.files || []);
     } catch (err) {
       console.error("Failed to fetch files:", err);
       setError("Failed to load files. Please try again.");

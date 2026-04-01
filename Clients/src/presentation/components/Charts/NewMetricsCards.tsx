@@ -1,6 +1,18 @@
 import { Box, Stack, Typography, LinearProgress } from "@mui/material";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Cell,
+  ResponsiveContainer,
+} from "recharts";
 import { StatusDonutChart } from "./StatusDonutChart";
+import { vwTooltipStyle, ChartOutlineWrapper } from "./VWCharts";
 import { DASHBOARD_COLORS, TEXT_STYLES } from "../../styles/colors";
+import { border as borderPalette } from "../../themes/palette";
 
 const C = DASHBOARD_COLORS;
 
@@ -16,38 +28,43 @@ function LegendItem({ label, value, color }: { label: string; value: number; col
   );
 }
 
-// Shared vertical bar component
-interface VerticalBarProps {
-  label: string;
-  value: number;
-  color: string;
-  max: number;
-  barHeight: number;
-  barWidth?: number;
-  labelSize?: number;
+// Shared Recharts bar chart for dashboard metric cards
+interface MetricBarChartProps {
+  data: { name: string; value: number; color: string }[];
+  height?: number;
 }
 
-function VerticalBar({ label, value, color, max, barHeight, barWidth = 40, labelSize = 11 }: VerticalBarProps) {
+function MetricBarChart({ data, height = 130 }: MetricBarChartProps) {
   return (
-    <Stack alignItems="center" gap={0.5}>
-      <Typography sx={TEXT_STYLES.value}>{value}</Typography>
-      <Box
-        sx={{
-          width: barWidth,
-          height: (value / max) * barHeight || 4,
-          backgroundColor: color,
-          borderRadius: "4px 4px 0 0",
-          minHeight: 4,
-        }}
-      />
-      <Typography sx={{ fontSize: labelSize, color: C.textSecondary, textAlign: "center" }}>
-        {label}
-      </Typography>
-    </Stack>
+    <ChartOutlineWrapper>
+      <ResponsiveContainer width="100%" height={height} minWidth={0}>
+        <BarChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: -24 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={borderPalette.light} vertical={false} />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: 10, fill: C.textSecondary }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            tick={{ fontSize: 10, fill: C.textSecondary }}
+            tickLine={false}
+            axisLine={false}
+            allowDecimals={false}
+          />
+          <Tooltip contentStyle={vwTooltipStyle} />
+          <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={36}>
+            {data.map((entry) => (
+              <Cell key={entry.name} fill={entry.color} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartOutlineWrapper>
   );
 }
 
-// Training Completion Card - Progress bar style
+// Training Completion Card - Bar chart
 interface TrainingCompletionProps {
   total: number;
   distribution: { planned: number; inProgress: number; completed: number };
@@ -56,23 +73,14 @@ interface TrainingCompletionProps {
 }
 
 export function TrainingCompletionCard({ distribution }: TrainingCompletionProps) {
-  const max = Math.max(distribution.completed, distribution.inProgress, distribution.planned, 1);
-  const barHeight = 80;
-
-  const items = [
-    { label: "Planned", value: distribution.planned, color: C.draft },
-    { label: "In progress", value: distribution.inProgress, color: C.inProgress },
-    { label: "Completed", value: distribution.completed, color: C.completed },
+  const data = [
+    { name: "Planned", value: distribution.planned, color: C.draft },
+    { name: "In progress", value: distribution.inProgress, color: C.inProgress },
+    { name: "Completed", value: distribution.completed, color: C.completed },
   ];
 
-  return (
-    <Stack direction="row" justifyContent="space-around" alignItems="flex-end" sx={{ height: barHeight + 40 }}>
-      {items.map((item) => (
-        <VerticalBar key={item.label} {...item} max={max} barHeight={barHeight} />
-      ))}
-    </Stack>
-  );
-};
+  return <MetricBarChart data={data} />;
+}
 
 // Policy Status Card - Donut with legend
 interface PolicyStatusProps {
@@ -101,40 +109,31 @@ export function PolicyStatusCard({ total, distribution }: PolicyStatusProps) {
       <Box sx={{ pt: "8px" }}>
         <StatusDonutChart data={data} total={total} size={100} />
       </Box>
-      <Stack gap={0.5} sx={{ pt: "8px" }}>
+      <Stack gap="4px" sx={{ pt: "8px" }}>
         {data.map((item) => (
           <LegendItem key={item.label} {...item} />
         ))}
       </Stack>
     </Stack>
   );
-};
+}
 
-// Incident Status Card - Vertical bars
+// Incident Status Card - Bar chart
 interface IncidentStatusProps {
   total: number;
   distribution: { open: number; investigating: number; mitigated: number; closed: number };
 }
 
 export function IncidentStatusCard({ distribution }: IncidentStatusProps) {
-  const max = Math.max(distribution.open, distribution.investigating, distribution.mitigated, distribution.closed, 1);
-  const barHeight = 80;
-
-  const items = [
-    { label: "Open", value: distribution.open, color: C.open },
-    { label: "Investigating", value: distribution.investigating, color: C.investigating },
-    { label: "Mitigated", value: distribution.mitigated, color: C.mitigated },
-    { label: "Closed", value: distribution.closed, color: C.closed },
+  const data = [
+    { name: "Open", value: distribution.open, color: C.open },
+    { name: "Investigating", value: distribution.investigating, color: C.investigating },
+    { name: "Mitigated", value: distribution.mitigated, color: C.mitigated },
+    { name: "Closed", value: distribution.closed, color: C.closed },
   ];
 
-  return (
-    <Stack direction="row" justifyContent="space-around" alignItems="flex-end" sx={{ height: barHeight + 40 }}>
-      {items.map((item) => (
-        <VerticalBar key={item.label} {...item} max={max} barHeight={barHeight} barWidth={32} labelSize={10} />
-      ))}
-    </Stack>
-  );
-};
+  return <MetricBarChart data={data} />;
+}
 
 // Evidence Coverage Card - Progress with counts
 interface EvidenceCoverageProps {
@@ -154,7 +153,7 @@ export function EvidenceCoverageCard({
 }: EvidenceCoverageProps) {
   return (
   <Box>
-    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+    <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
       <Typography sx={TEXT_STYLES.percentage}>{coveragePercentage}%</Typography>
       <Typography sx={{ fontSize: 12, color: C.textSecondary }}>model coverage</Typography>
     </Stack>
@@ -208,11 +207,11 @@ export function ModelLifecycleCard({ total, distribution }: ModelLifecycleProps)
       <Box sx={{ pt: "8px" }}>
         <StatusDonutChart data={data} total={total} size={100} />
       </Box>
-      <Stack gap={0.5} sx={{ pt: "8px" }}>
+      <Stack gap="4px" sx={{ pt: "8px" }}>
         {data.map((item) => (
           <LegendItem key={item.label} {...item} />
         ))}
       </Stack>
     </Stack>
   );
-};
+}

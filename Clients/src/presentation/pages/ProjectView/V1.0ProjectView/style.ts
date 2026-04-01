@@ -1,5 +1,6 @@
+import { brand, text } from "../../../themes/palette";
 export const projectViewHeaderTitle = {
-  color: "#1A1919",
+  color: `${text.primary}`,
   fontWeight: 600,
   mb: "6px",
   fontSize: 16,
@@ -7,7 +8,7 @@ export const projectViewHeaderTitle = {
 
 export const projectViewHeaderDesc = {
   fontSize: 13,
-  color: "#344054",
+  color: `${text.secondary}`,
 };
 
 export const tabStyle = {
@@ -19,7 +20,7 @@ export const tabStyle = {
   minHeight: "20px",
   minWidth: "auto",
   "&.Mui-selected": {
-    color: "#13715B",
+    color: `${brand.primary}`,
   },
 };
 
@@ -29,7 +30,7 @@ export const tabPanelStyle = {
 };
 
 export const projectRiskSection = {
-  color: "#1A1919",
+  color: `${text.primary}`,
   fontWeight: 600,
   mt: 10,
   fontSize: 16,

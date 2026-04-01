@@ -16,6 +16,8 @@ import { User } from "../../../domain/types/User";
 import { ExportMenu } from "../Table/ExportMenu";
 import { FilterBy, FilterColumn } from "../Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import { ColumnSelector } from "../Table/ColumnSelector";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 
 import {
   projectWrapperStyle,
@@ -34,6 +36,28 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
+
+  // Column visibility management
+  type ProjectColumn = 'ucId' | 'title' | 'risk' | 'role' | 'startDate' | 'lastUpdated' | 'actions';
+  
+  const PROJECT_COLUMNS: ColumnConfig<ProjectColumn>[] = useMemo(
+    () => [
+      { key: 'ucId', label: 'Use case ID', defaultVisible: true, alwaysVisible: true },
+      { key: 'title', label: 'Use case title', defaultVisible: true, alwaysVisible: true },
+      { key: 'risk', label: 'AI risk level', defaultVisible: true },
+      { key: 'role', label: 'Role', defaultVisible: true },
+      { key: 'startDate', label: 'Start date', defaultVisible: true },
+      { key: 'lastUpdated', label: 'Last updated', defaultVisible: false },
+      { key: 'actions', label: 'Action', defaultVisible: true, alwaysVisible: true },
+    ],
+    []
+  );
+
+  const { visibleColumns, allColumns, toggleColumn, resetToDefaults } =
+    useColumnVisibility<ProjectColumn>({
+      tableId: 'projects-table',
+      columns: PROJECT_COLUMNS,
+    });
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -224,6 +248,7 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
               projects={data}
               hidePagination={options?.hidePagination}
               onProjectDeleted={onProjectDeleted}
+              visibleColumns={visibleColumns}
             />
           )}
         />
@@ -301,15 +326,23 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
               />
 
               {viewMode === 'table' && (
-                <GroupBy
-                  options={[
-                    { id: 'risk_level', label: 'Risk level' },
-                    { id: 'role', label: 'Role' },
-                    { id: 'owner', label: 'Owner' },
-                    { id: 'status', label: 'Status' },
-                  ]}
-                  onGroupChange={handleGroupChange}
-                />
+                <>
+                  <GroupBy
+                    options={[
+                      { id: 'risk_level', label: 'Risk level' },
+                      { id: 'role', label: 'Role' },
+                      { id: 'owner', label: 'Owner' },
+                      { id: 'status', label: 'Status' },
+                    ]}
+                    onGroupChange={handleGroupChange}
+                  />
+                  <ColumnSelector
+                    columns={allColumns}
+                    visibleColumns={visibleColumns}
+                    onToggleColumn={toggleColumn}
+                    onResetToDefaults={resetToDefaults}
+                  />
+                </>
               )}
 
               <SearchBox

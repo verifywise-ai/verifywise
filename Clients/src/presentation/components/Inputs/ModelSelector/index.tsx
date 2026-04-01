@@ -105,8 +105,7 @@ function ModelSelector({
 
   const handleProviderSelect = (newProvider: string) => {
     onProviderChange(newProvider);
-    onModelChange(""); // Reset model when provider changes
-    setCustomModel(""); // Reset custom model too
+    setCustomModel("");
     setSearchQuery("");
   };
 

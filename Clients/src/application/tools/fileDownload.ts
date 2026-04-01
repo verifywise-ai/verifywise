@@ -11,6 +11,8 @@ interface GenerateReportProps {
   frameworkId: number;
   projectFrameworkId: number;
   format: "pdf" | "docx";
+  aiEnhanced?: boolean;
+  llmKeyId?: number;
 }
 
 /**

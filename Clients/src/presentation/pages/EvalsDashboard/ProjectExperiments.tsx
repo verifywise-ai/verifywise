@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Box, Card, CardContent, Typography, Stack } from "@mui/material";
-import Select from "../../components/RiskVisualization/Inputs/Select";
+import { Box, Card, CardContent, Typography, Stack, FormControl, Select, MenuItem } from "@mui/material";
 import { Play, Clock } from "lucide-react";
 import {
   getAllExperiments,
@@ -24,12 +23,10 @@ import { GroupBy } from "../../components/Table/GroupBy";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
-import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
 import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
-import { palette } from "../../themes/palette";
 
 interface ProjectExperimentsProps {
   projectId: string;
@@ -580,7 +577,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
   });
 
   return (
-    <Stack sx={{ width: "100%" }}>
+    <Box>
       {alert && <Alert variant={alert.variant} body={alert.body} />}
 
       {/* Rerun Confirmation Modal */}
@@ -589,7 +586,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
           title="Rerun experiment"
           body={
             <Box>
-              <Typography sx={{ fontSize: "14px", color: palette.text.tertiary, lineHeight: 1.6, mb: 2 }}>
+              <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6, mb: 2 }}>
                 This will create a new experiment run using the same configuration as "{rerunConfirm.experiment.name}".
               </Typography>
               {rerunConfirm.promptCount > 0 && (
@@ -600,16 +597,16 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
                     gap: "8px",
                     p: "8px",
                     borderRadius: "4px",
-                    backgroundColor: palette.status.success.bg,
-                    border: `1px solid ${palette.status.success.border}`,
+                    backgroundColor: "#F0FDF4",
+                    border: "1px solid #BBF7D0",
                   }}
                 >
-                  <Clock size={16} color={palette.brand.primary} />
+                  <Clock size={16} color="#13715B" />
                   <Box>
-                    <Typography sx={{ fontSize: "13px", fontWeight: 500, color: palette.brand.primary }}>
+                    <Typography sx={{ fontSize: "13px", fontWeight: 500, color: "#13715B" }}>
                       Estimated time: {getEstimatedTimeRange(rerunConfirm.promptCount)}
                     </Typography>
-                    <Typography sx={{ fontSize: "11px", color: palette.status.success.text }}>
+                    <Typography sx={{ fontSize: "11px", color: "#16A34A" }}>
                       Based on {rerunConfirm.promptCount} prompt{rerunConfirm.promptCount !== 1 ? "s" : ""} from the original run
                     </Typography>
                   </Box>
@@ -635,7 +632,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
         <ConfirmationModal
           title="API key may not be configured"
           body={
-            <Typography sx={{ fontSize: "14px", color: palette.text.tertiary, lineHeight: 1.6 }}>
+            <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6 }}>
               {apiKeyWarning.message}
               <br /><br />
               Do you want to run the experiment anyway?
@@ -654,17 +651,22 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
         />
       )}
 
-      <PageHeader
-        title="Experiments"
-        description="Experiments run evaluations on your models using datasets and scorers. Track performance metrics over time and compare different model configurations."
-        rightContent={<HelperIcon articlePath="llm-evals/running-experiments" />}
-      />
-      <Box sx={{ mt: "18px" }}>
+      {/* Header + description */}
+      <Stack spacing={1} mb={4}>
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography variant="h6" fontSize={15} fontWeight="600" color="#111827">
+            Experiments
+          </Typography>
+          <HelperIcon articlePath="llm-evals/running-experiments" />
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: "14px" }}>
+          Experiments run evaluations on your models using datasets and scorers. Track performance metrics over time and compare different model configurations.
+        </Typography>
         <TipBox entityName="evals-experiments" />
-      </Box>
+      </Stack>
 
       {/* Performance Chart */}
-      <Card sx={{ marginBottom: "16px", border: `1px solid ${palette.border.dark}`, borderRadius: "4px", boxShadow: "none" }}>
+      <Card sx={{ marginBottom: "16px", border: "1px solid #d0d5dd", borderRadius: "4px", boxShadow: "none" }}>
         <CardContent sx={{ py: 2 }}>
           <Box mb={1}>
             <Typography variant="h6" sx={{ fontSize: "14px", fontWeight: 600 }}>Performance tracking</Typography>
@@ -673,13 +675,26 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
               Track metric scores across eval runs
             </Typography>
-            <Select
-              id="chart-time-range"
-              value={chartTimeRange}
-              onChange={(e) => setChartTimeRange(e.target.value as TimeRange)}
-              items={TIME_RANGE_OPTIONS.map((opt) => ({ _id: opt.value, name: opt.label }))}
-              sx={{ minWidth: 130 }}
-            />
+            <FormControl size="small">
+              <Select
+                value={chartTimeRange}
+                onChange={(e) => setChartTimeRange(e.target.value as TimeRange)}
+                sx={{
+                  fontSize: "12px",
+                  height: "28px",
+                  "& .MuiSelect-select": { py: 0.5, px: 1.5 },
+                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "#E5E7EB" },
+                  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#D1D5DB" },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#13715B" },
+                }}
+              >
+                {TIME_RANGE_OPTIONS.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "12px" }}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
 
           <Box sx={{ position: "relative" }}>
@@ -708,7 +723,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
                   sx={{
                     fontSize: "14px",
                     fontWeight: 500,
-                    color: palette.text.secondary,
+                    color: "#374151",
                     textAlign: "center",
                     px: 3,
                   }}
@@ -746,8 +761,8 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
           text="New experiment"
           icon={<Play size={16} />}
           sx={{
-            backgroundColor: palette.brand.primary,
-            border: `1px solid ${palette.brand.primary}`,
+            backgroundColor: "#13715B",
+            border: "1px solid #13715B",
             gap: 2,
           }}
           onClick={() => setNewEvalModalOpen(true)}
@@ -792,6 +807,6 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
         onStarted={handleStarted}
         useCase={useCase}
       />
-    </Stack>
+    </Box>
   );
 }

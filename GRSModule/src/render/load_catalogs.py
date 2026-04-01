@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import string
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from render.models import (
     OrgContextsCatalog,
     BaseTemplatesFile,
     RenderVarsCatalog,
+    CONTEXT_SLOTS,
 )
 
 
@@ -43,3 +45,44 @@ def load_render_inputs(*, config_dir: Path) -> RenderInputs:
         templates=templates,
         render_vars=render_vars,
     )
+
+
+def validate_render_inputs(inputs: RenderInputs) -> None:
+    """Validate that render_vars.yaml covers every placeholder in every template.
+
+    Raises ValueError with a full list of issues if anything is missing.
+    Called once at startup before rendering begins.
+    """
+    errors: list[str] = []
+
+    defaults = [d for d in inputs.domains.domains if d.default]
+    if len(defaults) != 1:
+        errors.append(
+            f"domains.yaml must have exactly one default:true domain, found {len(defaults)}"
+        )
+
+    _MISSING = object()
+    for t in inputs.templates.templates:
+        raw = (inputs.render_vars.model_extra or {}).get(t.domain, _MISSING)
+        if raw is _MISSING:
+            errors.append(
+                f"[{t.template_id}] domain '{t.domain}' not found in render_vars.yaml"
+            )
+            continue
+        domain_vars: dict[str, list[str]] = raw
+        slots = {
+            fname
+            for _, fname, _, _ in string.Formatter().parse(t.template)
+            if fname and fname not in CONTEXT_SLOTS
+        }
+        for slot in slots:
+            if slot not in domain_vars:
+                errors.append(
+                    f"[{t.template_id}] placeholder '{{{slot}}}' has no entry "
+                    f"in render_vars.yaml under '{t.domain}'"
+                )
+
+    if errors:
+        raise ValueError(
+            "Render config validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
+        )

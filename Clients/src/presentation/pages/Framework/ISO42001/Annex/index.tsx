@@ -377,7 +377,7 @@ const ISO42001Annex = ({
         filteredAnnexes.map((annex: any) => {
           const count = filteredControlsCountMemo[annex.id ?? 0];
           const chipColor = count !== undefined && count > 0
-            ? { bg: "#E6F4EA", color: "#138A5E" }
+            ? { bg: "#E6F4EA", color: "status.success.text" }
             : { bg: "#FFF8E1", color: "#795548" };
           return (
             <Stack key={annex.id} sx={styles.container}>

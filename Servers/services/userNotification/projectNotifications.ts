@@ -96,7 +96,7 @@ async function sendProjectNotification(
   data: ProjectNotificationData,
   functionName: string,
   fileName: string,
-  tenantId: string,
+  organizationId: number,
   userId: number
 ): Promise<void> {
   logProcessing({
@@ -104,7 +104,7 @@ async function sendProjectNotification(
     functionName,
     fileName,
     userId: userId,
-    tenantId: tenantId,
+    organizationId: organizationId,
   });
 
   try {
@@ -186,7 +186,7 @@ async function sendProjectNotification(
       functionName,
       fileName,
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
   } catch (error) {
     await logFailure({
@@ -196,7 +196,7 @@ async function sendProjectNotification(
       fileName,
       error: error as Error,
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
     throw error;
   }
@@ -226,7 +226,7 @@ export const sendUserAddedToProjectNotification = async (
     adminId: number;
     userId: number;
     role: ProjectRole;
-    tenantId: string;
+    organizationId: number;
   }
 ): Promise<void> => {
   return sendProjectNotification(
@@ -237,7 +237,7 @@ export const sendUserAddedToProjectNotification = async (
     },
     "sendUserAddedToProjectNotification",
     "projectNotifications.ts",
-    data.tenantId,
+    data.organizationId,
     data.userId
   );
 };
@@ -260,14 +260,14 @@ export const sendMemberRoleChangedEditorToAdminNotification = async (
     projectName: string;
     actorId: number;
     userId: number;
-    tenantId: string;
+    organizationId: number;
   }
 ): Promise<void> => {
   return sendProjectNotification(
     { ...data, type: "role_changed_to_admin" },
     "sendMemberRoleChangedEditorToAdminNotification",
     "projectNotifications.ts",
-    data.tenantId,
+    data.organizationId,
     data.userId
   );
 };
@@ -288,7 +288,7 @@ export const sendProjectCreatedNotification = async (
     projectId: number;
     projectName: string;
     adminId: number;
-    tenantId: string;
+    organizationId: number;
     userId: number;
   }
 ): Promise<void> => {
@@ -296,7 +296,7 @@ export const sendProjectCreatedNotification = async (
     { ...data, type: "project_created" },
     "sendProjectCreatedNotification",
     "projectNotifications.ts",
-    data.tenantId,
+    data.organizationId,
     data.userId
   );
 };

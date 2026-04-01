@@ -70,11 +70,19 @@ export interface SelectCorProps {
     color?: string;
   }[];
   isRequired?: boolean;
+  isOptional?: boolean;
+  optionalLabel?: string;
   error?: string;
   getOptionValue?: (item: any) => any;
   disabled?: boolean;
   customRenderValue?: (value: any, selectedItem: any) => React.ReactNode;
   isFilterApplied?: boolean;
+  /** Insert a visual divider after this many items (e.g., 10 = divider after first 10 items) */
+  dividerAfterIndex?: number;
+  /** Label for the section below the divider */
+  dividerLabel?: string;
+  /** Multiple dividers at specific indices with labels */
+  dividers?: { index: number; label?: string }[];
 }
 
 export interface IBannerProps {

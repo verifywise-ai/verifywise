@@ -5,7 +5,6 @@ import {
   Model,
   Table,
 } from "sequelize-typescript";
-import { NISTAIMRFCategoryModel } from "./nist_ai_rmf_category.model";
 import { Status, STATUSES } from "../../../types/status.type";
 import { UserModel } from "../../models/user/user.model";
 
@@ -23,57 +22,19 @@ export class NISTAIMRFSubcategoryModel extends Model<NISTAIMRFSubcategoryModel> 
 
   @Column({
     type: DataType.INTEGER,
-    allowNull: true,
+    allowNull: false,
   })
-  index?: number;
-
-  @Column({
-    type: DataType.STRING,
-  })
-  title?: string;
-
-  @Column({
-    type: DataType.STRING,
-  })
-  description?: string;
+  organization_id?: number;
 
   @Column({
     type: DataType.STRING,
   })
   implementation_description?: string;
 
-  @ForeignKey(() => NISTAIMRFCategoryModel)
-  @Column({
-    type: DataType.INTEGER,
-  })
-  category_id?: number;
-
-  @Column({
-    type: DataType.DATE,
-    defaultValue: DataType.NOW,
-  })
-  created_at?: Date;
-
-  @Column({
-    type: DataType.DATE,
-  })
-  updated_at?: Date;
-
-  @Column({
-    type: DataType.BOOLEAN,
-    defaultValue: false,
-  })
-  is_demo?: boolean;
-
   @Column({
     type: DataType.ENUM(...STATUSES),
   })
   status?: Status;
-
-  @Column({
-    type: DataType.STRING,
-  })
-  auditor_feedback?: string;
 
   @ForeignKey(() => UserModel)
   @Column({
@@ -99,13 +60,63 @@ export class NISTAIMRFSubcategoryModel extends Model<NISTAIMRFSubcategoryModel> 
   due_date?: Date;
 
   @Column({
-    type: DataType.JSONB,
+    type: DataType.STRING,
   })
-  evidence_links?: Object[];
+  auditor_feedback?: string;
 
   @Column({
-    type: DataType.ARRAY(DataType.STRING),
-    allowNull: true,
+    type: DataType.INTEGER,
   })
-  tags?: string[];
+  subcategory_meta_id?: number;
+
+  @Column({
+    type: DataType.INTEGER,
+  })
+  projects_frameworks_id?: number;
+
+  @Column({
+    type: DataType.DATE,
+    defaultValue: DataType.NOW,
+  })
+  created_at?: Date;
+
+  @Column({
+    type: DataType.DATE,
+  })
+  updated_at?: Date;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    defaultValue: false,
+  })
+  is_demo?: boolean;
+
+  // NOTE: evidence_links are now stored in file_entity_links table
+
+  // Virtual fields populated via JOIN with struct tables (not actual DB columns)
+  // These exist for backward compatibility with API responses
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  function?: string;
+
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  index?: string;  // subcategory_id from struct (e.g., "GV.1.1")
+
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  title?: string;  // description from struct
+
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  description?: string;  // description from struct (for frontend compatibility)
+
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  category_id?: number;  // category_struct_id from struct
 }

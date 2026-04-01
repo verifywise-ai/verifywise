@@ -1,5 +1,6 @@
 import { SxProps, Theme } from "@mui/material";
 import { commonStyles, flashAnimation, getStatusColor } from "../style";
+import { background, border as borderPalette } from "../../../themes/palette";
 
 // Component styles
 export const styles = {
@@ -13,7 +14,7 @@ export const styles = {
     borderRadius: "4px",
     padding: "5px",
     backgroundColor: getStatusColor(status),
-    color: "#fff",
+    color: `${background.main}`,
     height: "fit-content",
   }) as SxProps<Theme>,
 
@@ -38,12 +39,12 @@ export const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "16px",
-    borderBottom: isLast ? "none" : "1px solid #eaecf0",
+    borderBottom: isLast ? "none" : `1px solid ${borderPalette.light}`,
     cursor: "pointer",
     fontSize: 13,
     animation: isFlashing ? `${flashAnimation} 2s ease-in-out` : 'none',
     '&:hover': {
-      backgroundColor: isFlashing ? 'transparent' : '#f5f5f5',
+      backgroundColor: isFlashing ? 'transparent' : 'background.surface',
     },
   }) as SxProps<Theme>,
 

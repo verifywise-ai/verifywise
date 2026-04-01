@@ -27,7 +27,7 @@ export async function getModelInventoryChangeHistoryById(
   try {
     const result = await getModelInventoryChangeHistory(
       modelInventoryId,
-      req.tenantId!,
+      req.organizationId!,
       limit,
       offset
     );

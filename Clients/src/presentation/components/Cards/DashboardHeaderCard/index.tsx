@@ -3,6 +3,7 @@ import { useState, ReactNode } from "react";
 import { Stack, Typography, Box } from "@mui/material";
 import { ArrowRight as RightArrow } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { background, border as borderPalette } from "../../../themes/palette";
 
 interface HeaderCardProps {
   title: string;
@@ -44,9 +45,9 @@ export function DashboardHeaderCard({ title, count, disableNavigation = false, i
   return (
     <Stack
       sx={{
-        border: "1px solid #d0d5dd",
+        border: `1px solid ${borderPalette.dark}`,
         borderRadius: 2,
-        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+        background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         width: "100%",
         padding: "8px 36px 14px 14px",
         cursor: isClickable ? "pointer" : "default",
@@ -55,8 +56,8 @@ export function DashboardHeaderCard({ title, count, disableNavigation = false, i
         transition: "all 0.2s ease",
         "&:hover": isClickable
           ? {
-            background: "linear-gradient(135deg, #f9fafb 0%, #f1f5f9 100%)",
-            borderColor: "#d0d5dd",
+            background: `linear-gradient(135deg, ${background.accent} 0%, #f1f5f9 100%)`,
+            borderColor: `${borderPalette.dark}`,
           }
           : {},
       }}

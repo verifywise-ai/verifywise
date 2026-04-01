@@ -40,18 +40,29 @@ const logger = createLogger({
 });
 
 /**
+ * Cache of tenant-specific loggers to avoid opening new file streams on every log call.
+ * Without this cache, each call to getTenantLogger() creates a new DailyRotateFile
+ * transport, leaking file descriptors until the OS EMFILE limit is hit.
+ */
+const tenantLoggerCache = new Map<string, ReturnType<typeof createLogger>>();
+
+/**
  * Get or create a tenant-specific logger
  */
 function getTenantLogger(tenantId: string = 'default') {
-  // For development, use console + file logging
-  // For production, use only file logging in tenant-specific directories
+  const cached = tenantLoggerCache.get(tenantId);
+  if (cached) return cached;
+
   const fileTransport = createTenantRotatingFileTransport(tenantId);
 
-  return createLogger({
+  const tenantLogger = createLogger({
     level: isDev ? 'debug' : 'info',
     format: combine(timestamp({ format: () => new Date().toISOString() }), logFormat),
     transports: isDev ? [consoleTransport, fileTransport] : [fileTransport],
-});
+  });
+
+  tenantLoggerCache.set(tenantId, tenantLogger);
+  return tenantLogger;
 }
 
 export default logger;

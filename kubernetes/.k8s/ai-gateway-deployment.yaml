@@ -1,0 +1,127 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-gateway
+  namespace: verifywise
+  labels:
+    app: verifywise
+    component: ai-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: verifywise
+      component: ai-gateway
+  template:
+    metadata:
+      labels:
+        app: verifywise
+        component: ai-gateway
+    spec:
+      containers:
+      - name: ai-gateway
+        image: ghcr.io/verifywise-ai/verifywise-ai-gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8100
+          name: http
+          protocol: TCP
+        env:
+        # Database Configuration
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: DB_PORT
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: DB_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: DB_NAME
+
+        # Redis Configuration
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: REDIS_URL
+
+        # AI Gateway Configuration
+        - name: AI_GATEWAY_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: AI_GATEWAY_PORT
+        - name: AI_GATEWAY_INTERNAL_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: AI_GATEWAY_INTERNAL_KEY
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: ENCRYPTION_KEY
+        - name: EXPRESS_BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: EXPRESS_BACKEND_URL
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8100
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8100
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-gateway
+  namespace: verifywise
+  labels:
+    app: verifywise
+    component: ai-gateway
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8100
+    targetPort: 8100
+    protocol: TCP
+    name: http
+  selector:
+    app: verifywise
+    component: ai-gateway

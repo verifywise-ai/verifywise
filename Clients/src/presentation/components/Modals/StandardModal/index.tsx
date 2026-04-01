@@ -64,7 +64,7 @@
  * - Footer background: linear-gradient(180deg, #F3F5F8 0%, #F8FAFB 100%)
  * - Border color: #E0E4E9
  * - Title: 15px, weight 600
- * - Description: 12px, color #475467
+ * - Description: 12px, color text.tertiary
  * - Content box: 16px border radius, white background
  * - Spacing: Use spacing={6} (48px) between form sections
  *
@@ -78,6 +78,7 @@ import React from "react";
 import { Modal, Stack, Box, Typography } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
+import { brand } from "../../../themes/palette";
 
 interface StandardModalProps {
   /** Controls whether the modal is visible */
@@ -122,7 +123,7 @@ interface StandardModalProps {
   /** When true, expands the modal height for additional content. Default height is 630px, expanded uses min(740px, 90vh - 180px) */
   expandedHeight?: boolean;
 
-  /** Custom color for the submit button (default: "#13715B"). Use "#c62828" for destructive actions like delete */
+  /** Custom color for the submit button (default: `${brand.primary}`). Use "#c62828" for destructive actions like delete */
   submitButtonColor?: string;
 
   /** When true, remove the cancel button from footer */
@@ -130,6 +131,9 @@ interface StandardModalProps {
 
   /** When true, modal height fits content instead of using fixed maxHeight. Use for content-viewing modals where height varies. */
   fitContent?: boolean;
+
+  /** When true, hides the submit button while keeping the cancel button visible */
+  hideSubmitButton?: boolean;
 }
 
 const StandardModal: React.FC<StandardModalProps> = ({
@@ -147,9 +151,10 @@ const StandardModal: React.FC<StandardModalProps> = ({
   hideFooter = false,
   headerActions,
   expandedHeight = false,
-  submitButtonColor = "#13715B",
+  submitButtonColor = `${brand.primary}`,
   showCancelButton = true,
   fitContent = false,
+  hideSubmitButton = false,
 }) => {
   return (
     <Modal
@@ -173,7 +178,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
           minWidth: `min(600px, ${maxWidth})`,
           maxWidth: "calc(100vw - 48px)",
           maxHeight: "calc(100vh - 48px)",
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "background.main",
           borderRadius: "8px",
           overflow: "hidden",
           transition: "max-width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
@@ -213,7 +218,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                 sx={{
                   fontSize: 13,
                   fontWeight: 400,
-                  color: "#475467",
+                  color: "text.tertiary",
                   lineHeight: "20px",
                 }}
               >
@@ -239,7 +244,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                   }}
                   sx={{
                     cursor: "pointer",
-                    color: "#98A2B3",
+                    color: "text.muted",
                     display: "flex",
                     alignItems: "center",
                     padding: "4px",
@@ -278,7 +283,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                   : "calc(100vh - 240px)",
               border: "1px solid #E0E4E9",
               borderRadius: "16px",
-              backgroundColor: "#FFFFFF",
+              backgroundColor: "background.main",
               zIndex: 1,
               position: "relative",
             }}
@@ -329,17 +334,17 @@ const StandardModal: React.FC<StandardModalProps> = ({
                       sx={{
                         minWidth: "80px",
                         height: "34px",
-                        border: "1px solid #D0D5DD",
-                        color: "#344054",
+                        border: "1px solid #d0d5dd",
+                        color: "text.secondary",
                         "&:hover": {
-                          backgroundColor: "#F9FAFB",
-                          border: "1px solid #D0D5DD",
+                          backgroundColor: "background.accent",
+                          border: "1px solid #d0d5dd",
                         },
                       }}
                     />
                 )}
 
-                {onSubmit && (
+                {onSubmit && !hideSubmitButton && (
                   <CustomizableButton
                     variant="contained"
                     text={submitButtonText}
@@ -350,12 +355,12 @@ const StandardModal: React.FC<StandardModalProps> = ({
                       height: "34px",
                       backgroundColor: submitButtonColor,
                       "&:hover:not(.Mui-disabled)": {
-                        backgroundColor: submitButtonColor === "#13715B" ? "#0F5A47" : submitButtonColor,
-                        filter: submitButtonColor !== "#13715B" ? "brightness(0.9)" : undefined,
+                        backgroundColor: submitButtonColor === "brand.primary" ? "brand.primaryHover" : submitButtonColor,
+                        filter: submitButtonColor !== "brand.primary" ? "brightness(0.9)" : undefined,
                       },
                       "&.Mui-disabled": {
-                        backgroundColor: "#E5E7EB",
-                        color: "#9CA3AF",
+                        backgroundColor: "status.default.border",
+                        color: "text.disabled",
                         cursor: "not-allowed",
                       },
                     }}

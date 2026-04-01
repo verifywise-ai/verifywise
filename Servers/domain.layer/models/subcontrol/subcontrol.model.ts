@@ -98,26 +98,30 @@ export class SubcontrolModel
   })
   feedback_description?: string;
 
-  @Column({
-    type: DataType.JSONB,
-  })
+  /**
+   * Evidence files - now managed via file_entity_links table
+   * This property is populated dynamically by the utils layer, not stored in database
+   */
   evidence_files?: {
-    id: string;
-    fileName: string;
-    project_id: number;
-    uploaded_by: number;
-    uploaded_time: Date;
+    id: string | number;
+    fileName?: string;
+    filename?: string;
+    project_id?: number;
+    uploaded_by?: number;
+    uploaded_time?: Date;
   }[];
 
-  @Column({
-    type: DataType.JSONB,
-  })
+  /**
+   * Feedback files - now managed via file_entity_links table
+   * This property is populated dynamically by the utils layer, not stored in database
+   */
   feedback_files?: {
-    id: string;
-    fileName: string;
-    project_id: number;
-    uploaded_by: number;
-    uploaded_time: Date;
+    id: string | number;
+    fileName?: string;
+    filename?: string;
+    project_id?: number;
+    uploaded_by?: number;
+    uploaded_time?: Date;
   }[];
 
   @ForeignKey(() => ControlModel)

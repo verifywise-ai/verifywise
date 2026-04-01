@@ -402,8 +402,8 @@ async function fetchRisks(params, tenant) {
 ```
 
 All queries:
-- Include tenant parameter for multi-tenant isolation
-- Use schema-prefixed tables: `"${tenant}".risks`
+- Include `organizationId` parameter for multi-tenant isolation
+- Use unqualified table names with `WHERE organization_id = :organizationId`
 - Leverage existing utility functions
 
 ## Key Files

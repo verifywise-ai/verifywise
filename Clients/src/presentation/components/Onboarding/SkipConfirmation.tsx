@@ -3,6 +3,7 @@ import { Button, Modal, Stack, Typography, useTheme } from "@mui/material";
 import { SkipForward } from "lucide-react";
 import { SKIP_CONFIRMATION_TEXT } from "./onboardingConstants";
 import { useModalKeyHandling } from "../../../application/hooks/useModalKeyHandling";
+import { brand } from "../../themes/palette";
 
 interface SkipConfirmationProps {
   open: boolean;
@@ -109,9 +110,9 @@ const SkipConfirmation: React.FC<SkipConfirmationProps> = ({
               fontSize: 13,
               fontWeight: 500,
               textTransform: "none",
-              backgroundColor: "#13715B",
+              backgroundColor: `${brand.primary}`,
               "&:hover": {
-                backgroundColor: "#0F5A47",
+                backgroundColor: `${brand.primaryHover}`,
               },
             }}
           >

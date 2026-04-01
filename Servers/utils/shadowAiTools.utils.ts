@@ -1,7 +1,7 @@
 /**
  * Shadow AI Tools Utils
  *
- * Database queries for managing tenant shadow AI tools.
+ * Database queries for managing shadow AI tools.
  */
 
 import { sequelize } from "../database/db";
@@ -12,10 +12,10 @@ import {
 } from "../domain.layer/interfaces/i.shadowAi";
 
 /**
- * Get all tools for a tenant with optional filtering.
+ * Get all tools for an organization with optional filtering.
  */
 export async function getAllToolsQuery(
-  tenant: string,
+  organizationId: number,
   options?: {
     status?: ShadowAiToolStatus;
     sort?: string;
@@ -27,13 +27,15 @@ export async function getAllToolsQuery(
   const limit = options?.limit || 20;
   const offset = (page - 1) * limit;
 
-  let whereClause = "";
-  const replacements: Record<string, any> = { limit, offset };
+  const whereConditions: string[] = ["organization_id = :organizationId"];
+  const replacements: Record<string, any> = { organizationId, limit, offset };
 
   if (options?.status) {
-    whereClause = "WHERE status = :status";
+    whereConditions.push("status = :status");
     replacements.status = options.status;
   }
+
+  const whereClause = `WHERE ${whereConditions.join(" AND ")}`;
 
   const sortColumn =
     options?.sort === "risk"
@@ -47,7 +49,7 @@ export async function getAllToolsQuery(
             : "last_seen_at DESC NULLS LAST";
 
   const [tools] = await sequelize.query(
-    `SELECT * FROM "${tenant}".shadow_ai_tools
+    `SELECT * FROM shadow_ai_tools
      ${whereClause}
      ORDER BY ${sortColumn}
      LIMIT :limit OFFSET :offset`,
@@ -55,7 +57,7 @@ export async function getAllToolsQuery(
   );
 
   const [countResult] = await sequelize.query(
-    `SELECT COUNT(*) as total FROM "${tenant}".shadow_ai_tools ${whereClause}`,
+    `SELECT COUNT(*) as total FROM shadow_ai_tools ${whereClause}`,
     { replacements }
   );
 
@@ -69,12 +71,12 @@ export async function getAllToolsQuery(
  * Get a single tool by ID with department breakdown.
  */
 export async function getToolByIdQuery(
-  tenant: string,
+  organizationId: number,
   toolId: number
 ): Promise<IShadowAiTool | null> {
   const [rows] = await sequelize.query(
-    `SELECT * FROM "${tenant}".shadow_ai_tools WHERE id = :toolId`,
-    { replacements: { toolId } }
+    `SELECT * FROM shadow_ai_tools WHERE organization_id = :organizationId AND id = :toolId`,
+    { replacements: { organizationId, toolId } }
   );
 
   const tools = rows as IShadowAiTool[];
@@ -85,7 +87,7 @@ export async function getToolByIdQuery(
  * Get department breakdown for a tool.
  */
 export async function getToolDepartmentsQuery(
-  tenant: string,
+  organizationId: number,
   toolId: number
 ): Promise<Array<{ department: string; user_count: number; event_count: number }>> {
   const [rows] = await sequelize.query(
@@ -93,12 +95,13 @@ export async function getToolDepartmentsQuery(
        COALESCE(department, 'Unknown') as department,
        COUNT(DISTINCT user_email) as user_count,
        COUNT(*) as event_count
-     FROM "${tenant}".shadow_ai_events
-     WHERE detected_tool_id = :toolId
+     FROM shadow_ai_events
+     WHERE organization_id = :organizationId
+       AND detected_tool_id = :toolId
        AND event_timestamp > NOW() - INTERVAL '30 days'
      GROUP BY department
      ORDER BY event_count DESC`,
-    { replacements: { toolId } }
+    { replacements: { organizationId, toolId } }
   );
 
   return rows as any[];
@@ -108,7 +111,7 @@ export async function getToolDepartmentsQuery(
  * Get top users for a tool.
  */
 export async function getToolTopUsersQuery(
-  tenant: string,
+  organizationId: number,
   toolId: number,
   limit: number = 10
 ): Promise<Array<{ user_email: string; event_count: number; last_used: string }>> {
@@ -117,13 +120,14 @@ export async function getToolTopUsersQuery(
        user_email,
        COUNT(*) as event_count,
        MAX(event_timestamp) as last_used
-     FROM "${tenant}".shadow_ai_events
-     WHERE detected_tool_id = :toolId
+     FROM shadow_ai_events
+     WHERE organization_id = :organizationId
+       AND detected_tool_id = :toolId
        AND event_timestamp > NOW() - INTERVAL '30 days'
      GROUP BY user_email
      ORDER BY event_count DESC
      LIMIT :limit`,
-    { replacements: { toolId, limit } }
+    { replacements: { organizationId, toolId, limit } }
   );
 
   return rows as any[];
@@ -133,18 +137,18 @@ export async function getToolTopUsersQuery(
  * Update tool status.
  */
 export async function updateToolStatusQuery(
-  tenant: string,
+  organizationId: number,
   toolId: number,
   status: ShadowAiToolStatus,
   transaction?: Transaction
 ): Promise<IShadowAiTool | null> {
   const [rows] = await sequelize.query(
-    `UPDATE "${tenant}".shadow_ai_tools
+    `UPDATE shadow_ai_tools
      SET status = :status, updated_at = NOW()
-     WHERE id = :toolId
+     WHERE organization_id = :organizationId AND id = :toolId
      RETURNING *`,
     {
-      replacements: { toolId, status },
+      replacements: { organizationId, toolId, status },
       ...(transaction ? { transaction } : {}),
     }
   );
@@ -157,20 +161,21 @@ export async function updateToolStatusQuery(
  * Link a tool to a model inventory entry.
  */
 export async function linkToolToModelInventoryQuery(
-  tenant: string,
+  organizationId: number,
   toolId: number,
   modelInventoryId: number,
   riskEntryId?: number,
   transaction?: Transaction
 ): Promise<void> {
   await sequelize.query(
-    `UPDATE "${tenant}".shadow_ai_tools
+    `UPDATE shadow_ai_tools
      SET model_inventory_id = :modelInventoryId,
          risk_entry_id = :riskEntryId,
          updated_at = NOW()
-     WHERE id = :toolId`,
+     WHERE organization_id = :organizationId AND id = :toolId`,
     {
       replacements: {
+        organizationId,
         toolId,
         modelInventoryId,
         riskEntryId: riskEntryId || null,

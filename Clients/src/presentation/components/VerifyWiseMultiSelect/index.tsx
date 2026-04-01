@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import { ChevronDown, Eye } from "lucide-react";
 import Checkbox from "../Inputs/Checkbox";
+import { brand, background, status } from "../../themes/palette";
 
 export interface VerifyWiseMultiSelectOption {
   value: string;
@@ -57,11 +58,11 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
 
   // Standardized color palette
   const colors = {
-    primary: "#13715B",
+    primary: `${brand.primary}`,
     primaryHover: "#0f604d",
-    secondary: "#6B7280",
+    secondary: `${status.default.text}`,
     secondaryHover: "#4B5563",
-    background: "#f5f5f5",
+    background: `${background.surface}`,
   };
 
   return (
@@ -76,7 +77,7 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
           height: height || 32, // Default to medium size
           minHeight: height || 32,
           backgroundColor: colors.secondary, // Consistent secondary color
-          color: "#fff",
+          color: `${background.main}`,
           borderRadius: "4px",
           border: "none",
           display: "flex",
@@ -96,7 +97,7 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
             boxShadow: "none",
           },
           "& .MuiSelect-icon": {
-            color: "#fff",
+            color: `${background.main}`,
             right: 6,
             top: "50%",
             transform: "translateY(-50%)",
@@ -110,7 +111,7 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
             sx={{
               fontSize: height === 28 ? "12px" : "13px", // Consistent font size based on height
               fontWeight: 500,
-              color: "#fff",
+              color: `${background.main}`,
             }}
           >
             {placeholder}
@@ -119,7 +120,7 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
         <ChevronDown
           size={14}
           strokeWidth={1.5}
-          style={{ color: "#fff", marginLeft: "auto" }}
+          style={{ color: `${background.main}`, marginLeft: "auto" }}
         />
       </Box>
 
@@ -158,7 +159,7 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
                 backgroundColor: colors.background, // Standardized hover color
               },
               "&:active": {
-                backgroundColor: "#E5E7EB", // Slightly darker on active
+                backgroundColor: `${status.default.border}`, // Slightly darker on active
               },
             }}
           >

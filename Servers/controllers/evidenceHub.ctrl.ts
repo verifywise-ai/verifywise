@@ -27,7 +27,7 @@ export async function getAllEvidences(req: Request, res: Response) {
 
   try {
     const evidences = (await getAllEvidencesQuery(
-      req.tenantId!
+      req.organizationId!
     )) as EvidenceHubModel[];
 
     if (evidences && evidences.length > 0) {
@@ -84,7 +84,7 @@ export async function getEvidenceById(req: Request, res: Response) {
   try {
     const evidence = (await getEvidenceByIdQuery(
       evidenceId,
-      req.tenantId!
+      req.organizationId!
     )) as EvidenceHubModel;
     if (evidence) {
       logStructured(
@@ -132,7 +132,7 @@ export async function createNewEvidence(req: Request, res: Response) {
 
     const savedEvidence = await createNewEvidenceQuery(
       evidence,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -145,7 +145,7 @@ export async function createNewEvidence(req: Request, res: Response) {
         await recordEvidenceAddedToModel(
           modelId,
           req.userId!,
-          req.tenantId!,
+          req.organizationId!,
           savedEvidence.evidence_name,
           savedEvidence.evidence_type,
           transaction
@@ -192,7 +192,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
   try {
     const existingEvidence = (await getEvidenceByIdQuery(
       evidenceId,
-      req.tenantId!
+      req.organizationId!
     )) as EvidenceHubModel;
     if (!existingEvidence) {
       return res.status(404).json(STATUS_CODE[404]("Evidence not found"));
@@ -220,7 +220,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
     const updatedEvidence = await updateEvidenceByIdQuery(
       evidenceId,
       existingEvidence,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -229,7 +229,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
       await recordEvidenceAddedToModel(
         modelId,
         req.userId!,
-        req.tenantId!,
+        req.organizationId!,
         updatedEvidence.evidence_name,
         updatedEvidence.evidence_type,
         transaction
@@ -241,7 +241,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
       await recordEvidenceRemovedFromModel(
         modelId,
         req.userId!,
-        req.tenantId!,
+        req.organizationId!,
         existingEvidence.evidence_name,
         existingEvidence.evidence_type,
         transaction
@@ -272,7 +272,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
               await recordEvidenceFieldChangeForModel(
                 modelId,
                 req.userId!,
-                req.tenantId!,
+                req.organizationId!,
                 updatedEvidence.evidence_name,
                 label,
                 oldStr,
@@ -312,7 +312,7 @@ export async function deleteEvidenceById(req: Request, res: Response) {
   try {
     const existingEvidence = (await getEvidenceByIdQuery(
       evidenceId,
-      req.tenantId!
+      req.organizationId!
     )) as EvidenceHubModel;
     if (!existingEvidence) {
       return res.status(404).json(STATUS_CODE[404]("Evidence not found"));
@@ -327,7 +327,7 @@ export async function deleteEvidenceById(req: Request, res: Response) {
         await recordEvidenceRemovedFromModel(
           modelId,
           req.userId!,
-          req.tenantId!,
+          req.organizationId!,
           existingEvidence.evidence_name,
           existingEvidence.evidence_type,
           transaction
@@ -335,7 +335,7 @@ export async function deleteEvidenceById(req: Request, res: Response) {
       }
     }
 
-    await deleteEvidenceByIdQuery(evidenceId, req.tenantId!, transaction);
+    await deleteEvidenceByIdQuery(evidenceId, req.organizationId!, transaction);
     await transaction.commit();
 
     return res

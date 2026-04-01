@@ -1,3 +1,4 @@
+import { brand } from "../../themes/palette";
 export const tabStyle = {
     textTransform: "none",
     fontWeight: 400,
@@ -7,7 +8,7 @@ export const tabStyle = {
     minHeight: "20px",
     minWidth: "auto",
     "&.Mui-selected": {
-      color: "#13715B",
+      color: `${brand.primary}`,
     },
   };
   

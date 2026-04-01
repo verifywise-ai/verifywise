@@ -23,7 +23,7 @@ import { QueryTypes } from "sequelize";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM public.users WHERE id = :userId`,
+    `SELECT name, surname FROM users WHERE id = :userId`,
     { replacements: { userId }, type: QueryTypes.SELECT }
   );
   if (result[0]) {
@@ -43,18 +43,18 @@ export async function getAllVendorRisksAllProjects(
     functionName: 'getAllVendorRisksAllProjects',
     fileName: 'vendorRisk.ctrl.ts',
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const risks = await getAllVendorRisksAllProjectsQuery(req.tenantId!, filter);
+    const risks = await getAllVendorRisksAllProjectsQuery(req.organizationId!, filter);
     await logSuccess({
       eventType: 'Read',
       description: 'Retrieved all vendor risks across all projects',
       functionName: 'getAllVendorRisksAllProjects',
       fileName: 'vendorRisk.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](risks));
   } catch (error) {
@@ -65,7 +65,7 @@ export async function getAllVendorRisksAllProjects(
       fileName: 'vendorRisk.ctrl.ts',
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -89,11 +89,11 @@ export async function getAllVendorRisks(
     functionName: 'getAllVendorRisks',
     fileName: 'vendorRisk.ctrl.ts',
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const vendorRisks = await getVendorRisksByProjectIdQuery(projectId, req.tenantId!, filter);
+    const vendorRisks = await getVendorRisksByProjectIdQuery(projectId, req.organizationId!, filter);
 
     if (vendorRisks) {
       await logSuccess({
@@ -102,7 +102,7 @@ export async function getAllVendorRisks(
         functionName: 'getAllVendorRisks',
         fileName: 'vendorRisk.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendorRisks));
     }
@@ -113,7 +113,7 @@ export async function getAllVendorRisks(
       functionName: 'getAllVendorRisks',
       fileName: 'vendorRisk.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](vendorRisks));
   } catch (error) {
@@ -124,7 +124,7 @@ export async function getAllVendorRisks(
       fileName: 'vendorRisk.ctrl.ts',
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -142,11 +142,11 @@ export async function getAllVendorRisksByVendorId(
     functionName: 'getAllVendorRisksByVendorId',
     fileName: 'vendorRisk.ctrl.ts',
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const vendorRisks = await getVendorRisksByVendorIdQuery(vendorId, req.tenantId!, filter);
+    const vendorRisks = await getVendorRisksByVendorIdQuery(vendorId, req.organizationId!, filter);
 
     if (vendorRisks) {
       await logSuccess({
@@ -155,7 +155,7 @@ export async function getAllVendorRisksByVendorId(
         functionName: 'getAllVendorRisksByVendorId',
         fileName: 'vendorRisk.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendorRisks));
     }
@@ -166,7 +166,7 @@ export async function getAllVendorRisksByVendorId(
       functionName: 'getAllVendorRisksByVendorId',
       fileName: 'vendorRisk.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](vendorRisks));
   } catch (error) {
@@ -177,7 +177,7 @@ export async function getAllVendorRisksByVendorId(
       fileName: 'vendorRisk.ctrl.ts',
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -194,11 +194,11 @@ export async function getVendorRiskById(
     functionName: 'getVendorRiskById',
     fileName: 'vendorRisk.ctrl.ts',
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const vendorRisk = await getVendorRiskByIdQuery(vendorRiskId, req.tenantId!);
+    const vendorRisk = await getVendorRiskByIdQuery(vendorRiskId, req.organizationId!);
 
     if (vendorRisk) {
       await logSuccess({
@@ -207,7 +207,7 @@ export async function getVendorRiskById(
         functionName: 'getVendorRiskById',
         fileName: 'vendorRisk.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendorRisk));
     }
@@ -218,7 +218,7 @@ export async function getVendorRiskById(
       functionName: 'getVendorRiskById',
       fileName: 'vendorRisk.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](vendorRisk));
   } catch (error) {
@@ -229,7 +229,7 @@ export async function getVendorRiskById(
       fileName: 'vendorRisk.ctrl.ts',
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -246,7 +246,7 @@ export async function createVendorRisk(
     functionName: 'createVendorRisk',
     fileName: 'vendorRisk.ctrl.ts',
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -255,7 +255,7 @@ export async function createVendorRisk(
 
     const createdVendorRisk = await createNewVendorRiskQuery(
       vendorRiskModel,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -266,7 +266,7 @@ export async function createVendorRisk(
         await recordVendorRiskCreation(
           createdVendorRisk.id,
           userId,
-          req.tenantId!,
+          req.organizationId!,
           createdVendorRisk,
           transaction
         );
@@ -284,14 +284,14 @@ export async function createVendorRisk(
         let vendorName: string | undefined;
         if (createdVendorRisk.vendor_id) {
           const vendorResult = await sequelize.query<{ vendor_name: string }>(
-            `SELECT vendor_name FROM "${req.tenantId!}".vendors WHERE id = :vendorId`,
-            { replacements: { vendorId: createdVendorRisk.vendor_id }, type: QueryTypes.SELECT }
+            `SELECT vendor_name FROM vendors WHERE organization_id = :organizationId AND id = :vendorId`,
+            { replacements: { organizationId: req.organizationId!, vendorId: createdVendorRisk.vendor_id }, type: QueryTypes.SELECT }
           );
           vendorName = vendorResult[0]?.vendor_name;
         }
 
         notifyUserAssigned(
-          req.tenantId!,
+          req.organizationId!,
           actionOwnerId,
           {
             entityType: "Vendor Risk",
@@ -316,7 +316,7 @@ export async function createVendorRisk(
         functionName: 'createVendorRisk',
         fileName: 'vendorRisk.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(201).json(STATUS_CODE[201](createdVendorRisk));
     }
@@ -327,7 +327,7 @@ export async function createVendorRisk(
       functionName: 'createVendorRisk',
       fileName: 'vendorRisk.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
@@ -339,7 +339,7 @@ export async function createVendorRisk(
       fileName: 'vendorRisk.ctrl.ts',
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -358,12 +358,12 @@ export async function updateVendorRiskById(
     functionName: 'updateVendorRiskById',
     fileName: 'vendorRisk.ctrl.ts',
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     // Fetch existing vendor risk for change tracking
-    const existingVendorRisk = await getVendorRiskByIdQuery(vendorRiskId, req.tenantId!);
+    const existingVendorRisk = await getVendorRiskByIdQuery(vendorRiskId, req.organizationId!);
 
     if (!existingVendorRisk) {
       await transaction.rollback();
@@ -373,7 +373,7 @@ export async function updateVendorRiskById(
         functionName: 'updateVendorRiskById',
         fileName: 'vendorRisk.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
     }
@@ -387,7 +387,7 @@ export async function updateVendorRiskById(
     const vendorRisk = await updateVendorRiskByIdQuery(
       vendorRiskId,
       vendorRiskModel,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -400,7 +400,7 @@ export async function updateVendorRiskById(
           await recordMultipleFieldChanges(
             vendorRiskId,
             userId,
-            req.tenantId!,
+            req.organizationId!,
             changes,
             transaction
           );
@@ -420,14 +420,14 @@ export async function updateVendorRiskById(
         let vendorName: string | undefined;
         if (vendorRisk.vendor_id) {
           const vendorResult = await sequelize.query<{ vendor_name: string }>(
-            `SELECT vendor_name FROM "${req.tenantId!}".vendors WHERE id = :vendorId`,
-            { replacements: { vendorId: vendorRisk.vendor_id }, type: QueryTypes.SELECT }
+            `SELECT vendor_name FROM vendors WHERE organization_id = :organizationId AND id = :vendorId`,
+            { replacements: { organizationId: req.organizationId!, vendorId: vendorRisk.vendor_id }, type: QueryTypes.SELECT }
           );
           vendorName = vendorResult[0]?.vendor_name;
         }
 
         notifyUserAssigned(
-          req.tenantId!,
+          req.organizationId!,
           newActionOwner,
           {
             entityType: "Vendor Risk",
@@ -452,7 +452,7 @@ export async function updateVendorRiskById(
         functionName: 'updateVendorRiskById',
         fileName: 'vendorRisk.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](vendorRisk));
     }
@@ -463,7 +463,7 @@ export async function updateVendorRiskById(
       functionName: 'updateVendorRiskById',
       fileName: 'vendorRisk.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -475,7 +475,7 @@ export async function updateVendorRiskById(
       fileName: 'vendorRisk.ctrl.ts',
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -493,13 +493,13 @@ export async function deleteVendorRiskById(
     functionName: 'deleteVendorRiskById',
     fileName: 'vendorRisk.ctrl.ts',
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     const deletedVendorRisk = await deleteVendorRiskByIdQuery(
       vendorRiskId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -511,7 +511,7 @@ export async function deleteVendorRiskById(
         functionName: 'deleteVendorRiskById',
         fileName: 'vendorRisk.ctrl.ts',
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](deletedVendorRisk));
     }
@@ -522,7 +522,7 @@ export async function deleteVendorRiskById(
       functionName: 'deleteVendorRiskById',
       fileName: 'vendorRisk.ctrl.ts',
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -534,7 +534,7 @@ export async function deleteVendorRiskById(
       fileName: 'vendorRisk.ctrl.ts',
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

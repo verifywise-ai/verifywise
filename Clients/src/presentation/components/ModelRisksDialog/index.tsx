@@ -26,7 +26,7 @@ import {
 } from "../Table/styles";
 import { EmptyState } from "../EmptyState";
 import TablePaginationActions from "../TablePagination";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, ShieldAlert } from "lucide-react";
 import { IModelRisk, IModelRiskFormData } from "../../../domain/interfaces/i.modelRisk";
 import { getAllEntities, updateEntityById } from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
@@ -379,7 +379,7 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
                     colSpan={5}
                     sx={{ border: "none", p: 0 }}
                   >
-                    <EmptyState message="No risks found for this model." />
+                    <EmptyState icon={ShieldAlert} message="No risks found for this model." />
                   </TableCell>
                 </TableRow>
               </TableBody>

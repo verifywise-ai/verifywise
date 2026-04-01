@@ -12,18 +12,18 @@ export interface FetchUseCasesParams {
  * Fetch all projects as use cases. Uses Admin role to get all projects
  * since the advisor operates at the tenant level.
  */
-const getAllProjects = async (tenant: string) => {
+const getAllProjects = async (organizationId: number) => {
   // Use a high-privilege view (Admin role, userId=0) so the advisor can see all projects
-  const projects = await getUserProjects({ userId: 0, role: "Admin" }, tenant);
+  const projects = await getUserProjects({ userId: 0, role: "Admin" }, organizationId);
   return projects || [];
 };
 
 const fetchUseCases = async (
   params: FetchUseCasesParams,
-  tenant: string
+  organizationId: number
 ): Promise<any[]> => {
   try {
-    let projects = await getAllProjects(tenant);
+    let projects = await getAllProjects(organizationId);
 
     // Apply filters
     if (params.status) {
@@ -63,10 +63,10 @@ const fetchUseCases = async (
 
 const getUseCaseAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const projects = await getAllProjects(tenant);
+    const projects = await getAllProjects(organizationId);
     const total = projects.length;
 
     // Status distribution
@@ -109,10 +109,10 @@ const getUseCaseAnalytics = async (
 
 const getUseCaseExecutiveSummary = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const projects = await getAllProjects(tenant);
+    const projects = await getAllProjects(organizationId);
     const total = projects.length;
 
     const activeCount = projects.filter(
@@ -135,7 +135,7 @@ const getUseCaseExecutiveSummary = async (
     const projectsToCheck = projects.slice(0, 10).filter((p: any) => p.id);
     const riskResults = await Promise.allSettled(
       projectsToCheck.map((project: any) =>
-        calculateProjectRisks(project.id, tenant).then((rows) => ({
+        calculateProjectRisks(project.id, organizationId).then((rows) => ({
           project,
           totalRisks: rows.reduce(
             (sum, row) => sum + parseInt(String(row.count), 10),

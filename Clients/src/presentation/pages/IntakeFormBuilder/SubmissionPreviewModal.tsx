@@ -39,6 +39,7 @@ interface PreviewData {
   formSchema: FormSchema;
   formName: string;
   entityType: string;
+  submissionStatus: string;
 }
 
 // ============================================================================
@@ -106,10 +107,11 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
       {/* Dimension bars */}
       {riskAssessment.dimensions && riskAssessment.dimensions.length > 0 && (
         <Box sx={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {riskAssessment.dimensions.map((dim) => {
+          {riskAssessment.dimensions.map((dim, idx) => {
             const barColor = getDimensionBarColor(dim.score);
+            const dimLabel = dim.label || dim.name || dim.key || `Dimension ${idx + 1}`;
             return (
-              <Box key={dim.name}>
+              <Box key={`${dimLabel}-${idx}`}>
                 <Box
                   sx={{
                     display: "flex",
@@ -119,9 +121,9 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
                   }}
                 >
                   <Typography
-                    sx={{ fontSize: "12px", color: theme.palette.text.tertiary, textTransform: "capitalize" }}
+                    sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}
                   >
-                    {dim.name}
+                    {dimLabel}
                   </Typography>
                   <Typography sx={{ fontSize: "12px", fontWeight: 600, color: barColor }}>
                     {dim.score}/100
@@ -143,6 +145,23 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
               </Box>
             );
           })}
+
+          {/* Color legend */}
+          <Box sx={{ display: "flex", gap: "12px", mt: "4px", flexWrap: "wrap" }}>
+            {[
+              { color: "#16a34a", label: "Low (0-25)" },
+              { color: "#d97706", label: "Medium (26-50)" },
+              { color: "#ea580c", label: "High (51-75)" },
+              { color: "#dc2626", label: "Critical (76-100)" },
+            ].map((item) => (
+              <Box key={item.label} sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: item.color }} />
+                <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
+                  {item.label}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
         </Box>
       )}
     </Box>
@@ -257,7 +276,7 @@ function SubmissionPreviewModal({
         const response = await getSubmissionPreview(submissionId as number, controller.signal);
         if (cancelled) return;
 
-        const { riskAssessment, entityPreview, form } = response.data;
+        const { riskAssessment, entityPreview, form, submission: sub } = response.data;
 
         setPreviewData({
           riskAssessment,
@@ -265,6 +284,7 @@ function SubmissionPreviewModal({
           formSchema: form?.schema ?? { version: "1.0", fields: [] },
           formName: form?.name ?? "Unknown form",
           entityType: form?.entityType ?? "use_case",
+          submissionStatus: sub?.status ?? "pending",
         });
         setEditedEntityData({ ...(entityPreview || {}) });
       } catch (err) {
@@ -366,6 +386,8 @@ function SubmissionPreviewModal({
 
   // ============================================================================
   // Render
+  const isPending = previewData?.submissionStatus === "pending";
+
   // ============================================================================
 
   return (
@@ -373,12 +395,18 @@ function SubmissionPreviewModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Review submission"
-      description="Review risk assessment and entity data before approving or rejecting"
-      onSubmit={showRejectForm ? handleReject : handleApprove}
+      description={
+        isPending
+          ? "Review risk assessment and entity data before approving or rejecting"
+          : `This submission has been ${previewData?.submissionStatus ?? "processed"}`
+      }
+      onSubmit={isPending ? (showRejectForm ? handleReject : handleApprove) : undefined}
       submitButtonText={
-        showRejectForm
-          ? "Reject submission"
-          : `Approve and create ${entityLabel}`
+        !isPending
+          ? undefined
+          : showRejectForm
+            ? "Reject submission"
+            : `Approve and create ${entityLabel}`
       }
       submitButtonColor={showRejectForm ? "#c62828" : undefined}
       isSubmitting={isApproving || isRejecting}
@@ -422,161 +450,171 @@ function SubmissionPreviewModal({
 
             <RiskSection riskAssessment={previewData?.riskAssessment ?? null} />
 
-            {/* Override toggle */}
-            <Box
-              component="button"
-              type="button"
-              onClick={() => setOverrideExpanded((prev) => !prev)}
-              sx={{
-                mt: 2.5,
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                color: theme.palette.text.tertiary,
-                fontSize: "13px",
-                fontWeight: 500,
-                "&:hover": { color: theme.palette.text.primary },
-              }}
-            >
-              {overrideExpanded ? (
-                <ChevronUp size={15} strokeWidth={1.5} />
-              ) : (
-                <ChevronDown size={15} strokeWidth={1.5} />
-              )}
-              Override risk assessment
-            </Box>
-
-            <Collapse in={overrideExpanded} timeout="auto" unmountOnExit>
-              <Box sx={{ mt: 2 }}>
-                <OverrideSection
-                  overrideTier={overrideTier}
-                  overrideJustification={overrideJustification}
-                  onTierChange={setOverrideTier}
-                  onJustificationChange={setOverrideJustification}
-                />
-              </Box>
-            </Collapse>
-          </Box>
-
-          {/* ------------------------------------------------------------------ */}
-          {/* Section 2: Entity preview (editable)                                */}
-          {/* ------------------------------------------------------------------ */}
-          <Box
-            sx={{
-              border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px",
-              p: 2.5,
-            }}
-          >
-            <Typography sx={{ fontSize: "14px", fontWeight: 600, color: theme.palette.text.primary, mb: 2 }}>
-              {previewData?.entityType === "model"
-                ? "Model inventory preview"
-                : "Use case preview"}
-            </Typography>
-
-            {mappedFields.length === 0 ? (
-              <Typography sx={{ fontSize: "13px", color: theme.palette.text.accent }}>
-                No entity field mappings defined for this form.
-              </Typography>
-            ) : (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {mappedFields.map((field) => {
-                  const fieldKey = field.entityFieldMapping as string;
-                  const currentValue = String(editedEntityData[fieldKey] ?? "");
-
-                  return (
-                    <Field
-                      key={field.id}
-                      id={`entity-${field.id}`}
-                      label={field.label}
-                      value={currentValue}
-                      onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
-                      rows={field.type === "textarea" ? 2 : undefined}
-                      placeholder={field.placeholder ?? ""}
-                    />
-                  );
-                })}
-              </Box>
-            )}
-          </Box>
-
-          {/* Reject toggle + reason */}
-          {!showRejectForm ? (
-            <Box
-              component="button"
-              type="button"
-              onClick={() => setShowRejectForm(true)}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                color: theme.palette.status.error.text,
-                fontSize: "13px",
-                fontWeight: 500,
-                "&:hover": { textDecoration: "underline" },
-              }}
-            >
-              Reject this submission instead
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                border: "1px solid #fecaca",
-                borderRadius: "4px",
-                p: 2.5,
-                backgroundColor: "#fef2f2",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
-              >
-                <Typography
-                  sx={{ fontSize: "14px", fontWeight: 600, color: "#991b1b" }}
-                >
-                  Reject submission
-                </Typography>
+            {/* Override toggle — only for pending submissions */}
+            {isPending && (
+              <>
                 <Box
                   component="button"
                   type="button"
-                  onClick={() => {
-                    setShowRejectForm(false);
-                    setRejectReason("");
-                    setApproveError(null);
-                  }}
+                  onClick={() => setOverrideExpanded((prev) => !prev)}
                   sx={{
+                    mt: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
                     background: "none",
                     border: "none",
                     cursor: "pointer",
-                    color: theme.palette.other.icon,
-                    fontSize: "12px",
+                    padding: 0,
+                    color: theme.palette.text.tertiary,
+                    fontSize: "13px",
+                    fontWeight: 500,
                     "&:hover": { color: theme.palette.text.primary },
                   }}
                 >
-                  Cancel
+                  {overrideExpanded ? (
+                    <ChevronUp size={15} strokeWidth={1.5} />
+                  ) : (
+                    <ChevronDown size={15} strokeWidth={1.5} />
+                  )}
+                  Override risk assessment
                 </Box>
-              </Box>
-              <Field
-                id="reject-reason"
-                label="Reason for rejection"
-                placeholder="Explain why this submission is being rejected (min. 10 characters)"
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                rows={3}
-              />
+
+                <Collapse in={overrideExpanded} timeout="auto" unmountOnExit>
+                  <Box sx={{ mt: 2 }}>
+                    <OverrideSection
+                      overrideTier={overrideTier}
+                      overrideJustification={overrideJustification}
+                      onTierChange={setOverrideTier}
+                      onJustificationChange={setOverrideJustification}
+                    />
+                  </Box>
+                </Collapse>
+              </>
+            )}
+          </Box>
+
+          {/* ------------------------------------------------------------------ */}
+          {/* Section 2: Entity preview (editable for pending, read-only otherwise) */}
+          {/* ------------------------------------------------------------------ */}
+          {isPending && (
+            <Box
+              sx={{
+                border: `1px solid ${theme.palette.border.dark}`,
+                borderRadius: "4px",
+                p: 2.5,
+              }}
+            >
+              <Typography sx={{ fontSize: "14px", fontWeight: 600, color: theme.palette.text.primary, mb: 2 }}>
+                {previewData?.entityType === "model"
+                  ? "Model inventory preview"
+                  : "Use case preview"}
+              </Typography>
+
+              {mappedFields.length === 0 ? (
+                <Typography sx={{ fontSize: "13px", color: theme.palette.text.accent }}>
+                  No entity field mappings defined for this form.
+                </Typography>
+              ) : (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {mappedFields.map((field) => {
+                    const fieldKey = field.entityFieldMapping as string;
+                    const currentValue = String(editedEntityData[fieldKey] ?? "");
+
+                    return (
+                      <Field
+                        key={field.id}
+                        id={`entity-${field.id}`}
+                        label={field.label}
+                        value={currentValue}
+                        onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+                        rows={field.type === "textarea" ? 2 : undefined}
+                        placeholder={field.placeholder ?? ""}
+                      />
+                    );
+                  })}
+                </Box>
+              )}
             </Box>
+          )}
+
+          {/* Reject toggle + reason — only for pending submissions */}
+          {isPending && (
+            <>
+              {!showRejectForm ? (
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setShowRejectForm(true)}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    color: theme.palette.status.error.text,
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    "&:hover": { textDecoration: "underline" },
+                  }}
+                >
+                  Reject this submission instead
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    border: "1px solid #fecaca",
+                    borderRadius: "4px",
+                    p: 2.5,
+                    backgroundColor: "#fef2f2",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 2,
+                    }}
+                  >
+                    <Typography
+                      sx={{ fontSize: "14px", fontWeight: 600, color: "#991b1b" }}
+                    >
+                      Reject submission
+                    </Typography>
+                    <Box
+                      component="button"
+                      type="button"
+                      onClick={() => {
+                        setShowRejectForm(false);
+                        setRejectReason("");
+                        setApproveError(null);
+                      }}
+                      sx={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: theme.palette.other.icon,
+                        fontSize: "12px",
+                        "&:hover": { color: theme.palette.text.primary },
+                      }}
+                    >
+                      Cancel
+                    </Box>
+                  </Box>
+                  <Field
+                    id="reject-reason"
+                    label="Reason for rejection"
+                    placeholder="Explain why this submission is being rejected (min. 10 characters)"
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    rows={3}
+                  />
+                </Box>
+              )}
+            </>
           )}
 
           {/* Action error */}

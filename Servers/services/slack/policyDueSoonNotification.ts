@@ -1,7 +1,6 @@
 import { PolicyManagerModel } from "../../domain.layer/models/policy/policy.model";
 import { getAllPoliciesDueSoonQuery } from "../../utils/policyManager.utils";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
-import { getTenantHash } from "../../tools/getTenantHash";
 import { sendSlackNotification } from "./slackNotificationService";
 import { SlackNotificationRoutingType } from "../../domain.layer/enums/slack.enum";
 import logger from "../../utils/logger/fileLogger";
@@ -35,14 +34,13 @@ export const sendPolicyDueSoonNotification = async (): Promise<number> => {
     // Iterate through each organization
     for (const organization of organizations) {
       const organizationId = organization.id!;
-      const tenantId = getTenantHash(organizationId);
       const users = await getAllUsersQuery(organizationId);
       const admins = users.filter((user) => user.role_id === 1);
 
       try {
-        // Get all policies due soon for this tenant
+        // Get all policies due soon for this organization
         const policies: PolicyManagerModel[] =
-          await getAllPoliciesDueSoonQuery(tenantId);
+          await getAllPoliciesDueSoonQuery(organizationId);
 
         if (policies.length > 0) {
           // Send notification for each policy

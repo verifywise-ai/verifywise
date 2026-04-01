@@ -8,4 +8,4 @@ from io_utils.jsonl import write_jsonl
 
 
 def export_obligations_jsonl(out_path: Path, obligations: List[Obligation]) -> None:
-    write_jsonl(out_path, (o.model_dump() for o in obligations))
+    write_jsonl(out_path, (o.model_dump(exclude_none=True) for o in obligations))

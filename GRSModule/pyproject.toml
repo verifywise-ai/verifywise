@@ -13,7 +13,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["streamlit>=1.40", "pandas>=2.0"]
+dev = ["streamlit>=1.40", "pandas>=2.0", "pyarrow>=14.0", "pytest>=8.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
 
 [project.scripts]
 grs-scenarios = "cli:main"
@@ -21,6 +25,11 @@ grs-scenarios = "cli:main"
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

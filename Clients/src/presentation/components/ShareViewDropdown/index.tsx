@@ -16,6 +16,7 @@ import Toggle from "../Inputs/Toggle";
 import Checkbox from "../Inputs/Checkbox";
 import Field from "../Inputs/Field";
 import ManageShareLinks from "./ManageShareLinks";
+import { brand, text, background } from "../../themes/palette";
 
 /**
  * Configuration for share view settings
@@ -175,7 +176,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
           borderRadius: "8px",
           boxShadow: "0 8px 24px rgba(0, 0, 0, 0.15)",
           overflow: "visible",
-          backgroundColor: "#fff",
+          backgroundColor: `${background.main}`,
           width: "420px",
         },
       }}
@@ -207,7 +208,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                 sx={{
                   fontSize: "13px",
                   fontWeight: 600,
-                  color: "#000",
+                  color: `${text.black}`,
                 }}
               >
                 Share view
@@ -242,7 +243,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                   sx={{
                     fontSize: "13px",
                     fontWeight: 600,
-                    color: "#000",
+                    color: `${text.black}`,
                   }}
                 >
                   Shareable link
@@ -274,8 +275,8 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                   slotProps={{
                     tooltip: {
                       sx: {
-                        backgroundColor: "#13715B",
-                        color: "#fff",
+                        backgroundColor: `${brand.primary}`,
+                        color: `${background.main}`,
                         fontSize: "12px",
                         padding: "6px 12px",
                         borderRadius: "4px",
@@ -288,7 +289,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                     onClick={handleCopyLink}
                     sx={{
                       padding: "4px",
-                      color: "#13715B",
+                      color: `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },
@@ -302,8 +303,8 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                   slotProps={{
                     tooltip: {
                       sx: {
-                        backgroundColor: "#13715B",
-                        color: "#fff",
+                        backgroundColor: `${brand.primary}`,
+                        color: `${background.main}`,
                         fontSize: "12px",
                         padding: "6px 12px",
                         borderRadius: "4px",
@@ -316,7 +317,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                     onClick={handleRefreshLink}
                     sx={{
                       padding: "4px",
-                      color: "#13715B",
+                      color: `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },
@@ -330,8 +331,8 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                   slotProps={{
                     tooltip: {
                       sx: {
-                        backgroundColor: "#13715B",
-                        color: "#fff",
+                        backgroundColor: `${brand.primary}`,
+                        color: `${background.main}`,
                         fontSize: "12px",
                         padding: "6px 12px",
                         borderRadius: "4px",
@@ -345,7 +346,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                     disabled={!shareableLink}
                     sx={{
                       padding: "4px",
-                      color: "#13715B",
+                      color: `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },
@@ -365,7 +366,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                   sx={{
                     fontSize: "13px",
                     fontWeight: 600,
-                    color: "#000",
+                    color: `${text.black}`,
                   }}
                 >
                   Settings
@@ -444,7 +445,7 @@ const SettingItem: React.FC<SettingItemProps> = ({
           onChange={onChange}
           sx={{
             "& svg": {
-              color: checked ? "#13715B" : "#d1d5db",
+              color: checked ? "brand.primary" : "#d1d5db",
             },
           }}
         />
@@ -456,8 +457,8 @@ const SettingItem: React.FC<SettingItemProps> = ({
         slotProps={{
           tooltip: {
             sx: {
-              backgroundColor: "#13715B",
-              color: "#fff",
+              backgroundColor: "brand.primary",
+              color: "background.main",
               fontSize: "12px",
               padding: "6px 12px",
               borderRadius: "4px",
@@ -465,7 +466,7 @@ const SettingItem: React.FC<SettingItemProps> = ({
           },
           arrow: {
             sx: {
-              color: "#13715B",
+              color: "brand.primary",
             },
           },
         }}
@@ -478,7 +479,7 @@ const SettingItem: React.FC<SettingItemProps> = ({
             cursor: "help",
           }}
         >
-          <Info size={16} color="#9CA3AF" />
+          <Info size={16} color={text.disabled} />
         </Box>
       </Tooltip>
     </Box>

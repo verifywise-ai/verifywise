@@ -134,9 +134,9 @@ export const ProjectRiskMitigationTableBody: React.FC<
                 <TableCell>
                   <CustomizableButton
                     sx={{
-                      backgroundColor: "#13715B",
-                      color: "#fff",
-                      border: "1px solid #13715B",
+                      backgroundColor: "brand.primary",
+                      color: "background.main",
+                      border: "1px solid brand.primary",
                     }}
                     variant="contained"
                     text="View"

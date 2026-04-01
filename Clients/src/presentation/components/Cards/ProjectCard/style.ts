@@ -1,5 +1,6 @@
+import { brand, text, background, border as borderPalette } from "../../../themes/palette";
 export const projectCardStyle = {
-  border: "1px solid #d0d5dd",
+  border: `1px solid ${borderPalette.dark}`,
   borderRadius: "4px",
   padding: "16px",
   minWidth: 300,
@@ -35,11 +36,11 @@ export const projectCardSpecsStyle = {
 
 export const projectCardSpecKeyStyle = { fontSize: 11, color: "#8594AC" };
 
-export const projectCardSpecValueStyle = { fontSize: 13, color: "#344054" };
+export const projectCardSpecValueStyle = { fontSize: 13, color: `${text.secondary}` };
 
 export const viewProjectButtonStyle = {
-  backgroundColor: "#13715B",
-  color: "#fff",
+  backgroundColor: `${brand.primary}`,
+  color: `${background.main}`,
   fontSize: 13,
   fontWeight: 600,
   px: 3,
@@ -53,7 +54,7 @@ export const viewProjectButtonStyle = {
 
 export const euAiActChipStyle = {
   backgroundColor: '#014576',
-  color: '#fff',
+  color: `${background.main}`,
   fontWeight: 600,
   fontSize: 11,
   height: 28,
@@ -82,7 +83,7 @@ export const euAiActChipStyle = {
 
 export const iso42001ChipStyle = {
   backgroundColor: '#0ca5af',
-  color: '#fff',
+  color: `${background.main}`,
   fontWeight: 600,
   fontSize: 11,
   height: 28,

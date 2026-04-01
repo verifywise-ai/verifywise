@@ -32,13 +32,18 @@ import {
   Sparkles,
   Telescope,
   X,
+  Moon,
+  Sun,
 } from "lucide-react";
 import Avatar from "../Avatar/VWAvatar";
+import { brand, text, background } from "../../themes/palette";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { ROLES } from "../../../application/constants/roles";
 import useLogout from "../../../application/hooks/useLogout";
+import { getUserById } from "../../../application/repository/user.repository";
 import { User } from "../../../domain/types/User";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
+import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import ReadyToSubscribeBox from "../ReadyToSubscribeBox/ReadyToSubscribeBox";
 
 interface IManagementItem {
@@ -63,7 +68,7 @@ interface SidebarFooterProps {
   isAdmin?: boolean;
 }
 
-const getManagementItems = (): IManagementItem[] => [
+const MANAGEMENT_ITEMS: IManagementItem[] = [
   {
     name: "Event Tracker",
     icon: <Telescope size={16} strokeWidth={1.5} />,
@@ -73,6 +78,14 @@ const getManagementItems = (): IManagementItem[] => [
     name: "Settings",
     icon: <Settings size={16} strokeWidth={1.5} />,
     path: "/settings",
+  },
+];
+
+const SUPER_ADMIN_MANAGEMENT_ITEMS: IManagementItem[] = [
+  {
+    name: "Settings",
+    icon: <Settings size={16} strokeWidth={1.5} />,
+    path: "/super-admin/settings",
   },
 ];
 
@@ -108,16 +121,53 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const logout = useLogout();
+  const { activeModule } = useActiveModule();
+  const managementItems = activeModule === "super-admin" ? SUPER_ADMIN_MANAGEMENT_ITEMS : MANAGEMENT_ITEMS;
   const { userId, users, photoRefreshFlag } = useContext(VerifyWiseContext);
+  const [selfUser, setSelfUser] = useState<User | null>(null);
+
+  // Fetch current user directly when not in the org users list (e.g., super-admin)
+  useEffect(() => {
+    if (!userId) return;
+    const found = users?.find((u: User) => u.id === userId);
+    if (found) {
+      setSelfUser(null);
+      return;
+    }
+    getUserById({ userId })
+      .then((res) => {
+        const data = (res as any)?.data;
+        if (data) {
+          setSelfUser({
+            id: data.id,
+            name: data.name,
+            surname: data.surname,
+            email: data.email,
+            roleId: data.role_id,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [userId, users]);
 
   const [managementAnchorEl, setManagementAnchorEl] = useState<null | HTMLElement>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [demoButtonHovered, setDemoButtonHovered] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  const user: User = users
-    ? users.find((u: User) => u.id === userId) || DEFAULT_USER
-    : DEFAULT_USER;
+  // Dark mode (CSS filter experiment)
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("vw_dark_mode") === "true";
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark-mode", darkMode);
+    localStorage.setItem("vw_dark_mode", String(darkMode));
+  }, [darkMode]);
+
+  const user: User = selfUser
+    || (users ? users.find((u: User) => u.id === userId) : null)
+    || DEFAULT_USER;
 
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
@@ -172,7 +222,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
     };
   }, [slideoverOpen]);
 
-  const isManagementActive = getManagementItems().some(
+  const isManagementActive = managementItems.some(
     (item) => item.path && (location.pathname.startsWith(`${item.path}/`) || location.pathname === item.path)
   );
 
@@ -290,12 +340,12 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                             backgroundColor: "rgba(0, 0, 0, 0.04)",
                           },
                           "& svg": {
-                            color: "#667085 !important",
-                            stroke: "#667085 !important",
+                            color: `${text.icon} !important`,
+                            stroke: `${text.icon} !important`,
                           },
                           "&:hover svg": {
-                            color: "#344054 !important",
-                            stroke: "#344054 !important",
+                            color: `${text.secondary} !important`,
+                            stroke: `${text.secondary} !important`,
                           },
                         }}
                       >
@@ -311,6 +361,83 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
       )}
 
       {/* Management Section */}
+      {activeModule === "super-admin" ? (
+        <List
+          component="nav"
+          disablePadding
+          sx={{
+            px: theme.spacing(8),
+            flexShrink: 0,
+          }}
+        >
+          <Tooltip
+            sx={{ fontSize: 13 }}
+            placement="right"
+            title={delayedCollapsed ? "Settings" : ""}
+            slotProps={{
+              popper: {
+                modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
+              },
+            }}
+            disableInteractive
+          >
+            <ListItemButton
+              disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+              onClick={() => navigate("/super-admin/settings")}
+              sx={{
+                height: "32px",
+                gap: theme.spacing(4),
+                borderRadius: theme.shape.borderRadius,
+                px: theme.spacing(4),
+                background: location.pathname.startsWith("/super-admin/settings")
+                  ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                  : "transparent",
+                border: location.pathname.startsWith("/super-admin/settings")
+                  ? "1px solid #D8D8D8"
+                  : "1px solid transparent",
+                "&:hover": {
+                  background: "#F9F9F9",
+                  border: "1px solid transparent",
+                },
+                "&:hover svg": {
+                  color: `${brand.primary} !important`,
+                  stroke: `${brand.primary} !important`,
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  width: "16px",
+                  mr: 0,
+                  "& svg": {
+                    color: location.pathname.startsWith("/super-admin/settings")
+                      ? `${brand.primary} !important`
+                      : `${theme.palette.text.tertiary} !important`,
+                    transition: "color 0.2s ease, stroke 0.2s ease",
+                  },
+                }}
+              >
+                <Settings size={16} strokeWidth={1.5} />
+              </ListItemIcon>
+              {!delayedCollapsed && (
+                <ListItemText
+                  sx={{
+                    "& .MuiListItemText-primary": {
+                      fontSize: "13px",
+                    },
+                  }}
+                >
+                  Settings
+                </ListItemText>
+              )}
+            </ListItemButton>
+          </Tooltip>
+        </List>
+      ) : (
       <List
         component="nav"
         aria-labelledby="nested-management-subheader"
@@ -354,11 +481,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   : "1px solid transparent",
               },
               "&:hover svg": {
-                color: "#13715B !important",
-                stroke: "#13715B !important",
+                color: `${brand.primary} !important`,
+                stroke: `${brand.primary} !important`,
               },
               "&:hover svg path": {
-                stroke: "#13715B !important",
+                stroke: `${brand.primary} !important`,
               },
             }}
           >
@@ -372,16 +499,16 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 mr: 0,
                 "& svg": {
                   color: isManagementActive
-                    ? "#13715B !important"
+                    ? `${brand.primary} !important`
                     : `${theme.palette.text.tertiary} !important`,
                   stroke: isManagementActive
-                    ? "#13715B !important"
+                    ? `${brand.primary} !important`
                     : `${theme.palette.text.tertiary} !important`,
                   transition: "color 0.2s ease, stroke 0.2s ease",
                 },
                 "& svg path": {
                   stroke: isManagementActive
-                    ? "#13715B !important"
+                    ? `${brand.primary} !important`
                     : `${theme.palette.text.tertiary} !important`,
                 },
               }}
@@ -438,7 +565,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             },
           }}
         >
-          {getManagementItems().map((item) => (
+          {managementItems.map((item) => (
             <MenuItem
               key={item.path || item.name}
               onClick={() => {
@@ -461,11 +588,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   backgroundColor: "#F9F9F9",
                 },
                 "&:hover svg": {
-                  color: "#13715B !important",
-                  stroke: "#13715B !important",
+                  color: `${brand.primary} !important`,
+                  stroke: `${brand.primary} !important`,
                 },
                 "&:hover svg path": {
-                  stroke: "#13715B !important",
+                  stroke: `${brand.primary} !important`,
                 },
               }}
             >
@@ -488,18 +615,18 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     "& svg": {
                       color:
                         item.path && location.pathname.includes(item.path)
-                          ? "#13715B !important"
+                          ? `${brand.primary} !important`
                           : `${theme.palette.text.tertiary} !important`,
                       stroke:
                         item.path && location.pathname.includes(item.path)
-                          ? "#13715B !important"
+                          ? `${brand.primary} !important`
                           : `${theme.palette.text.tertiary} !important`,
                       transition: "color 0.2s ease, stroke 0.2s ease",
                     },
                     "& svg path": {
                       stroke:
                         item.path && location.pathname.includes(item.path)
-                          ? "#13715B !important"
+                          ? `${brand.primary} !important`
                           : `${theme.palette.text.tertiary} !important`,
                     },
                   }}
@@ -519,6 +646,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           ))}
         </Menu>
       </List>
+      )}
 
       {/* Ready To Subscribe Box - only shown when not collapsed and enabled */}
       {showReadyToSubscribe && !collapsed && (
@@ -674,7 +802,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       px: theme.spacing(4),
                       py: 1,
                       "&:hover": {
-                        backgroundColor: "#F9FAFB",
+                        backgroundColor: background.accent,
                       },
                     }}
                   >
@@ -723,14 +851,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                           stroke: theme.palette.text.tertiary,
                         },
                         "&:hover": {
-                          backgroundColor: "#F9FAFB",
+                          backgroundColor: background.accent,
                         },
                         "&:hover svg": {
-                          color: "#13715B !important",
-                          stroke: "#13715B !important",
+                          color: `${brand.primary} !important`,
+                          stroke: `${brand.primary} !important`,
                         },
                         "&:hover svg path": {
-                          stroke: "#13715B !important",
+                          stroke: `${brand.primary} !important`,
                         },
                       }}
                     >
@@ -757,14 +885,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                           stroke: theme.palette.text.tertiary,
                         },
                         "&:hover": {
-                          backgroundColor: "#F9FAFB",
+                          backgroundColor: background.accent,
                         },
                         "&:hover svg": {
-                          color: "#13715B !important",
-                          stroke: "#13715B !important",
+                          color: `${brand.primary} !important`,
+                          stroke: `${brand.primary} !important`,
                         },
                         "&:hover svg path": {
-                          stroke: "#13715B !important",
+                          stroke: `${brand.primary} !important`,
                         },
                       }}
                     >
@@ -814,14 +942,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         stroke: theme.palette.text.tertiary,
                       },
                       "&:hover": {
-                        backgroundColor: "#F9FAFB",
+                        backgroundColor: background.accent,
                       },
                       "&:hover svg": {
-                        color: "#13715B !important",
-                        stroke: "#13715B !important",
+                        color: `${brand.primary} !important`,
+                        stroke: `${brand.primary} !important`,
                       },
                       "&:hover svg path": {
-                        stroke: "#13715B !important",
+                        stroke: `${brand.primary} !important`,
                       },
                     }}
                   >
@@ -847,14 +975,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         stroke: theme.palette.text.tertiary,
                       },
                       "&:hover": {
-                        backgroundColor: "#F9FAFB",
+                        backgroundColor: background.accent,
                       },
                       "&:hover svg": {
-                        color: "#13715B !important",
-                        stroke: "#13715B !important",
+                        color: `${brand.primary} !important`,
+                        stroke: `${brand.primary} !important`,
                       },
                       "&:hover svg path": {
-                        stroke: "#13715B !important",
+                        stroke: `${brand.primary} !important`,
                       },
                     }}
                   >
@@ -878,14 +1006,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         stroke: theme.palette.text.tertiary,
                       },
                       "&:hover": {
-                        backgroundColor: "#F9FAFB",
+                        backgroundColor: background.accent,
                       },
                       "&:hover svg": {
-                        color: "#13715B !important",
-                        stroke: "#13715B !important",
+                        color: `${brand.primary} !important`,
+                        stroke: `${brand.primary} !important`,
                       },
                       "&:hover svg path": {
-                        stroke: "#13715B !important",
+                        stroke: `${brand.primary} !important`,
                       },
                     }}
                   >
@@ -909,14 +1037,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         stroke: theme.palette.text.tertiary,
                       },
                       "&:hover": {
-                        backgroundColor: "#F9FAFB",
+                        backgroundColor: background.accent,
                       },
                       "&:hover svg": {
-                        color: "#13715B !important",
-                        stroke: "#13715B !important",
+                        color: `${brand.primary} !important`,
+                        stroke: `${brand.primary} !important`,
                       },
                       "&:hover svg path": {
-                        stroke: "#13715B !important",
+                        stroke: `${brand.primary} !important`,
                       },
                     }}
                   >
@@ -940,14 +1068,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         stroke: theme.palette.text.tertiary,
                       },
                       "&:hover": {
-                        backgroundColor: "#F9FAFB",
+                        backgroundColor: background.accent,
                       },
                       "&:hover svg": {
-                        color: "#13715B !important",
-                        stroke: "#13715B !important",
+                        color: `${brand.primary} !important`,
+                        stroke: `${brand.primary} !important`,
                       },
                       "&:hover svg path": {
-                        stroke: "#13715B !important",
+                        stroke: `${brand.primary} !important`,
                       },
                     }}
                   >
@@ -971,14 +1099,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         stroke: theme.palette.text.tertiary,
                       },
                       "&:hover": {
-                        backgroundColor: "#F9FAFB",
+                        backgroundColor: background.accent,
                       },
                       "&:hover svg": {
-                        color: "#13715B !important",
-                        stroke: "#13715B !important",
+                        color: `${brand.primary} !important`,
+                        stroke: `${brand.primary} !important`,
                       },
                       "&:hover svg path": {
-                        stroke: "#13715B !important",
+                        stroke: `${brand.primary} !important`,
                       },
                     }}
                   >
@@ -986,6 +1114,56 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     <Typography sx={{ fontSize: "13px" }}>Give feedback</Typography>
                   </ListItemButton>
                 </Stack>
+              </Box>
+
+              {/* Appearance Section */}
+              <Box>
+                <Typography
+                  variant="overline"
+                  sx={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: theme.palette.text.disabled,
+                    letterSpacing: "0.5px",
+                    px: theme.spacing(4),
+                    pb: 1,
+                  }}
+                >
+                  APPEARANCE
+                </Typography>
+
+                <ListItemButton
+                  onClick={() => { setDarkMode((prev) => !prev); closePopup(); }}
+                  sx={{
+                    height: "32px",
+                    gap: theme.spacing(4),
+                    borderRadius: theme.shape.borderRadius,
+                    px: theme.spacing(4),
+                    "& svg": {
+                      color: theme.palette.text.tertiary,
+                      stroke: theme.palette.text.tertiary,
+                    },
+                    "&:hover": {
+                      backgroundColor: background.accent,
+                    },
+                    "&:hover svg": {
+                      color: `${brand.primary} !important`,
+                      stroke: `${brand.primary} !important`,
+                    },
+                    "&:hover svg path": {
+                      stroke: `${brand.primary} !important`,
+                    },
+                  }}
+                >
+                  {darkMode ? (
+                    <Sun size={16} strokeWidth={1.5} />
+                  ) : (
+                    <Moon size={16} strokeWidth={1.5} />
+                  )}
+                  <Typography sx={{ fontSize: "13px" }}>
+                    {darkMode ? "Light mode" : "Dark mode"}
+                  </Typography>
+                </ListItemButton>
               </Box>
 
               <Divider sx={{ my: 1 }} />
@@ -1006,14 +1184,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     stroke: theme.palette.text.tertiary,
                   },
                   "&:hover": {
-                    backgroundColor: "#F9FAFB",
+                    backgroundColor: background.accent,
                   },
                   "&:hover svg": {
-                    color: "#13715B !important",
-                    stroke: "#13715B !important",
+                    color: `${brand.primary} !important`,
+                    stroke: `${brand.primary} !important`,
                   },
                   "&:hover svg path": {
-                    stroke: "#13715B !important",
+                    stroke: `${brand.primary} !important`,
                   },
                 }}
               >

@@ -56,6 +56,8 @@ import { addNewModelButtonStyle } from "../../../pages/ModelInventory/style";
 import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
 import { VWLink } from "../../Link/VWLink";
 import { useQueryClient } from "@tanstack/react-query";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { checkStringValidation } from "../../../../application/validations/stringValidation";
 
 dayjs.extend(utc);
 
@@ -93,19 +95,7 @@ interface NewModelInventoryFormValues {
   security_assessment_data: FileResponse[];
 }
 
-interface NewModelInventoryFormErrors {
-  provider_model?: string; // Keep for backward compatibility
-  provider?: string;
-  model?: string;
-  version?: string;
-  approver?: string;
-  capabilities?: string;
-  status?: string;
-  status_date?: string;
-  projects?: string;
-  frameworks?: string;
-  security_assessment_data?: string;
-}
+
 
 const initialState: NewModelInventoryFormValues = {
   provider_model: "", // Keep for backward compatibility
@@ -175,13 +165,51 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
   const [values, setValues] = useState<NewModelInventoryFormValues>(
     initialData || initialState
   );
-  const [errors, setErrors] = useState<NewModelInventoryFormErrors>({});
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [isEvidenceLoading] = useState(false);
+
+  const validators = useMemo(
+    () => ({
+      provider: (v: unknown) => {
+        const r = checkStringValidation("Provider", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      model: (v: unknown) => {
+        const r = checkStringValidation("Model", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      version: (v: unknown) => {
+        const r = checkStringValidation("Version", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      status: (v: unknown) => {
+        if (!v) return "Status is required.";
+        return "";
+      },
+      status_date: (v: unknown) => {
+        const r = checkStringValidation("Status date", v as string, 1);
+        return r.accepted ? "" : r.message;
+      },
+      security_assessment_data: (
+        v: unknown,
+        vals: NewModelInventoryFormValues
+      ) => {
+        if (vals.security_assessment && (!v || (v as FileResponse[]).length === 0)) {
+          return "At least one file must be uploaded when security assessment is complete.";
+        }
+        return "";
+      },
+    }),
+    []
+  );
+
+  const { errors, validateAll, clearFieldError, resetErrors } =
+    useFormValidation<NewModelInventoryFormValues>(validators);
+
   // Prefetch history data when modal opens in edit mode
   // This ensures data is ready before user opens the sidebar
   useModelInventoryChangeHistory(
@@ -210,15 +238,15 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         // If not editing and no initial data, set initial state
         setValues(initialState);
       }
-      setErrors({});
+      resetErrors();
       setIsSubmitting(false); // Reset submitting state when modal opens
     } else {
       // When modal closes, reset everything
       setValues(initialState);
-      setErrors({});
+      resetErrors();
       setIsSubmitting(false); // Reset submitting state when modal closes
     }
-  }, [isOpen, initialData, isEdit]);
+  }, [isOpen, initialData, isEdit, resetErrors]);
 
   // Fetch users when modal opens
   useEffect(() => {
@@ -321,26 +349,26 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
       (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setValues((prev) => ({ ...prev, [prop]: value }));
-        setErrors((prev) => ({ ...prev, [prop]: "" }));
+        clearFieldError(prop);
       },
-    []
+    [clearFieldError]
   );
 
   const handleOnSelectChange = useCallback(
     (prop: keyof NewModelInventoryFormValues) => (event: any) => {
       const value = event.target.value;
       setValues((prev) => ({ ...prev, [prop]: value }));
-      setErrors((prev) => ({ ...prev, [prop]: "" }));
+      clearFieldError(prop);
     },
-    []
+    [clearFieldError]
   );
 
   const handleCapabilityChange = useCallback(
     (_event: React.SyntheticEvent, newValue: string[]) => {
       setValues((prev) => ({ ...prev, capabilities: newValue }));
-      setErrors((prev) => ({ ...prev, capabilities: "" }));
+      clearFieldError("capabilities");
     },
-    []
+    [clearFieldError]
   );
 
   const handleSelectUsedInProjectChange = useCallback(
@@ -350,9 +378,9 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         .map((title) => projectList.find((p) => p.project_title === title)?.id)
         .filter((id): id is number => id !== undefined);
       setValues((prev) => ({ ...prev, projects: projectIds }));
-      setErrors((prev) => ({ ...prev, projects: "" }));
+      clearFieldError("projects");
     },
-    [projectList]
+    [projectList, clearFieldError]
   );
 
   const handleSelectUsedInFrameworksChange = useCallback(
@@ -370,9 +398,9 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         })
         .filter((id): id is number => id !== undefined);
       setValues((prev) => ({ ...prev, frameworks: frameworkIds }));
-      setErrors((prev) => ({ ...prev, frameworks: "" }));
+      clearFieldError("frameworks");
     },
-    [frameworkIdToNameMap]
+    [frameworkIdToNameMap, clearFieldError]
   );
 
   const handleDateChange = useCallback((newDate: Dayjs | null) => {
@@ -381,9 +409,9 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         ...prev,
         status_date: newDate ? newDate.format("YYYY-MM-DD") : "",
       }));
-      setErrors((prev) => ({ ...prev, status_date: "" }));
+      clearFieldError("status_date");
     }
-  }, []);
+  }, [clearFieldError]);
 
   const handleSecurityAssessmentChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -394,43 +422,6 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     },
     []
   );
-
-  const validateForm = (): boolean => {
-    const newErrors: NewModelInventoryFormErrors = {};
-
-    if (!values.provider || !String(values.provider).trim()) {
-      newErrors.provider = "Provider is required.";
-    }
-
-    if (!values.model || !String(values.model).trim()) {
-      newErrors.model = "Model is required.";
-    }
-
-    if (!values.version || !String(values.version).trim()) {
-      newErrors.version = "Version is required.";
-    }
-
-    if (!values.status) {
-      newErrors.status = "Status is required.";
-    }
-
-    if (!values.status_date) {
-      newErrors.status_date = "Status date is required.";
-    }
-
-    // ✅ Check if security assessment is on, then at least one file must exist
-    if (
-      values.security_assessment &&
-      (!values.security_assessment_data ||
-        values.security_assessment_data.length === 0)
-    ) {
-      newErrors.security_assessment_data =
-        "At least one file must be uploaded when security assessment is complete.";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleUploadSuccess = (data: FileResponse[]) => {
     setValues((prevValues) => {
@@ -444,10 +435,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     });
 
     // Clear error for security assessment files
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      security_assessment_data: "",
-    }));
+    clearFieldError("security_assessment_data");
 
     setIsUploadModalOpen(false);
   };
@@ -469,7 +457,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
 
   const handleSubmit = async (event?: React.FormEvent) => {
     if (event) event.preventDefault();
-    if (validateForm()) {
+    if (validateAll(values)) {
       setIsSubmitting(true);
       try {
         if (onSuccess) {
@@ -482,36 +470,6 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         handleClose();
       } catch (error: any) {
         setIsSubmitting(false);
-        // Handle server-side validation errors
-        let errorData = null;
-
-        // Check if it's an axios error with response.data first
-        if (error?.response?.data) {
-          errorData = error.response.data;
-        }
-        // Check if it's a CustomException with response property
-        else if (error?.response) {
-          errorData = error.response;
-        }
-        // Check if the error itself has the data structure
-        else if (error?.status && error?.errors) {
-          errorData = error;
-        }
-
-        if (errorData?.errors && Array.isArray(errorData.errors)) {
-          const serverErrors: NewModelInventoryFormErrors = {};
-
-          errorData.errors.forEach((err: any) => {
-            if (err.field && err.message) {
-              // Map server field names to form field names
-              const fieldName = err.field as keyof NewModelInventoryFormErrors;
-              serverErrors[fieldName] = err.message;
-            }
-          });
-
-          setErrors(serverErrors);
-        }
-
         // Propagate error to parent for toast notification
         if (onError) {
           onError(error);
@@ -592,7 +550,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
             paddingRight: "9px",
           },
           "& .MuiAutocomplete-option.Mui-focused": {
-            background: "#f9fafb",
+            background: "background.accent",
           },
         },
         "& .MuiAutocomplete-noOptions": {

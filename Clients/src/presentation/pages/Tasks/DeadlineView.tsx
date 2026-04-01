@@ -7,7 +7,8 @@ import {
   Collapse,
   IconButton,
 } from "@mui/material";
-import { ChevronDown, ChevronRight, Calendar, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronRight, Calendar, AlertTriangle, CalendarCheck, ListChecks, Clock, Users } from "lucide-react";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { TaskModel } from "../../../domain/models/Common/task/task.model";
 import { TaskStatus } from "../../../domain/enums/task.enum";
 import TasksTable from "../../components/Table/TasksTable";
@@ -213,9 +214,26 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
   if (hasNoTasks) {
     return (
       <EmptyState
+        icon={CalendarCheck}
         message="No upcoming deadlines. All tasks are completed or have no due dates."
         showBorder
-      />
+      >
+        <EmptyStateTip
+          icon={ListChecks}
+          title="How deadlines work"
+          description="Tasks with due dates appear here grouped by urgency: overdue, due today, this week, and later. Complete or update tasks to clear them."
+        />
+        <EmptyStateTip
+          icon={Clock}
+          title="Set due dates on tasks"
+          description="Open any task and set a due date. It will automatically appear in the correct deadline group on this view."
+        />
+        <EmptyStateTip
+          icon={Users}
+          title="Assign owners"
+          description="Tasks assigned to team members show up in their personal task list. Use the 'My tasks only' toggle on the list view to filter."
+        />
+      </EmptyState>
     );
   }
 

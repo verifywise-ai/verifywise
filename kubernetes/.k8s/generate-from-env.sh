@@ -17,6 +17,8 @@ mkdir -p "$OUTPUT_DIR"
 
 # Define sensitive keys that should go into secrets
 SENSITIVE_KEYS=(
+    "SUPERADMIN_EMAIL"
+    "SUPERADMIN_PASSWORD"
     "DB_USER"
     "DB_PASSWORD"
     "DB_NAME"

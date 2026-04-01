@@ -21,6 +21,7 @@ import {
   rejectSubmission,
   getSubmissionPreview,
   overrideSubmissionRisk,
+  getSubmissionByEntity,
   // LLM feature controllers (admin)
   getLLMSuggestedQuestions,
   getFieldGuidance,
@@ -54,6 +55,7 @@ router.post("/forms/field-guidance", authenticateJWT, authorize(WRITE_ROLES), ge
 // Submissions
 router.get("/submissions", authenticateJWT, getPendingSubmissions);
 router.get("/submissions/stats", authenticateJWT, getSubmissionStats);
+router.get("/submissions/by-entity/:entityType/:entityId", authenticateJWT, getSubmissionByEntity);
 router.get("/submissions/:id", authenticateJWT, getSubmissionById);
 router.get("/submissions/:id/preview", authenticateJWT, getSubmissionPreview);
 router.patch("/submissions/:id/risk-override", authenticateJWT, authorize(WRITE_ROLES), overrideSubmissionRisk);

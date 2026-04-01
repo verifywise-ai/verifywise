@@ -12,6 +12,8 @@ export interface CustomizableButtonCoreProps {
   size?: "small" | "medium" | "large";
   /** If true, the button will be disabled */
   isDisabled?: boolean;
+  /** Alias for isDisabled — accepted for convenience */
+  disabled?: boolean;
   /** If true, the button will be styled as a link */
   isLink?: boolean;
   /** The color theme of the button */

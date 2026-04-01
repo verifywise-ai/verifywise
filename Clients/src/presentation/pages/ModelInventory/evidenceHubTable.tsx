@@ -17,15 +17,15 @@ import {
 } from "@mui/material";
 import TablePaginationActions from "../../components/TablePagination";
 import CustomIconButton from "../../components/IconButton";
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronsUpDown, ChevronUp, ChevronDown, FileCheck, FolderOpen, Shield, Clock } from "lucide-react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { displayFormattedDate } from "../../tools/isoDateToString";
 import { User } from "../../../domain/types/User";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { FileIcon } from "../../components/FileIcon";
-import { EvidenceHubModel } from "../../../domain/models/Common/evidenceHub/evidenceHub.model";
 import {
   loadingContainerStyle,
   paginationMenuProps,
@@ -37,8 +37,8 @@ import {
   tableRowHoverStyle,
 } from "./style";
 import { singleTheme } from "../../themes";
-import { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
 import { palette } from "../../themes/palette";
+import { EvidenceHubTableProps } from "../../../domain/interfaces/i.modelInventory";
 
 dayjs.extend(utc);
 
@@ -53,17 +53,6 @@ type SortConfig = {
 const SelectorVertical = (props: any) => (
   <ChevronsUpDown size={16} {...props} />
 );
-
-interface EvidenceHubTableProps {
-  data: EvidenceHubModel[];
-  isLoading?: boolean;
-  onEdit?: (id: number) => void;
-  onDelete?: (id: number) => void;
-  paginated?: boolean;
-  deletingId?: number | null;
-  modelInventoryData: IModelInventory[];
-  hidePagination?: boolean;
-}
 
 const TABLE_COLUMNS = [
   { id: "evidence_name", label: "EVIDENCE NAME", sortable: true },
@@ -175,11 +164,27 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
   deletingId,
   modelInventoryData,
   hidePagination = false,
+  visibleColumns,
 }) => {
   const theme = useTheme();
   const [users, setUsers] = useState<User[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Filter columns based on visibleColumns prop
+  const visibleTableColumns = useMemo(() => {
+    if (!visibleColumns || visibleColumns.size === 0) return TABLE_COLUMNS;
+    return TABLE_COLUMNS.filter((col) => visibleColumns.has(col.id));
+  }, [visibleColumns]);
+
+  // Helper to check if a column is visible
+  const isColVisible = useCallback(
+    (columnId: string) => {
+      if (!visibleColumns || visibleColumns.size === 0) return true;
+      return visibleColumns.has(columnId);
+    },
+    [visibleColumns]
+  );
 
   // Initialize sorting state from localStorage or default to no sorting
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
@@ -362,7 +367,7 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                 sx={{
                   ...singleTheme.tableStyles.primary.body.row,
                   ...tableRowHoverStyle,
-                  ...(deletingId === evidence.id?.toString() &&
+                  ...(deletingId === evidence.id &&
                     tableRowDeletingStyle),
                 }}
                 onClick={(e) => {
@@ -370,62 +375,73 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                   onEdit?.(Number(evidence.id));
                 }}
               >
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <FileIcon
-                      fileName={
-                        evidence.evidence_files &&
-                        evidence.evidence_files.length > 0
-                          ? evidence.evidence_files[0].filename
-                          : ""
+                {isColVisible("evidence_name") && (
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <FileIcon
+                        fileName={
+                          evidence.evidence_files &&
+                          evidence.evidence_files.length > 0
+                            ? evidence.evidence_files[0].filename
+                            : ""
+                        }
+                      />
+                      {evidence.evidence_name}
+                    </Box>
+                  </TableCell>
+                )}
+                {isColVisible("evidence_type") && (
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    <TooltipCell value={evidence.evidence_type} />
+                  </TableCell>
+                )}
+                {isColVisible("mapped_models") && (
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    <TooltipCell
+                      value={
+                        evidence.mapped_model_ids?.length
+                          ? evidence.mapped_model_ids
+                              .map((id) => modelMap.get(id) || `Model ${id}`)
+                              .join(", ")
+                          : "-"
                       }
                     />
-                    {evidence.evidence_name}
-                  </Box>
-                </TableCell>
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  <TooltipCell value={evidence.evidence_type} />
-                </TableCell>
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  <TooltipCell
-                    value={
-                      evidence.mapped_model_ids?.length
-                        ? evidence.mapped_model_ids
-                            .map((id) => modelMap.get(id) || `Model ${id}`)
-                            .join(", ")
-                        : "-"
-                    }
-                  />
-                </TableCell>
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  <TooltipCell
-                    value={
-                      evidence.evidence_files &&
-                      evidence.evidence_files.length > 0
-                        ? userMap.get(
-                            evidence.evidence_files[0].uploaded_by.toString()
-                          ) || "-"
-                        : "-"
-                    }
-                  />
-                </TableCell>
-
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  {evidence.evidence_files && evidence.evidence_files.length > 0
-                    ? displayFormattedDate(evidence.evidence_files[0].upload_date)
-                    : "-"}
-                </TableCell>
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  {evidence.expiry_date
-                    ? displayFormattedDate(evidence.expiry_date)
-                    : "-"}
-                </TableCell>
+                  </TableCell>
+                )}
+                {isColVisible("uploaded_by") && (
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    <TooltipCell
+                      value={
+                        evidence.evidence_files &&
+                        evidence.evidence_files.length > 0
+                          ? userMap.get(
+                              evidence.evidence_files[0].uploaded_by.toString()
+                            ) || "-"
+                          : "-"
+                      }
+                    />
+                  </TableCell>
+                )}
+                {isColVisible("uploaded_on") && (
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    {evidence.evidence_files && evidence.evidence_files.length > 0
+                      ? displayFormattedDate(evidence.evidence_files[0].upload_date)
+                      : "-"}
+                  </TableCell>
+                )}
+                {isColVisible("expiry_date") && (
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    {evidence.expiry_date
+                      ? displayFormattedDate(evidence.expiry_date)
+                      : "-"}
+                  </TableCell>
+                )}
                 <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                   <Stack direction="row" spacing={1}>
                     <CustomIconButton
@@ -445,8 +461,24 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
             ))
         ) : (
           <TableRow>
-            <TableCell colSpan={TABLE_COLUMNS.length} align="center">
-              <EmptyState message="No evidence found." />
+            <TableCell colSpan={visibleTableColumns.length} align="center">
+              <EmptyState message="No evidence yet. Upload documents that prove compliance with each requirement." icon={FileCheck}>
+                <EmptyStateTip
+                  icon={FolderOpen}
+                  title="Organize by control category"
+                  description="Group evidence by the controls they support. This makes audit preparation faster and keeps your evidence library structured."
+                />
+                <EmptyStateTip
+                  icon={Shield}
+                  title="What counts as evidence?"
+                  description="Policies, meeting minutes, configuration screenshots, training records, risk assessments, vendor agreements, and change logs."
+                />
+                <EmptyStateTip
+                  icon={Clock}
+                  title="Track expiry dates"
+                  description="Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale."
+                />
+              </EmptyState>
             </TableCell>
           </TableRow>
         )}
@@ -461,6 +493,8 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
       onEdit,
       modelMap,
       onDelete,
+      isColVisible,
+      visibleTableColumns,
     ]
   );
 
@@ -480,7 +514,7 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
     <TableContainer sx={{ overflowX: "auto" }}>
       <Table sx={singleTheme.tableStyles.primary.frame}>
         <SortableTableHead
-          columns={TABLE_COLUMNS}
+          columns={visibleTableColumns}
           sortConfig={sortConfig}
           onSort={handleSort}
           theme={theme}

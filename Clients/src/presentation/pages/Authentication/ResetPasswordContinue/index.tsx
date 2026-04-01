@@ -7,6 +7,7 @@ import { ReactComponent as Background } from "../../../assets/imgs/background-gr
 import { CheckCircle as Success } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useNavigate } from "react-router-dom";
+import { text, border as borderPalette } from "../../../themes/palette";
 
 const ResetPasswordContinue = () => {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ const ResetPasswordContinue = () => {
             justifyContent: "center",
             alignItems: "center",
             borderRadius: "12px",
-            border: "2px solid #EAECF0",
+            border: `2px solid ${borderPalette.light}`,
             gap: theme.spacing(12),
           }}
         >
@@ -59,7 +60,7 @@ const ResetPasswordContinue = () => {
           <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
             Password reset
           </Typography>
-          <Typography fontSize={13} color="#475467" fontWeight={400}>
+          <Typography fontSize={13} color={text.tertiary} fontWeight={400}>
             Your password has been successfully reset. Click below to log in.
           </Typography>
         </Stack>

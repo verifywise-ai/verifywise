@@ -113,7 +113,7 @@ describe("Test form validations", () => {
       const expected = {
         isFormValid: false,
         errors: {
-          password: "Password can't be longer than 16 characters.",
+          password: "Password can't be longer than 32 characters.",
         },
       };
       expect(result).toEqual(expected);

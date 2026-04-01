@@ -30,6 +30,10 @@ export type LicenseSource = "package" | "huggingface" | "pypi" | "npm" | "manual
 
 export type GovernanceStatus = "reviewed" | "approved" | "flagged";
 
+export type ScanMode = "full" | "incremental";
+
+export type FindingStatus = "active" | "fixed" | "carried_forward";
+
 export interface TriggeredByUser {
   id: number;
   name: string;
@@ -55,6 +59,12 @@ export interface Scan {
   risk_score_grade?: RiskGrade | null;
   risk_score_details?: RiskScoreDetails | null;
   risk_score_calculated_at?: string | null;
+  // Incremental scan fields
+  scan_mode?: ScanMode;
+  base_commit_sha?: string | null;
+  head_commit_sha?: string | null;
+  baseline_scan_id?: number | null;
+  changed_files_count?: number | null;
   created_at: string;
 }
 
@@ -75,7 +85,17 @@ export type FindingType =
   | "secret"
   | "model_ref"
   | "rag_component"
-  | "agent";
+  | "agent"
+  | "prompt_injection"
+  | "pii_exposure"
+  | "excessive_agency"
+  | "jailbreak_risk"
+  | "training_data_poisoning"
+  | "model_dos"
+  | "supply_chain"
+  | "insecure_plugin"
+  | "overreliance"
+  | "model_theft";
 
 export interface Finding {
   id: number;
@@ -97,6 +117,54 @@ export interface Finding {
   license_name?: string | null;
   license_risk?: LicenseRiskLevel | null;
   license_source?: LicenseSource | null;
+  // Vulnerability detection fields
+  mitigation?: string | null;
+  data_flow_summary?: string | null;
+  vulnerability_details?: Record<string, unknown> | null;
+  // Incremental scan fields
+  finding_status?: FindingStatus;
+}
+
+// ============================================================================
+// Vulnerability Finding Types
+// ============================================================================
+
+export type VulnerabilityFindingType =
+  | "prompt_injection"
+  | "pii_exposure"
+  | "excessive_agency"
+  | "jailbreak_risk"
+  | "training_data_poisoning"
+  | "model_dos"
+  | "supply_chain"
+  | "insecure_plugin"
+  | "overreliance"
+  | "model_theft";
+
+export const VULNERABILITY_FINDING_TYPES: VulnerabilityFindingType[] = [
+  "prompt_injection",
+  "pii_exposure",
+  "excessive_agency",
+  "jailbreak_risk",
+  "training_data_poisoning",
+  "model_dos",
+  "supply_chain",
+  "insecure_plugin",
+  "overreliance",
+  "model_theft",
+];
+
+export interface VulnerabilityFindingsBySeverity {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+}
+
+export interface VulnerabilitySummary {
+  total: number;
+  by_severity: VulnerabilityFindingsBySeverity;
+  by_type: Record<VulnerabilityFindingType, number>;
 }
 
 // ============================================================================
@@ -218,6 +286,9 @@ export interface ScansResponse {
 
 export interface StartScanRequest {
   repository_url: string;
+  scan_mode?: ScanMode;
+  base_commit_sha?: string;
+  head_commit_sha?: string;
 }
 
 export interface GetScansParams {

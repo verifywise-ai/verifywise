@@ -51,16 +51,18 @@ const SUBMISSION_SELECT_COLUMNS = `
 // ============================================================================
 
 /**
- * Get all intake forms for a tenant
+ * Get all intake forms for an organization
  */
 export const getAllIntakeFormsQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<IIntakeForm[]> => {
   const forms = await sequelize.query(
     `SELECT ${FORM_SELECT_COLUMNS}
-    FROM "${tenant}".intake_forms
+    FROM intake_forms
+    WHERE organization_id = :organizationId
     ORDER BY created_at DESC`,
     {
+      replacements: { organizationId },
       type: QueryTypes.SELECT,
     }
   );
@@ -72,14 +74,14 @@ export const getAllIntakeFormsQuery = async (
  */
 export const getIntakeFormByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<IIntakeForm | null> => {
   const forms = await sequelize.query(
     `SELECT ${FORM_SELECT_COLUMNS}
-    FROM "${tenant}".intake_forms
-    WHERE id = :id`,
+    FROM intake_forms
+    WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       type: QueryTypes.SELECT,
     }
   );
@@ -91,14 +93,14 @@ export const getIntakeFormByIdQuery = async (
  */
 export const getIntakeFormBySlugQuery = async (
   slug: string,
-  tenant: string
+  organizationId: number
 ): Promise<IIntakeForm | null> => {
   const forms = await sequelize.query(
     `SELECT ${FORM_SELECT_COLUMNS}
-    FROM "${tenant}".intake_forms
-    WHERE slug = :slug`,
+    FROM intake_forms
+    WHERE organization_id = :organizationId AND slug = :slug`,
     {
-      replacements: { slug },
+      replacements: { organizationId, slug },
       type: QueryTypes.SELECT,
     }
   );
@@ -110,7 +112,7 @@ export const getIntakeFormBySlugQuery = async (
  */
 export const getActivePublicFormQuery = async (
   slug: string,
-  tenant: string
+  organizationId: number
 ): Promise<IPublicIntakeForm | null> => {
   const forms = await sequelize.query(
     `SELECT
@@ -118,12 +120,13 @@ export const getActivePublicFormQuery = async (
       schema, submit_button_text as "submitButtonText",
       public_id as "publicId",
       design_settings as "designSettings"
-    FROM "${tenant}".intake_forms
-    WHERE slug = :slug
+    FROM intake_forms
+    WHERE organization_id = :organizationId
+      AND slug = :slug
       AND status = :status
       AND (ttl_expires_at IS NULL OR ttl_expires_at > NOW())`,
     {
-      replacements: { slug, status: IntakeFormStatus.ACTIVE },
+      replacements: { organizationId, slug, status: IntakeFormStatus.ACTIVE },
       type: QueryTypes.SELECT,
     }
   );
@@ -135,7 +138,7 @@ export const getActivePublicFormQuery = async (
  */
 export const getFormByPublicIdQuery = async (
   publicId: string,
-  tenant: string
+  organizationId: number
 ): Promise<IPublicIntakeForm | null> => {
   const forms = await sequelize.query(
     `SELECT
@@ -143,12 +146,13 @@ export const getFormByPublicIdQuery = async (
       schema, submit_button_text as "submitButtonText",
       public_id as "publicId",
       design_settings as "designSettings"
-    FROM "${tenant}".intake_forms
-    WHERE public_id = :publicId
+    FROM intake_forms
+    WHERE organization_id = :organizationId
+      AND public_id = :publicId
       AND status = :status
       AND (ttl_expires_at IS NULL OR ttl_expires_at > NOW())`,
     {
-      replacements: { publicId, status: IntakeFormStatus.ACTIVE },
+      replacements: { organizationId, publicId, status: IntakeFormStatus.ACTIVE },
       type: QueryTypes.SELECT,
     }
   );
@@ -160,25 +164,26 @@ export const getFormByPublicIdQuery = async (
  */
 export const createIntakeFormQuery = async (
   data: ICreateIntakeFormInput,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IIntakeForm> => {
   const slug = data.slug || generateSlug(data.name);
-  const uniqueSlug = await ensureUniqueSlug(slug, tenant, transaction);
+  const uniqueSlug = await ensureUniqueSlug(slug, organizationId, transaction);
   const publicId = crypto.randomBytes(8).toString("hex");
 
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".intake_forms
-      (name, description, slug, entity_type, schema, submit_button_text, status,
+    `INSERT INTO intake_forms
+      (organization_id, name, description, slug, entity_type, schema, submit_button_text, status,
        ttl_expires_at, public_id, recipients, risk_tier_system, risk_assessment_config,
        llm_key_id, suggested_questions_enabled, design_settings, created_by, created_at, updated_at)
     VALUES
-      (:name, :description, :slug, :entityType, :schema, :submitButtonText, :status,
+      (:organizationId, :name, :description, :slug, :entityType, :schema, :submitButtonText, :status,
        :ttlExpiresAt, :publicId, :recipients, :riskTierSystem, :riskAssessmentConfig,
        :llmKeyId, :suggestedQuestionsEnabled, :designSettings, :createdBy, NOW(), NOW())
     RETURNING ${FORM_SELECT_COLUMNS}`,
     {
       replacements: {
+        organizationId,
         name: data.name,
         description: data.description,
         slug: uniqueSlug,
@@ -189,7 +194,7 @@ export const createIntakeFormQuery = async (
         ttlExpiresAt: data.ttlExpiresAt || null,
         publicId,
         recipients: JSON.stringify(data.recipients || []),
-        riskTierSystem: data.riskTierSystem || "generic",
+        riskTierSystem: data.riskTierSystem || "eu_ai_act",
         riskAssessmentConfig: data.riskAssessmentConfig
           ? JSON.stringify(data.riskAssessmentConfig)
           : null,
@@ -214,11 +219,11 @@ export const createIntakeFormQuery = async (
 export const updateIntakeFormQuery = async (
   id: number,
   data: IUpdateIntakeFormInput,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IIntakeForm | null> => {
   const updates: string[] = [];
-  const replacements: Record<string, unknown> = { id };
+  const replacements: Record<string, unknown> = { organizationId, id };
 
   if (data.name !== undefined) {
     updates.push("name = :name");
@@ -229,7 +234,7 @@ export const updateIntakeFormQuery = async (
     replacements.description = data.description;
   }
   if (data.slug !== undefined) {
-    const uniqueSlug = await ensureUniqueSlug(data.slug, tenant, transaction, id);
+    const uniqueSlug = await ensureUniqueSlug(data.slug, organizationId, transaction, id);
     updates.push("slug = :slug");
     replacements.slug = uniqueSlug;
   }
@@ -281,15 +286,15 @@ export const updateIntakeFormQuery = async (
   }
 
   if (updates.length === 0) {
-    return getIntakeFormByIdQuery(id, tenant);
+    return getIntakeFormByIdQuery(id, organizationId);
   }
 
   updates.push("updated_at = NOW()");
 
   const result = await sequelize.query(
-    `UPDATE "${tenant}".intake_forms
+    `UPDATE intake_forms
     SET ${updates.join(", ")}
-    WHERE id = :id
+    WHERE organization_id = :organizationId AND id = :id
     RETURNING ${FORM_SELECT_COLUMNS}`,
     {
       replacements,
@@ -306,14 +311,15 @@ export const updateIntakeFormQuery = async (
  */
 export const deleteIntakeFormQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".intake_forms
-    WHERE id = :id AND status IN (:draft, :archived)`,
+    `DELETE FROM intake_forms
+    WHERE organization_id = :organizationId AND id = :id AND status IN (:draft, :archived)`,
     {
       replacements: {
+        organizationId,
         id,
         draft: IntakeFormStatus.DRAFT,
         archived: IntakeFormStatus.ARCHIVED,
@@ -330,13 +336,13 @@ export const deleteIntakeFormQuery = async (
  */
 export const archiveIntakeFormQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IIntakeForm | null> => {
   return updateIntakeFormQuery(
     id,
     { status: IntakeFormStatus.ARCHIVED },
-    tenant,
+    organizationId,
     transaction
   );
 };
@@ -345,17 +351,19 @@ export const archiveIntakeFormQuery = async (
  * Archive expired forms (called by cron job)
  */
 export const archiveExpiredFormsQuery = async (
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<number> => {
   const result = await sequelize.query(
-    `UPDATE "${tenant}".intake_forms
+    `UPDATE intake_forms
     SET status = :archivedStatus, updated_at = NOW()
-    WHERE status = :activeStatus
+    WHERE organization_id = :organizationId
+      AND status = :activeStatus
       AND ttl_expires_at IS NOT NULL
       AND ttl_expires_at <= NOW()`,
     {
       replacements: {
+        organizationId,
         archivedStatus: IntakeFormStatus.ARCHIVED,
         activeStatus: IntakeFormStatus.ACTIVE,
       },
@@ -375,16 +383,16 @@ export const archiveExpiredFormsQuery = async (
  */
 export const getSubmissionsByFormIdQuery = async (
   formId: number,
-  tenant: string,
+  organizationId: number,
   status?: IntakeSubmissionStatus,
   limit: number = 200,
   offset: number = 0
 ): Promise<IIntakeSubmission[]> => {
   let query = `SELECT ${SUBMISSION_SELECT_COLUMNS}
-  FROM "${tenant}".intake_submissions
-  WHERE form_id = :formId`;
+  FROM intake_submissions
+  WHERE organization_id = :organizationId AND form_id = :formId`;
 
-  const replacements: Record<string, unknown> = { formId, limit, offset };
+  const replacements: Record<string, unknown> = { organizationId, formId, limit, offset };
 
   if (status) {
     query += " AND status = :status";
@@ -402,11 +410,13 @@ export const getSubmissionsByFormIdQuery = async (
 };
 
 /**
- * Get pending submissions for a tenant (for dashboard, capped at 500)
+ * Get pending submissions for an organization (for dashboard, capped at 500)
  */
 export const getPendingSubmissionsQuery = async (
-  tenant: string
+  organizationId: number,
+  status?: IntakeSubmissionStatus
 ): Promise<IIntakeSubmission[]> => {
+  const statusFilter = status ? "AND s.status = :status" : "";
   const submissions = await sequelize.query(
     `SELECT
       s.id, s.form_id as "formId", s.submitter_email as "submitterEmail",
@@ -419,13 +429,14 @@ export const getPendingSubmissionsQuery = async (
       s.risk_override as "riskOverride",
       s.created_at as "createdAt", s.updated_at as "updatedAt",
       f.name as "formName", f.entity_type as "formEntityType"
-    FROM "${tenant}".intake_submissions s
-    JOIN "${tenant}".intake_forms f ON s.form_id = f.id
-    WHERE s.status = :status
+    FROM intake_submissions s
+    JOIN intake_forms f ON s.organization_id = f.organization_id AND s.form_id = f.id
+    WHERE s.organization_id = :organizationId
+    ${statusFilter}
     ORDER BY s.created_at DESC
     LIMIT 500`,
     {
-      replacements: { status: IntakeSubmissionStatus.PENDING },
+      replacements: status ? { organizationId, status } : { organizationId },
       type: QueryTypes.SELECT,
     }
   );
@@ -438,15 +449,19 @@ export const getPendingSubmissionsQuery = async (
  */
 export const getSubmissionByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number,
+  transaction?: Transaction,
+  forUpdate?: boolean
 ): Promise<IIntakeSubmission | null> => {
+  const lock = forUpdate ? " FOR UPDATE" : "";
   const submissions = await sequelize.query(
     `SELECT ${SUBMISSION_SELECT_COLUMNS}
-    FROM "${tenant}".intake_submissions
-    WHERE id = :id`,
+    FROM intake_submissions
+    WHERE organization_id = :organizationId AND id = :id${lock}`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       type: QueryTypes.SELECT,
+      transaction,
     }
   );
 
@@ -458,24 +473,25 @@ export const getSubmissionByIdQuery = async (
  */
 export const createSubmissionQuery = async (
   data: ICreateIntakeSubmissionInput,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IIntakeSubmission> => {
   // Use atomic subquery for resubmission count to avoid read-then-write race condition
   const resubmissionCountExpr = data.originalSubmissionId
-    ? `COALESCE((SELECT resubmission_count + 1 FROM "${tenant}".intake_submissions WHERE id = :originalSubmissionId FOR UPDATE), 0)`
+    ? `COALESCE((SELECT resubmission_count + 1 FROM intake_submissions WHERE organization_id = :organizationId AND id = :originalSubmissionId FOR UPDATE), 0)`
     : "0";
 
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".intake_submissions
-      (form_id, submitter_email, submitter_name, data, entity_type, status,
+    `INSERT INTO intake_submissions
+      (organization_id, form_id, submitter_email, submitter_name, data, entity_type, status,
        original_submission_id, resubmission_count, ip_address, created_at, updated_at)
     VALUES
-      (:formId, :submitterEmail, :submitterName, :data, :entityType, :status,
+      (:organizationId, :formId, :submitterEmail, :submitterName, :data, :entityType, :status,
        :originalSubmissionId, ${resubmissionCountExpr}, :ipAddress, NOW(), NOW())
     RETURNING ${SUBMISSION_SELECT_COLUMNS}`,
     {
       replacements: {
+        organizationId,
         formId: data.formId,
         submitterEmail: data.submitterEmail,
         submitterName: data.submitterName,
@@ -490,6 +506,27 @@ export const createSubmissionQuery = async (
     }
   );
 
+  // Supersede the original submission when this is a resubmission
+  if (data.originalSubmissionId) {
+    await sequelize.query(
+      `UPDATE intake_submissions
+       SET status = :superseded, updated_at = NOW()
+       WHERE organization_id = :organizationId AND id = :originalId
+         AND status IN (:pending, :rejected)`,
+      {
+        replacements: {
+          organizationId,
+          originalId: data.originalSubmissionId,
+          superseded: IntakeSubmissionStatus.SUPERSEDED,
+          pending: IntakeSubmissionStatus.PENDING,
+          rejected: IntakeSubmissionStatus.REJECTED,
+        },
+        type: QueryTypes.UPDATE,
+        transaction,
+      }
+    );
+  }
+
   return result[0] as IIntakeSubmission;
 };
 
@@ -500,17 +537,18 @@ export const approveSubmissionQuery = async (
   id: number,
   entityId: number,
   reviewedBy: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IIntakeSubmission | null> => {
   const result = await sequelize.query(
-    `UPDATE "${tenant}".intake_submissions
+    `UPDATE intake_submissions
     SET status = :status, entity_id = :entityId, reviewed_by = :reviewedBy,
         reviewed_at = NOW(), updated_at = NOW()
-    WHERE id = :id
+    WHERE organization_id = :organizationId AND id = :id
     RETURNING ${SUBMISSION_SELECT_COLUMNS}`,
     {
       replacements: {
+        organizationId,
         id,
         status: IntakeSubmissionStatus.APPROVED,
         entityId,
@@ -531,17 +569,18 @@ export const rejectSubmissionQuery = async (
   id: number,
   rejectionReason: string,
   reviewedBy: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IIntakeSubmission | null> => {
   const result = await sequelize.query(
-    `UPDATE "${tenant}".intake_submissions
+    `UPDATE intake_submissions
     SET status = :status, rejection_reason = :rejectionReason,
         reviewed_by = :reviewedBy, reviewed_at = NOW(), updated_at = NOW()
-    WHERE id = :id
+    WHERE organization_id = :organizationId AND id = :id
     RETURNING ${SUBMISSION_SELECT_COLUMNS}`,
     {
       replacements: {
+        organizationId,
         id,
         status: IntakeSubmissionStatus.REJECTED,
         rejectionReason,
@@ -561,15 +600,16 @@ export const rejectSubmissionQuery = async (
 export const updateSubmissionRiskQuery = async (
   id: number,
   riskResult: IRiskAssessment,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".intake_submissions
+    `UPDATE intake_submissions
     SET risk_assessment = :riskAssessment, risk_tier = :riskTier, updated_at = NOW()
-    WHERE id = :id`,
+    WHERE organization_id = :organizationId AND id = :id`,
     {
       replacements: {
+        organizationId,
         id,
         riskAssessment: JSON.stringify(riskResult),
         riskTier: riskResult.tier,
@@ -586,15 +626,16 @@ export const updateSubmissionRiskQuery = async (
 export const updateSubmissionRiskOverrideQuery = async (
   id: number,
   override: IRiskOverride,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".intake_submissions
+    `UPDATE intake_submissions
     SET risk_override = :riskOverride, risk_tier = :riskTier, updated_at = NOW()
-    WHERE id = :id`,
+    WHERE organization_id = :organizationId AND id = :id`,
     {
       replacements: {
+        organizationId,
         id,
         riskOverride: JSON.stringify(override),
         riskTier: override.tier,
@@ -609,20 +650,24 @@ export const updateSubmissionRiskOverrideQuery = async (
  * Get submission stats for dashboard
  */
 export const getSubmissionStatsQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<IIntakeSubmissionStats> => {
   const result = await sequelize.query(
     `SELECT
       COUNT(*) FILTER (WHERE status = :pending) as pending,
       COUNT(*) FILTER (WHERE status = :approved) as approved,
       COUNT(*) FILTER (WHERE status = :rejected) as rejected,
+      COUNT(*) FILTER (WHERE status = :superseded) as superseded,
       COUNT(*) as total
-    FROM "${tenant}".intake_submissions`,
+    FROM intake_submissions
+    WHERE organization_id = :organizationId`,
     {
       replacements: {
+        organizationId,
         pending: IntakeSubmissionStatus.PENDING,
         approved: IntakeSubmissionStatus.APPROVED,
         rejected: IntakeSubmissionStatus.REJECTED,
+        superseded: IntakeSubmissionStatus.SUPERSEDED,
       },
       type: QueryTypes.SELECT,
     }
@@ -633,7 +678,89 @@ export const getSubmissionStatsQuery = async (
     pending: parseInt(stats.pending, 10) || 0,
     approved: parseInt(stats.approved, 10) || 0,
     rejected: parseInt(stats.rejected, 10) || 0,
+    superseded: parseInt(stats.superseded, 10) || 0,
     total: parseInt(stats.total, 10) || 0,
+  };
+};
+
+/**
+ * Get the approved submission + form schema for a given entity.
+ * Used for surfacing original intake data on entity detail pages.
+ */
+export const getSubmissionByEntityQuery = async (
+  entityType: string,
+  entityId: number,
+  organizationId: number
+): Promise<{
+  submission: IIntakeSubmission;
+  formName: string;
+  formSchema: Record<string, unknown> | null;
+} | null> => {
+  const results = await sequelize.query(
+    `SELECT
+      s.id, s.form_id as "formId", s.submitter_email as "submitterEmail",
+      s.submitter_name as "submitterName", s.data, s.entity_type as "entityType",
+      s.entity_id as "entityId", s.status, s.rejection_reason as "rejectionReason",
+      s.reviewed_by as "reviewedBy", s.reviewed_at as "reviewedAt",
+      s.original_submission_id as "originalSubmissionId",
+      s.resubmission_count as "resubmissionCount", s.ip_address as "ipAddress",
+      s.risk_assessment as "riskAssessment", s.risk_tier as "riskTier",
+      s.risk_override as "riskOverride",
+      s.created_at as "createdAt", s.updated_at as "updatedAt",
+      f.name as "formName",
+      f.schema as "formSchema"
+    FROM intake_submissions s
+    LEFT JOIN intake_forms f ON s.organization_id = f.organization_id AND s.form_id = f.id
+    WHERE s.organization_id = :organizationId
+      AND s.entity_type = :entityType
+      AND s.entity_id = :entityId
+      AND s.status = :status
+    ORDER BY s.created_at DESC
+    LIMIT 1`,
+    {
+      replacements: {
+        organizationId,
+        entityType,
+        entityId,
+        status: IntakeSubmissionStatus.APPROVED,
+      },
+      type: QueryTypes.SELECT,
+    }
+  );
+
+  if (results.length === 0) return null;
+
+  const row = results[0] as any;
+  const formSchema = row.formSchema
+    ? typeof row.formSchema === "string"
+      ? JSON.parse(row.formSchema)
+      : row.formSchema
+    : null;
+
+  return {
+    submission: {
+      id: row.id,
+      formId: row.formId,
+      submitterEmail: row.submitterEmail,
+      submitterName: row.submitterName,
+      data: row.data,
+      entityType: row.entityType,
+      entityId: row.entityId,
+      status: row.status,
+      rejectionReason: row.rejectionReason,
+      reviewedBy: row.reviewedBy,
+      reviewedAt: row.reviewedAt,
+      originalSubmissionId: row.originalSubmissionId,
+      resubmissionCount: row.resubmissionCount,
+      ipAddress: row.ipAddress,
+      riskAssessment: row.riskAssessment,
+      riskTier: row.riskTier,
+      riskOverride: row.riskOverride,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    } as IIntakeSubmission,
+    formName: row.formName || "Deleted form",
+    formSchema,
   };
 };
 
@@ -642,25 +769,26 @@ export const getSubmissionStatsQuery = async (
 // ============================================================================
 
 /**
- * Check rate limit for IP address (100 submissions per hour)
+ * Check rate limit for IP address (10 submissions per hour per organization)
  */
 export const checkRateLimitQuery = async (
   ipAddress: string,
-  tenant: string
+  organizationId: number
 ): Promise<boolean> => {
   const result = await sequelize.query(
     `SELECT COUNT(*) as count
-    FROM "${tenant}".intake_submissions
-    WHERE ip_address = :ipAddress
+    FROM intake_submissions
+    WHERE organization_id = :organizationId
+      AND ip_address = :ipAddress
       AND created_at > NOW() - INTERVAL '1 hour'`,
     {
-      replacements: { ipAddress },
+      replacements: { organizationId, ipAddress },
       type: QueryTypes.SELECT,
     }
   );
 
   const count = parseInt((result[0] as any).count, 10) || 0;
-  return count < 100;
+  return count < 10;
 };
 
 // ============================================================================
@@ -684,7 +812,7 @@ export function generateSlug(name: string): string {
  */
 export async function ensureUniqueSlug(
   slug: string,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction,
   excludeId?: number
 ): Promise<string> {
@@ -692,8 +820,8 @@ export async function ensureUniqueSlug(
   let counter = 1;
 
   while (true) {
-    let query = `SELECT COUNT(*) as count FROM "${tenant}".intake_forms WHERE slug = :slug`;
-    const replacements: Record<string, unknown> = { slug: uniqueSlug };
+    let query = `SELECT COUNT(*) as count FROM intake_forms WHERE organization_id = :organizationId AND slug = :slug`;
+    const replacements: Record<string, unknown> = { organizationId, slug: uniqueSlug };
 
     if (excludeId) {
       query += " AND id != :excludeId";
@@ -729,7 +857,7 @@ export async function getTenantSlugById(
   organizationId: number
 ): Promise<string | null> {
   const result = await sequelize.query(
-    `SELECT slug FROM public.organizations WHERE id = :id`,
+    `SELECT slug FROM organizations WHERE id = :id`,
     {
       replacements: { id: organizationId },
       type: QueryTypes.SELECT,
@@ -740,15 +868,13 @@ export async function getTenantSlugById(
 }
 
 /**
- * Get tenant hash from organization slug
+ * Get organization ID from organization slug
  */
 export async function getTenantHashBySlug(
   slug: string
 ): Promise<{ id: number; hash: string } | null> {
-  const { getTenantHash } = await import("../tools/getTenantHash");
-
   const result = await sequelize.query(
-    `SELECT id FROM public.organizations WHERE slug = :slug`,
+    `SELECT id FROM organizations WHERE slug = :slug`,
     {
       replacements: { slug },
       type: QueryTypes.SELECT,
@@ -760,7 +886,7 @@ export async function getTenantHashBySlug(
   }
 
   const orgId = (result[0] as any).id;
-  return { id: orgId, hash: getTenantHash(orgId) };
+  return { id: orgId, hash: "" };
 }
 
 /**
@@ -772,7 +898,7 @@ export async function getUsersByIds(
   if (!userIds || userIds.length === 0) return [];
 
   const result = await sequelize.query(
-    `SELECT id, name, email FROM public.users WHERE id = ANY(:ids)`,
+    `SELECT id, name, email FROM users WHERE id = ANY(:ids)`,
     {
       replacements: { ids: userIds },
       type: QueryTypes.SELECT,
@@ -783,70 +909,36 @@ export async function getUsersByIds(
 }
 
 /**
- * Resolve tenant from publicId — uses a single UNION ALL query across all tenants
- * instead of scanning each tenant sequentially (O(1) query vs O(N) queries).
+ * Resolve organization from publicId — direct lookup in shared intake_forms table.
  */
-export async function getTenantByPublicId(
+export async function getOrganizationByPublicId(
   publicId: string
-): Promise<{ tenantHash: string; orgId: number } | null> {
+): Promise<{ orgId: number } | null> {
   // Validate publicId format (8 or 16 char hex string) to prevent injection
   if (!/^[a-f0-9]{8,16}$/i.test(publicId)) {
     return null;
   }
 
-  const { getTenantHash } = await import("../tools/getTenantHash");
+  const result = await sequelize.query(
+    `SELECT organization_id as org_id FROM intake_forms WHERE public_id = :publicId LIMIT 1`,
+    { replacements: { publicId }, type: QueryTypes.SELECT }
+  ) as Array<{ org_id: number }>;
 
-  const orgs = await sequelize.query(
-    `SELECT id FROM public.organizations`,
-    { type: QueryTypes.SELECT }
-  ) as Array<{ id: number }>;
-
-  if (orgs.length === 0) return null;
-
-  // Build a single UNION ALL query across all tenant schemas
-  const unionParts: string[] = [];
-  const tenantMap = new Map<number, string>();
-
-  for (const org of orgs) {
-    const hash = getTenantHash(org.id);
-    tenantMap.set(org.id, hash);
-    // Schema names are derived from getTenantHash (trusted), publicId uses parameterized replacement
-    unionParts.push(
-      `SELECT ${org.id} as org_id FROM "${hash}".intake_forms WHERE public_id = :publicId LIMIT 1`
-    );
-  }
-
-  try {
-    const result = await sequelize.query(
-      `${unionParts.join(" UNION ALL ")} LIMIT 1`,
-      { replacements: { publicId }, type: QueryTypes.SELECT }
-    ) as Array<{ org_id: number }>;
-
-    if (result.length > 0) {
-      const orgId = result[0].org_id;
-      return { tenantHash: tenantMap.get(orgId)!, orgId };
-    }
-  } catch (err) {
-    // If UNION ALL fails (e.g. a schema doesn't have intake_forms table),
-    // fall back to sequential scan
-    for (const org of orgs) {
-      const hash = tenantMap.get(org.id)!;
-      try {
-        const forms = await sequelize.query(
-          `SELECT id FROM "${hash}".intake_forms WHERE public_id = :publicId LIMIT 1`,
-          {
-            replacements: { publicId },
-            type: QueryTypes.SELECT,
-          }
-        );
-        if (forms.length > 0) {
-          return { tenantHash: hash, orgId: org.id };
-        }
-      } catch {
-        // Schema may not exist or table missing, skip
-      }
-    }
+  if (result.length > 0) {
+    return { orgId: result[0].org_id };
   }
 
   return null;
+}
+
+/**
+ * @deprecated Use getOrganizationByPublicId instead. Maintained for backward compatibility.
+ */
+export async function getTenantByPublicId(
+  publicId: string
+): Promise<{ tenantHash: string; orgId: number } | null> {
+  const result = await getOrganizationByPublicId(publicId);
+  if (!result) return null;
+  // Return a placeholder tenantHash for backward compatibility
+  return { tenantHash: String(result.orgId), orgId: result.orgId };
 }

@@ -10,10 +10,10 @@ export interface FetchEvidenceParams {
 
 const fetchEvidence = async (
   params: FetchEvidenceParams,
-  tenant: string
+  organizationId: number
 ): Promise<any[]> => {
   try {
-    let evidences = await getAllEvidencesQuery(tenant);
+    let evidences = await getAllEvidencesQuery(organizationId);
     const now = new Date();
 
     // Apply filters
@@ -68,10 +68,10 @@ const fetchEvidence = async (
 
 const getEvidenceAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const evidences = await getAllEvidencesQuery(tenant);
+    const evidences = await getAllEvidencesQuery(organizationId);
     const total = evidences.length;
     const now = new Date();
     const thirtyDaysFromNow = new Date(
@@ -130,10 +130,10 @@ const getEvidenceAnalytics = async (
 
 const getEvidenceExecutiveSummary = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const evidences = await getAllEvidencesQuery(tenant);
+    const evidences = await getAllEvidencesQuery(organizationId);
     const total = evidences.length;
     const now = new Date();
     const thirtyDaysFromNow = new Date(

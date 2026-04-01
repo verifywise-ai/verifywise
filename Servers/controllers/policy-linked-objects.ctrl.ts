@@ -19,7 +19,7 @@ export async function getAllLinkedObjects(req: Request, res: Response) {
   logger.debug("🔍 Fetching all linked objects");
 
   try {
-    const tenant = req.tenantId!;
+    const tenant = req.organizationId!;
     const rows = await getAllPolicyLinkedObjectsQuery(tenant);
 
     const grouped = rows.reduce(
@@ -86,7 +86,7 @@ export async function getLinkedObjects(req: Request, res: Response) {
   logger.debug(`🔍 Fetching linked objects for policy ${policyId}`);
 
   try {
-    const tenant = req.tenantId!;
+    const tenant = req.organizationId!;
     const rows = await getPolicyLinkedObjectByIdQuery(policyId, tenant);
 
     const grouped = rows.reduce(
@@ -148,7 +148,7 @@ export async function createLinkedObject(req: Request, res: Response) {
   let transaction: Transaction | null = null;
 
   try {
-    const tenant = req.tenantId!;
+    const tenant = req.organizationId!;
     transaction = await sequelize.transaction();
 
     // Handle single insert (old)
@@ -201,14 +201,14 @@ export async function deleteRiskFromAllPolicies(req: Request, res: Response) {
   let transaction: Transaction | null = null;
 
   try {
-    const tenant = req.tenantId!;
+    const organizationId = req.organizationId!;
     transaction = await sequelize.transaction();
 
     await sequelize.query(
-      `DELETE FROM "${tenant}".policy_linked_objects
-       WHERE object_id = :riskId AND object_type = 'risk'`,
+      `DELETE FROM policy_linked_objects
+       WHERE organization_id = :organizationId AND object_id = :riskId AND object_type = 'risk'`,
       {
-        replacements: { riskId },
+        replacements: { organizationId, riskId },
         transaction,
       }
     );
@@ -243,14 +243,14 @@ export async function deleteEvidenceFromAllPolicies(req: Request, res: Response)
   let transaction: Transaction | null = null;
 
   try {
-    const tenant = req.tenantId!;
+    const organizationId = req.organizationId!;
     transaction = await sequelize.transaction();
 
     await sequelize.query(
-      `DELETE FROM "${tenant}".policy_linked_objects
-       WHERE object_id = :evidenceId AND object_type = 'evidence'`,
+      `DELETE FROM policy_linked_objects
+       WHERE organization_id = :organizationId AND object_id = :evidenceId AND object_type = 'evidence'`,
       {
-        replacements: { evidenceId },
+        replacements: { organizationId, evidenceId },
         transaction,
       }
     );
@@ -284,9 +284,9 @@ export async function deleteLinkedObject(req: Request, res: Response) {
     let transaction: Transaction | null = null;
   
     try {
-      const tenant = req.tenantId!;
+      const tenant = req.organizationId!;
       transaction = await sequelize.transaction();
-  
+
       await deletePolicyLinkedObjectQuery(id, tenant, transaction);
   
       await transaction.commit();

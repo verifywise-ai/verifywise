@@ -12,12 +12,16 @@
  * 4. Payload structure validation
  * 5. Organization membership verification
  * 6. Role consistency validation
- * 7. Tenant hash validation for multi-tenancy
+ *
+ * Multi-Tenancy:
+ * Uses shared-schema multi-tenancy with organization_id for tenant isolation.
+ * All tenant data is in the public schema with organization_id column.
+ * tenantId is set to organizationId string for backward compatibility during migration.
  *
  * Features:
  * - Bearer token extraction from Authorization header
  * - Comprehensive token payload validation
- * - Multi-tenant organization isolation
+ * - Multi-tenant organization isolation via organizationId
  * - Role-based access control integration
  * - AsyncLocalStorage context propagation
  * - Detailed error responses for debugging
@@ -28,10 +32,8 @@
 import { NextFunction, Request, Response } from "express";
 import { getTokenPayload } from "../utils/jwt.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { getTenantHash } from "../tools/getTenantHash";
 import { doesUserBelongsToOrganizationQuery, getUserByIdQuery } from "../utils/user.utils";
 import { asyncLocalStorage } from '../utils/context/context';
-import { isValidTenantHash } from "../utils/security.utils";
 
 /**
  * Role ID to role name mapping for validation
@@ -46,6 +48,7 @@ export const roleMap = new Map([
   [2, "Reviewer"],
   [3, "Editor"],
   [4, "Auditor"],
+  [5, "SuperAdmin"],
 ])
 
 /**
@@ -65,19 +68,17 @@ export const roleMap = new Map([
  * - Checks token expiration timestamp
  * - Verifies user belongs to claimed organization
  * - Validates role hasn't changed since token issuance
- * - Verifies tenant hash for multi-tenancy security
  * - Prevents token reuse across organizations
  *
  * @validation_flow
  * 1. Extract Bearer token from Authorization header
  * 2. Verify JWT signature and decode payload
  * 3. Check token expiration
- * 4. Validate payload structure (id, roleName)
+ * 4. Validate payload structure (id, roleName, organizationId)
  * 5. Verify organization membership in database
  * 6. Validate role consistency with current user role
- * 7. Verify tenant hash matches organization
- * 8. Attach user context to request
- * 9. Initialize AsyncLocalStorage for request tracing
+ * 7. Attach user context to request
+ * 8. Initialize AsyncLocalStorage for request tracing
  *
  * @example
  * // Protect a route with authentication
@@ -138,39 +139,68 @@ const authenticateJWT = async (
       return res.status(400).json({ message: 'Invalid token' });
     }
 
-    // Verify user belongs to the organization claimed in token
-    const belongs = await doesUserBelongsToOrganizationQuery(decoded.id, decoded.organizationId);
-    if (!belongs.belongs) {
-      return res.status(403).json({ message: 'User does not belong to this organization' });
-    }
-
     // Validate role hasn't changed since token was issued
     const user = await getUserByIdQuery(decoded.id)
     if (decoded.roleName !== roleMap.get(user.role_id)) {
       return res.status(403).json({ message: 'Not allowed to access' });
     }
 
-    // Verify tenant hash format (defense-in-depth against SQL injection)
-    if (!isValidTenantHash(decoded.tenantId)) {
-      return res.status(400).json({ message: 'Invalid tenant format' });
+    const isSuperAdmin = decoded.roleName === 'SuperAdmin';
+
+    if (isSuperAdmin) {
+      // Super-admin: skip org membership check, resolve org from header
+      req.userId = decoded.id;
+      req.isSuperAdmin = true;
+
+      req.role = decoded.roleName;
+
+      const headerOrgId = req.headers['x-organization-id'];
+      if (headerOrgId) {
+        const orgId = parseInt(headerOrgId as string, 10);
+        if (!isNaN(orgId) && orgId > 0) {
+          req.organizationId = orgId;
+          req.tenantId = orgId;
+          const { getTenantHash } = require('../tools/getTenantHash');
+          req.tenantHash = getTenantHash(orgId);
+        }
+      }
+      // If no X-Organization-Id header, organizationId stays undefined (super-admin-only routes)
+    } else {
+      // Normal user: verify org membership
+      const belongs = await doesUserBelongsToOrganizationQuery(decoded.id, decoded.organizationId);
+      if (!belongs.belongs) {
+        return res.status(403).json({ message: 'User does not belong to this organization' });
+      }
+
+      // Attach user context to request for downstream handlers
+      req.userId = decoded.id;
+      req.role = decoded.roleName;
+      req.organizationId = decoded.organizationId;
+      // tenantId is set to organizationId for backward compatibility during migration
+      // TODO: Remove tenantId once all usages are migrated to use organizationId
+      req.tenantId = decoded.organizationId;
+      // tenantHash is the schema name derived from organizationId
+      // Use for schema-qualified queries: FROM "${tenantHash}".table_name
+      const { getTenantHash } = require('../tools/getTenantHash');
+      req.tenantHash = getTenantHash(decoded.organizationId);
     }
 
-    // Verify tenant hash matches organization for multi-tenancy security
-    if (decoded.tenantId !== getTenantHash(decoded.organizationId)) {
-      return res.status(400).json({ message: 'Invalid token' });
+    // Enforce read-only mode for super-admin viewing an org
+    if (req.isSuperAdmin && req.organizationId) {
+      const readOnlyMethods = ['GET', 'HEAD', 'OPTIONS'];
+      const isSuperAdminRoute = req.path.startsWith('/api/super-admin') || req.baseUrl?.startsWith('/api/super-admin');
+      if (!readOnlyMethods.includes(req.method.toUpperCase()) && !isSuperAdminRoute) {
+        return res.status(403).json(
+          STATUS_CODE[403]("Super-admin has read-only access when viewing an organization")
+        );
+      }
     }
 
-    // Attach user context to request for downstream handlers
-    req.userId = decoded.id;
-    req.role = decoded.roleName;
-    req.tenantId = decoded.tenantId;
-    req.organizationId = decoded.organizationId;
-
-    // Initialize AsyncLocalStorage context for request tracing (includes tenantId for logging)
+    // Initialize AsyncLocalStorage context for request tracing
     asyncLocalStorage.run({
       userId: decoded.id,
-      tenantId: decoded.tenantId,
-      organizationId: decoded.organizationId
+      tenantId: req.organizationId ?? 0,
+      organizationId: req.organizationId ?? 0
     }, () => {
       next();
     });

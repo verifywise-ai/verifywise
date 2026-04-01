@@ -18,6 +18,7 @@ import {
   deleteRepository,
   triggerRepositoryScan,
   getRepositoryScans,
+  generateWebhookSecretController,
 } from "../controllers/aiDetectionRepository.ctrl";
 
 const router = express.Router();
@@ -68,6 +69,13 @@ router.delete("/:id", authenticateJWT, authorize(ADMIN_ONLY), deleteRepository);
  * @access  Private - Admin, Editor
  */
 router.post("/:id/scan", authenticateJWT, authorize(WRITE_ROLES), triggerRepositoryScan);
+
+/**
+ * @route   POST /ai-detection/repositories/:id/webhook-secret
+ * @desc    Generate a new webhook secret for CI/CD integration
+ * @access  Private - Admin, Editor
+ */
+router.post("/:id/webhook-secret", authenticateJWT, authorize(WRITE_ROLES), generateWebhookSecretController);
 
 /**
  * @route   GET /ai-detection/repositories/:id/scans

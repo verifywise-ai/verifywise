@@ -11,6 +11,7 @@ on:
     paths:
       - 'Clients/**'
       - 'Servers/**'
+      - 'AIGateway/**'
 
 jobs:
   e2e-tests:
@@ -68,6 +69,8 @@ jobs:
           DB_NAME: verifywise_test
           DB_USER: postgres
           DB_PASSWORD: postgres
+          SUPERADMIN_EMAIL: admin@verifywise-test.com
+          SUPERADMIN_PASSWORD: TestAdmin!Str0ng
         run: npx sequelize db:migrate
 
       - name: Seed test data
@@ -79,6 +82,38 @@ jobs:
           DB_USER: postgres
           DB_PASSWORD: postgres
         run: node dist/scripts/seedTestData.js
+
+      # ---- AIGateway setup ----
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install AIGateway dependencies
+        working-directory: AIGateway
+        run: pip install -r requirements.txt
+
+      - name: Start AIGateway
+        working-directory: AIGateway/src
+        env:
+          AI_GATEWAY_PORT: 8100
+          AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
+          REDIS_URL: redis://localhost:6379/0
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          ENCRYPTION_KEY: test-encryption-key-32chars!!
+          EXPRESS_BACKEND_URL: http://localhost:3000
+        run: |
+          alembic upgrade head
+          uvicorn app:app --host 0.0.0.0 --port 8100 &
+          # Wait for AIGateway to be ready
+          for i in $(seq 1 30); do
+            curl -s http://localhost:8100/health && break
+            sleep 1
+          done
 
       - name: Start backend
         working-directory: Servers
@@ -96,6 +131,8 @@ jobs:
           REFRESH_TOKEN_SECRET: test-refresh-secret-for-e2e
           ENCRYPTION_KEY: test-encryption-key-32chars!!
           MULTI_TENANCY_ENABLED: false
+          AI_GATEWAY_URL: http://localhost:8100
+          AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
         run: |
           node dist/index.js &
           # Wait for backend to be ready
@@ -134,7 +171,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: Clients/playwright-report/
@@ -142,7 +179,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-results
           path: Clients/test-results/

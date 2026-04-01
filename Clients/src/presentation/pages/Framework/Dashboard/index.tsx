@@ -17,6 +17,7 @@ import NISTFunctionsOverviewCard from "./NISTFunctionsOverviewCard";
 import { PluginSlot } from "../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
 import { usePluginRegistry } from "../../../../application/contexts/PluginRegistry.context";
+import { brand } from "../../../themes/palette";
 
 // localStorage keys for framework controls navigation
 const FRAMEWORK_SELECTED_KEY = "verifywise_framework_selected";
@@ -101,7 +102,7 @@ const tabStyle = {
   minHeight: "20px",
   minWidth: "auto",
   "&.Mui-selected": {
-    color: "#13715B",
+    color: `${brand.primary}`,
   },
 };
 
@@ -471,7 +472,7 @@ const FrameworkDashboard = ({
         sx={{
           textAlign: "center",
           py: 8,
-          backgroundColor: "#F9FAFB",
+          backgroundColor: "background.accent",
           borderRadius: 2,
           border: "1px solid #d0d5dd",
         }}
@@ -509,7 +510,7 @@ const FrameworkDashboard = ({
           sx={{
             mb: 3,
             pb: 2,
-            borderBottom: "2px solid #13715B",
+            borderBottom: "2px solid brand.primary",
             display: "flex",
             alignItems: "center",
             gap: 1.5,
@@ -519,7 +520,7 @@ const FrameworkDashboard = ({
             sx={{
               width: 4,
               height: 20,
-              backgroundColor: "#13715B",
+              backgroundColor: "brand.primary",
               borderRadius: 1,
             }}
           />
@@ -535,7 +536,7 @@ const FrameworkDashboard = ({
           <Typography
             sx={{
               fontSize: 12,
-              color: "#667085",
+              color: "text.icon",
               ml: 1,
             }}
           >
@@ -570,7 +571,7 @@ const FrameworkDashboard = ({
             <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
               <TabList
                 onChange={handleTabChange}
-                TabIndicatorProps={{ style: { backgroundColor: "#13715B" } }}
+                TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
                 sx={tabListStyle}
               >
                 {tabs.map(tab => (

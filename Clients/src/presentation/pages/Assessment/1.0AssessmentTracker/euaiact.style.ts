@@ -27,9 +27,9 @@ export const getPriorityColors = (priority: string): { bg: string; text: string 
     case "medium priority":
       return { bg: "#FEF3C7", text: "#F59E0B" }; // Warning/Pending
     case "low priority":
-      return { bg: "#F3F4F6", text: "#6B7280" }; // Neutral
+      return { bg: "background.hover", text: "status.default.text" }; // Neutral
     default:
-      return { bg: "#F3F4F6", text: "#6B7280" }; // Neutral
+      return { bg: "background.hover", text: "status.default.text" }; // Neutral
   }
 };
 
@@ -65,7 +65,7 @@ export const styles = {
     paddingLeft: "16px",
     paddingRight: "16px",
     paddingY: "12px",
-    "&:hover": { backgroundColor: "#f5f5f5" },
+    "&:hover": { backgroundColor: "background.surface" },
   } as SxProps<Theme>,
 
   /**
@@ -96,7 +96,7 @@ export const styles = {
       fontSize: 13,
       animation: isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
       "&:hover": {
-        backgroundColor: isFlashing ? "transparent" : "#f5f5f5",
+        backgroundColor: isFlashing ? "transparent" : "background.surface",
       },
     } as SxProps<Theme>),
 
@@ -106,7 +106,7 @@ export const styles = {
    */
   questionText: {
     fontSize: 13,
-    color: "#344054",
+    color: "text.secondary",
     flex: 1,
     overflow: "hidden",
     textOverflow: "ellipsis",

@@ -10,7 +10,7 @@ export const historyContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The scan results page maintains a complete record of all repository scans performed by your organization. Each scan record is preserved indefinitely for audit purposes, providing a defensible trail of AI governance activities.',
+      text: 'The scan results page keeps a full record of every repository scan your organization has run. Scan records are kept indefinitely for audit purposes.',
     },
     {
       type: 'heading',
@@ -27,8 +27,8 @@ export const historyContent: ArticleContent = {
       items: [
         { bold: 'Repository', text: 'Owner and name of the scanned repository' },
         { bold: 'Status', text: 'Current state — Completed, Failed, Cancelled, or Scanning' },
-        { bold: 'Risk score', text: 'AI Governance Risk Score grade (A–F) and numeric score if calculated' },
-        { bold: 'Findings', text: 'Total number of detections including libraries, API calls, secrets, and security issues' },
+        { bold: 'Risk score', text: 'AGRS letter grade (A through F) and numeric score, if calculated' },
+        { bold: 'Findings', text: 'Total detections: libraries, API calls, secrets, security issues' },
         { bold: 'Files scanned', text: 'Total source files analyzed' },
         { bold: 'Duration', text: 'Time taken to complete the scan' },
         { bold: 'Triggered by', text: 'User who initiated the scan, or "Scheduled" for automated scans' },
@@ -36,7 +36,7 @@ export const historyContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click any completed scan row to view its full results, including risk score details, library findings, API calls, detected secrets, and security vulnerabilities.',
+      text: 'Click any completed scan row to see its full results: risk score, library findings, API calls, secrets, and security issues.',
     },
     {
       type: 'image',
@@ -82,7 +82,7 @@ export const historyContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The risk score column shows the AI Governance Risk Score for each completed scan. A letter grade badge (A through F) appears alongside the numeric score. Scans without a calculated score show a dash. To generate a score, open the scan details page and click **Calculate risk score**.',
+      text: 'Each completed scan shows a letter grade badge (A through F) with the numeric score. Scans without a calculated score show a dash. To generate one, open the scan details and click **Calculate risk score**.',
     },
     {
       type: 'heading',
@@ -92,7 +92,7 @@ export const historyContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click any column header to sort the table by that column. Use the filter button to narrow results by status, repository, or triggered-by user. The search box filters results by repository name in real time. The table supports pagination for organizations with extensive scan results.',
+      text: 'Click column headers to sort. Use the filter button to narrow by status, repository, or who triggered the scan. The search box filters by repository name in real time. The table paginates if you have a lot of scans.',
     },
     {
       type: 'heading',
@@ -102,13 +102,13 @@ export const historyContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can delete individual scan records by clicking the trash icon in the actions column. Deletion is permanent and removes all associated findings. Consider exporting or documenting important results before deletion.',
+      text: 'Delete a scan record by clicking the trash icon. This is permanent and removes all its findings. Export or document anything you need before deleting.',
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Audit trail',
-      text: 'For compliance purposes, maintain scan results as evidence of ongoing AI governance activities. Regular scanning demonstrates due diligence in monitoring AI usage.',
+      text: 'Keep scan results around as evidence of ongoing AI governance. Regular scanning shows due diligence in monitoring AI usage.',
     },
     {
       type: 'heading',
@@ -118,12 +118,12 @@ export const historyContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To rescan a previously analyzed repository, navigate to the scan results page and click **Rescan**. This creates a new scan record while preserving the original for comparison. Alternatively, start a new scan from the Scan page with the same repository URL, or configure a scheduled scan from the Repositories page.',
+      text: 'To rescan a repo, go to the scan results page and click **Rescan**. This creates a new scan record and keeps the original for comparison. You can also start a new scan from the Scan page or set up a scheduled scan in Repositories.',
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Regular rescanning helps identify newly added AI dependencies. Consider configuring scheduled scans in the Repositories page for critical repositories.',
+      text: 'Rescanning regularly catches newly added AI dependencies. Set up scheduled scans in the Repositories page for your most important repos.',
     },
     {
       type: 'article-links',

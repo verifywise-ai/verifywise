@@ -48,7 +48,7 @@ const PolicyStatusCard: React.FC<PolicyStatusCardProps> = ({
     <StatusTileCards
       items={items}
       entityName="policy"
-      cardSx={{ paddingX: { xs: "15px", sm: "20px" } }}
+      size="small"
       onCardClick={handleCardClick}
       selectedKey={selectedStatus || undefined}
     />

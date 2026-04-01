@@ -33,7 +33,7 @@ export async function getVendorChangeHistoryById(
   try {
     const result = await getVendorChangeHistory(
       vendorId,
-      req.tenantId!,
+      req.organizationId!,
       limit,
       offset
     );

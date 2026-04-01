@@ -38,6 +38,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { Save as SaveIcon, Trash2 as DeleteIcon } from "lucide-react";
 import CustomizableToast from "../../../components/Toast";
 import CustomizableSkeleton from "../../../components/Skeletons";
+import IntakeSubmissionCard from "../IntakeSubmissionCard";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
 import allowedRoles from "../../../../application/constants/permissions";
@@ -616,28 +617,9 @@ const ProjectSettings = React.memo(
         newErrors.startDate = startDate.message;
       }
 
-      const geography = selectValidation("Geography", values.geography);
-      if (!geography.accepted) {
-        newErrors.geography = geography.message;
-      }
-
       const owner = selectValidation("Owner", values.owner);
       if (!owner.accepted) {
         newErrors.owner = owner.message;
-      }
-      const riskClassification = selectValidation(
-        "AI risk classification",
-        values.riskClassification,
-      );
-      if (!riskClassification.accepted) {
-        newErrors.riskClassification = riskClassification.message;
-      }
-      const typeOfHighRiskRole = selectValidation(
-        "Type of high risk role",
-        values.typeOfHighRiskRole,
-      );
-      if (!typeOfHighRiskRole.accepted) {
-        newErrors.typeOfHighRiskRole = typeOfHighRiskRole.message;
       }
 
       // Skip framework validation if use-case has pending approval (no frameworks created yet)
@@ -1038,7 +1020,6 @@ const ProjectSettings = React.memo(
                     onChange={handleOnSelectChange("geography")}
                     items={geographyItems}
                     sx={{ width: "150px", backgroundColor: theme.palette.background.main }}
-                    isRequired
                   />
 
                   {/* Use case status Row */}
@@ -1257,7 +1238,7 @@ const ProjectSettings = React.memo(
                                         paddingRight: "9px",
                                       },
                                       "& .MuiAutocomplete-option.Mui-focused": {
-                                        background: "#f9fafb",
+                                        background: "background.accent",
                                       },
                                     },
                                     "& .MuiAutocomplete-noOptions": {
@@ -1407,7 +1388,7 @@ const ProjectSettings = React.memo(
                               paddingRight: "9px",
                             },
                             "& .MuiAutocomplete-option.Mui-focused": {
-                              background: "#f9fafb",
+                              background: "background.accent",
                             },
                           },
                           "& .MuiAutocomplete-noOptions": {
@@ -1446,7 +1427,6 @@ const ProjectSettings = React.memo(
                         backgroundColor: theme.palette.background.main,
                       }}
                       error={errors.riskClassification}
-                      isRequired
                     />
                   </Stack>
 
@@ -1478,10 +1458,12 @@ const ProjectSettings = React.memo(
                       backgroundColor: theme.palette.background.main,
                     }}
                     error={errors.typeOfHighRiskRole}
-                    isRequired
                   />
                 </Box>
               </Box>
+
+              {/* Intake Form Submission */}
+              <IntakeSubmissionCard projectId={parseInt(projectId, 10) || 0} />
 
               {/* Save Button Row */}
               <Stack sx={{ width: "100%" }}>
@@ -1491,10 +1473,10 @@ const ProjectSettings = React.memo(
                       ...styles.saveButton,
                       backgroundColor: isSaveDisabled
                         ? "#ccc"
-                        : "#13715B",
+                        : "brand.primary",
                       border: isSaveDisabled
                         ? "1px solid rgba(0, 0, 0, 0.26)"
-                        : "1px solid #13715B",
+                        : "1px solid brand.primary",
                     }}
                     icon={<SaveIcon size={16} />}
                     variant="contained"
@@ -1520,7 +1502,7 @@ const ProjectSettings = React.memo(
                 <Typography
                   sx={{
                     fontSize: theme.typography.fontSize,
-                    color: "#667085",
+                    color: "text.icon",
                     mb: 8,
                   }}
                 >
@@ -1533,7 +1515,7 @@ const ProjectSettings = React.memo(
                     width: { xs: "100%", sm: theme.spacing(80) },
                     mb: theme.spacing(4),
                     backgroundColor: "#DB504A",
-                    color: "#fff",
+                    color: "background.main",
                     border: "1px solid #DB504A",
                     gap: 2,
                   }}

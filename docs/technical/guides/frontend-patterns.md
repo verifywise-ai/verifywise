@@ -952,6 +952,25 @@ const SettingsPage = React.lazy(() => import("./pages/Settings"));
 </Suspense>
 ```
 
+## Adding a New Frontend Route
+
+File: `Clients/src/application/config/routes.tsx`
+
+```tsx
+import MyNewPage from "../../presentation/pages/MyNewPage";
+
+export const createRoutes = (triggerSidebar: boolean, _triggerSidebarReload: () => void) => [
+  <Route
+    key="dashboard"
+    path="/"
+    element={<ProtectedRoute Component={Dashboard} reloadTrigger={triggerSidebar} />}
+  >
+    {/* Add your new route inside dashboard */}
+    <Route path="/my-new-page" element={<MyNewPage />} />
+  </Route>,
+];
+```
+
 ## Related Documentation
 
 - [Code Style](./code-style.md) - Naming and TypeScript conventions

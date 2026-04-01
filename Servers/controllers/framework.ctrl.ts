@@ -30,7 +30,7 @@ export async function getAllFrameworks(
   logger.debug("🔍 Fetching all frameworks");
 
   try {
-    const frameworks = await getAllFrameworksQuery(req.tenantId!);
+    const frameworks = await getAllFrameworksQuery(req.organizationId!);
 
     if (frameworks && frameworks.length > 0) {
       logStructured(
@@ -60,7 +60,7 @@ export async function getAllFrameworks(
       "Error",
       `Failed to retrieve frameworks: ${(error as Error).message}`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     logger.error("❌ Error in getAllFrameworks:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -84,7 +84,7 @@ export async function getFrameworkById(
   try {
     const framework = await getAllFrameworkByIdQuery(
       frameworkId,
-      req.tenantId!
+      req.organizationId!
     );
 
     if (framework) {
@@ -115,7 +115,7 @@ export async function getFrameworkById(
       "Error",
       `Failed to retrieve framework by ID: ${frameworkId}`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     logger.error("❌ Error in getFrameworkById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -142,7 +142,7 @@ export async function addFrameworkToProject(
     const hasPendingApproval = await hasPendingApprovalQuery(
       projectId,
       "use_case",
-      req.tenantId!
+      req.organizationId!
     );
 
     if (hasPendingApproval) {
@@ -173,7 +173,7 @@ export async function addFrameworkToProject(
         "Error",
         `Framework not found during project addition: ID ${frameworkId}`,
         req.userId!,
-        req.tenantId!
+        req.organizationId!
       );
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Framework not found"));
@@ -182,7 +182,7 @@ export async function addFrameworkToProject(
     const result = await addFrameworkToProjectQuery(
       frameworkId,
       projectId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -198,7 +198,7 @@ export async function addFrameworkToProject(
         "Create",
         `Framework ${frameworkId} added to project ${projectId}`,
         req.userId!,
-        req.tenantId!
+        req.organizationId!
       );
       return res.status(200).json(STATUS_CODE[200](result));
     }
@@ -214,7 +214,7 @@ export async function addFrameworkToProject(
       "Error",
       `Failed to add framework ${frameworkId} to project ${projectId}`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     return res
       .status(404)
@@ -237,7 +237,7 @@ export async function addFrameworkToProject(
         (error as Error).message
       }`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
 
     if (error instanceof ValidationException) {
@@ -274,12 +274,12 @@ export async function deleteFrameworkFromProject(
     // Check if project has a pending approval request
     console.log("=== deleteFrameworkFromProject - Checking pending approval ===");
     console.log("projectId:", projectId);
-    console.log("tenantId:", req.tenantId);
+    console.log("organizationId:", req.organizationId);
 
     const hasPendingApproval = await hasPendingApprovalQuery(
       projectId,
       "use_case",
-      req.tenantId!
+      req.organizationId!
     );
 
     if (hasPendingApproval) {
@@ -310,7 +310,7 @@ export async function deleteFrameworkFromProject(
         "Error",
         `Framework not found during project removal: ID ${frameworkId}`,
         req.userId!,
-        req.tenantId!
+        req.organizationId!
       );
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Framework not found"));
@@ -319,7 +319,7 @@ export async function deleteFrameworkFromProject(
     const result = await deleteFrameworkFromProjectQuery(
       frameworkId,
       projectId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -335,7 +335,7 @@ export async function deleteFrameworkFromProject(
         "Delete",
         `Framework ${frameworkId} removed from project ${projectId}`,
         req.userId!,
-        req.tenantId!
+        req.organizationId!
       );
       return res.status(200).json(STATUS_CODE[200](result));
     }
@@ -351,7 +351,7 @@ export async function deleteFrameworkFromProject(
       "Error",
       `Failed to remove framework ${frameworkId} from project ${projectId}`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     return res
       .status(404)
@@ -374,7 +374,7 @@ export async function deleteFrameworkFromProject(
         (error as Error).message
       }`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
 
     if (error instanceof ValidationException) {

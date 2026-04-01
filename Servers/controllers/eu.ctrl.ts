@@ -39,7 +39,7 @@ import { hasPendingApprovalQuery } from "../utils/approvalRequest.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM public.users WHERE id = :userId`,
+    `SELECT name, surname FROM users WHERE id = :userId`,
     { replacements: { userId }, type: QueryTypes.SELECT }
   );
   if (result[0]) {
@@ -74,11 +74,11 @@ async function notifyEuAiActAssignment(
     // Query for subcontrol description and order info from struct table
     const subcontrolResult = await sequelize.query<{ description: string; control_id: number; subcontrol_order_no: number; control_order_no: number }>(
       `SELECT scs.description, sc.control_id, scs.order_no as subcontrol_order_no, cs.order_no as control_order_no
-       FROM "${req.tenantId!}".subcontrols_eu sc
-       JOIN public.subcontrols_struct_eu scs ON sc.subcontrol_meta_id = scs.id
-       JOIN public.controls_struct_eu cs ON scs.control_id = cs.id
-       WHERE sc.id = :entityId`,
-      { replacements: { entityId }, type: QueryTypes.SELECT }
+       FROM subcontrols_eu sc
+       JOIN subcontrols_struct_eu scs ON sc.subcontrol_meta_id = scs.id
+       JOIN controls_struct_eu cs ON scs.control_id = cs.id
+       WHERE sc.organization_id = :organizationId AND sc.id = :entityId`,
+      { replacements: { organizationId: req.organizationId!, entityId }, type: QueryTypes.SELECT }
     );
     description = subcontrolResult[0]?.description;
     // Build subcontrol identifier like "1.1 Subcontrol title" (control.order_no.subcontrol.order_no)
@@ -93,8 +93,8 @@ async function notifyEuAiActAssignment(
     if (projectId) {
       // Get project name
       const projectResult = await sequelize.query<{ project_title: string }>(
-        `SELECT project_title FROM "${req.tenantId!}".projects WHERE id = :projectId`,
-        { replacements: { projectId }, type: QueryTypes.SELECT }
+        `SELECT project_title FROM projects WHERE organization_id = :organizationId AND id = :projectId`,
+        { replacements: { organizationId: req.organizationId!, projectId }, type: QueryTypes.SELECT }
       );
       projectName = projectResult[0]?.project_title;
 
@@ -102,10 +102,10 @@ async function notifyEuAiActAssignment(
       if (resolvedControlId) {
         const controlResult = await sequelize.query<{ title: string }>(
           `SELECT cs.title
-           FROM "${req.tenantId!}".controls_eu c
-           JOIN public.controls_struct_eu cs ON c.control_meta_id = cs.id
-           WHERE c.id = :controlId`,
-          { replacements: { controlId: resolvedControlId }, type: QueryTypes.SELECT }
+           FROM controls_eu c
+           JOIN controls_struct_eu cs ON c.control_meta_id = cs.id
+           WHERE c.organization_id = :organizationId AND c.id = :controlId`,
+          { replacements: { organizationId: req.organizationId!, controlId: resolvedControlId }, type: QueryTypes.SELECT }
         );
         controlName = controlResult[0]?.title;
       }
@@ -120,7 +120,7 @@ async function notifyEuAiActAssignment(
     }
 
     notifyUserAssigned(
-      req.tenantId!,
+      req.organizationId!,
       newUserId,
       {
         entityType,
@@ -152,7 +152,7 @@ export async function getAssessmentsByProjectId(
     functionName: "getAssessmentsByProjectId",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Fetching assessments for project framework ID ${projectFrameworkId}`
@@ -161,7 +161,7 @@ export async function getAssessmentsByProjectId(
   try {
     const assessments = await getAssessmentsEUByProjectIdQuery(
       projectFrameworkId,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -170,7 +170,7 @@ export async function getAssessmentsByProjectId(
       functionName: "getAssessmentsByProjectId",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // send calculated progress
@@ -183,7 +183,7 @@ export async function getAssessmentsByProjectId(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -199,7 +199,7 @@ export async function getCompliancesByProjectId(
     functionName: "getCompliancesByProjectId",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Fetching compliances for project framework ID ${projectFrameworkId}`
@@ -208,7 +208,7 @@ export async function getCompliancesByProjectId(
   try {
     const complainces = await getComplianceEUByProjectIdQuery(
       projectFrameworkId,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -217,7 +217,7 @@ export async function getCompliancesByProjectId(
       functionName: "getCompliancesByProjectId",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // send calculated progress
@@ -230,7 +230,7 @@ export async function getCompliancesByProjectId(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -245,7 +245,7 @@ export async function getTopicById(req: Request, res: Response): Promise<any> {
     functionName: "getTopicById",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Looking up topic ID ${topicId} for project framework ID ${projectFrameworkId}`
@@ -255,7 +255,7 @@ export async function getTopicById(req: Request, res: Response): Promise<any> {
     const topic = await getTopicByIdForProjectQuery(
       topicId,
       projectFrameworkId,
-      req.tenantId!
+      req.organizationId!
     );
 
     if (topic) {
@@ -265,7 +265,7 @@ export async function getTopicById(req: Request, res: Response): Promise<any> {
         functionName: "getTopicById",
         fileName: "eu.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](topic));
     }
@@ -276,7 +276,7 @@ export async function getTopicById(req: Request, res: Response): Promise<any> {
       functionName: "getTopicById",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](topic));
   } catch (error) {
@@ -287,7 +287,7 @@ export async function getTopicById(req: Request, res: Response): Promise<any> {
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -314,7 +314,7 @@ export async function getControlById(
     functionName: "getControlById",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Looking up control ID ${controlId} for project framework ID ${projectFrameworkId}`
@@ -327,7 +327,7 @@ export async function getControlById(
       owner,
       approver,
       dueDateFilter,
-      req.tenantId!
+      req.organizationId!
     );
 
     if (topic) {
@@ -337,7 +337,7 @@ export async function getControlById(
         functionName: "getControlById",
         fileName: "eu.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](topic));
     }
@@ -348,7 +348,7 @@ export async function getControlById(
       functionName: "getControlById",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](topic));
   } catch (error) {
@@ -359,7 +359,7 @@ export async function getControlById(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -377,7 +377,7 @@ export async function saveControls(
     functionName: "saveControls",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(`💾 Saving controls for control ID ${controlId}`);
 
@@ -394,7 +394,7 @@ export async function saveControls(
       const hasPendingApproval = await hasPendingApprovalQuery(
         Control.project_id,
         "use_case",
-        req.tenantId!,
+        req.organizationId!,
         transaction
       );
 
@@ -407,7 +407,7 @@ export async function saveControls(
           fileName: "eu.ctrl.ts",
           error: new Error("Project has pending approval and controls cannot be modified"),
           userId: req.userId!,
-          tenantId: req.tenantId!,
+          tenantId: req.organizationId!,
         });
         return res.status(403).json(
           STATUS_CODE[403](
@@ -444,11 +444,11 @@ export async function saveControls(
         // Get current subcontrol data for assignment change detection
         const currentSubcontrolResult = (await sequelize.query(
           `SELECT sc.owner, sc.reviewer, sc.approver, scs.title
-           FROM "${req.tenantId!}".subcontrols_eu sc
-           JOIN public.subcontrols_struct_eu scs ON sc.subcontrol_meta_id = scs.id
-           WHERE sc.id = :id;`,
+           FROM subcontrols_eu sc
+           JOIN subcontrols_struct_eu scs ON sc.subcontrol_meta_id = scs.id
+           WHERE sc.organization_id = :organizationId AND sc.id = :id;`,
           {
-            replacements: { id: parseInt(subcontrol.id) },
+            replacements: { organizationId: req.organizationId!, id: parseInt(subcontrol.id) },
             transaction,
             type: QueryTypes.SELECT,
           }
@@ -470,7 +470,7 @@ export async function saveControls(
             Control.user_id,
             Control.project_id,
             "Compliance tracker group",
-            req.tenantId!,
+            req.organizationId!,
             transaction
           );
           evidenceUploadedFiles.push({
@@ -491,7 +491,7 @@ export async function saveControls(
             Control.user_id,
             Control.project_id,
             "Compliance tracker group",
-            req.tenantId!,
+            req.organizationId!,
             transaction
           );
           feedbackUploadedFiles.push({
@@ -531,7 +531,7 @@ export async function saveControls(
           evidenceUploadedFiles,
           feedbackUploadedFiles,
           filesToUnlink,
-          req.tenantId!,
+          req.organizationId!,
           transaction
         );
         if (subcontrolToSave) {
@@ -562,7 +562,7 @@ export async function saveControls(
     await updateProjectUpdatedByIdQuery(
       controlId,
       "controls",
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
     await transaction.commit();
@@ -588,7 +588,7 @@ export async function saveControls(
       functionName: "saveControls",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200]({ response }));
@@ -601,7 +601,7 @@ export async function saveControls(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -619,7 +619,7 @@ export async function updateQuestionById(
     functionName: "updateQuestionById",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(`✏️ Updating question ID ${questionId}`);
 
@@ -644,7 +644,7 @@ export async function updateQuestionById(
       const hasPendingApproval = await hasPendingApprovalQuery(
         projectId,
         "use_case",
-        req.tenantId!,
+        req.organizationId!,
         transaction
       );
 
@@ -657,7 +657,7 @@ export async function updateQuestionById(
           fileName: "eu.ctrl.ts",
           error: new Error("Project has pending approval and assessments cannot be modified"),
           userId: req.userId!,
-          tenantId: req.tenantId!,
+          tenantId: req.organizationId!,
         });
         return res.status(403).json(
           STATUS_CODE[403](
@@ -720,7 +720,7 @@ export async function updateQuestionById(
           userId,
           projectId,
           "Assessment tracker group",
-          req.tenantId!,
+          req.organizationId!,
           transaction
         );
 
@@ -788,7 +788,7 @@ export async function updateQuestionById(
     const question = (await updateQuestionEUByIdQuery(
       questionId,
       updateBody,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     )) as AnswerEU;
 
@@ -801,7 +801,7 @@ export async function updateQuestionById(
         fileName: "eu.ctrl.ts",
         error: new Error("Question not found"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
     }
@@ -810,7 +810,7 @@ export async function updateQuestionById(
     await updateProjectUpdatedByIdQuery(
       questionId,
       "answers",
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
     await transaction.commit();
@@ -821,7 +821,7 @@ export async function updateQuestionById(
       functionName: "updateQuestionById",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(202).json(STATUS_CODE[202](question));
@@ -834,7 +834,7 @@ export async function updateQuestionById(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -852,7 +852,7 @@ export async function deleteAssessmentsByProjectId(
     functionName: "deleteAssessmentsByProjectId",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🗑️ Deleting assessments for project framework ID ${projectFrameworkId}`
@@ -861,7 +861,7 @@ export async function deleteAssessmentsByProjectId(
   try {
     const result = await deleteAssessmentEUByProjectIdQuery(
       projectFrameworkId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -873,7 +873,7 @@ export async function deleteAssessmentsByProjectId(
         functionName: "deleteAssessmentsByProjectId",
         fileName: "eu.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](result));
     }
@@ -886,7 +886,7 @@ export async function deleteAssessmentsByProjectId(
       fileName: "eu.ctrl.ts",
       error: new Error("Delete operation failed"),
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400](result));
   } catch (error) {
@@ -898,7 +898,7 @@ export async function deleteAssessmentsByProjectId(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -916,7 +916,7 @@ export async function deleteCompliancesByProjectId(
     functionName: "deleteCompliancesByProjectId",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🗑️ Deleting compliances for project framework ID ${projectFrameworkId}`
@@ -925,7 +925,7 @@ export async function deleteCompliancesByProjectId(
   try {
     const result = await deleteComplianeEUByProjectIdQuery(
       projectFrameworkId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -937,7 +937,7 @@ export async function deleteCompliancesByProjectId(
         functionName: "deleteCompliancesByProjectId",
         fileName: "eu.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](result));
     }
@@ -950,7 +950,7 @@ export async function deleteCompliancesByProjectId(
       fileName: "eu.ctrl.ts",
       error: new Error("Delete operation failed"),
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400](result));
   } catch (error) {
@@ -962,7 +962,7 @@ export async function deleteCompliancesByProjectId(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -979,7 +979,7 @@ export async function getProjectAssessmentProgress(
     functionName: "getProjectAssessmentProgress",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `📊 Calculating assessment progress for project framework ID ${projectFrameworkId}`
@@ -993,7 +993,7 @@ export async function getProjectAssessmentProgress(
     //   return res.status(404).json(STATUS_CODE[404](project));
     // }
     const { totalAssessments, answeredAssessments } =
-      await countAnswersEUByProjectId(projectFrameworkId, req.tenantId!);
+      await countAnswersEUByProjectId(projectFrameworkId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -1001,7 +1001,7 @@ export async function getProjectAssessmentProgress(
       functionName: "getProjectAssessmentProgress",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -1018,7 +1018,7 @@ export async function getProjectAssessmentProgress(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1035,7 +1035,7 @@ export async function getProjectComplianceProgress(
     functionName: "getProjectComplianceProgress",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `📊 Calculating compliance progress for project framework ID ${projectFrameworkId}`
@@ -1049,7 +1049,7 @@ export async function getProjectComplianceProgress(
     //   return res.status(404).json(STATUS_CODE[404](project));
     // }
     const { totalSubcontrols, doneSubcontrols } =
-      await countSubControlsEUByProjectId(projectFrameworkId, req.tenantId!);
+      await countSubControlsEUByProjectId(projectFrameworkId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -1057,7 +1057,7 @@ export async function getProjectComplianceProgress(
       functionName: "getProjectComplianceProgress",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -1074,7 +1074,7 @@ export async function getProjectComplianceProgress(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1092,7 +1092,7 @@ export async function getAllProjectsAssessmentProgress(
     functionName: "getAllProjectsAssessmentProgress",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("📊 Calculating assessment progress across all projects");
 
@@ -1107,12 +1107,12 @@ export async function getAllProjectsAssessmentProgress(
         fileName: "eu.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const projects = await getAllProjectsQuery({ userId, role }, req.tenantId!);
+    const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
     if (projects && projects.length > 0) {
       await Promise.all(
         projects.map(async (project) => {
@@ -1126,7 +1126,7 @@ export async function getAllProjectsAssessmentProgress(
             return;
           }
           const { totalAssessments, answeredAssessments } =
-            await countAnswersEUByProjectId(projectFrameworkId, req.tenantId!);
+            await countAnswersEUByProjectId(projectFrameworkId, req.organizationId!);
           totalNumberOfQuestions += parseInt(totalAssessments);
           totalNumberOfAnsweredQuestions += parseInt(answeredAssessments);
         })
@@ -1138,7 +1138,7 @@ export async function getAllProjectsAssessmentProgress(
         functionName: "getAllProjectsAssessmentProgress",
         fileName: "eu.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1154,7 +1154,7 @@ export async function getAllProjectsAssessmentProgress(
         functionName: "getAllProjectsAssessmentProgress",
         fileName: "eu.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](projects));
     }
@@ -1166,7 +1166,7 @@ export async function getAllProjectsAssessmentProgress(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1184,7 +1184,7 @@ export async function getAllProjectsComplianceProgress(
     functionName: "getAllProjectsComplianceProgress",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("📊 Calculating compliance progress across all projects");
 
@@ -1199,12 +1199,12 @@ export async function getAllProjectsComplianceProgress(
         fileName: "eu.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const projects = await getAllProjectsQuery({ userId, role }, req.tenantId!);
+    const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
     if (projects && projects.length > 0) {
       await Promise.all(
         projects.map(async (project) => {
@@ -1220,7 +1220,7 @@ export async function getAllProjectsComplianceProgress(
           const { totalSubcontrols, doneSubcontrols } =
             await countSubControlsEUByProjectId(
               projectFrameworkId,
-              req.tenantId!
+              req.organizationId!
             );
           totalNumberOfSubcontrols += parseInt(totalSubcontrols);
           totalNumberOfDoneSubcontrols += parseInt(doneSubcontrols);
@@ -1233,7 +1233,7 @@ export async function getAllProjectsComplianceProgress(
         functionName: "getAllProjectsComplianceProgress",
         fileName: "eu.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1249,7 +1249,7 @@ export async function getAllProjectsComplianceProgress(
         functionName: "getAllProjectsComplianceProgress",
         fileName: "eu.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](projects));
     }
@@ -1261,7 +1261,7 @@ export async function getAllProjectsComplianceProgress(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1276,12 +1276,12 @@ export async function getAllControlCategories(
     functionName: "getAllControlCategories",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("🔍 Fetching all control categories");
 
   try {
-    const controlCategories = await getAllControlCategoriesQuery(req.tenantId!);
+    const controlCategories = await getAllControlCategoriesQuery(req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -1289,7 +1289,7 @@ export async function getAllControlCategories(
       functionName: "getAllControlCategories",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(controlCategories);
@@ -1301,7 +1301,7 @@ export async function getAllControlCategories(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1331,7 +1331,7 @@ export async function getControlsByControlCategoryId(
     functionName: "getControlsByControlCategoryId",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug(
     `🔍 Fetching controls for control category ID ${controlCategoryId} and project framework ID ${projectFrameworkId}`
@@ -1344,7 +1344,7 @@ export async function getControlsByControlCategoryId(
       owner,
       approver,
       dueDateFilter,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -1353,7 +1353,7 @@ export async function getControlsByControlCategoryId(
       functionName: "getControlsByControlCategoryId",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(controls);
@@ -1365,7 +1365,7 @@ export async function getControlsByControlCategoryId(
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1377,12 +1377,12 @@ export async function getAllTopics(req: Request, res: Response): Promise<any> {
     functionName: "getAllTopics",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
   logger.debug("🔍 Fetching all topics");
 
   try {
-    const topics = await getAllTopicsQuery(req.tenantId!);
+    const topics = await getAllTopicsQuery(req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -1390,7 +1390,7 @@ export async function getAllTopics(req: Request, res: Response): Promise<any> {
       functionName: "getAllTopics",
       fileName: "eu.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(topics);
@@ -1402,7 +1402,7 @@ export async function getAllTopics(req: Request, res: Response): Promise<any> {
       fileName: "eu.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

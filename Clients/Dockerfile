@@ -11,6 +11,9 @@ WORKDIR /app
 # This will be at /app/shared, accessible via ../shared from /app/src
 COPY shared/ /app/shared/
 
+# Copy version.json (needed by vite.config.ts for __APP_VERSION__)
+COPY version.json /app/version.json
+
 # Step 4: Set working directory to /app/src for the client app
 WORKDIR /app/src
 

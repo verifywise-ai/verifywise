@@ -3,6 +3,8 @@ from __future__ import annotations
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import List, Literal
 
+from models.generated_by import GeneratedBy
+
 
 class SourceRef(BaseModel):
     source_type: Literal["internal_policy", "eu_ai_act", "iso_42001", "other"]
@@ -16,6 +18,7 @@ class Obligation(BaseModel):
 
     must: List[str] = Field(default_factory=list)
     must_not: List[str] = Field(default_factory=list)
+    generated_by: GeneratedBy | None = None
 
     @field_validator("obligation_id")
     @classmethod

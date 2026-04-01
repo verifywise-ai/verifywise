@@ -141,7 +141,7 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
             left: "50px",
             fontWeight: 600,
             fontSize: "24px",
-            color: "#FFFFFF",
+            color: "background.main",
           }}
         >
           Invite team members
@@ -152,7 +152,7 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
         <Typography
           sx={{
             fontSize: "14px",
-            color: "#667085",
+            color: "text.icon",
             marginBottom: 3,
             lineHeight: 1.6,
           }}
@@ -198,16 +198,16 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
           startIcon={<UserPlus size={16} />}
           isDisabled={isSending}
           sx={{
-            backgroundColor: "#13715B",
+            backgroundColor: "brand.primary",
             fontSize: "14px",
             padding: "10px 20px",
             alignSelf: "flex-start",
             "&:hover": {
-              backgroundColor: "#0F5A47",
+              backgroundColor: "brand.primaryHover",
             },
             "&:disabled": {
-              backgroundColor: "#9CA3AF",
-              color: "#FFFFFF",
+              backgroundColor: "text.disabled",
+              color: "background.main",
             },
           }}
         />
@@ -221,7 +221,7 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
               padding: 2.5,
             }}
           >
-            <Typography sx={{ fontSize: "13px", color: "#13715B", lineHeight: 1.6 }}>
+            <Typography sx={{ fontSize: "13px", color: "brand.primary", lineHeight: 1.6 }}>
               {successMessage}
             </Typography>
           </Box>
@@ -250,7 +250,7 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
             padding: 2.5,
           }}
         >
-          <Typography sx={{ fontSize: "13px", color: "#13715B", lineHeight: 1.6 }}>
+          <Typography sx={{ fontSize: "13px", color: "brand.primary", lineHeight: 1.6 }}>
             You can skip this step and invite team members later from the organization settings.
           </Typography>
         </Box>

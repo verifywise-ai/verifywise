@@ -16,6 +16,9 @@ data:
   BACKEND_URL: "http://backend:3000"
   FRONTEND_URL: "http://frontend:8080"
   LLM_EVALS_URL: "http://eval_server:8000"
+  AI_GATEWAY_URL: "http://ai-gateway:8100"
+  AI_GATEWAY_PORT: "8100"
+  EXPRESS_BACKEND_URL: "http://backend:3000"
 
   # Database Settings
   DB_HOST: "postgresdb"

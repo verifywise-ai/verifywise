@@ -3,10 +3,13 @@ import { AppModule } from "../../../application/redux/ui/uiSlice";
 import { useEvalsSidebarContextSafe } from "../../../application/contexts/EvalsSidebar.context";
 import { useAIDetectionSidebarContextSafe } from "../../../application/contexts/AIDetectionSidebar.context";
 import { useShadowAISidebarContextSafe } from "../../../application/contexts/ShadowAISidebar.context";
+import { useAIGatewaySidebarContextSafe } from "../../../application/contexts/AIGatewaySidebar.context";
 import Sidebar from "../Sidebar";
+import SuperAdminSidebar from "../SuperAdminSidebar";
 import EvalsSidebar from "../../pages/EvalsDashboard/EvalsSidebar";
 import AIDetectionSidebar from "../../pages/AIDetection/AIDetectionSidebar";
 import ShadowAISidebar from "../../pages/ShadowAI/ShadowAISidebar";
+import AIGatewaySidebar from "../../pages/AIGateway/AIGatewaySidebar";
 
 interface ContextSidebarProps {
   activeModule: AppModule;
@@ -38,6 +41,7 @@ export function ContextSidebar({
   const evalsSidebarContext = useEvalsSidebarContextSafe();
   const aiDetectionSidebarContext = useAIDetectionSidebarContextSafe();
   const shadowAiSidebarContext = useShadowAISidebarContextSafe();
+  const aiGatewaySidebarContext = useAIGatewaySidebarContextSafe();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -158,6 +162,37 @@ export function ContextSidebar({
         />
       );
     }
+    case "ai-gateway": {
+      const gatewayTab = (() => {
+        const p = location.pathname;
+        if (p.includes("/ai-gateway/dashboard")) return "dashboard";
+        if (p.includes("/ai-gateway/endpoints")) return "endpoints";
+        if (p.includes("/ai-gateway/playground")) return "playground";
+        if (p.includes("/ai-gateway/guardrails")) return "guardrails";
+        if (p.includes("/ai-gateway/prompts")) return "prompts";
+        if (p.includes("/ai-gateway/models")) return "models";
+        if (p.includes("/ai-gateway/logs")) return "logs";
+        if (p.includes("/ai-gateway/virtual-keys")) return "virtual-keys";
+        if (p.includes("/ai-gateway/settings")) return "settings";
+        return "dashboard";
+      })();
+
+      const handleGatewayTabChange = (newTab: string) => {
+        navigate(`/ai-gateway/${newTab}`);
+      };
+
+      return (
+        <AIGatewaySidebar
+          activeTab={gatewayTab}
+          onTabChange={handleGatewayTabChange}
+          endpointsCount={aiGatewaySidebarContext?.endpointsCount ?? 0}
+          promptsCount={aiGatewaySidebarContext?.promptsCount ?? 0}
+          virtualKeysCount={aiGatewaySidebarContext?.virtualKeysCount ?? 0}
+        />
+      );
+    }
+    case "super-admin":
+      return <SuperAdminSidebar />;
     default:
       return (
         <Sidebar

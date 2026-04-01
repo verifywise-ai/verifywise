@@ -16,6 +16,7 @@ import type { FormErrors } from "../../../../application/validations/formValidat
 import { extractUserToken } from "../../../../application/tools/extractToken";
 import { resetPassword } from "../../../../application/repository/auth.repository";
 import CustomizableSkeleton from "../../../components/Skeletons";
+import { background, border as borderPalette } from "../../../themes/palette";
 
 interface ResetPasswordFormValues {
   password: string;
@@ -158,7 +159,7 @@ const SetNewPassword: React.FC = () => {
 
   const buttonStyle = {
     width: 360,
-    backgroundColor: "#fff",
+    backgroundColor: `${background.main}`,
   };
 
   return (
@@ -225,7 +226,7 @@ const SetNewPassword: React.FC = () => {
               justifyContent: "center",
               alignItems: "center",
               borderRadius: "12px",
-              border: "2px solid #EAECF0",
+              border: `2px solid ${borderPalette.light}`,
               gap: theme.spacing(12),
             }}
           >

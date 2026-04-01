@@ -21,6 +21,7 @@ import { styles } from "./styles";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { StatsCard } from "../../../components/Cards/StatsCard";
 import { useSearchParams } from "react-router-dom";
+import { brand } from "../../../themes/palette";
 
 const ISO42001Annex = ({
   project,
@@ -186,7 +187,7 @@ const ISO42001Annex = ({
             completed={annexesProgress?.doneAnnexcategories ?? 0}
             total={annexesProgress?.totalAnnexcategories ?? 0}
             title="Annexes"
-            progressbarColor="#13715B"
+            progressbarColor={brand.primary}
           />
           <Typography sx={{ ...styles.title, mt: 4 }}>
             Annex A : Reference Controls (Statement of Applicability)

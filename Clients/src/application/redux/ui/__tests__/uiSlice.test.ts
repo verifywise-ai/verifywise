@@ -65,7 +65,7 @@ describe("uiSlice", () => {
         stateWithTable,
         setRowsPerPage({ table: "vendors", value: 25 })
       );
-      expect(state.vendors.rowsPerPage).toBe(25);
+      expect((state as any).vendors.rowsPerPage).toBe(25);
     });
 
     it("should be a no-op for an unknown table key", () => {

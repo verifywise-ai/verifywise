@@ -1,8 +1,9 @@
-import Joyride, { Step, TooltipRenderProps } from "react-joyride";
+import { Joyride, Step, TooltipRenderProps } from "react-joyride";
 import React, { useEffect, useState } from "react";
 import { CustomStepWrapper } from "./CustomStep";
 import { Global } from "@emotion/react";
 import { IPageTourProps } from "../../types/interfaces/i.tour";
+import { brand } from "../../themes/palette";
 
 const PageTour: React.FC<IPageTourProps> = ({
   steps,
@@ -91,44 +92,47 @@ const PageTour: React.FC<IPageTourProps> = ({
           },
         }}
       />
+      {/* Cast props for compat with both old and new react-joyride versions */}
       <Joyride
-        steps={steps as unknown as Step[]}
-        run={shouldRun}
-        continuous
-        hideCloseButton
-        showProgress={false}
-        showSkipButton={false}
-        callback={handleCallback}
-        disableOverlayClose
-        disableScrolling={true}
-        scrollToFirstStep={false}
-        spotlightClicks={false}
-        tooltipComponent={tooltipRenderer}
-        locale={{
-          last: "Finish",
-          next: "Next",
-          back: "Back",
-          skip: "Skip",
-        }}
-        styles={{
+        {...{
+          steps: steps as unknown as Step[],
+          run: shouldRun,
+          continuous: true,
+          hideCloseButton: true,
+          showProgress: false,
+          showSkipButton: false,
+          callback: handleCallback,
+          disableOverlayClose: true,
+          disableScrolling: true,
+          scrollToFirstStep: false,
+          spotlightClicks: false,
+          tooltipComponent: tooltipRenderer,
+          locale: {
+            last: "Finish",
+            next: "Next",
+            back: "Back",
+            skip: "Skip",
+          },
           options: {
-            primaryColor: "#13715B",
+            primaryColor: `${brand.primaryHover}`,
             zIndex: 900,
             beaconSize: 30,
           },
-          overlay: {
-            backgroundColor: "transparent",
+          styles: {
+            overlay: {
+              backgroundColor: "transparent",
+            },
+            tooltip: {
+              borderRadius: "4px",
+            },
+            tooltipContainer: {
+              textAlign: "left",
+            },
+            tooltipContent: {
+              padding: 0,
+            },
           },
-          tooltip: {
-            borderRadius: "4px",
-          },
-          tooltipContainer: {
-            textAlign: "left",
-          },
-          tooltipContent: {
-            padding: 0,
-          },
-        }}
+        } as any}
         floaterProps={{
           styles: {
             arrow: {

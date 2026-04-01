@@ -29,16 +29,6 @@ vi.mock("../../../../application/hooks/useNavigateSearch", () => ({
   default: () => mockNavigateSearch,
 }));
 
-vi.mock("../../../../application/repository/user.repository", () => ({
-  getUserById: vi.fn().mockResolvedValue({ data: { name: "John" } }),
-}));
-
-vi.mock("../../../../application/utils/greetings", () => ({
-  getTimeBasedGreeting: (name: string) => ({
-    greetingText: "Good morning",
-    text: `Good morning, ${name || "there"}`,
-  }),
-}));
 
 vi.mock("../../../../application/utils/dateFormatter", () => ({
   formatRelativeDate: (d: string) => d,
@@ -231,9 +221,9 @@ describe("IntegratedDashboard", () => {
     vi.restoreAllMocks();
   });
 
-  it("should render greeting with user name", () => {
+  it("should render Dashboard heading", () => {
     renderWithProviders(<IntegratedDashboard />);
-    expect(screen.getByText("Good morning")).toBeInTheDocument();
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
   });
 
   it("should render view toggle buttons (Operations / Executive)", () => {
@@ -317,10 +307,8 @@ describe("IntegratedDashboard", () => {
     expect(screen.queryByTestId("step-progress-dialog")).not.toBeInTheDocument();
   });
 
-  it("should render platform overview subtitle text", () => {
+  it("should render Dashboard heading text", () => {
     renderWithProviders(<IntegratedDashboard />);
-    expect(
-      screen.getByText("Here is an overview of your AI governance platform")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
   });
 });

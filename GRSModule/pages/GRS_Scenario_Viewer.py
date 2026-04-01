@@ -42,6 +42,17 @@ def _normalize(sc: dict) -> dict:
     return sc
 
 
+def _dir_fingerprint(version: str) -> float:
+    """Return max mtime of all .jsonl files in the version directory for cache invalidation."""
+    version_dir = DATASETS_DIR / version
+    if not version_dir.exists():
+        return 0.0
+    return max(
+        (p.stat().st_mtime for p in version_dir.rglob("*.jsonl")),
+        default=0.0,
+    )
+
+
 def _find_scenarios_path(version: str) -> tuple[Path, str]:
     """Return (path, label) for the best available scenario file."""
     final_path = DATASETS_DIR / version / "final" / "scenarios.jsonl"
@@ -54,7 +65,7 @@ def _find_scenarios_path(version: str) -> tuple[Path, str]:
 
 
 @st.cache_data(show_spinner="Loading dataset…")
-def load_dataset(version: str, model_stem: str) -> list[dict]:
+def load_dataset(version: str, model_stem: str, mtime: float) -> list[dict]:
     """Merge scenarios, responses, and judge scores into flat rows."""
     scenarios_path, _ = _find_scenarios_path(version)
     scenarios: dict[str, dict] = {}
@@ -239,6 +250,33 @@ def render_detail(row: dict) -> None:
                 )
                 st.markdown(inactive_html, unsafe_allow_html=True)
 
+        metadata = sc.get("metadata", {})
+        tension_signals = metadata.get("tension_signals", {})
+        if tension_signals:
+            active_sig = [k for k, v in tension_signals.items() if v]
+            inactive_sig = [k for k, v in tension_signals.items() if not v]
+            st.markdown("#### Tension Signals")
+            sig_html = ""
+            if active_sig:
+                sig_html += " ".join(pill(s.replace("_", " "), "#6a4c93") for s in active_sig)
+            if inactive_sig:
+                sig_html += " " + " ".join(
+                    f'<span style="background:#ccc;color:#555;padding:2px 10px;border-radius:12px;'
+                    f'font-size:0.8em;margin:2px;display:inline-block">{s.replace("_", " ")}</span>'
+                    for s in inactive_sig
+                )
+            if sig_html:
+                st.markdown(sig_html, unsafe_allow_html=True)
+
+        reasoning = metadata.get("semantic_reasoning", "")
+        used_fallback = metadata.get("used_heuristic_fallback", False)
+        if reasoning or used_fallback:
+            with st.expander("Semantic validation details"):
+                if used_fallback:
+                    st.info("Validated via heuristic fallback (MockChatClient — no LLM call).")
+                if reasoning:
+                    st.markdown(f"**Reasoning:** {reasoning}")
+
         reasons = sc.get("risk_reasons", [])
         if reasons:
             st.markdown("#### Risk Reasons")
@@ -258,7 +296,16 @@ def render_detail(row: dict) -> None:
         else:
             st.markdown(f"**Model:** `{resp.get('model_id', '—')}`")
             st.markdown(f"**Provider:** {resp.get('provider', '—')}")
-            st.markdown(f"**Finish reason:** {resp.get('raw', {}).get('finish_reason', '—')}")
+            finish_reason = resp.get('raw', {}).get('finish_reason', '—')
+            st.markdown(f"**Finish reason:** {finish_reason}")
+            if finish_reason == "length":
+                reasoning_tokens = resp.get("raw", {}).get("usage", {}).get("completion_tokens_details", {}).get("reasoning_tokens", 0)
+                st.warning(
+                    f"⚠️ **Response was cut off** (`finish_reason=length`). "
+                    f"The model hit the `max_tokens` limit before finishing its response. "
+                    + (f"Reasoning tokens consumed: **{reasoning_tokens}** of the budget. " if reasoning_tokens else "")
+                    + "Re-run inference with a higher `--max-tokens` value."
+                )
 
             col_a, col_b, col_c, col_d = st.columns(4)
             col_a.metric("Latency", f"{row['latency_ms']} ms" if row["latency_ms"] else "—")
@@ -388,7 +435,7 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Load data
     # ------------------------------------------------------------------
-    rows = load_dataset(version, model_stem)
+    rows = load_dataset(version, model_stem, _dir_fingerprint(version))
 
     if not rows:
         st.warning("No scenarios found. Run `make render` (or `make validate`) to generate them.")

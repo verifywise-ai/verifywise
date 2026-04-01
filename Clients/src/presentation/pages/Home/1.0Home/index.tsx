@@ -13,7 +13,9 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import allowedRoles from "../../../../application/constants/permissions";
 import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
+import AiOrNotScreening from "../../../components/Modals/AiOrNotScreening";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
+import { brand } from "../../../themes/palette";
 
 const Home = () => {
   const location = useLocation();
@@ -27,6 +29,7 @@ const Home = () => {
   } = useContext(VerifyWiseContext);
   const [isProjectFormModalOpen, setIsProjectFormModalOpen] =
     useState<boolean>(false);
+  const [isScreeningOpen, setIsScreeningOpen] = useState<boolean>(false);
   const [refreshProjectsFlag, setRefreshProjectsFlag] =
     useState<boolean>(false);
 
@@ -71,7 +74,7 @@ const Home = () => {
   // Auto-open create modal when navigating from "Add new..." dropdown
   useEffect(() => {
     if (location.state?.openCreateModal) {
-      setIsProjectFormModalOpen(true);
+      setIsScreeningOpen(true);
 
       // Clear the navigation state to prevent re-opening on subsequent navigations
       navigate(location.pathname, { replace: true, state: {} });
@@ -88,7 +91,7 @@ const Home = () => {
       title="Use cases"
       description="Use case is a real-world scenario describing how an AI system is applied within an organization to achieve a defined purpose or outcome."
 
-      helpArticlePath="reporting/dashboard-analytics"
+      helpArticlePath="ai-governance/use-cases"
       tipBoxEntity="overview"
     >
       {/* Projects List */}
@@ -101,12 +104,12 @@ const Home = () => {
               variant="contained"
               text="New use case"
               sx={{
-                backgroundColor: "#13715B",
-                border: "1px solid #13715B",
+                backgroundColor: `${brand.primary}`,
+                border: `1px solid ${brand.primary}`,
                 gap: 2,
               }}
               icon={<AddCircleOutlineIcon size={16} />}
-              onClick={() => setIsProjectFormModalOpen(true)}
+              onClick={() => setIsScreeningOpen(true)}
               isDisabled={!allowedRoles.projects.create.includes(userRoleName)}
             />
           </div>
@@ -135,6 +138,17 @@ const Home = () => {
           onClose={handleProjectFormModalClose}
         />
       </StandardModal>
+      <AiOrNotScreening
+        isOpen={isScreeningOpen}
+        onClose={() => setIsScreeningOpen(false)}
+        onSkip={() => {
+          setIsScreeningOpen(false);
+          setIsProjectFormModalOpen(true);
+        }}
+        onComplete={() => {
+          setIsProjectFormModalOpen(true);
+        }}
+      />
       <PageTour
         steps={HomeSteps}
         run={runHomeTour}

@@ -4,6 +4,7 @@ import googleModels from "./google/models.json";
 import mistralModels from "./mistral/models.json";
 import xaiModels from "./xai/models.json";
 import openrouterModels from "./openrouter/models.json";
+import { text } from "../../themes/palette";
 
 export interface ModelInfo {
   id: string;
@@ -28,7 +29,7 @@ const PROVIDER_META: Record<string, { displayName: string; iconColor: string; lo
   anthropic: { displayName: "Anthropic", iconColor: "#D97706", logo: "/src/presentation/assets/icons/anthropic_logo.svg" },
   google: { displayName: "Google", iconColor: "#4285F4", logo: "/src/presentation/assets/icons/gemini_logo.svg" },
   mistral: { displayName: "Mistral", iconColor: "#FF7000", logo: "/src/presentation/assets/icons/mistral_logo.svg" },
-  xai: { displayName: "xAI", iconColor: "#000000", logo: "/src/presentation/assets/icons/xai_logo.svg" },
+  xai: { displayName: "xAI", iconColor: `${text.black}`, logo: "/src/presentation/assets/icons/xai_logo.svg" },
   openrouter: { displayName: "OpenRouter", iconColor: "#6366F1", logo: "/src/presentation/assets/icons/openrouter_logo.svg" },
   "self-hosted": { displayName: "Self-Hosted", iconColor: "#1A1A2E", logo: "/src/presentation/assets/icons/ollama_logo.svg" },
 };

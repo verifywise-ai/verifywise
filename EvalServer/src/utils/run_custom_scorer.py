@@ -9,6 +9,7 @@ Supports multiple providers: OpenAI, Anthropic, Mistral, xAI, Google (Gemini), e
 
 import re
 import os
+import json
 from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass
 
@@ -28,6 +29,7 @@ class ScorerResult:
     score: float
     raw_response: str
     passed: bool
+    reason: Optional[str] = None
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
@@ -133,7 +135,10 @@ def get_provider_client(
 
     resolved_key = api_key or os.getenv(env_var)
     if not resolved_key:
-        raise RuntimeError(f"{env_var} environment variable not set")
+        raise RuntimeError(
+            f"No API key found for provider '{provider}' (expected env var: {env_var}). "
+            f"Please save your {provider.upper()} API key in LLM Evals Settings."
+        )
 
     if base_url:
         client = OpenAI(api_key=resolved_key, base_url=base_url)
@@ -297,7 +302,17 @@ async def run_custom_scorer(
     
     if not messages_templates:
         raise ValueError(f"Scorer {scorer_name} has no message templates configured")
-    
+
+    has_output_placeholder = any(
+        "{{output}}" in (msg.get("content") or msg.get("template", ""))
+        for msg in messages_templates
+    )
+    if not has_output_placeholder:
+        print(
+            f"⚠️  Warning: Scorer '{scorer_name}' has no {{{{output}}}} placeholder in its "
+            f"messages. The model response will not be sent to the judge LLM."
+        )
+
     # Render message templates with actual values
     values = {
         "input": input_text,
@@ -332,12 +347,27 @@ async def run_custom_scorer(
         
         raw_response = response.choices[0].message.content.strip()
         usage = response.usage
-        
+
+        # Try to parse a JSON response of the form {"verdict": "PASS", "reason": "..."}
+        extracted_reason: Optional[str] = None
+        json_label: Optional[str] = None
+        try:
+            json_text = re.sub(r"^```(?:json)?\s*", "", raw_response, flags=re.IGNORECASE)
+            json_text = re.sub(r"```\s*$", "", json_text).strip()
+            parsed = json.loads(json_text)
+            verdict = str(parsed.get("verdict") or parsed.get("label") or "").strip().upper()
+            known_labels = {c.get("label", "").upper() for c in choice_scores}
+            if verdict in known_labels:
+                json_label = verdict
+            extracted_reason = str(parsed.get("reason", "")).strip() or None
+        except (json.JSONDecodeError, AttributeError, ValueError, TypeError):
+            pass
+
         # Extract label and map to score
-        label = extract_label(raw_response, choice_scores)
+        label = json_label if json_label else extract_label(raw_response, choice_scores)
         score = label_to_score(label, choice_scores)
         passed = score >= threshold if threshold is not None else True
-        
+
         return ScorerResult(
             scorer_id=scorer_id,
             scorer_name=scorer_name,
@@ -345,6 +375,7 @@ async def run_custom_scorer(
             score=score,
             raw_response=raw_response,
             passed=passed,
+            reason=extracted_reason,
             prompt_tokens=getattr(usage, "prompt_tokens", None),
             completion_tokens=getattr(usage, "completion_tokens", None),
             total_tokens=getattr(usage, "total_tokens", None),

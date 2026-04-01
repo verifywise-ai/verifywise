@@ -1,21 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Box, Stack, TableRow, TableCell } from "@mui/material";
+import { FileText, Copy, Filter, BookOpen } from "lucide-react";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { EmptyState } from "../../components/EmptyState";
 import policyTemplates from "../../../application/data/PolicyTemplates.json";
-import {
-  PolicyTemplate,
-  PolicyTemplatesProps,
-} from "../../types/interfaces/i.policy";
-import PolicyDetailModal from "../../components/Policies/PolicyDetailsModal";
-import { handleAlert } from "../../../application/tools/alertUtils";
-import Alert from "../../components/Alert";
-import { AlertProps } from "../../types/alert.types";
+import { PolicyTemplatesProps } from "../../types/interfaces/i.policy";
 import { SearchBox } from "../../components/Search";
 import { PolicyTemplateCategory } from "../../../domain/enums/policy.enum";
 import TagChip from "../../components/Tags/TagChip";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import { ColumnSelector } from "../../components/Table/ColumnSelector";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
@@ -30,79 +27,42 @@ const tableHeaders = [
   { id: "description", name: "Description" },
 ];
 
+type PolicyTemplateColumnKey = "title" | "id" | "tags" | "description" | "actions";
+
+const POLICY_TEMPLATE_TABLE_COLUMNS: ColumnConfig<PolicyTemplateColumnKey>[] = [
+  
+  { key: "id", label: "ID", defaultVisible: true },
+  { key: "title", label: "Title", defaultVisible: true, alwaysVisible: true },
+  { key: "tags", label: "Tags", defaultVisible: true },
+  { key: "description", label: "Description", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true } as ColumnConfig<"actions">, // Add actions column config
+];
+
 const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
-  tags,
-  fetchAll,
+  tags: _tags,
+  fetchAll: _fetchAll,
 }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedPolicyTemplate, setSelectedPolicyTemplate] = useState<
-    PolicyTemplate | undefined
-  >(undefined);
-  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
-  // Handle templateId URL param to open modal from Wise Search
+  // Handle templateId URL param to redirect to editor from Wise Search
   useEffect(() => {
     const templateId = searchParams.get("templateId");
     if (templateId && !hasProcessedUrlParam.current) {
       hasProcessedUrlParam.current = true;
-      const id = parseInt(templateId, 10);
-      // Find and open the template
-      const selectedPolicy = policyTemplates.find((policy) => policy.id === id);
-      if (selectedPolicy) {
-        const template: PolicyTemplate = {
-          title: selectedPolicy.title,
-          tags: selectedPolicy.tags,
-          content: selectedPolicy.content,
-        };
-        setSelectedPolicyTemplate(template);
-        setShowModal(true);
-      }
       setSearchParams({}, { replace: true });
+      navigate(`/policies/new?templateId=${templateId}`);
     }
-  }, [searchParams, setSearchParams]);
-
-  const handleClose = () => {
-    setShowModal(false);
-    setSelectedPolicyTemplate(undefined);
-  };
+  }, [searchParams, setSearchParams, navigate]);
 
   const handleSelectPolicyTemplate = (id: number) => {
     if (id) {
-      const selectedPolicy = policyTemplates.find((policy) => policy.id === id);
-      if (selectedPolicy) {
-        const template: PolicyTemplate = {
-          title: selectedPolicy.title,
-          tags: selectedPolicy.tags,
-          content: selectedPolicy.content,
-        };
-        setSelectedPolicyTemplate(template);
-        setShowModal(true);
-      }
-    }
-  };
-
-  const handleSaved = (successMessage?: string) => {
-    fetchAll();
-    handleClose();
-
-    // Navigate to organizational policies tab to show the newly created policy
-    navigate("/policies");
-
-    // Show success alert if message is provided
-    if (successMessage) {
-      handleAlert({
-        variant: "success",
-        body: successMessage,
-        setAlert,
-        alertTimeout: 4000, // 4 seconds to give users time to read
-      });
+      navigate(`/policies/new?templateId=${id}`);
     }
   };
 
@@ -180,6 +140,19 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
 
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
+  const { visibleColumns, allColumns, toggleColumn, resetToDefaults } =
+    useColumnVisibility({ tableId: "policy-templates-table", columns: POLICY_TEMPLATE_TABLE_COLUMNS });
+
+  const isVisible = useCallback(
+    (key: string) => !visibleColumns || visibleColumns.size === 0 || visibleColumns.has(key as PolicyTemplateColumnKey),
+    [visibleColumns]
+  );
+
+  const visibleTableHeaders = useMemo(
+    () => tableHeaders.filter((col) => col.id === "title" || isVisible(col.id)),
+    [isVisible]
+  );
+
   return (
     <Stack>
       <Stack direction="row" spacing={2} alignItems="center" mb={8}>
@@ -199,6 +172,14 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
           onGroupChange={handleGroupChange}
         />
 
+        {/* Column Selector */}
+        <ColumnSelector
+          columns={allColumns}
+          visibleColumns={visibleColumns}
+          onToggleColumn={toggleColumn}
+          onResetToDefaults={resetToDefaults}
+        />
+
         {/* Search */}
         <Box data-joyride-id="policy-search">
           <SearchBox
@@ -213,17 +194,33 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
 
       {/* Table */}
       {filteredPolicyTemplates.length === 0 ? (
-        <EmptyState message="No policy templates found" />
+        <EmptyState icon={FileText} message="No policy templates found.">
+          <EmptyStateTip
+            icon={Copy}
+            title="What are policy templates?"
+            description="Pre-built policy documents covering common AI governance topics. Copy a template, customize it for your organization, and publish."
+          />
+          <EmptyStateTip
+            icon={Filter}
+            title="Filter by framework"
+            description="Templates are grouped by framework (EU AI Act, ISO 42001, etc.). Use the search bar to find templates relevant to your compliance needs."
+          />
+          <EmptyStateTip
+            icon={BookOpen}
+            title="Build your own"
+            description="If no template fits, create a policy from scratch in the policies tab. You can always come back here for reference."
+          />
+        </EmptyState>
       ) : (
         <GroupedTableView
           groupedData={groupedTemplates}
           ungroupedData={filteredPolicyTemplates}
           renderTable={(data, options) => (
             <CustomizablePolicyTable
-              data={{ rows: data.map(p => ({ ...p, id: p.id })), cols: tableHeaders }}
+              data={{ rows: data.map(p => ({ ...p, id: p.id })), cols: visibleTableHeaders }}
               paginated
-              setSelectedRow={() => {}}
-              setAnchorEl={() => {}}
+              setSelectedRow={() => { }}
+              setAnchorEl={() => { }}
               onRowClick={(id: string) => handleSelectPolicyTemplate(Number(id))}
               hidePagination={options?.hidePagination}
               renderRow={(policy, sortConfig) => (
@@ -234,49 +231,55 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
                   sx={{ ...singleTheme.tableStyles.primary.body.row }}
                   onClick={() => handleSelectPolicyTemplate(policy.id)}
                 >
-                  <TableCell
-                    sx={{
-                      ...cellStyle,
-                      fontWeight: 500,
-                      backgroundColor: sortConfig?.key?.toLowerCase().includes("id") ? "#f5f5f5" : "inherit",
-                    }}
-                  >
-                    {policy.id}
-                  </TableCell>
+                  {isVisible("id") && (
+                    <TableCell
+                      sx={{
+                        ...cellStyle,
+                        fontWeight: 500,
+                        backgroundColor: sortConfig?.key?.toLowerCase().includes("id") ? "background.surface" : "inherit",
+                      }}
+                    >
+                      {policy.id}
+                    </TableCell>
+                  )}
                   <TableCell
                     sx={{
                       ...cellStyle,
                       maxWidth: 200,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-                      backgroundColor: sortConfig?.key?.toLowerCase().includes("title") ? "#f5f5f5" : "inherit",
+                      backgroundColor: sortConfig?.key?.toLowerCase().includes("title") ? "background.surface" : "inherit",
                     }}
                   >
                     {policy.title}
                   </TableCell>
-                  <TableCell
-                    sx={{
-                      ...cellStyle,
-                      backgroundColor: sortConfig?.key?.toLowerCase().includes("tags") ? "#f5f5f5" : "inherit",
-                    }}
-                  >
-                    <Stack direction="row" gap={1} flexWrap="wrap">
-                      {policy.tags.map((tag: string, index: number) => (
-                        <TagChip key={`${tag}-${index}`} tag={tag} />
-                      ))}
-                    </Stack>
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      ...cellStyle,
-                      maxWidth: 250,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      backgroundColor: sortConfig?.key?.toLowerCase().includes("description") ? "#f5f5f5" : "inherit",
-                    }}
-                  >
-                    {policy.description}
-                  </TableCell>
+                  {isVisible("tags") && (
+                    <TableCell
+                      sx={{
+                        ...cellStyle,
+                        backgroundColor: sortConfig?.key?.toLowerCase().includes("tags") ? "background.surface" : "inherit",
+                      }}
+                    >
+                      <Stack direction="row" gap={1} flexWrap="wrap">
+                        {policy.tags.map((tag: string, index: number) => (
+                          <TagChip key={`${tag}-${index}`} tag={tag} />
+                        ))}
+                      </Stack>
+                    </TableCell>
+                  )}
+                  {isVisible("description") && (
+                    <TableCell
+                      sx={{
+                        ...cellStyle,
+                        maxWidth: 250,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        backgroundColor: sortConfig?.key?.toLowerCase().includes("description") ? "background.surface" : "inherit",
+                      }}
+                    >
+                      {policy.description}
+                    </TableCell>
+                  )}
                 </TableRow>
               )}
             />
@@ -284,26 +287,6 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
         />
       )}
 
-      {/* Modal */}
-      {showModal && tags.length > 0 && (
-        <PolicyDetailModal
-          policy={null}
-          tags={tags}
-          onClose={handleClose}
-          onSaved={handleSaved}
-          template={selectedPolicyTemplate}
-        />
-      )}
-
-      {alert && (
-        <Alert
-          variant={alert.variant}
-          title={alert.title}
-          body={alert.body}
-          isToast={true}
-          onClick={() => setAlert(null)}
-        />
-      )}
     </Stack>
   );
 };

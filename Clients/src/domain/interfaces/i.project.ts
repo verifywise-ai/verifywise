@@ -23,6 +23,7 @@ export interface IProjectTableViewProps {
   projects: Project[];
   hidePagination?: boolean;
   onProjectDeleted?: () => void;
+  visibleColumns?: Set<string>;
 }
 
 export interface IProjectRiskMitigationProps {

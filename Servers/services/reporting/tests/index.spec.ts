@@ -37,7 +37,7 @@ describe("Report Generation Service", () => {
       projectFrameworkId: 1,
       generatedAt: new Date(),
       generatedBy: "Test User",
-      tenantId: "test-tenant",
+      organizationId: 1,
       isOrganizational: false,
     },
     branding: {
@@ -83,10 +83,10 @@ describe("Report Generation Service", () => {
       };
       (generatePDF as jest.Mock).mockResolvedValue(mockPdfResult);
 
-      const result = await generateReport(baseRequest, 1, "test-tenant");
+      const result = await generateReport(baseRequest, 1, 1);
 
       expect(createDataCollector).toHaveBeenCalledWith(
-        "test-tenant",
+        1,
         1,
         1,
         1,
@@ -109,7 +109,7 @@ describe("Report Generation Service", () => {
       (generateDOCX as jest.Mock).mockResolvedValue(mockDocxResult);
 
       const docxRequest = { ...baseRequest, format: "docx" as const };
-      const result = await generateReport(docxRequest, 1, "test-tenant");
+      const result = await generateReport(docxRequest, 1, 1);
 
       expect(generateDOCX).toHaveBeenCalledWith(mockReportData);
       expect(result.success).toBe(true);
@@ -133,7 +133,7 @@ describe("Report Generation Service", () => {
         },
       };
 
-      await generateReport(requestWithBranding, 1, "test-tenant");
+      await generateReport(requestWithBranding, 1, 1);
 
       // Verify generatePDF was called with merged branding
       const callArg = (generatePDF as jest.Mock).mock.calls[0][0];
@@ -155,7 +155,7 @@ describe("Report Generation Service", () => {
         reportName: "custom_report",
       };
 
-      const result = await generateReport(requestWithName, 1, "test-tenant");
+      const result = await generateReport(requestWithName, 1, 1);
 
       expect(result.filename).toBe("custom_report.pdf");
     });
@@ -174,7 +174,7 @@ describe("Report Generation Service", () => {
         reportName: "custom_report.pdf",
       };
 
-      const result = await generateReport(requestWithName, 1, "test-tenant");
+      const result = await generateReport(requestWithName, 1, 1);
 
       expect(result.filename).toBe("custom_report.pdf");
     });
@@ -193,7 +193,7 @@ describe("Report Generation Service", () => {
         reportType: ["Project risks report", "Vendors and risks report"],
       };
 
-      await generateReport(multiTypeRequest, 1, "test-tenant");
+      await generateReport(multiTypeRequest, 1, 1);
 
       // Should call collectAllData with appropriate sections
       expect(mockDataCollector.collectAllData).toHaveBeenCalled();
@@ -209,7 +209,7 @@ describe("Report Generation Service", () => {
         reportType: "All reports",
       };
 
-      const result = await getReportData(request, 1, "test-tenant");
+      const result = await getReportData(request, 1, 1);
 
       expect(createDataCollector).toHaveBeenCalled();
       expect(mockDataCollector.collectAllData).toHaveBeenCalled();
@@ -227,7 +227,7 @@ describe("Report Generation Service", () => {
         },
       };
 
-      const result = await getReportData(request, 1, "test-tenant");
+      const result = await getReportData(request, 1, 1);
 
       expect(result.branding.organizationName).toBe("Custom Org");
     });

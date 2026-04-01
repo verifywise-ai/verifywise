@@ -9,6 +9,7 @@ import { Divider, Drawer, Typography } from "@mui/material";
 import { X as CloseIcon, Save as SaveIcon, Trash2 as DeleteIcon, Eye as ViewIcon, Download as DownloadIcon, FileText as FileIcon } from "lucide-react";
 
 import Field from "../../Inputs/Field";
+import RichTextEditor from "../../RichTextEditor";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
 import ChipInput from "../../Inputs/ChipInput";
@@ -17,6 +18,7 @@ import Alert from "../../Alert";
 import TabBar from "../../TabBar";
 import { LinkedRisksPopup } from "../../LinkedRisks";
 import StandardModal from "../../Modals/StandardModal";
+import { text } from "../../../themes/palette";
 
 const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
 const NotesTab = lazy(() => import("../../Notes/NotesTab"));
@@ -531,10 +533,10 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
           }
         }}
         sx={{
-          width: 600,
+          width: 850,
           margin: 0,
           "& .MuiDrawer-paper": {
-            width: 600,
+            width: 850,
             margin: 0,
             borderRadius: 0,
             overflowX: "hidden",
@@ -545,14 +547,14 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
         <Stack
           className="nist-ai-rmf-drawer-dialog-content"
           sx={{
-            width: 600,
+            width: 850,
           }}
         >
           {/* Loading State */}
           {isLoading && (
             <Stack
               sx={{
-                width: 600,
+                width: 850,
                 height: "100%",
                 display: "flex",
                 justifyContent: "center",
@@ -622,29 +624,21 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                       <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
                         Implementation description:
                       </Typography>
-                      <Field
-                        type="description"
-                        value={formData.implementation_description}
-                        onChange={(e) =>
+                      <RichTextEditor
+                        toolbar="full"
+                        initialContent={formData.implementation_description}
+                        onContentChange={(content) =>
                           handleFieldChange(
                             "implementation_description",
-                            e.target.value
+                            content
                           )
                         }
-                        sx={{
-                          cursor: "text",
-                          "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
-                            {
-                              height: "73px",
-                            },
-                        }}
                         placeholder="Enter implementation details and how this subcategory is being addressed..."
-                        disabled={isEditingDisabled}
+                        isEditable={!isEditingDisabled}
+                        height="120px"
                       />
                     </Stack>
                   </Stack>
-
-                  <Divider />
 
                   {/* Status Assignment Section */}
                   <Stack padding="15px 20px" gap="24px">
@@ -910,7 +904,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                                 <Typography
                                   sx={{
                                     fontSize: 11,
-                                    color: "#6B7280",
+                                    color: "status.default.text",
                                   }}
                                 >
                                   {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ""}
@@ -1061,7 +1055,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                         <Typography variant="body2" sx={{ mb: 1 }}>
                           No evidence files uploaded yet
                         </Typography>
-                        <Typography variant="caption" color="#9CA3AF">
+                        <Typography variant="caption" color={text.disabled}>
                           Click "Add evidence files" to upload documentation for
                           this subcategory
                         </Typography>
@@ -1247,7 +1241,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                           <Typography variant="body2" sx={{ mb: 1 }}>
                             No risks linked yet
                           </Typography>
-                          <Typography variant="caption" color="#9CA3AF">
+                          <Typography variant="caption" color={text.disabled}>
                             Click "Add/remove risks" to link risks from your
                             risk database
                           </Typography>
@@ -1283,8 +1277,6 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                   />
                 </Suspense>
               )}
-
-              <Divider />
 
               {/* Footer */}
               <Stack

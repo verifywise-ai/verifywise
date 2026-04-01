@@ -4,6 +4,7 @@ import {
   flashAnimation,
   getStatusColor,
 } from "../../../ISO/style";
+import { border as borderPalette } from "../../../../themes/palette";
 
 // Component styles
 export const styles = {
@@ -19,12 +20,12 @@ export const styles = {
       flexDirection: "row",
       justifyContent: "space-between",
       padding: "16px",
-      borderBottom: isLast ? "none" : "1px solid #d0d5dd",
+      borderBottom: isLast ? "none" : `1px solid ${borderPalette.dark}`,
       cursor: "pointer",
       fontSize: 13,
       animation: isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
       "&:hover": {
-        backgroundColor: isFlashing ? "transparent" : "#f5f5f5",
+        backgroundColor: isFlashing ? "transparent" : "background.surface",
       },
       alignItems: "center",
     } as SxProps<Theme>),
@@ -34,7 +35,7 @@ export const styles = {
       borderRadius: "4px",
       padding: "5px",
       backgroundColor: getStatusColor(status),
-      color: "#fff",
+      color: "background.main",
     } as SxProps<Theme>),
 
   loadingContainer: {
@@ -64,7 +65,7 @@ export const styles = {
       fontSize: 13,
       animation: isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
       "&:hover": {
-        backgroundColor: isFlashing ? "transparent" : "#f5f5f5",
+        backgroundColor: isFlashing ? "transparent" : "background.surface",
       },
     } as SxProps<Theme>),
 

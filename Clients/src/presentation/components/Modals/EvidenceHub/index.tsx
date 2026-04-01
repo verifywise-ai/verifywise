@@ -435,7 +435,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
                     size="small"
                     sx={{
                       padding: "4px",
-                      bgcolor: "#f5f5f5",
+                      bgcolor: "background.surface",
                       "&:hover": { bgcolor: "#e0e0e0" },
                     }}
                   >

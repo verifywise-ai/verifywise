@@ -4,6 +4,7 @@ import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { CheckSquare, MessageSquare, BarChart3, Bell } from "lucide-react";
 import Alert from "../../Alert";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
+import { brand, text, background, status } from "../../../themes/palette";
 
 const TaskWorkflowStep: React.FC<OnboardingStepProps> = () => {
   const workflowSteps = [
@@ -58,7 +59,7 @@ const TaskWorkflowStep: React.FC<OnboardingStepProps> = () => {
             left: "50px",
             fontWeight: 600,
             fontSize: "24px",
-            color: "#FFFFFF",
+            color: `${background.main}`,
           }}
         >
           Your daily workflow
@@ -69,7 +70,7 @@ const TaskWorkflowStep: React.FC<OnboardingStepProps> = () => {
         <Typography
           sx={{
             fontSize: "14px",
-            color: "#667085",
+            color: `${text.icon}`,
             marginBottom: 3,
             lineHeight: 1.6,
           }}
@@ -91,7 +92,7 @@ const TaskWorkflowStep: React.FC<OnboardingStepProps> = () => {
             sx={{
               padding: 10,
               background: "linear-gradient(135deg, #13715B08 0%, transparent 100%)",
-              border: "1px solid #E5E7EB",
+              border: `1px solid ${status.default.border}`,
               borderRadius: "4px",
               display: "flex",
               flexDirection: "column",
@@ -104,7 +105,7 @@ const TaskWorkflowStep: React.FC<OnboardingStepProps> = () => {
                 height: "32px",
                 borderRadius: "6px",
                 backgroundColor: "#13715B15",
-                color: "#13715B",
+                color: `${brand.primary}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -121,7 +122,7 @@ const TaskWorkflowStep: React.FC<OnboardingStepProps> = () => {
             >
               {step.title}
             </Typography>
-            <Typography sx={{ fontSize: "12px", color: "#6B7280" }}>
+            <Typography sx={{ fontSize: "12px", color: `${status.default.text}` }}>
               {step.description}
             </Typography>
           </Box>

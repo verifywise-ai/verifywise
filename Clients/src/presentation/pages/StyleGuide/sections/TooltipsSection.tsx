@@ -157,7 +157,7 @@ const TooltipsSection: React.FC = () => {
                 { property: "Font size", value: "11px" },
                 { property: "Padding", value: "4px 8px" },
                 { property: "Background", value: "#1c2130" },
-                { property: "Color", value: "#ffffff" },
+                { property: "Color", value: "background.main" },
                 { property: "Border radius", value: "4px" },
                 { property: "Max width", value: "300px" },
                 { property: "Arrow", value: "arrow prop" },
@@ -294,7 +294,7 @@ const TooltipsSection: React.FC = () => {
               borderRadius: "4px",
               color: "rgba(255, 255, 255, 0.6)",
               "&:hover": {
-                color: "#ffffff",
+                color: "background.main",
                 backgroundColor: "rgba(255, 255, 255, 0.1)",
               },
             }}
@@ -305,7 +305,7 @@ const TooltipsSection: React.FC = () => {
             sx={{
               fontWeight: 600,
               fontSize: "15px",
-              color: "#ffffff",
+              color: "background.main",
               letterSpacing: "-0.02em",
               mb: 2,
               pr: 3,

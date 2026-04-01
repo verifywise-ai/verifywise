@@ -25,7 +25,6 @@ import {
   deleteNoteByIdQuery,
   getNoteCountByEntityQuery,
   getNotesByAuthorQuery,
-  ensureNotesTableExists,
 } from "../utils/notes.utils";
 import {
   ValidationException,
@@ -66,15 +65,14 @@ export class NotesService {
     authorId: number,
     attachedTo: NotesAttachedToEnum,
     attachedToId: string,
-    organizationId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<NotesModel> {
     logProcessing({
       description: "Starting NotesService.createNote",
       functionName: "createNote",
       fileName: "notesService.ts",
       userId: authorId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
@@ -134,9 +132,6 @@ export class NotesService {
         );
       }
 
-      // Ensure notes table exists (for existing tenants that might be missing it)
-      await ensureNotesTableExists(tenantId);
-
       // Create note model
       const note = await NotesModel.createNote(
         sanitizedContent,
@@ -150,7 +145,7 @@ export class NotesService {
       await note.validateNoteData();
 
       // Save to database
-      const savedNote = await createNewNoteQuery(note, tenantId);
+      const savedNote = await createNewNoteQuery(note, organizationId);
 
       await logSuccess({
         eventType: "Create",
@@ -158,7 +153,7 @@ export class NotesService {
         functionName: "createNote",
         fileName: "notesService.ts",
         userId: authorId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return savedNote;
@@ -170,7 +165,7 @@ export class NotesService {
         fileName: "notesService.ts",
         error: error as Error,
         userId: authorId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -198,7 +193,6 @@ export class NotesService {
     attachedTo: NotesAttachedToEnum,
     attachedToId: string,
     organizationId: number,
-    tenantId: string,
     userId: number
   ): Promise<NotesModel[]> {
     logProcessing({
@@ -206,7 +200,7 @@ export class NotesService {
       functionName: "getNotes",
       fileName: "notesService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
@@ -230,14 +224,10 @@ export class NotesService {
         );
       }
 
-      // Ensure notes table exists (for existing tenants that might be missing it)
-      await ensureNotesTableExists(tenantId);
-
       const notes = await getNotesByEntityQuery(
         attachedTo,
         attachedToId,
-        organizationId,
-        tenantId
+        organizationId
       );
 
       await logSuccess({
@@ -246,7 +236,7 @@ export class NotesService {
         functionName: "getNotes",
         fileName: "notesService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return notes;
@@ -258,7 +248,7 @@ export class NotesService {
         fileName: "notesService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -273,6 +263,7 @@ export class NotesService {
    * @param {string} content - New content
    * @param {number} userId - User ID attempting update
    * @param {string} userRole - User role (for admin check)
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<NotesModel>} Updated note
    * @throws {ForbiddenException} If user lacks permission
    * @throws {ValidationException} If validation fails
@@ -283,7 +274,8 @@ export class NotesService {
    *   'uuid-123',
    *   'Updated content',
    *   123,
-   *   'Editor'
+   *   'Editor',
+   *   456
    * );
    */
   static async updateNote(
@@ -291,14 +283,14 @@ export class NotesService {
     content: string,
     userId: number,
     userRole: string,
-    tenantId: string
+    organizationId: number
   ): Promise<NotesModel> {
     logProcessing({
       description: `Starting NotesService.updateNote for ID ${noteId}`,
       functionName: "updateNote",
       fileName: "notesService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
@@ -319,11 +311,8 @@ export class NotesService {
         );
       }
 
-      // Ensure notes table exists (for existing tenants that might be missing it)
-      await ensureNotesTableExists(tenantId);
-
       // Fetch existing note
-      const note = await getNoteByIdQuery(noteId, tenantId);
+      const note = await getNoteByIdQuery(noteId, organizationId);
 
       if (!note) {
         throw new Error(`Note with ID ${noteId} not found`);
@@ -357,7 +346,7 @@ export class NotesService {
       await note.validateNoteData();
 
       // Save to database
-      const updatedNote = await updateNoteContentQuery(noteId, note, tenantId);
+      const updatedNote = await updateNoteContentQuery(noteId, note, organizationId);
 
       await logSuccess({
         eventType: "Update",
@@ -365,7 +354,7 @@ export class NotesService {
         functionName: "updateNote",
         fileName: "notesService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return updatedNote;
@@ -377,7 +366,7 @@ export class NotesService {
         fileName: "notesService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -391,46 +380,44 @@ export class NotesService {
    * @param {string} noteId - Note UUID
    * @param {number} userId - User ID attempting deletion
    * @param {string} userRole - User role (for admin check)
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<boolean>} True if deleted successfully
    * @throws {ForbiddenException} If user lacks permission
    * @throws {Error} If note not found
    *
    * @example
-   * await NotesService.deleteNote('uuid-123', 123, 'Editor');
+   * await NotesService.deleteNote('uuid-123', 123, 'Editor', 456);
    */
   static async deleteNote(
     noteId: number,
     userId: number,
     userRole: string,
-    tenantId: string
+    organizationId: number
   ): Promise<boolean> {
     logProcessing({
       description: `Starting NotesService.deleteNote for ID ${noteId}`,
       functionName: "deleteNote",
       fileName: "notesService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
-      // Ensure notes table exists (for existing tenants that might be missing it)
-      await ensureNotesTableExists(tenantId);
-
       // Fetch existing note
-      const note = await getNoteByIdQuery(noteId, tenantId);
+      const note = await getNoteByIdQuery(noteId, organizationId);
 
       if (!note) {
         // Log additional context for debugging
         await logFailure({
           eventType: "Delete",
-          description: `Note ${noteId} not found in tenant ${tenantId}`,
+          description: `Note ${noteId} not found in organization ${organizationId}`,
           functionName: "deleteNote",
           fileName: "notesService.ts",
           error: new Error(
-            `Note with ID ${noteId} not found in tenant ${tenantId}`,
+            `Note with ID ${noteId} not found in organization ${organizationId}`,
           ),
           userId: userId,
-          tenantId: tenantId
+          organizationId: organizationId
         });
         throw new Error(`Note with ID ${noteId} not found`);
       }
@@ -448,7 +435,7 @@ export class NotesService {
       }
 
       // Delete from database
-      const deleteCount = await deleteNoteByIdQuery(noteId, tenantId);
+      const deleteCount = await deleteNoteByIdQuery(noteId, organizationId);
 
       if (deleteCount === 0) {
         throw new Error(`Failed to delete note with ID ${noteId}`);
@@ -460,7 +447,7 @@ export class NotesService {
         functionName: "deleteNote",
         fileName: "notesService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return true;
@@ -472,7 +459,7 @@ export class NotesService {
         fileName: "notesService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -498,18 +485,13 @@ export class NotesService {
   static async getNoteCount(
     attachedTo: NotesAttachedToEnum,
     attachedToId: string,
-    organizationId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<number> {
     try {
-      // Ensure notes table exists (for existing tenants that might be missing it)
-      await ensureNotesTableExists(tenantId);
-
       return await getNoteCountByEntityQuery(
         attachedTo,
         attachedToId,
-        organizationId,
-        tenantId
+        organizationId
       );
     } catch (error) {
       throw new Error(`Failed to get note count: ${(error as Error).message}`);
@@ -521,7 +503,7 @@ export class NotesService {
    *
    * @static
    * @async
-   * @param {number} authorId - User ID of author
+   * @param {number} authorId - User ID of note author
    * @param {number} organizationId - Organization ID
    * @returns {Promise<NotesModel[]>} Array of user's notes
    *
@@ -530,14 +512,10 @@ export class NotesService {
    */
   static async getNotesByAuthor(
     authorId: number,
-    organizationId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<NotesModel[]> {
     try {
-      // Ensure notes table exists (for existing tenants that might be missing it)
-      await ensureNotesTableExists(tenantId);
-
-      return await getNotesByAuthorQuery(authorId, organizationId, tenantId);
+      return await getNotesByAuthorQuery(authorId, organizationId);
     } catch (error) {
       throw new Error(
         `Failed to get author notes: ${(error as Error).message}`

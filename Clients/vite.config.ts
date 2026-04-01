@@ -2,7 +2,7 @@ import svgr from "@svgr/rollup";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { defineConfig } from "vitest/config";
-import { version } from "./package.json";
+import { version } from "../version.json";
 
 // https://vitejs.dev/config/
 export default defineConfig({

@@ -9,10 +9,10 @@ import {
 } from "../types/framework.type";
 
 export const getAllFrameworksQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<FrameworkModel[]> => {
   const frameworks = await sequelize.query(
-    `SELECT * FROM public.frameworks ORDER BY created_at DESC, id ASC;`,
+    `SELECT * FROM frameworks ORDER BY created_at DESC, id ASC;`,
     {
       mapToModel: true,
       model: FrameworkModel,
@@ -20,9 +20,9 @@ export const getAllFrameworksQuery = async (
   );
   for (let framework of frameworks) {
     const frameworkProjects = await sequelize.query(
-      `SELECT * FROM "${tenant}".projects_frameworks WHERE framework_id = :frameworkId`,
+      `SELECT * FROM projects_frameworks WHERE organization_id = :organizationId AND framework_id = :frameworkId`,
       {
-        replacements: { frameworkId: framework.id },
+        replacements: { frameworkId: framework.id, organizationId },
         mapToModel: true,
         model: ProjectFrameworksModel,
       }
@@ -34,10 +34,10 @@ export const getAllFrameworksQuery = async (
 
 export const getAllFrameworkByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<FrameworkModel | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM public.frameworks WHERE id = :id ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM frameworks WHERE id = :id ORDER BY created_at DESC, id ASC`,
     {
       replacements: { id },
       mapToModel: true,
@@ -46,9 +46,9 @@ export const getAllFrameworkByIdQuery = async (
   );
   const framework = result[0];
   const frameworkProjects = await sequelize.query(
-    `SELECT * FROM "${tenant}".projects_frameworks WHERE framework_id = :frameworkId`,
+    `SELECT * FROM projects_frameworks WHERE organization_id = :organizationId AND framework_id = :frameworkId`,
     {
-      replacements: { frameworkId: framework.id },
+      replacements: { frameworkId: framework.id, organizationId },
       mapToModel: true,
       model: ProjectFrameworksModel,
     }
@@ -60,12 +60,12 @@ export const getAllFrameworkByIdQuery = async (
 const checkFrameworkExistsQuery = async (
   frameworkId: number,
   projectId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<boolean> => {
   const [[{ exists }]] = (await sequelize.query(
-    `SELECT EXISTS (SELECT 1 FROM "${tenant}".projects_frameworks WHERE project_id = :projectId AND framework_id = :frameworkId) AS exists;`,
-    { replacements: { projectId, frameworkId }, transaction }
+    `SELECT EXISTS (SELECT 1 FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :projectId AND framework_id = :frameworkId) AS exists;`,
+    { replacements: { projectId, frameworkId, organizationId }, transaction }
   )) as [[{ exists: boolean }], number];
   return exists;
 };
@@ -73,13 +73,13 @@ const checkFrameworkExistsQuery = async (
 const canRemoveFrameworkFromProjectQuery = async (
   frameworkId: number,
   projectId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<boolean> => {
   const exists = await checkFrameworkExistsQuery(
     frameworkId,
     projectId,
-    tenant,
+    organizationId,
     transaction
   );
   if (!exists) {
@@ -91,14 +91,14 @@ const canRemoveFrameworkFromProjectQuery = async (
   // Use safe query that handles missing plugin table
   const [[{ can_remove }]] = (await sequelize.query(
     `SELECT (
-      (SELECT COUNT(*) FROM "${tenant}".projects_frameworks WHERE project_id = :projectId) +
+      (SELECT COUNT(*) FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :projectId) +
       CASE
-        WHEN EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = :tenant AND table_name = 'custom_framework_projects')
-        THEN (SELECT COUNT(*) FROM "${tenant}".custom_framework_projects WHERE project_id = :projectId)
+        WHEN EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'verifywise' AND table_name = 'custom_framework_projects')
+        THEN (SELECT COUNT(*) FROM custom_framework_projects WHERE organization_id = :organizationId AND project_id = :projectId)
         ELSE 0
       END
-    ) > 1 AND EXISTS (SELECT 1 FROM "${tenant}".projects_frameworks WHERE project_id = :projectId AND framework_id = :frameworkId) AS can_remove;`,
-    { replacements: { projectId, frameworkId, tenant }, transaction }
+    ) > 1 AND EXISTS (SELECT 1 FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :projectId AND framework_id = :frameworkId) AS can_remove;`,
+    { replacements: { projectId, frameworkId, organizationId }, transaction }
   )) as [[{ can_remove: boolean }], number];
   return can_remove;
 };
@@ -106,13 +106,13 @@ const canRemoveFrameworkFromProjectQuery = async (
 export const canAddFrameworkToProjectQuery = async (
   frameworkId: number,
   projectId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<boolean> => {
   const exists = await checkFrameworkExistsQuery(
     frameworkId,
     projectId,
-    tenant,
+    organizationId,
     transaction
   );
   if (exists) {
@@ -120,12 +120,12 @@ export const canAddFrameworkToProjectQuery = async (
   }
 
   const [[{ is_framework_organizational }]] = (await sequelize.query(
-    `SELECT is_organizational AS is_framework_organizational FROM public.frameworks WHERE id = :frameworkId;`,
+    `SELECT is_organizational AS is_framework_organizational FROM frameworks WHERE id = :frameworkId;`,
     { replacements: { frameworkId }, transaction }
   )) as [[{ is_framework_organizational: boolean }], number];
   const [[{ is_project_organizational }]] = (await sequelize.query(
-    `SELECT is_organizational AS is_project_organizational FROM "${tenant}".projects WHERE id = :projectId;`,
-    { replacements: { projectId }, transaction }
+    `SELECT is_organizational AS is_project_organizational FROM projects WHERE organization_id = :organizationId AND id = :projectId;`,
+    { replacements: { projectId, organizationId }, transaction }
   )) as [[{ is_project_organizational: boolean }], number];
 
   if (is_framework_organizational !== is_project_organizational) {
@@ -138,13 +138,13 @@ export const canAddFrameworkToProjectQuery = async (
 export const addFrameworkToProjectQuery = async (
   frameworkId: number,
   projectId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<boolean> => {
   const canAdd = await canAddFrameworkToProjectQuery(
     frameworkId,
     projectId,
-    tenant,
+    organizationId,
     transaction
   );
   if (!canAdd) {
@@ -158,40 +158,40 @@ export const addFrameworkToProjectQuery = async (
 
   // add the framework to the project
   const result = (await sequelize.query(
-    `INSERT INTO "${tenant}".projects_frameworks (project_id, framework_id) VALUES (:projectId, :frameworkId) RETURNING *;`,
-    { replacements: { projectId, frameworkId }, transaction }
+    `INSERT INTO projects_frameworks (organization_id, project_id, framework_id) VALUES (:organizationId, :projectId, :frameworkId) RETURNING *;`,
+    { replacements: { projectId, frameworkId, organizationId }, transaction }
   )) as [ProjectFrameworksModel[], number];
   if (!result[0]?.length) {
     return false;
   }
   // call framework addition function only if insert was successful
-  await frameworkAdditionFunction(projectId, false, tenant, transaction);
+  await frameworkAdditionFunction(projectId, false, organizationId, transaction);
   return true;
 };
 
 const deleteFrameworkEvidenceFiles = async (
   projectId: number,
   source: string[],
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<void> => {
   // First clean up any virtual folder mappings for these files
   await sequelize.query(
-    `DELETE FROM "${tenant}".file_folder_mappings
-     WHERE file_id IN (
-       SELECT id FROM "${tenant}".files
-       WHERE project_id = :project_id AND source IN (:source)
+    `DELETE FROM file_folder_mappings
+     WHERE organization_id = :organizationId AND file_id IN (
+       SELECT id FROM files
+       WHERE organization_id = :organizationId AND project_id = :project_id AND source IN (:source)
      )`,
     {
-      replacements: { project_id: projectId, source },
+      replacements: { project_id: projectId, source, organizationId },
       transaction,
     }
   );
 
   await sequelize.query(
-    `DELETE FROM "${tenant}".files WHERE project_id = :project_id AND source IN (:source)`,
+    `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :project_id AND source IN (:source)`,
     {
-      replacements: { project_id: projectId, source },
+      replacements: { project_id: projectId, source, organizationId },
       transaction,
     }
   );
@@ -200,13 +200,13 @@ const deleteFrameworkEvidenceFiles = async (
 export const deleteFrameworkFromProjectQuery = async (
   frameworkId: number,
   projectId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<boolean> => {
   const canRemove = await canRemoveFrameworkFromProjectQuery(
     frameworkId,
     projectId,
-    tenant,
+    organizationId,
     transaction
   );
   if (!canRemove) {
@@ -222,7 +222,7 @@ export const deleteFrameworkFromProjectQuery = async (
   await deleteFrameworkEvidenceFiles(
     projectId,
     frameworkFilesDeletionSource,
-    tenant,
+    organizationId,
     transaction
   );
 
@@ -233,7 +233,7 @@ export const deleteFrameworkFromProjectQuery = async (
   // call framework deletion function
   const result = await frameworkDeletionFunction(
     projectId,
-    tenant,
+    organizationId,
     transaction
   );
   return result;

@@ -28,6 +28,7 @@ const ModelInventorySummary: React.FC<ModelInventorySummaryProps> = ({
       entityName="model"
       onCardClick={onCardClick}
       selectedKey={selectedStatus}
+      size="small"
     />
   );
 };

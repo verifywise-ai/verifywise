@@ -69,7 +69,7 @@ export const getDatePickerStyle = (theme: Theme) => ({
 
 // Keep backward-compatible static export for existing consumers
 export const DatePickerStyle = {
-  backgroundColor: "#FFFFFF",
+  backgroundColor: "background.main",
   ".MuiIconButton-root:hover": { backgroundColor: "unset" },
   "& svg": { display: "none" },
   "& .MuiInputAdornment-root": {
@@ -91,7 +91,7 @@ export const DatePickerStyle = {
     display: "block",
   },
   "& .MuiPickersOutlinedInput-root": {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "background.main",
     borderRadius: "4px",
     paddingLeft: "40px !important",
   },
@@ -109,7 +109,7 @@ export const DatePickerStyle = {
     pointerEvents: "none",
   },
   "& .MuiOutlinedInput-root": {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "background.main",
     borderRadius: "4px",
   },
   "& .MuiPickersOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
@@ -119,12 +119,12 @@ export const DatePickerStyle = {
     borderColor: "#5FA896 !important",
   },
   "& .MuiPickersOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: "#13715B !important",
+    borderColor: "brand.primary !important",
     borderWidth: "2px",
     boxShadow: "0 0 0 3px rgba(19, 113, 91, 0.1)",
   },
   "& .MuiPickersOutlinedInput-root.Mui-focused fieldset": {
-    borderColor: "#13715B !important",
+    borderColor: "brand.primary !important",
     borderWidth: "2px",
     boxShadow: "0 0 0 3px rgba(19, 113, 91, 0.1)",
   },

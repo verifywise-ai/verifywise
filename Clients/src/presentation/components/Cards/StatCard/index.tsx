@@ -32,8 +32,8 @@ export function StatCard({ title, value, Icon, highlight, active, subtitle, tool
           ? `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`
           : "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
         border: active
-          ? `1px solid ${palette.brand.primary}`
-          : `1px solid ${palette.border.light}`,
+          ? `1.5px solid ${palette.brand.primary}`
+          : `1.5px solid ${palette.border.light}`,
         height: "100%",
         minHeight: "80px",
         position: "relative",

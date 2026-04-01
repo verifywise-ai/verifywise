@@ -16,7 +16,7 @@ import {
     Tooltip,
 } from "@mui/material";
 
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronsUpDown, ChevronUp, ChevronDown, FileCheck } from "lucide-react";
 
 import StandardModal from "../Modals/StandardModal";
 
@@ -369,7 +369,7 @@ const LinkEvidenceSelectorModal: React.FC<LinkEvidenceSelectorModalProps> = ({
                             colSpan={TABLE_COLUMNS.length}
                             align="center"
                         >
-                            <EmptyState message="No evidence found." />
+                            <EmptyState message="No evidence found." icon={FileCheck} />
                         </TableCell>
                     </TableRow>
                 )}

@@ -119,7 +119,19 @@ export async function cacheAside<T>(
 }
 
 /**
- * Build a tenant-specific cache key
+ * Build an organization-specific cache key
+ *
+ * @param prefix - Cache key prefix
+ * @param organizationId - Organization identifier
+ * @returns Full cache key
+ */
+export function buildOrgCacheKey(prefix: string, organizationId: number): string {
+  return `${prefix}:org_${organizationId}`;
+}
+
+/**
+ * Build a tenant-specific cache key (DEPRECATED)
+ * @deprecated Use buildOrgCacheKey instead for shared-schema multi-tenancy
  *
  * @param prefix - Cache key prefix
  * @param tenantId - Tenant identifier

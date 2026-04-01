@@ -40,6 +40,7 @@ import { GroupBy } from "../../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../../components/Table/GroupedTableView";
 import singleTheme from "../../../themes/v1SingleTheme";
+import { text, background, border as borderPalette } from "../../../themes/palette";
 
 // Helper component for Resource Table Row
 const ResourceTableRow: React.FC<{
@@ -698,11 +699,11 @@ const TrustCenterResources: React.FC = () => {
                 onClick={() => setAddFileModalOpen(true)}
                 isDisabled={!formData?.info?.resources_visible}
                 sx={{
-                  border: "1px solid #D0D5DD",
-                  color: "#344054",
+                  border: `1px solid ${borderPalette.dark}`,
+                  color: `${text.secondary}`,
                   "&:hover": {
-                    backgroundColor: "#F9FAFB",
-                    border: "1px solid #D0D5DD",
+                    backgroundColor: `${background.accent}`,
+                    border: `1px solid ${borderPalette.dark}`,
                   },
                 }}
               />
@@ -790,11 +791,11 @@ const TrustCenterResources: React.FC = () => {
                 onClick={() => setEditFileModalOpen(true)}
                 isDisabled={!formData?.info?.resources_visible}
                 sx={{
-                  border: "1px solid #D0D5DD",
-                  color: "#344054",
+                  border: `1px solid ${borderPalette.dark}`,
+                  color: `${text.secondary}`,
                   "&:hover": {
-                    backgroundColor: "#F9FAFB",
-                    border: "1px solid #D0D5DD",
+                    backgroundColor: `${background.accent}`,
+                    border: `1px solid ${borderPalette.dark}`,
                   },
                 }}
               />

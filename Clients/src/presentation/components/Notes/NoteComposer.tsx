@@ -166,11 +166,11 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
               sx={{
                 minWidth: "80px",
                 height: "34px",
-                border: "1px solid #D0D5DD",
-                color: "#344054",
+                border: "1px solid #d0d5dd",
+                color: "text.secondary",
                 "&:hover": {
-                  backgroundColor: "#F9FAFB",
-                  border: "1px solid #D0D5DD",
+                  backgroundColor: "background.accent",
+                  border: "1px solid #d0d5dd",
                 },
               }}
             />
@@ -185,8 +185,8 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
               loading={isLoading}
               icon={<SaveIcon size={16} />}
               sx={{
-                backgroundColor: "#13715B",
-                border: "1px solid #13715B",
+                backgroundColor: "brand.primary",
+                border: "1px solid brand.primary",
                 gap: 2,
                 width: "fit-content",
                 height: "34px",
@@ -201,8 +201,8 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
               loading={isLoading}
               icon={<SendIcon size={16} />}
               sx={{
-                backgroundColor: "#13715B",
-                border: "1px solid #13715B",
+                backgroundColor: "brand.primary",
+                border: "1px solid brand.primary",
                 gap: 2,
                 width: "fit-content",
                 height: "34px",

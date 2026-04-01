@@ -6,6 +6,7 @@ import {
 } from "@mui/material";
 import { ChevronDown, FileText, Building2 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import { brand, background } from "../../../themes/palette";
 const GenerateReportPopup = lazy(
   () => import("../../../components/Reporting/GenerateReport")
 );
@@ -81,7 +82,7 @@ const GenerateReport: React.FC<GenerateReportProps> = ({
             sx={{
               ...styles.buttonStyle,
               width: "fit-content",
-              border: isDisabled ? "1px solid #dddddd" : "1px solid #13715B",
+              border: isDisabled ? "1px solid #dddddd" : `1px solid ${brand.primary}`,
             }}
           >
             Generate report
@@ -107,7 +108,7 @@ const GenerateReport: React.FC<GenerateReportProps> = ({
               borderRadius: "4px",
               boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
               overflow: "visible",
-              backgroundColor: "#fff",
+              backgroundColor: `${background.main}`,
             },
           }}
         >
@@ -162,7 +163,7 @@ const GenerateReport: React.FC<GenerateReportProps> = ({
                     },
                   }}
                 >
-                  <Box sx={{ color: "#13715B" }}>{option.icon}</Box>
+                  <Box sx={{ color: `${brand.primary}` }}>{option.icon}</Box>
                   <Typography
                     variant="body2"
                     sx={{
@@ -192,13 +193,13 @@ const GenerateReport: React.FC<GenerateReportProps> = ({
         </Popover>
 
         {/* Render generate report status */}
-        <Suspense fallback={"loading..."}>
+        <Suspense fallback={null}>
           <ReportStatus isDisabled={isDisabled} />
         </Suspense>
       </Box>
 
       {isModalOpen && (
-        <Suspense fallback={"loading..."}>
+        <Suspense fallback={null}>
           <GenerateReportPopup
             onClose={() => {
               setIsModalOpen(false);

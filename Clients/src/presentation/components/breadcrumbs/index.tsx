@@ -71,14 +71,20 @@ function Breadcrumbs({
 
     const breadcrumbs: BreadcrumbItemPresentation[] = [];
 
-    // Add home item
-    breadcrumbs.push({
-      label: homeLabel,
-      path: homePath,
-      icon: getRouteIcon(homePath),
-    });
+    // Add home item (skip for module pages that have their own root breadcrumb)
+    const skipHome = location.pathname.startsWith("/ai-gateway") ||
+                     location.pathname.startsWith("/evals") ||
+                     location.pathname.startsWith("/ai-detection") ||
+                     location.pathname.startsWith("/shadow-ai");
+    if (!skipHome) {
+      breadcrumbs.push({
+        label: homeLabel,
+        path: homePath,
+        icon: getRouteIcon(homePath),
+      });
+    }
 
-    // Build path progressively
+    // Build path progressively, skipping numeric-only intermediate segments
     let currentPath = "";
     pathSegments.forEach((segment, index) => {
       currentPath += `/${segment}`;
@@ -88,9 +94,23 @@ function Breadcrumbs({
         return;
       }
 
+      // Skip numeric-only intermediate segments (e.g., "38" in /policies/38/edit)
+      // These create 404 breadcrumbs and are not meaningful navigation targets
+      if (/^\d+$/.test(segment) && index < pathSegments.length - 1) {
+        return;
+      }
+
+      // TODO: Hacky fix — /ai-detection/scans is auto-generated from URL segments
+      // of /ai-detection/scans/:scanId but has no route. The real fix is to restructure
+      // scan detail URLs to /ai-detection/history/:scanId so breadcrumbs work naturally.
+      const BREADCRUMB_PATH_REDIRECTS: Record<string, string> = {
+        "/ai-detection/scans": "/ai-detection/history",
+      };
+      const resolvedPath = BREADCRUMB_PATH_REDIRECTS[currentPath] || currentPath;
+
       breadcrumbs.push({
         label: pathToLabel(currentPath),
-        path: currentPath,
+        path: resolvedPath,
         icon: getRouteIcon(currentPath),
       });
     });

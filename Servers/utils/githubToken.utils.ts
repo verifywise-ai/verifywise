@@ -17,19 +17,18 @@ import {
 } from "../domain.layer/interfaces/i.aiDetection";
 
 // ============================================================================
-// Tenant ID Validation (Defense-in-depth for SQL injection prevention)
+// Organization ID Validation
 // ============================================================================
 
 /**
- * Validates tenant ID format to prevent SQL injection.
- * Tenant IDs from getTenantHash() should only contain alphanumeric chars and underscores.
+ * Validates organization ID.
  *
- * @param tenantId - The tenant schema identifier
- * @throws Error if tenant ID format is invalid
+ * @param organizationId - The organization identifier
+ * @throws Error if organization ID is invalid
  */
-function validateTenantId(tenantId: string): void {
-  if (!tenantId || !/^[a-zA-Z0-9_]+$/.test(tenantId)) {
-    throw new Error(`Invalid tenant identifier format: ${tenantId}`);
+function validateOrganizationId(organizationId: number): void {
+  if (!organizationId || !Number.isInteger(organizationId) || organizationId <= 0) {
+    throw new Error(`Invalid organization identifier: ${organizationId}`);
   }
 }
 
@@ -38,62 +37,35 @@ function validateTenantId(tenantId: string): void {
 // ============================================================================
 
 /**
- * Ensure the github_tokens table exists in the tenant schema
- *
- * @param tenantId - The tenant schema hash
+ * Ensure the github_tokens table exists
+ * Note: In shared-schema multi-tenancy, this table should be created via migrations.
+ * This function is kept for backwards compatibility but is a no-op.
  */
-async function ensureGitHubTokensTableExists(tenantId: string): Promise<void> {
-  validateTenantId(tenantId);
-  try {
-    // Check if table exists
-    const [result] = await sequelize.query<{ exists: boolean }>(
-      `SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = :tenantId
-        AND table_name = 'github_tokens'
-      )`,
-      { type: QueryTypes.SELECT, replacements: { tenantId } }
-    );
-
-    if (!result?.exists) {
-      // Create the table if it doesn't exist
-      await sequelize.query(`
-        CREATE TABLE IF NOT EXISTS "${tenantId}".github_tokens (
-          id SERIAL PRIMARY KEY,
-          encrypted_token TEXT NOT NULL,
-          token_name VARCHAR(100) DEFAULT 'GitHub Personal Access Token',
-          created_by INTEGER NOT NULL,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          last_used_at TIMESTAMP WITH TIME ZONE
-        );
-      `);
-      console.log(`Created github_tokens table in schema ${tenantId}`);
-    }
-  } catch (error) {
-    console.error(`Error ensuring github_tokens table exists in ${tenantId}:`, error);
-    throw error;
-  }
+async function ensureGitHubTokensTableExists(): Promise<void> {
+  // In shared-schema multi-tenancy, tables are created via migrations
+  // This function is kept for backwards compatibility
 }
 
 /**
- * Get the GitHub token for a tenant (returns encrypted)
+ * Get the GitHub token for an organization (returns encrypted)
  *
- * @param tenantId - The tenant schema hash
+ * @param organizationId - The organization ID
  * @returns The token record or null if not found
  */
 export async function getGitHubTokenQuery(
-  tenantId: string
+  organizationId: number
 ): Promise<IGitHubToken | null> {
+  validateOrganizationId(organizationId);
   // Ensure table exists before querying
-  await ensureGitHubTokensTableExists(tenantId);
+  await ensureGitHubTokensTableExists();
 
   const [token] = await sequelize.query<IGitHubToken>(
     `SELECT id, encrypted_token, token_name, created_by, created_at, updated_at, last_used_at
-     FROM "${tenantId}".github_tokens
+     FROM github_tokens
+     WHERE organization_id = :organizationId
      ORDER BY created_at DESC
      LIMIT 1`,
-    { type: QueryTypes.SELECT }
+    { type: QueryTypes.SELECT, replacements: { organizationId } }
   );
 
   return token || null;
@@ -102,13 +74,13 @@ export async function getGitHubTokenQuery(
 /**
  * Get the GitHub token status (without returning the actual token)
  *
- * @param tenantId - The tenant schema hash
+ * @param organizationId - The organization ID
  * @returns Status info about whether token is configured
  */
 export async function getGitHubTokenStatusQuery(
-  tenantId: string
+  organizationId: number
 ): Promise<IGitHubTokenStatus> {
-  const token = await getGitHubTokenQuery(tenantId);
+  const token = await getGitHubTokenQuery(organizationId);
 
   if (!token) {
     return { configured: false };
@@ -123,43 +95,45 @@ export async function getGitHubTokenStatusQuery(
 }
 
 /**
- * Save or update the GitHub token for a tenant
+ * Save or update the GitHub token for an organization
  *
  * @param plainToken - The plain text token to encrypt and save
  * @param userId - The user saving the token
- * @param tenantId - The tenant schema hash
+ * @param organizationId - The organization ID
  * @param tokenName - Optional friendly name for the token
  * @returns The saved token record
  */
 export async function saveGitHubTokenQuery(
   plainToken: string,
   userId: number,
-  tenantId: string,
+  organizationId: number,
   tokenName?: string
 ): Promise<IGitHubToken> {
+  validateOrganizationId(organizationId);
   // Ensure table exists before saving
-  await ensureGitHubTokensTableExists(tenantId);
+  await ensureGitHubTokensTableExists();
 
   // Encrypt the token before storing
   const encryptedToken = encrypt(plainToken);
 
   // Check if token already exists
-  const existing = await getGitHubTokenQuery(tenantId);
+  const existing = await getGitHubTokenQuery(organizationId);
 
   if (existing) {
     // Update existing token
     await sequelize.query(
-      `UPDATE "${tenantId}".github_tokens
+      `UPDATE github_tokens
        SET encrypted_token = :encryptedToken,
            token_name = :tokenName,
            updated_at = NOW()
-       WHERE id = :id`,
+       WHERE id = :id AND organization_id = :organizationId`,
       {
         type: QueryTypes.UPDATE,
         replacements: {
           encryptedToken,
           tokenName: tokenName || "GitHub Personal Access Token",
           id: existing.id,
+          organizationId,
         },
       }
     );
@@ -174,12 +148,13 @@ export async function saveGitHubTokenQuery(
 
   // Insert new token
   const result = await sequelize.query<{ id: number }>(
-    `INSERT INTO "${tenantId}".github_tokens (encrypted_token, token_name, created_by, created_at, updated_at)
-     VALUES (:encryptedToken, :tokenName, :userId, NOW(), NOW())
+    `INSERT INTO github_tokens (organization_id, encrypted_token, token_name, created_by, created_at, updated_at)
+     VALUES (:organizationId, :encryptedToken, :tokenName, :userId, NOW(), NOW())
      RETURNING id`,
     {
       type: QueryTypes.SELECT,
       replacements: {
+        organizationId,
         encryptedToken,
         tokenName: tokenName || "GitHub Personal Access Token",
         userId,
@@ -200,23 +175,24 @@ export async function saveGitHubTokenQuery(
 }
 
 /**
- * Delete the GitHub token for a tenant
+ * Delete the GitHub token for an organization
  *
- * @param tenantId - The tenant schema hash
+ * @param organizationId - The organization ID
  * @returns True if token was deleted, false if no token existed
  */
 export async function deleteGitHubTokenQuery(
-  tenantId: string
+  organizationId: number
 ): Promise<boolean> {
+  validateOrganizationId(organizationId);
   // Check if token exists first
-  const existingToken = await getGitHubTokenQuery(tenantId);
+  const existingToken = await getGitHubTokenQuery(organizationId);
   if (!existingToken) {
     return false;
   }
 
   await sequelize.query(
-    `DELETE FROM "${tenantId}".github_tokens`,
-    { type: QueryTypes.DELETE }
+    `DELETE FROM github_tokens WHERE organization_id = :organizationId`,
+    { type: QueryTypes.DELETE, replacements: { organizationId } }
   );
 
   return true;
@@ -225,13 +201,13 @@ export async function deleteGitHubTokenQuery(
 /**
  * Get the decrypted GitHub token for use in git operations
  *
- * @param tenantId - The tenant schema hash
+ * @param organizationId - The organization ID
  * @returns The decrypted token or null if not found
  */
 export async function getDecryptedGitHubToken(
-  tenantId: string
+  organizationId: number
 ): Promise<string | null> {
-  const token = await getGitHubTokenQuery(tenantId);
+  const token = await getGitHubTokenQuery(organizationId);
 
   if (!token) {
     return null;
@@ -248,16 +224,17 @@ export async function getDecryptedGitHubToken(
 /**
  * Update the last_used_at timestamp for the token
  *
- * @param tenantId - The tenant schema hash
+ * @param organizationId - The organization ID
  */
 export async function updateGitHubTokenLastUsed(
-  tenantId: string
+  organizationId: number
 ): Promise<void> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   await sequelize.query(
-    `UPDATE "${tenantId}".github_tokens
-     SET last_used_at = NOW(), updated_at = NOW()`,
-    { type: QueryTypes.UPDATE }
+    `UPDATE github_tokens
+     SET last_used_at = NOW(), updated_at = NOW()
+     WHERE organization_id = :organizationId`,
+    { type: QueryTypes.UPDATE, replacements: { organizationId } }
   );
 }
 

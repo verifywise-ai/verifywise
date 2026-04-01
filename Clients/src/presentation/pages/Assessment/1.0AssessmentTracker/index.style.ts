@@ -1,8 +1,9 @@
+import { brand, text } from "../../../themes/palette";
 export const pageHeadingStyle = {
   paddingBottom: 8.5,
   fontSize: 16,
   fontWeight: 600,
-  color: "#1A1919",
+  color: `${text.primary}`,
 };
 
 export const topicsListStyle = {
@@ -13,14 +14,14 @@ export const topicsListStyle = {
   overflowY: "auto",
 };
 
-export const subHeadingStyle = { color: "#667085", fontSize: 11, marginY: 6 };
+export const subHeadingStyle = { color: `${text.icon}`, fontSize: 11, marginY: 6 };
 
 export const listItemStyle = {
   display: "block",
   "& .MuiListItemButton-root.Mui-selected": {
-    backgroundColor: "#13715B",
+    backgroundColor: `${brand.primary}`,
   },
   "& .MuiListItemButton-root.Mui-selected:hover": {
-    backgroundColor: "#13715B",
+    backgroundColor: `${brand.primary}`,
   },
 };

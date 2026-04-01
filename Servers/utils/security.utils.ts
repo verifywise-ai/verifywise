@@ -16,9 +16,11 @@ export function isValidSQLIdentifier(value: string): boolean {
 }
 
 /**
- * Validates tenant hash format
+ * Validates tenant hash format (DEPRECATED)
+ * Legacy function - kept for backward compatibility during migration
  * Tenant hashes are exactly 10 alphanumeric characters produced by getTenantHash
  *
+ * @deprecated Use isValidOrganizationId instead for shared-schema multi-tenancy
  * @param tenantId - The tenant ID to validate
  * @returns true if valid tenant hash format
  */
@@ -26,6 +28,17 @@ export function isValidTenantHash(tenantId: string): boolean {
   // getTenantHash produces exactly 10 alphanumeric characters
   // from base64 hash with special chars removed
   return /^[a-zA-Z0-9]{10}$/.test(tenantId);
+}
+
+/**
+ * Validates organization ID for shared-schema multi-tenancy
+ *
+ * @param organizationId - The organization ID to validate
+ * @returns true if valid organization ID (positive integer)
+ */
+export function isValidOrganizationId(organizationId: number | string): boolean {
+  const id = typeof organizationId === 'string' ? parseInt(organizationId, 10) : organizationId;
+  return Number.isInteger(id) && id > 0;
 }
 
 /**

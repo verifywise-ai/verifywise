@@ -3,6 +3,7 @@ import { Box, Typography, Stack } from "@mui/material";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { Shield, FileText, Scale, Activity } from "lucide-react";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
+import { text, background } from "../../../themes/palette";
 
 const FrameworksStep: React.FC<OnboardingStepProps> = () => {
   const frameworks = [
@@ -61,7 +62,7 @@ const FrameworksStep: React.FC<OnboardingStepProps> = () => {
             left: "50px",
             fontWeight: 600,
             fontSize: "24px",
-            color: "#FFFFFF",
+            color: `${background.main}`,
           }}
         >
           Apply compliance frameworks
@@ -72,7 +73,7 @@ const FrameworksStep: React.FC<OnboardingStepProps> = () => {
         <Typography
           sx={{
             fontSize: "14px",
-            color: "#667085",
+            color: `${text.icon}`,
             marginBottom: 3,
             lineHeight: 1.6,
           }}
@@ -94,7 +95,7 @@ const FrameworksStep: React.FC<OnboardingStepProps> = () => {
             sx={{
               padding: 12,
               background: `linear-gradient(135deg, ${framework.color}08 0%, transparent 100%)`,
-              border: "1px solid #E5E7EB",
+              border: "1px solid status.default.border",
               borderRadius: "4px",
               display: "flex",
               flexDirection: "column",
@@ -132,7 +133,7 @@ const FrameworksStep: React.FC<OnboardingStepProps> = () => {
               >
                 {framework.name}
               </Typography>
-              <Typography sx={{ fontSize: "13px", color: "#6B7280" }}>
+              <Typography sx={{ fontSize: "13px", color: "status.default.text" }}>
                 {framework.description}
               </Typography>
             </Box>

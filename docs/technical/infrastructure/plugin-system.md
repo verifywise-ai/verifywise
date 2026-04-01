@@ -174,29 +174,26 @@ CREATE INDEX idx_plugin_installations_key_{tenantId}
 
 **File:** `Servers/database/migrations/20251226151729-create-plugin-installations-table.js`
 
-The migration iterates through all organizations and creates the table in each tenant schema:
+The migration creates the table once in the `verifywise` schema:
 
 ```javascript
 async up(queryInterface, Sequelize) {
   const transaction = await queryInterface.sequelize.transaction();
   try {
-    const organizations = await queryInterface.sequelize.query(
-      `SELECT id FROM organizations;`,
-      { transaction }
-    );
+    await queryInterface.sequelize.query(`
+      CREATE TABLE verifywise.plugin_installations (
+        ...
+        organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE
+      )
+    `, { transaction });
 
-    for (let organization of organizations[0]) {
-      const tenantHash = getTenantHash(organization.id);
-      await queryInterface.sequelize.query(`
-        CREATE TABLE "${tenantHash}".plugin_installations (...)
-      `, { transaction });
+    await queryInterface.sequelize.query(`
+      CREATE INDEX idx_plugin_installations_key
+      ON verifywise.plugin_installations(plugin_key);
+      CREATE INDEX idx_plugin_installations_org
+      ON verifywise.plugin_installations(organization_id);
+    `, { transaction });
 
-      // Add index
-      await queryInterface.sequelize.query(`
-        CREATE INDEX idx_plugin_installations_key_${tenantHash}
-        ON "${tenantHash}".plugin_installations(plugin_key);
-      `, { transaction });
-    }
     await transaction.commit();
   } catch (error) {
     await transaction.rollback();
@@ -2605,7 +2602,7 @@ The `plugins.json` file is the central registry that defines all available plugi
 | Type | Description | Use Case |
 |------|-------------|----------|
 | `standard` | Uses shared/public tables | OAuth integrations (Slack), global configs |
-| `tenant_scoped` | Creates tables in tenant schema | Data storage per organization (MLflow, Risk Import) |
+| `tenant_scoped` | Creates tables with organization_id column | Data storage per organization (MLflow, Risk Import) |
 
 #### Available Categories
 
@@ -5088,18 +5085,20 @@ Check if the table exists before querying:
 // Servers/utils/framework.utils.ts
 const [[{ can_remove }]] = await sequelize.query(
   `SELECT (
-    (SELECT COUNT(*) FROM "${tenant}".projects_frameworks WHERE project_id = :projectId) +
+    (SELECT COUNT(*) FROM projects_frameworks
+     WHERE project_id = :projectId AND organization_id = :organizationId) +
     CASE
       WHEN EXISTS (
         SELECT 1 FROM information_schema.tables
-        WHERE table_schema = :tenant
+        WHERE table_schema = 'verifywise'
         AND table_name = 'custom_framework_projects'
       )
-      THEN (SELECT COUNT(*) FROM "${tenant}".custom_framework_projects WHERE project_id = :projectId)
+      THEN (SELECT COUNT(*) FROM custom_framework_projects
+            WHERE project_id = :projectId AND organization_id = :organizationId)
       ELSE 0
     END
   ) > 1 AS can_remove;`,
-  { replacements: { projectId, tenant }, transaction }
+  { replacements: { projectId, organizationId }, transaction }
 );
 ```
 
@@ -5109,6 +5108,30 @@ const [[{ can_remove }]] = await sequelize.query(
 - Use `CASE WHEN EXISTS ... THEN ... ELSE 0 END` pattern
 - Return sensible defaults (0, null, false) when table doesn't exist
 - This keeps the app working whether plugin is installed or not
+
+---
+
+## File Linking for Plugins
+
+Use the `file_entity_links` table for proper file associations in plugins:
+
+```typescript
+// Link file to plugin entity
+await sequelize.query(`
+  INSERT INTO "${tenantId}".file_entity_links
+  (file_id, framework_type, entity_type, entity_id, project_id, created_by)
+  VALUES (:fileId, :pluginKey, 'level2', :entityId, :projectId, :userId)
+`, { replacements: { fileId, pluginKey, entityId, projectId, userId } });
+
+// Get files for plugin entity
+const files = await sequelize.query(`
+  SELECT f.* FROM "${tenantId}".files f
+  INNER JOIN "${tenantId}".file_entity_links fel ON f.id = fel.file_id
+  WHERE fel.framework_type = :pluginKey
+    AND fel.entity_type = :entityType
+    AND fel.entity_id = :entityId
+`, { replacements: { pluginKey, entityType, entityId } });
+```
 
 ---
 

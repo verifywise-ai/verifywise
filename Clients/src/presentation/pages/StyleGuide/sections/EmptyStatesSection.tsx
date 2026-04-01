@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
-import { Copy } from "lucide-react";
+import { Copy, Inbox, ShieldAlert, Database, ListTodo } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
-import SkeletonCard from "../../../components/SkeletonCard";
+import EmptyIllustration from "../../../components/EmptyState/EmptyIllustration";
 import CodeBlock from "../components/CodeBlock";
 
 const emptyStateSnippets = {
@@ -10,20 +10,20 @@ const emptyStateSnippets = {
 
 <EmptyState />`,
   customMessage: `<EmptyState
-  message="No projects found. Create your first project to get started."
+  icon={Database}
+  message="No datasets found. Add a dataset to get started."
 />`,
-  withHalo: `<EmptyState
-  message="No data available"
-  showHalo={true}
-/>`,
-  withBorder: `<EmptyState
-  message="No items in this list"
+  withIcon: `import { ShieldAlert } from "lucide-react";
+
+<EmptyState
+  icon={ShieldAlert}
+  message="No risks identified."
   showBorder={true}
 />`,
-  skeletonCard: `import SkeletonCard from "../SkeletonCard";
+  illustration: `import EmptyIllustration from "../EmptyState/EmptyIllustration";
+import { ListTodo } from "lucide-react";
 
-<SkeletonCard />
-<SkeletonCard width={180} showHalo={false} />`,
+<EmptyIllustration icon={ListTodo} />`,
 };
 
 const EmptyStatesSection: React.FC = () => {
@@ -66,7 +66,7 @@ const EmptyStatesSection: React.FC = () => {
           }}
         >
           Components for displaying empty or no-data states in tables and lists.
-          Uses animated skeleton cards for visual feedback.
+          Uses an abstract SVG illustration with a contextual icon.
         </Typography>
       </Box>
 
@@ -74,7 +74,7 @@ const EmptyStatesSection: React.FC = () => {
       <SpecSection title="EmptyState component">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
           Reusable component for tables and lists when no data is available.
-          Displays a SkeletonCard stack with a customizable message.
+          Displays an abstract illustration with a contextual Lucide icon and a message.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -97,7 +97,7 @@ const EmptyStatesSection: React.FC = () => {
               </ExampleWithCode>
 
               <ExampleWithCode
-                label="Custom message"
+                label="With contextual icon"
                 code={emptyStateSnippets.customMessage}
                 onCopy={handleCopy}
               >
@@ -108,17 +108,18 @@ const EmptyStatesSection: React.FC = () => {
                     overflow: "hidden",
                   }}
                 >
-                  <EmptyState message="No projects found. Create your first project to get started." />
+                  <EmptyState icon={Database} message="No datasets found. Add a dataset to get started." />
                 </Box>
               </ExampleWithCode>
 
               <ExampleWithCode
                 label="With border (standalone container)"
-                code={emptyStateSnippets.withBorder}
+                code={emptyStateSnippets.withIcon}
                 onCopy={handleCopy}
               >
                 <EmptyState
-                  message="No items in this list"
+                  icon={ShieldAlert}
+                  message="No risks identified."
                   showBorder={true}
                 />
               </ExampleWithCode>
@@ -132,9 +133,9 @@ const EmptyStatesSection: React.FC = () => {
             <SpecTable
               onCopy={handleCopy}
               specs={[
+                { property: "icon", value: "Inbox (default, any LucideIcon)" },
                 { property: "message", value: '"There is currently no data..."' },
                 { property: "imageAlt", value: '"No data available"' },
-                { property: "showHalo", value: "false (default)" },
                 { property: "showBorder", value: "false (default)" },
               ]}
             />
@@ -145,14 +146,13 @@ const EmptyStatesSection: React.FC = () => {
             <SpecTable
               onCopy={handleCopy}
               specs={[
-                { property: "Padding top", value: "75px" },
-                { property: "Padding bottom", value: "32px (theme.spacing(16))" },
+                { property: "Padding top", value: "48px" },
+                { property: "Padding bottom", value: "24px (theme.spacing(12))" },
                 { property: "Message font size", value: "13px" },
-                { property: "Message color", value: "#9CA3AF" },
-                { property: "Message font weight", value: "400" },
-                { property: "Border (when shown)", value: "1px solid #d0d5dd" },
+                { property: "Message font weight", value: "500" },
+                { property: "Message max width", value: "360px" },
+                { property: "Border (when shown)", value: "1px dashed borderPalette.dark" },
                 { property: "Border radius", value: "4px" },
-                { property: "Background", value: "#FFFFFF" },
               ]}
             />
           </Box>
@@ -161,66 +161,34 @@ const EmptyStatesSection: React.FC = () => {
 
       <Divider sx={{ my: "32px" }} />
 
-      {/* SkeletonCard Component */}
-      <SpecSection title="SkeletonCard component">
+      {/* EmptyIllustration Component */}
+      <SpecSection title="EmptyIllustration component">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Animated skeleton card stack used in EmptyState. Shows pulsing skeleton elements.
+          Standalone SVG illustration used inside EmptyState. Shows a teal circle with a contextual icon,
+          dashed connector lines, and floating isometric cubes. Theme-aware colors for light and dark mode.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           <Box sx={{ flex: "1 1 500px", minWidth: 320 }}>
             <Stack spacing="24px">
               <ExampleWithCode
-                label="Default skeleton card"
-                code={emptyStateSnippets.skeletonCard}
+                label="Different icons"
+                code={emptyStateSnippets.illustration}
                 onCopy={handleCopy}
               >
                 <Box
                   sx={{
                     display: "flex",
                     justifyContent: "center",
+                    gap: "32px",
                     p: "40px",
                     backgroundColor: theme.palette.background.fill,
                     borderRadius: "4px",
                   }}
                 >
-                  <SkeletonCard />
-                </Box>
-              </ExampleWithCode>
-
-              <ExampleWithCode
-                label="Without halo effect"
-                code={`<SkeletonCard showHalo={false} />`}
-                onCopy={handleCopy}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    p: "40px",
-                    backgroundColor: theme.palette.background.fill,
-                    borderRadius: "4px",
-                  }}
-                >
-                  <SkeletonCard showHalo={false} />
-                </Box>
-              </ExampleWithCode>
-
-              <ExampleWithCode
-                label="Custom width"
-                code={`<SkeletonCard width={180} />`}
-                onCopy={handleCopy}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    p: "40px",
-                    backgroundColor: theme.palette.background.fill,
-                    borderRadius: "4px",
-                  }}
-                >
-                  <SkeletonCard width={180} />
+                  <EmptyIllustration icon={Inbox} />
+                  <EmptyIllustration icon={ShieldAlert} />
+                  <EmptyIllustration icon={ListTodo} />
                 </Box>
               </ExampleWithCode>
             </Stack>
@@ -228,43 +196,27 @@ const EmptyStatesSection: React.FC = () => {
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
             <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              SkeletonCard props
+              EmptyIllustration props
             </Typography>
             <SpecTable
               onCopy={handleCopy}
               specs={[
-                { property: "width", value: "216 (60% of 360)" },
-                { property: "showHalo", value: "true (default)" },
+                { property: "icon", value: "LucideIcon (required)" },
+                { property: "scale", value: "1 (default)" },
               ]}
             />
 
             <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Card styling
+              SVG dimensions
             </Typography>
             <SpecTable
               onCopy={handleCopy}
               specs={[
-                { property: "Card height", value: "57.6px" },
-                { property: "Card border radius", value: "12px" },
-                { property: "Card background", value: "#ffffff" },
-                { property: "Card shadow", value: "0 8px 30px rgba(0,0,0,.08)" },
-                { property: "Block width", value: "54px" },
-                { property: "Block height", value: "33.6px" },
-                { property: "Block radius", value: "7.2px" },
-                { property: "Block background", value: "#f3f4f6" },
-                { property: "Line height", value: "7.2px" },
-              ]}
-            />
-
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Animations
-            </Typography>
-            <SpecTable
-              onCopy={handleCopy}
-              specs={[
-                { property: "Pulse animation", value: "1.6s ease-in-out infinite" },
-                { property: "Float animation", value: "3s ease-in-out (5 times)" },
-                { property: "Pulse opacity", value: "1 → 0.72 → 1" },
+                { property: "Width", value: "180px" },
+                { property: "Height", value: "120px" },
+                { property: "Circle radius", value: "26px" },
+                { property: "Icon size", value: "18px" },
+                { property: "Line dash", value: "4 3" },
               ]}
             />
           </Box>
@@ -294,12 +246,11 @@ const EmptyStatesSection: React.FC = () => {
         <Stack spacing="8px">
           {[
             "Use EmptyState for table cells when no data is available",
+            "Pass a contextual icon prop (e.g. Database, ShieldAlert, ListTodo)",
             "Set showBorder={true} for standalone containers (not inside tables)",
-            "Set showHalo={true} for full-page empty states",
             "Customize message prop for context-specific feedback",
-            "EmptyState includes proper ARIA role='img' for accessibility",
-            "SkeletonCard animations auto-play - no interaction needed",
-            "Default size is 60% of original design for compactness",
+            "EmptyState includes proper ARIA role='status' for accessibility",
+            "Illustration adapts to light/dark theme automatically",
           ].map((item, index) => (
             <Box
               key={index}

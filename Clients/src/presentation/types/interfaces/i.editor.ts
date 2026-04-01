@@ -6,6 +6,12 @@ export interface IRichTextEditorProps {
   bodySx?: object;
   initialContent?: string;
   isEditable?: boolean;
+  /** "basic" = bold/italic/lists, "full" = adds table, underline, link */
+  toolbar?: "basic" | "full";
+  /** Override editor height (default "90px") */
+  height?: string;
+  /** Placeholder text */
+  placeholder?: string;
 }
 
 export interface IAuditorFeedbackProps {

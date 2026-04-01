@@ -19,14 +19,14 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Extract Tag Name
         id: get_tag
         run: echo "TAG=${GITHUB_REF##*/}" >> $GITHUB_ENV
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -34,7 +34,7 @@ jobs:
 
       # Build Frontend image
       - name: Build Clients image (for scanning)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Clients/Dockerfile
@@ -47,7 +47,7 @@ jobs:
             VITE_APP_VERSION=${{ env.TAG }}
 
       - name: Scan Frontend image with Trivy
-        uses: aquasecurity/trivy-action@0.34.1
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: 'verifywise-frontend:scan'
           format: 'sarif'
@@ -62,7 +62,7 @@ jobs:
           category: 'container-frontend'
 
       - name: Build and push Clients image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Clients/Dockerfile
@@ -76,8 +76,11 @@ jobs:
             VITE_APP_VERSION=${{ env.TAG }}
 
       # Build Backend image
+      - name: Copy version.json into Servers context
+        run: cp version.json Servers/version.json
+
       - name: Build Servers image (for scanning)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./Servers
           platforms: linux/amd64
@@ -86,7 +89,7 @@ jobs:
           tags: verifywise-backend:scan
 
       - name: Scan Backend image with Trivy
-        uses: aquasecurity/trivy-action@0.34.1
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: 'verifywise-backend:scan'
           format: 'sarif'
@@ -101,7 +104,7 @@ jobs:
           category: 'container-backend'
 
       - name: Build and push Servers image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./Servers
           platforms: linux/amd64,linux/arm64
@@ -125,7 +128,7 @@ jobs:
 
       # Build EvalServer image
       - name: Build EvalServer image (for scanning)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./EvalServer/Dockerfile
@@ -135,7 +138,7 @@ jobs:
           tags: verifywise-eval-server:scan
 
       - name: Scan EvalServer image with Trivy
-        uses: aquasecurity/trivy-action@0.34.1
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: 'verifywise-eval-server:scan'
           format: 'sarif'
@@ -150,7 +153,7 @@ jobs:
           category: 'container-evalserver'
 
       - name: Build and push EvalServer image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./EvalServer/Dockerfile
@@ -159,3 +162,43 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:${{ env.TAG }}
             ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:latest
+
+      - name: Clean up after EvalServer build
+        run: |
+          docker system prune -f
+          docker builder prune -f
+
+      # Build AIGateway image
+      - name: Build AIGateway image (for scanning)
+        uses: docker/build-push-action@v7
+        with:
+          context: ./AIGateway
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: verifywise-ai-gateway:scan
+
+      - name: Scan AIGateway image with Trivy
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: 'verifywise-ai-gateway:scan'
+          format: 'sarif'
+          output: 'aigateway-trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Upload AIGateway Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'aigateway-trivy-results.sarif'
+          category: 'container-aigateway'
+
+      - name: Build and push AIGateway image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./AIGateway
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:${{ env.TAG }}
+            ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:latest

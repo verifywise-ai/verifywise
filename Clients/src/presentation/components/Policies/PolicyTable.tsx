@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useCallback } from "react";
 import CustomizablePolicyTable from "../Table/PolicyTable";
 import { TableRow, TableCell } from "@mui/material";
 import singleTheme from "../../themes/v1SingleTheme";
@@ -11,7 +11,6 @@ import { store } from "../../../application/redux/store";
 const tableHeaders = [
   { id: "title", name: "Title" },
   { id: "status", name: "Status" },
-  { id: "tags", name: "Tags" },
   { id: "next_review", name: "Next Review" },
   { id: "author", name: "Author" },
   // { id: "reviewers", name: "Reviewers" },
@@ -25,13 +24,28 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
   onOpen,
   onDelete,
   onLinkedObjects,
+  onAssignToFolder,
   isLoading,
   error,
   onRefresh,
   hidePagination = false,
   flashRowId,
+  visibleColumns,
 }) => {
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
+
+  const isVisible = useCallback(
+    (key: string) => !visibleColumns || visibleColumns.size === 0 || visibleColumns.has(key),
+    [visibleColumns]
+  );
+
+  const visibleTableHeaders = useMemo(
+    () =>
+      tableHeaders.filter(
+        (col) => col.id === "title" || col.id === "actions" || isVisible(col.id)
+      ),
+    [isVisible]
+  );
 
   // Helper function to get user name by ID
   const getUserNameById = (id: string | null | undefined | number) => {
@@ -142,7 +156,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
   return (
     <>
       <CustomizablePolicyTable
-        data={{ rows, cols: tableHeaders }}
+        data={{ rows, cols: visibleTableHeaders }}
         paginated
         setSelectedRow={() => {}}
         setAnchorEl={() => {}}
@@ -192,66 +206,65 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                 ? `${policy.title.slice(0, 30)}...`
                 : policy.title}
             </TableCell>
-            <TableCell
-              sx={{
-                ...cellStyle,
-                backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("status") ? singleTheme.tableColors.sortedColumn : undefined,
-              }}
-            >
-              <Chip label={policy.status} />
-            </TableCell>
-            <TableCell
-              sx={{
-                ...cellStyle,
-                backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("tags") ? singleTheme.tableColors.sortedColumn : undefined,
-              }}
-            >
-              {(() => {
-                const tags = policy.tags?.join(", ") ?? "-";
-                return tags.length > 30 ? `${tags.slice(0, 30)}...` : tags;
-              })()}
-            </TableCell>
-            <TableCell
-              sx={{
-                ...cellStyle,
-                backgroundColor: sortConfig?.key && (sortConfig.key.toLowerCase().includes("next") || sortConfig.key.toLowerCase().includes("review")) ? singleTheme.tableColors.sortedColumn : undefined,
-              }}
-            >
-              {policy.next_review_date
-                ? new Date(policy.next_review_date).toLocaleDateString()
-                : "-"}
-            </TableCell>
-            <TableCell
-              sx={{
-                ...cellStyle,
-                backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("author") ? singleTheme.tableColors.sortedColumn : undefined,
-              }}
-            >
-              {getUserNameById(policy.author_id)}
-            </TableCell>
+            {isVisible("status") && (
+              <TableCell
+                sx={{
+                  ...cellStyle,
+                  backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("status") ? singleTheme.tableColors.sortedColumn : undefined,
+                }}
+              >
+                <Chip label={policy.status} />
+              </TableCell>
+            )}
+            {isVisible("next_review") && (
+              <TableCell
+                sx={{
+                  ...cellStyle,
+                  backgroundColor: sortConfig?.key && (sortConfig.key.toLowerCase().includes("next") || sortConfig.key.toLowerCase().includes("review")) ? singleTheme.tableColors.sortedColumn : undefined,
+                }}
+              >
+                {policy.next_review_date
+                  ? new Date(policy.next_review_date).toLocaleDateString()
+                  : "-"}
+              </TableCell>
+            )}
+            {isVisible("author") && (
+              <TableCell
+                sx={{
+                  ...cellStyle,
+                  backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("author") ? singleTheme.tableColors.sortedColumn : undefined,
+                }}
+              >
+                {getUserNameById(policy.author_id)}
+              </TableCell>
+            )}
             {/* <TableCell sx={cellStyle}>
               {
                 policy.assigned_reviewer_ids?.map(getUserNameById).join(", ").length > 30 ? `${policy.assigned_reviewer_ids?.map(getUserNameById).join(", ").slice(0, 30)}...` : policy.assigned_reviewer_ids?.map(getUserNameById).join(", ") || "-"
               }
             </TableCell> */}
-            <TableCell
-              sx={{
-                ...cellStyle,
-                backgroundColor: sortConfig?.key && (sortConfig.key.toLowerCase().includes("last") || sortConfig.key.toLowerCase().includes("updated")) && !sortConfig.key.toLowerCase().includes("by") ? singleTheme.tableColors.sortedColumn : undefined,
-              }}
-            >
-              {policy.last_updated_at
-                ? new Date(policy.last_updated_at).toLocaleString()
-                : "-"}
-            </TableCell>
-            <TableCell
-              sx={{
-                ...cellStyle,
-                backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("updated") && sortConfig.key.toLowerCase().includes("by") ? singleTheme.tableColors.sortedColumn : undefined,
-              }}
-            >
-              {getUserNameById(policy.last_updated_by)}
-            </TableCell>
+            {isVisible("last_updated") && (
+              <TableCell
+                sx={{
+                  ...cellStyle,
+                  backgroundColor: sortConfig?.key && (sortConfig.key.toLowerCase().includes("last") || sortConfig.key.toLowerCase().includes("updated")) && !sortConfig.key.toLowerCase().includes("by") ? singleTheme.tableColors.sortedColumn : undefined,
+                }}
+              >
+                {policy.last_updated_at
+                  ? new Date(policy.last_updated_at).toLocaleString()
+                  : "-"}
+              </TableCell>
+            )}
+            {isVisible("updated_by") && (
+              <TableCell
+                sx={{
+                  ...cellStyle,
+                  backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("updated") && sortConfig.key.toLowerCase().includes("by") ? singleTheme.tableColors.sortedColumn : undefined,
+                }}
+              >
+                {getUserNameById(policy.last_updated_by)}
+              </TableCell>
+            )}
             <TableCell
               sx={{
                 backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("actions") ? singleTheme.tableColors.sortedColumn : undefined,
@@ -270,6 +283,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                   onLinkedObjects={() => {
                     onLinkedObjects(policy.id);
                   }}
+                  onAssignToFolder={onAssignToFolder ? () => onAssignToFolder(policy.id) : undefined}
                   onDownloadPDF={() => handleDownloadPDF(policy.id, policy.title)}
                   onDownloadDOCX={() => handleDownloadDOCX(policy.id, policy.title)}
                   onMouseEvent={() => {}}

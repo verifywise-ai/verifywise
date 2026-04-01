@@ -34,7 +34,7 @@ export const recordIncidentChange = async (
   incidentId: number,
   action: "created" | "updated" | "deleted",
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
@@ -45,7 +45,7 @@ export const recordIncidentChange = async (
     incidentId,
     action,
     changedByUserId,
-    tenant,
+    organizationId,
     fieldName,
     oldValue,
     newValue,
@@ -60,7 +60,7 @@ export const recordIncidentChange = async (
 export const recordMultipleFieldChanges = async (
   incidentId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -68,7 +68,7 @@ export const recordMultipleFieldChanges = async (
     "incident",
     incidentId,
     changedByUserId,
-    tenant,
+    organizationId,
     changes,
     transaction
   );
@@ -80,14 +80,14 @@ export const recordMultipleFieldChanges = async (
  */
 export const getIncidentChangeHistory = async (
   incidentId: number,
-  tenant: string,
+  organizationId: number,
   limit: number = 100,
   offset: number = 0
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
   return getEntityChangeHistory(
     "incident",
     incidentId,
-    tenant,
+    organizationId,
     limit,
     offset
   );
@@ -111,7 +111,7 @@ export const trackIncidentChanges = async (
 export const recordIncidentCreation = async (
   incidentId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   incidentData: Partial<IAIIncidentManagement>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -119,7 +119,7 @@ export const recordIncidentCreation = async (
     "incident",
     incidentId,
     changedByUserId,
-    tenant,
+    organizationId,
     incidentData,
     transaction
   );
@@ -132,14 +132,14 @@ export const recordIncidentCreation = async (
 export const recordIncidentDeletion = async (
   incidentId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   return recordEntityDeletion(
     "incident",
     incidentId,
     changedByUserId,
-    tenant,
+    organizationId,
     transaction
   );
 };

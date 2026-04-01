@@ -3,13 +3,6 @@ import {
   Typography,
   IconButton,
   Tooltip,
-  Select as MuiSelect,
-  MenuItem,
-  FormControl,
-  FormControlLabel,
-  Checkbox as MuiCheckbox,
-  OutlinedInput,
-  FormHelperText,
   useTheme,
 } from "@mui/material";
 import {
@@ -20,6 +13,9 @@ import {
   Info,
 } from "lucide-react";
 import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
+import Checkbox from "../../components/Inputs/Checkbox";
+import Chip from "../../components/Chip";
 import { FormField, FieldType } from "./types";
 
 const TYPE_LABELS: Record<FieldType, string> = {
@@ -171,29 +167,20 @@ function FieldPreview({ field }: { field: FormField }) {
       return (
         <>
           <PreviewFieldLabel label={field.label} guidanceText={field.guidanceText} required={isRequired} />
-          <FormControl fullWidth disabled>
-            <MuiSelect
-              value=""
-              displayEmpty
-              sx={{
-                fontSize: "13px",
-                borderRadius: "4px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.border.dark },
-              }}
-            >
-              <MenuItem value="" disabled>
-                <em style={{ color: theme.palette.text.accent }}>Select an option</em>
-              </MenuItem>
-              {field.options?.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </MuiSelect>
-            {field.helpText && (
-              <FormHelperText>{field.helpText}</FormHelperText>
-            )}
-          </FormControl>
+          <Select
+            id={`preview-${field.id}`}
+            label=""
+            placeholder="Select an option"
+            value=""
+            onChange={() => {}}
+            items={(field.options || []).map((opt) => ({ _id: opt.value, name: opt.label }))}
+            disabled
+          />
+          {field.helpText && (
+            <Typography sx={{ color: theme.palette.other.icon, fontSize: "11px", mt: "2px" }}>
+              {field.helpText}
+            </Typography>
+          )}
         </>
       );
 
@@ -201,66 +188,52 @@ function FieldPreview({ field }: { field: FormField }) {
       return (
         <>
           <PreviewFieldLabel label={field.label} guidanceText={field.guidanceText} required={isRequired} />
-          <FormControl fullWidth disabled>
-            <MuiSelect
-              multiple
-              value={[]}
-              input={<OutlinedInput />}
-              displayEmpty
-              renderValue={() => (
-                <em style={{ color: theme.palette.text.accent }}>Select options</em>
-              )}
-              sx={{
-                fontSize: "13px",
-                borderRadius: "4px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.border.dark },
-              }}
-            >
-              {field.options?.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </MuiSelect>
-            {field.helpText && (
-              <FormHelperText>{field.helpText}</FormHelperText>
-            )}
-          </FormControl>
+          <Select
+            id={`preview-${field.id}`}
+            label=""
+            placeholder="Select options"
+            value=""
+            onChange={() => {}}
+            items={(field.options || []).map((opt) => ({ _id: opt.value, name: opt.label }))}
+            disabled
+          />
+          {field.helpText && (
+            <Typography sx={{ color: theme.palette.other.icon, fontSize: "11px", mt: "2px" }}>
+              {field.helpText}
+            </Typography>
+          )}
         </>
       );
 
     case "checkbox":
       return (
         <Box>
-          <FormControlLabel
-            disabled
-            control={
-              <MuiCheckbox
-                checked={false}
-                sx={{
-                  color: theme.palette.border.dark,
-                  "&.Mui-checked": { color: theme.palette.primary.main },
-                }}
-              />
-            }
-            label={
-              <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
-                  {field.label}
-                  {isRequired && <span style={{ color: theme.palette.status.error.text }}> *</span>}
-                </Typography>
-                {field.guidanceText && (
-                  <Tooltip title={field.guidanceText} placement="top" arrow>
-                    <span style={{ display: "inline-flex", alignItems: "center", cursor: "help" }}>
-                      <Info size={14} strokeWidth={1.5} color={theme.palette.text.accent} />
-                    </span>
-                  </Tooltip>
-                )}
-              </Box>
-            }
-          />
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Checkbox
+              id={`preview-${field.id}`}
+              isChecked={false}
+              value={field.id}
+              onChange={() => {}}
+              isDisabled
+              label={
+                isRequired
+                  ? `${field.label} *`
+                  : field.label
+              }
+              size="small"
+            />
+            {field.guidanceText && (
+              <Tooltip title={field.guidanceText} placement="top" arrow>
+                <span style={{ display: "inline-flex", alignItems: "center", cursor: "help", marginLeft: 4 }}>
+                  <Info size={14} strokeWidth={1.5} color={theme.palette.text.accent} />
+                </span>
+              </Tooltip>
+            )}
+          </Box>
           {field.helpText && (
-            <FormHelperText sx={{ ml: 4 }}>{field.helpText}</FormHelperText>
+            <Typography sx={{ color: theme.palette.other.icon, fontSize: "11px", mt: "2px", ml: "32px" }}>
+              {field.helpText}
+            </Typography>
           )}
         </Box>
       );
@@ -330,41 +303,13 @@ export function FieldCard({
         <FieldPreview field={field} />
       </Box>
 
-      {/* Metadata badges — shown only when selected */}
-      {isSelected && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: "6px", mt: "8px", flexWrap: "wrap" }}>
-          <Box
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              height: 20,
-              px: "6px",
-              borderRadius: "4px",
-              backgroundColor: theme.palette.background.accent,
-              fontSize: "11px",
-              color: theme.palette.other.icon,
-            }}
-          >
-            {TYPE_LABELS[field.type]}
-          </Box>
-          {field.entityFieldMapping && (
-            <Box
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                height: 20,
-                px: "6px",
-                borderRadius: "4px",
-                backgroundColor: "#dbeafe",
-                fontSize: "11px",
-                color: "#1d4ed8",
-              }}
-            >
-              Maps to: {field.entityFieldMapping}
-            </Box>
-          )}
-        </Box>
-      )}
+      {/* Metadata badges — always visible */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: "6px", mt: "8px", flexWrap: "wrap" }}>
+        <Chip label={TYPE_LABELS[field.type]} variant="default" size="small" uppercase={false} />
+        {field.entityFieldMapping && (
+          <Chip label={`Maps to: ${field.entityFieldMapping}`} variant="info" size="small" uppercase={false} />
+        )}
+      </Box>
 
       {/* Action toolbar — appears on hover/selection */}
       <Box

@@ -22,6 +22,7 @@ import { styles } from "./styles";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { StatsCard } from "../../../components/Cards/StatsCard";
 import { useSearchParams } from "react-router-dom";
+import { brand } from "../../../themes/palette";
 
 const ISO42001Clauses = ({
   project: _project,
@@ -254,7 +255,7 @@ const ISO42001Clauses = ({
         completed={clauseProgress?.doneSubclauses ?? 0}
         total={clauseProgress?.totalSubclauses ?? 0}
         title="Clauses"
-        progressbarColor="#13715B"
+        progressbarColor={brand.primary}
       />
       <Typography sx={{ ...styles.title, mt: 4 }}>
         {"Management System Clauses"}

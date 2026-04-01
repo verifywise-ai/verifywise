@@ -18,7 +18,10 @@ class InferConfig:
     model_id: str
     provider: str
     temperature: float = 0.2
-    max_tokens: int = 2048
+    max_tokens: int = 8192  # Increased from 2048: thinking models (e.g. Gemini 2.5 Pro) consume
+                            # reasoning tokens from this budget before generating visible output.
+                            # With 2048, ~1600-1963 tokens were spent on reasoning, leaving <400
+                            # for actual output and causing finish_reason=length truncation.
     retry_max_attempts: int = 5
 
 

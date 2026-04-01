@@ -58,7 +58,7 @@ async def create_bias_audit_controller(
     background_tasks: BackgroundTasks,
     dataset: UploadFile,
     config_json: str,
-    tenant: str,
+    organization_id: int,
     user_id: Optional[str] = None,
     org_id: Optional[str] = None,
 ) -> JSONResponse:
@@ -83,7 +83,7 @@ async def create_bias_audit_controller(
 
     # Generate audit ID (uuid suffix prevents same-second collisions)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    audit_id = f"bias_audit_{tenant}_{timestamp}_{uuid.uuid4().hex[:8]}"
+    audit_id = f"bias_audit_{organization_id}_{timestamp}_{uuid.uuid4().hex[:8]}"
 
     # Read CSV bytes with size limit
     csv_bytes = await dataset.read(MAX_CSV_SIZE + 1)
@@ -112,7 +112,7 @@ async def create_bias_audit_controller(
     try:
         async with get_db() as db:
             created = await create_bias_audit(
-                tenant=tenant,
+                organization_id=organization_id,
                 db=db,
                 audit_id=audit_id,
                 org_id=effective_org_id,
@@ -125,7 +125,7 @@ async def create_bias_audit_controller(
             )
             await db.commit()
     except Exception as e:
-        logger.error(f"[BiasAudit] Failed to create audit for tenant {tenant}: {e}")
+        logger.error(f"[BiasAudit] Failed to create audit for org {organization_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to create audit. Please try again.")
 
     # Launch background task
@@ -135,7 +135,7 @@ async def create_bias_audit_controller(
         csv_bytes=csv_bytes,
         config_data=config_data,
         preset=preset,
-        tenant=tenant,
+        organization_id=organization_id,
     )
 
     return JSONResponse(
@@ -153,13 +153,13 @@ async def run_bias_audit_task(
     csv_bytes: bytes,
     config_data: Dict[str, Any],
     preset: Optional[Dict[str, Any]],
-    tenant: str,
+    organization_id: int,
 ) -> None:
     """Background task: parse CSV, run computation, store results."""
     try:
         # Update status to running
         async with get_db() as db:
-            await update_bias_audit_status(tenant, db, audit_id, status="running")
+            await update_bias_audit_status(organization_id, db, audit_id, status="running")
             await db.commit()
 
         logger.info(f"[BiasAudit] Starting audit {audit_id}")
@@ -251,11 +251,11 @@ async def run_bias_audit_task(
 
         async with get_db() as db:
             # Store per-group result rows
-            await create_bias_audit_result_rows(tenant, db, audit_id, all_rows)
+            await create_bias_audit_result_rows(organization_id, db, audit_id, all_rows)
 
             # Store aggregate results as JSONB
             await update_bias_audit_status(
-                tenant, db, audit_id,
+                organization_id, db, audit_id,
                 status="completed",
                 results=results_dict,
             )
@@ -270,7 +270,7 @@ async def run_bias_audit_task(
         try:
             async with get_db() as db:
                 await update_bias_audit_status(
-                    tenant, db, audit_id,
+                    organization_id, db, audit_id,
                     status="failed",
                     error=str(e),
                 )
@@ -281,11 +281,11 @@ async def run_bias_audit_task(
 
 async def get_bias_audit_status_controller(
     audit_id: str,
-    tenant: str,
+    organization_id: int,
 ) -> JSONResponse:
     """Get the status of a bias audit."""
     async with get_db() as db:
-        audit = await get_bias_audit(tenant, db, audit_id)
+        audit = await get_bias_audit(organization_id, db, audit_id)
 
     if not audit:
         raise HTTPException(status_code=404, detail=f"Audit {audit_id} not found")
@@ -307,11 +307,11 @@ async def get_bias_audit_status_controller(
 
 async def get_bias_audit_results_controller(
     audit_id: str,
-    tenant: str,
+    organization_id: int,
 ) -> JSONResponse:
     """Get full results of a completed bias audit."""
     async with get_db() as db:
-        audit = await get_bias_audit(tenant, db, audit_id)
+        audit = await get_bias_audit(organization_id, db, audit_id)
         if not audit:
             raise HTTPException(status_code=404, detail=f"Audit {audit_id} not found")
 
@@ -324,7 +324,7 @@ async def get_bias_audit_results_controller(
         if audit["status"] == "failed":
             raise HTTPException(status_code=500, detail=f"Audit failed: {audit['error']}")
 
-        result_rows = await get_bias_audit_result_rows(tenant, db, audit_id)
+        result_rows = await get_bias_audit_result_rows(organization_id, db, audit_id)
 
     return JSONResponse(
         status_code=200,
@@ -345,31 +345,31 @@ async def get_bias_audit_results_controller(
 
 
 async def list_bias_audits_controller(
-    tenant: str,
+    organization_id: int,
     org_id: Optional[str] = None,
     project_id: Optional[str] = None,
 ) -> JSONResponse:
-    """List all bias audits for the tenant."""
+    """List all bias audits for the organization."""
     try:
         async with get_db() as db:
-            audits = await list_bias_audits(tenant, db, org_id=org_id, project_id=project_id)
+            audits = await list_bias_audits(organization_id, db, project_id=project_id)
         return JSONResponse(status_code=200, content={"audits": audits})
     except Exception as e:
         error_str = str(e).lower()
         if "does not exist" in error_str or "relation" in error_str:
             return JSONResponse(status_code=200, content={"audits": []})
-        logger.error(f"[BiasAudit] Failed to list audits for tenant {tenant}: {e}")
+        logger.error(f"[BiasAudit] Failed to list audits for org {organization_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to list audits. Please try again.")
 
 
 async def delete_bias_audit_controller(
     audit_id: str,
-    tenant: str,
+    organization_id: int,
 ) -> JSONResponse:
     """Delete a bias audit and its results."""
     try:
         async with get_db() as db:
-            deleted = await delete_bias_audit(tenant, db, audit_id)
+            deleted = await delete_bias_audit(organization_id, db, audit_id)
             await db.commit()
 
         if not deleted:

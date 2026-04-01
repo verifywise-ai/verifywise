@@ -5,6 +5,7 @@ import {
   ChipVariant,
   ChipColorConfig,
 } from "../types/interfaces/i.chip";
+import { background, status, risk } from "../themes/palette";
 
 /**
  * Color mappings for all chip variants
@@ -12,29 +13,29 @@ import {
  */
 const VARIANT_COLORS: Record<ChipVariant, ChipColorConfig> = {
   // Risk levels
-  critical: { backgroundColor: "#FFD6D6", textColor: "#D32F2F" },
-  high: { backgroundColor: "#FFE5D0", textColor: "#E64A19" },
-  medium: { backgroundColor: "#FFF8E1", textColor: "#795548" },
-  low: { backgroundColor: "#E6F4EA", textColor: "#138A5E" },
-  "very-low": { backgroundColor: "#E0F7FA", textColor: "#00695C" },
+  critical: { backgroundColor: `${risk.critical.bg}`, textColor: `${status.error.text}` },
+  high: { backgroundColor: `${risk.high.bg}`, textColor: `${risk.high.text}` },
+  medium: { backgroundColor: `${risk.medium.bg}`, textColor: `${risk.medium.text}` },
+  low: { backgroundColor: `${risk.low.bg}`, textColor: `${status.success.text}` },
+  "very-low": { backgroundColor: `${risk.veryLow.bg}`, textColor: `${risk.veryLow.text}` },
 
   // Status
-  success: { backgroundColor: "#E6F4EA", textColor: "#138A5E" },
-  warning: { backgroundColor: "#FFF8E1", textColor: "#795548" },
-  error: { backgroundColor: "#FFD6D6", textColor: "#D32F2F" },
-  info: { backgroundColor: "#E3F2FD", textColor: "#1565C0" },
-  default: { backgroundColor: "#F3F4F6", textColor: "#6B7280" },
+  success: { backgroundColor: `${status.success.bg}`, textColor: `${status.success.text}` },
+  warning: { backgroundColor: `${status.warning.bg}`, textColor: `${status.warning.text}` },
+  error: { backgroundColor: `${status.error.bg}`, textColor: `${status.error.text}` },
+  info: { backgroundColor: `${status.info.bg}`, textColor: `${status.info.text}` },
+  default: { backgroundColor: `${background.hover}`, textColor: `${status.default.text}` },
 
   // Severity (maps to same colors as risk levels)
-  catastrophic: { backgroundColor: "#FFD6D6", textColor: "#D32F2F" },
-  major: { backgroundColor: "#FFE5D0", textColor: "#E64A19" },
-  moderate: { backgroundColor: "#FFF8E1", textColor: "#795548" },
-  minor: { backgroundColor: "#E6F4EA", textColor: "#138A5E" },
-  negligible: { backgroundColor: "#E0F7FA", textColor: "#00695C" },
+  catastrophic: { backgroundColor: `${risk.critical.bg}`, textColor: `${status.error.text}` },
+  major: { backgroundColor: `${risk.high.bg}`, textColor: `${risk.high.text}` },
+  moderate: { backgroundColor: `${risk.medium.bg}`, textColor: `${risk.medium.text}` },
+  minor: { backgroundColor: `${risk.low.bg}`, textColor: `${status.success.text}` },
+  negligible: { backgroundColor: `${risk.veryLow.bg}`, textColor: `${risk.veryLow.text}` },
 
   // Boolean
-  yes: { backgroundColor: "#E6F4EA", textColor: "#138A5E" },
-  no: { backgroundColor: "#FFD6D6", textColor: "#D32F2F" },
+  yes: { backgroundColor: `${status.success.bg}`, textColor: `${status.success.text}` },
+  no: { backgroundColor: `${status.error.bg}`, textColor: `${status.error.text}` },
 };
 
 /**
@@ -83,6 +84,7 @@ const LABEL_TO_VARIANT: Record<string, ChipVariant> = {
   "under review": "warning",
   draft: "default",
   superseded: "default",
+  resubmitted: "info",
   expired: "warning",
   blocked: "error",
   rejected: "error",
@@ -144,6 +146,10 @@ const LABEL_TO_VARIANT: Record<string, ChipVariant> = {
   // Automation execution status
   "partial success": "warning",
   failure: "error",
+
+  // Guardrail actions
+  block: "error",
+  mask: "warning",
 };
 
 /**
@@ -243,6 +249,7 @@ const Chip: React.FC<IChipProps> = ({
   uppercase = true,
   backgroundColor,
   textColor,
+  icon,
 }) => {
   const colors = getChipColors(label, variant, backgroundColor, textColor);
   const height = SIZE_HEIGHT[size];
@@ -268,12 +275,13 @@ const Chip: React.FC<IChipProps> = ({
         border: `1px solid ${borderColor}`,
         color: colors.textColor,
         fontSize: 11,
-        fontWeight: 500,
+        fontWeight: 400,
         textTransform: uppercase ? "uppercase" : "none",
         whiteSpace: "nowrap",
         lineHeight: 1,
       }}
     >
+      {icon && <Box component="span" sx={{ display: "inline-flex", alignItems: "center", mr: 0.5 }}>{icon}</Box>}
       {label}
     </Box>
   );

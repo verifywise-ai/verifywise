@@ -27,6 +27,7 @@ import { ProjectFrameworksModel } from "../domain.layer/models/projectFrameworks
 import { STATUSES_ANSWERS, STATUSES_COMPLIANCE } from "../types/status.type";
 import { AnswerEURisksModel } from "../domain.layer/frameworks/EU-AI-Act/answerEURisks.model";
 import { validateRiskArray } from "./utility.utils";
+import { getEvidenceFilesForEntities } from "./files/evidenceFiles.utils";
 
 const getDemoAnswers = (): string[] => {
   const answers = [];
@@ -51,13 +52,13 @@ const getDemoControls = (): Object[] => {
 const findIsDemo = async (
   tableName: string,
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const result = (await sequelize.query(
-    `SELECT is_demo FROM "${tenant}".${tableName} WHERE id = :id`,
+    `SELECT is_demo FROM ${tableName} WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       transaction,
     }
   )) as [{ is_demo: boolean }[], number];
@@ -66,16 +67,16 @@ const findIsDemo = async (
 
 export const countAnswersEUByProjectId = async (
   projectFrameworkId: number,
-  tenant: string
+  organizationId: number
 ): Promise<{
   totalAssessments: string;
   answeredAssessments: string;
 }> => {
   const result = await sequelize.query(
     `SELECT COUNT(*) AS "totalAssessments", COUNT(CASE WHEN ans.status = 'Done' THEN 1 END) AS "answeredAssessments" FROM
-      "${tenant}".assessments a JOIN "${tenant}".answers_eu ans ON a.id = ans.assessment_id WHERE a.projects_frameworks_id = :projects_frameworks_id;`,
+      assessments a JOIN answers_eu ans ON a.organization_id = ans.organization_id AND a.id = ans.assessment_id WHERE a.organization_id = :organizationId AND a.projects_frameworks_id = :projects_frameworks_id;`,
     {
-      replacements: { projects_frameworks_id: projectFrameworkId },
+      replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       type: QueryTypes.SELECT,
     }
   );
@@ -87,22 +88,16 @@ export const countAnswersEUByProjectId = async (
 
 export const countSubControlsEUByProjectId = async (
   projectFrameworkId: number,
-  tenant: string
+  organizationId: number
 ): Promise<{
   totalSubcontrols: string;
   doneSubcontrols: string;
 }> => {
-  // const projectFrameworkId = await sequelize.query(
-  //   `SELECT id FROM projects_frameworks WHERE project_id = :project_id AND framework_id = 1`,
-  //   {
-  //     replacements: { project_id: project_id }
-  //   }
-  // ) as [{ id: number }[], number];
   const result = await sequelize.query(
     `SELECT COUNT(*) AS "totalSubcontrols", COUNT(CASE WHEN sc.status = 'Done' THEN 1 END) AS "doneSubcontrols" FROM
-      "${tenant}".controls_eu c JOIN "${tenant}".subcontrols_eu sc ON c.id = sc.control_id WHERE c.projects_frameworks_id = :projects_frameworks_id;`,
+      controls_eu c JOIN subcontrols_eu sc ON c.organization_id = sc.organization_id AND c.id = sc.control_id WHERE c.organization_id = :organizationId AND c.projects_frameworks_id = :projects_frameworks_id;`,
     {
-      replacements: { projects_frameworks_id: projectFrameworkId },
+      replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       type: QueryTypes.SELECT,
     }
   );
@@ -115,12 +110,12 @@ export const countSubControlsEUByProjectId = async (
 export const getTopicByIdForProjectQuery = async (
   topicStructId: number,
   projectFrameworkId: number,
-  tenant: string
+  organizationId: number
 ): Promise<TopicStructEUModel | null> => {
   const assessmentResult = (await sequelize.query(
-    `SELECT id FROM "${tenant}".assessments WHERE projects_frameworks_id = :projects_frameworks_id`,
+    `SELECT id FROM assessments WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
     {
-      replacements: { projects_frameworks_id: projectFrameworkId },
+      replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
     }
   )) as [{ id: number }[], number];
 
@@ -131,7 +126,7 @@ export const getTopicByIdForProjectQuery = async (
   const assessmentId = assessmentResult[0][0].id;
 
   const topics = await sequelize.query(
-    `SELECT * FROM public.topics_struct_eu WHERE id = :topic_id;`,
+    `SELECT * FROM topics_struct_eu WHERE id = :topic_id;`,
     {
       replacements: { topic_id: topicStructId },
       mapToModel: true,
@@ -145,13 +140,13 @@ export const getTopicByIdForProjectQuery = async (
     return null;
   }
 
-  const subtopicStruct = await getAllSubTopicsQuery(topic.id!, tenant);
+  const subtopicStruct = await getAllSubTopicsQuery(topic.id!, organizationId);
   (topic.dataValues as any).subTopics = subtopicStruct;
   for (let subtopic of subtopicStruct) {
     const questionAnswers = await getAllQuestionsQuery(
       subtopic.id!,
       assessmentId,
-      tenant
+      organizationId
     );
     (subtopic.dataValues as any).questions = [];
     for (let question of questionAnswers) {
@@ -163,14 +158,14 @@ export const getTopicByIdForProjectQuery = async (
 
 const getSubControlsCalculations = async (
   controlId: number,
-  tenant: string,
+  organizationId: number,
   owner?: number,
   approver?: number,
   dueDateFilter?: number
 ) => {
   // Build WHERE conditions dynamically
-  const conditions: string[] = ["c.id = :control_id"];
-  const replacements: any = { control_id: controlId };
+  const conditions: string[] = ["c.organization_id = :organizationId", "c.id = :control_id"];
+  const replacements: any = { organizationId, control_id: controlId };
 
   // Add owner filter if provided
   if (owner !== undefined) {
@@ -195,7 +190,7 @@ const getSubControlsCalculations = async (
   const whereClause = conditions.join(" AND ");
 
   const query = `SELECT COUNT(*) AS "numberOfSubcontrols", COUNT(CASE WHEN sc.status = 'Done' THEN 1 END) AS "numberOfDoneSubcontrols" FROM
-    "${tenant}".controls_eu c JOIN "${tenant}".subcontrols_eu sc ON c.id = sc.control_id WHERE ${whereClause};`;
+    controls_eu c JOIN subcontrols_eu sc ON c.organization_id = sc.organization_id AND c.id = sc.control_id WHERE ${whereClause};`;
 
   const result = (await sequelize.query(query, {
     replacements,
@@ -215,25 +210,26 @@ export const getControlByIdForProjectQuery = async (
   owner: number | undefined,
   approver: number | undefined,
   dueDateFilter: number | undefined,
-  tenant: string
+  organizationId: number
 ): Promise<Partial<ControlEU & ControlStructEUModel> | null> => {
   const controlId = (await sequelize.query(
-    `SELECT id FROM "${tenant}".controls_eu WHERE control_meta_id = :control_meta_id AND projects_frameworks_id = :projects_frameworks_id`,
+    `SELECT id FROM controls_eu WHERE organization_id = :organizationId AND control_meta_id = :control_meta_id AND projects_frameworks_id = :projects_frameworks_id`,
     {
       replacements: {
+        organizationId,
         control_meta_id: controlStructId,
         projects_frameworks_id: projectFrameworkId,
       },
     }
   )) as [{ id: number }[], number];
-  const controls = await getControlByIdQuery(controlId[0][0].id, tenant);
+  const controls = await getControlByIdQuery(controlId[0][0].id, organizationId);
   const control = controls[0];
   const subControls = await getSubControlsByIdQuery(
     control.id!,
     owner,
     approver,
     dueDateFilter,
-    tenant
+    organizationId
   );
 
   (control as any).subControls = [];
@@ -242,7 +238,7 @@ export const getControlByIdForProjectQuery = async (
   }
   const subControlsCalculations = await getSubControlsCalculations(
     control.id!,
-    tenant,
+    organizationId,
     owner,
     approver,
     dueDateFilter
@@ -257,11 +253,11 @@ export const getControlByIdForProjectQuery = async (
 };
 
 export const getAllTopicsQuery = async (
-  _tenant: string,
+  _organizationId: number,
   transaction: Transaction | null = null
 ) => {
   const topicStruct = await sequelize.query(
-    `SELECT * FROM public.topics_struct_eu;`,
+    `SELECT * FROM topics_struct_eu;`,
     {
       mapToModel: true,
       model: TopicStructEUModel,
@@ -273,11 +269,11 @@ export const getAllTopicsQuery = async (
 
 export const getAllSubTopicsQuery = async (
   topicId: number,
-  _tenant: string,
+  _organizationId: number,
   transaction: Transaction | null = null
 ) => {
   const subtopicStruct = await sequelize.query(
-    `SELECT * FROM public.subtopics_struct_eu WHERE topic_id = :topic_id;`,
+    `SELECT * FROM subtopics_struct_eu WHERE topic_id = :topic_id;`,
     {
       replacements: { topic_id: topicId },
       mapToModel: true,
@@ -291,11 +287,11 @@ export const getAllSubTopicsQuery = async (
 export const getAllQuestionsQuery = async (
   subtopicId: number,
   assessmentId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ) => {
   const result = (await sequelize.query(
-    `SELECT 
+    `SELECT
       q.id AS question_id,
       q.order_no AS order_no,
       q.question AS question,
@@ -309,16 +305,15 @@ export const getAllQuestionsQuery = async (
       a.id AS answer_id,
       a.assessment_id AS assessment_id,
       a.answer AS answer,
-      a.evidence_files AS evidence_files,
       a.dropdown_options AS dropdown_options,
       a.status AS status,
       a.created_at AS created_at,
       a.is_demo AS is_demo
-    FROM public.questions_struct_eu q JOIN "${tenant}".answers_eu a ON q.id = a.question_id WHERE 
-      q.subtopic_id = :subtopic_id AND a.assessment_id = :assessment_id
+    FROM questions_struct_eu q JOIN answers_eu a ON q.id = a.question_id WHERE
+      a.organization_id = :organizationId AND q.subtopic_id = :subtopic_id AND a.assessment_id = :assessment_id
       ORDER BY created_at DESC, question_id ASC;`,
     {
-      replacements: { subtopic_id: subtopicId, assessment_id: assessmentId },
+      replacements: { organizationId, subtopic_id: subtopicId, assessment_id: assessmentId },
       ...(transaction && { transaction }),
     }
   )) as [
@@ -326,12 +321,26 @@ export const getAllQuestionsQuery = async (
     number,
   ];
   const questionAnswers = result[0];
+
+  // Batch fetch evidence files from file_entity_links
+  const answerIds = questionAnswers.map((q) => q.answer_id!).filter(Boolean);
+  const evidenceFilesMap = await getEvidenceFilesForEntities(
+    organizationId,
+    "eu_ai_act",
+    "assessment",
+    answerIds,
+    "evidence"
+  );
+
   for (let questionAnswer of questionAnswers) {
     (questionAnswer as any).risks = [];
+    // Attach evidence files from file_entity_links
+    (questionAnswer as any).evidence_files = evidenceFilesMap.get(questionAnswer.answer_id!) || [];
+
     const risks = (await sequelize.query(
-      `SELECT projects_risks_id FROM "${tenant}".answers_eu__risks WHERE answer_id = :id`,
+      `SELECT projects_risks_id FROM answers_eu__risks WHERE organization_id = :organizationId AND answer_id = :id`,
       {
-        replacements: { id: questionAnswer.answer_id },
+        replacements: { organizationId, id: questionAnswer.answer_id },
         transaction,
       }
     )) as [{ projects_risks_id: number }[], number];
@@ -344,14 +353,14 @@ export const getAllQuestionsQuery = async (
 
 export const getAssessmentsEUByIdQuery = async (
   assessmentId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ) => {
-  const topicStruct = await getAllTopicsQuery(tenant, transaction);
+  const topicStruct = await getAllTopicsQuery(organizationId, transaction);
   for (let topic of topicStruct) {
     const subtopicStruct = await getAllSubTopicsQuery(
       topic.id!,
-      tenant,
+      organizationId,
       transaction
     );
     (topic.dataValues as any).subTopics = subtopicStruct;
@@ -359,7 +368,7 @@ export const getAssessmentsEUByIdQuery = async (
       const questionAnswers = await getAllQuestionsQuery(
         subtopic.id!,
         assessmentId,
-        tenant,
+        organizationId,
         transaction
       );
       (subtopic.dataValues as any).questions = [];
@@ -372,11 +381,11 @@ export const getAssessmentsEUByIdQuery = async (
 };
 
 export const getAllControlCategoriesQuery = async (
-  _tenant: string,
+  _organizationId: number,
   transaction: Transaction | null = null
 ) => {
   const controlCategoriesStruct = await sequelize.query(
-    `SELECT * FROM public.controlcategories_struct_eu;`,
+    `SELECT * FROM controlcategories_struct_eu;`,
     {
       mapToModel: true,
       model: ControlCategoryStructEUModel,
@@ -390,7 +399,7 @@ export const getControlStructByControlCategoryIdQuery = async (
   controlCategoryId: number
 ) => {
   const controlsStruct = await sequelize.query(
-    `SELECT * FROM public.controls_struct_eu WHERE control_category_id = :control_category_id;`,
+    `SELECT * FROM controls_struct_eu WHERE control_category_id = :control_category_id;`,
     {
       replacements: { control_category_id: controlCategoryId },
       mapToModel: true,
@@ -406,13 +415,14 @@ export const getControlStructByControlCategoryIdForAProjectQuery = async (
   owner: number | undefined,
   approver: number | undefined,
   dueDateFilter: number | undefined,
-  tenant: string
+  organizationId: number
 ) => {
   const controlsStruct = (await sequelize.query(
-    `SELECT cs.*, c.id AS control_id, c.owner, c.status FROM public.controls_struct_eu cs JOIN "${tenant}".controls_eu c ON cs.id = c.control_meta_id
-      WHERE cs.control_category_id = :control_category_id AND c.projects_frameworks_id = :projects_frameworks_id;`,
+    `SELECT cs.*, c.id AS control_id, c.owner, c.status FROM controls_struct_eu cs JOIN controls_eu c ON cs.id = c.control_meta_id
+      WHERE c.organization_id = :organizationId AND cs.control_category_id = :control_category_id AND c.projects_frameworks_id = :projects_frameworks_id;`,
     {
       replacements: {
+        organizationId,
         control_category_id: controlCategoryId,
         projects_frameworks_id: projectFrameworkId,
       },
@@ -424,7 +434,7 @@ export const getControlStructByControlCategoryIdForAProjectQuery = async (
   for (let control of controlsStruct[0]) {
     const subControlsCalculations = await getSubControlsCalculations(
       control.control_id!,
-      tenant,
+      organizationId,
       owner,
       approver,
       dueDateFilter
@@ -443,11 +453,11 @@ export const getControlStructByControlCategoryIdForAProjectQuery = async (
 
 export const getControlByIdQuery = async (
   controlId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ) => {
   const result = (await sequelize.query(
-    `SELECT 
+    `SELECT
       cs.title AS title,
       cs.description AS description,
       cs.order_no AS order_no,
@@ -461,10 +471,10 @@ export const getControlByIdQuery = async (
       c.due_date AS due_date,
       c.implementation_details AS implementation_details,
       c.created_at AS created_at
-    FROM "${tenant}".controls_eu c JOIN public.controls_struct_eu cs ON c.control_meta_id = cs.id WHERE c.id = :control_id
+    FROM controls_eu c JOIN controls_struct_eu cs ON c.control_meta_id = cs.id WHERE c.organization_id = :organizationId AND c.id = :control_id
     ORDER BY created_at DESC, id ASC;`,
     {
-      replacements: { control_id: controlId },
+      replacements: { organizationId, control_id: controlId },
       ...(transaction && { transaction }),
     }
   )) as [Partial<ControlEUModel & ControlStructEUModel>[], number];
@@ -477,12 +487,12 @@ export const getSubControlsByIdQuery = async (
   owner: number | undefined,
   approver: number | undefined,
   dueDateFilter: number | undefined,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ) => {
   // Build WHERE conditions dynamically
-  const conditions: string[] = ["sc.control_id = :control_id"];
-  const replacements: any = { control_id: subControlId };
+  const conditions: string[] = ["sc.organization_id = :organizationId", "sc.control_id = :control_id"];
+  const replacements: any = { organizationId, control_id: subControlId };
 
   // Add owner filter if provided
   if (owner !== undefined) {
@@ -507,7 +517,7 @@ export const getSubControlsByIdQuery = async (
   const whereClause = conditions.join(" AND ");
 
   const subControls = (await sequelize.query(
-    `SELECT 
+    `SELECT
       scs.title AS title,
       scs.description AS description,
       scs.order_no AS order_no,
@@ -521,12 +531,10 @@ export const getSubControlsByIdQuery = async (
       sc.implementation_details AS implementation_details,
       sc.control_id AS control_id,
       sc.is_demo AS is_demo,
-      sc.evidence_files AS evidence_files,
-      sc.feedback_files AS feedback_files,
       sc.evidence_description AS evidence_description,
       sc.feedback_description AS feedback_description,
       sc.created_at AS created_at
-    FROM "${tenant}".subcontrols_eu sc JOIN public.subcontrols_struct_eu scs ON sc.subcontrol_meta_id = scs.id WHERE ${whereClause}
+    FROM subcontrols_eu sc JOIN subcontrols_struct_eu scs ON sc.subcontrol_meta_id = scs.id WHERE ${whereClause}
     ORDER BY created_at DESC, id ASC;`,
     {
       replacements,
@@ -534,13 +542,34 @@ export const getSubControlsByIdQuery = async (
     }
   )) as [Partial<SubcontrolEUModel | ControlStructEUModel>[], number];
 
+  // Batch fetch evidence and feedback files from file_entity_links
+  const subcontrolIds = subControls[0].map((sc) => sc.id!).filter(Boolean);
+  const evidenceFilesMap = await getEvidenceFilesForEntities(
+    organizationId,
+    "eu_ai_act",
+    "subcontrol",
+    subcontrolIds,
+    "evidence"
+  );
+  const feedbackFilesMap = await getEvidenceFilesForEntities(
+    organizationId,
+    "eu_ai_act",
+    "subcontrol",
+    subcontrolIds,
+    "feedback"
+  );
+
   // Load risks for each subcontrol
   for (let subControl of subControls[0]) {
     (subControl as any).risks = [];
+    // Attach evidence and feedback files from file_entity_links
+    (subControl as any).evidence_files = evidenceFilesMap.get(subControl.id!) || [];
+    (subControl as any).feedback_files = feedbackFilesMap.get(subControl.id!) || [];
+
     const risks = (await sequelize.query(
-      `SELECT projects_risks_id FROM "${tenant}".subcontrols_eu__risks WHERE subcontrol_id = :id`,
+      `SELECT projects_risks_id FROM subcontrols_eu__risks WHERE organization_id = :organizationId AND subcontrol_id = :id`,
       {
-        replacements: { id: subControl.id },
+        replacements: { organizationId, id: subControl.id },
         ...(transaction && { transaction }),
       }
     )) as [{ projects_risks_id: number }[], number];
@@ -554,11 +583,11 @@ export const getSubControlsByIdQuery = async (
 
 export const getCompliancesEUByIdQuery = async (
   controlIds: number[],
-  tenant: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ) => {
   const controlCategoriesStruct = await getAllControlCategoriesQuery(
-    tenant,
+    organizationId,
     transaction
   );
   let controlCategoryIdIndexMap = new Map();
@@ -568,7 +597,7 @@ export const getCompliancesEUByIdQuery = async (
   }
 
   for (let controlId of controlIds) {
-    const controls = await getControlByIdQuery(controlId, tenant, transaction);
+    const controls = await getControlByIdQuery(controlId, organizationId, transaction);
 
     for (let control of controls) {
       (controlCategoriesStruct as any)[
@@ -579,7 +608,7 @@ export const getCompliancesEUByIdQuery = async (
         undefined,
         undefined,
         undefined,
-        tenant,
+        organizationId,
         transaction
       );
       (control as any).subControls = [];
@@ -593,35 +622,35 @@ export const getCompliancesEUByIdQuery = async (
 
 export const getAssessmentsEUByProjectIdQuery = async (
   projectFrameworkId: number,
-  tenant: string
+  organizationId: number
 ) => {
   const assessmentId = (await sequelize.query(
-    `SELECT id FROM "${tenant}".assessments WHERE projects_frameworks_id = :projects_frameworks_id`,
+    `SELECT id FROM assessments WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
     {
-      replacements: { projects_frameworks_id: projectFrameworkId },
+      replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
     }
   )) as [{ id: number }[], number];
   const assessments = await getAssessmentsEUByIdQuery(
     assessmentId[0][0].id,
-    tenant
+    organizationId
   );
   return assessments;
 };
 
 export const getComplianceEUByProjectIdQuery = async (
   projectFrameworkId: number,
-  tenant: string
+  organizationId: number
 ) => {
   const controlIds = (await sequelize.query(
-    `SELECT id FROM "${tenant}".controls_eu WHERE projects_frameworks_id = :projects_frameworks_id`,
+    `SELECT id FROM controls_eu WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
     {
-      replacements: { projects_frameworks_id: projectFrameworkId },
+      replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
     }
   )) as [{ id: number }[], number];
 
   const compliances = await getCompliancesEUByIdQuery(
     controlIds[0].map((c) => c.id),
-    tenant
+    organizationId
   );
   return compliances;
 };
@@ -629,29 +658,27 @@ export const getComplianceEUByProjectIdQuery = async (
 export const createNewAssessmentEUQuery = async (
   assessment: AssessmentEU,
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean
 ): Promise<Object> => {
   const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM "${tenant}".projects_frameworks WHERE project_id = :project_id AND framework_id = 1`,
+    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1`,
     {
-      replacements: { project_id: assessment.project_id },
+      replacements: { organizationId, project_id: assessment.project_id },
       transaction,
     }
   )) as [{ id: number }[], number];
-  // if (projectFrameworkId[0].length === 0) {
-  //   throw new Error("Project not added to framework");
-  // }
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".assessments (projects_frameworks_id, is_demo) VALUES (:projects_frameworks_id, :is_demo) RETURNING *`,
+    `INSERT INTO assessments (organization_id, projects_frameworks_id, is_demo) VALUES (:organizationId, :projects_frameworks_id, :is_demo) RETURNING *`,
     {
       replacements: {
+        organizationId,
         projects_frameworks_id: projectFrameworkId[0][0].id,
         is_demo: await findIsDemo(
           "projects",
           assessment.project_id,
-          tenant,
+          organizationId,
           transaction
         ),
       },
@@ -663,13 +690,13 @@ export const createNewAssessmentEUQuery = async (
   await createNewAnswersEUQuery(
     result[0].id!,
     enable_ai_data_insertion,
-    tenant,
+    organizationId,
     transaction,
     is_mock_data
   );
   const assessments = await getAssessmentsEUByIdQuery(
     result[0].id!,
-    tenant,
+    organizationId,
     transaction
   );
   return { ...result[0].dataValues, topics: assessments };
@@ -678,14 +705,14 @@ export const createNewAssessmentEUQuery = async (
 export const createNewAnswersEUQuery = async (
   assessmentId: number,
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean
 ) => {
   let demoAnswers: string[] = [];
   if (enable_ai_data_insertion) demoAnswers = getDemoAnswers();
   const questions = await sequelize.query(
-    `SELECT * FROM public.questions_struct_eu ORDER BY id;`,
+    `SELECT * FROM questions_struct_eu ORDER BY id;`,
     {
       mapToModel: true,
       model: QuestionStructEUModel,
@@ -696,11 +723,12 @@ export const createNewAnswersEUQuery = async (
   let ansCtr = 0;
   for (let question of questions) {
     const result = await sequelize.query(
-      `INSERT INTO "${tenant}".answers_eu(assessment_id, question_id, answer, status, is_demo) VALUES (
-        :assessment_id, :question_id, :answer, :status, :is_demo
+      `INSERT INTO answers_eu(organization_id, assessment_id, question_id, answer, status, is_demo) VALUES (
+        :organizationId, :assessment_id, :question_id, :answer, :status, :is_demo
       ) RETURNING *;`,
       {
         replacements: {
+          organizationId,
           assessment_id: assessmentId,
           question_id: question.id!,
           answer: enable_ai_data_insertion ? demoAnswers[ansCtr++] : null,
@@ -712,7 +740,7 @@ export const createNewAnswersEUQuery = async (
           is_demo: await findIsDemo(
             "assessments",
             assessmentId,
-            tenant,
+            organizationId,
             transaction
           ),
         },
@@ -731,7 +759,7 @@ export const createNewAnswersEUQuery = async (
 export const createNewControlsQuery = async (
   projectId: number,
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean
 ) => {
@@ -739,7 +767,7 @@ export const createNewControlsQuery = async (
   if (enable_ai_data_insertion) demoControls = getDemoControls();
 
   const controlsStruct = await sequelize.query(
-    `SELECT * FROM public.controls_struct_eu;`,
+    `SELECT * FROM controls_struct_eu;`,
     {
       mapToModel: true,
       model: ControlStructEUModel,
@@ -750,25 +778,26 @@ export const createNewControlsQuery = async (
   let controlIds: number[] = [];
   for (let controlStruct of controlsStruct) {
     const projectFrameworkId = (await sequelize.query(
-      `SELECT id FROM "${tenant}".projects_frameworks WHERE project_id = :project_id AND framework_id = 1`,
+      `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1`,
       {
-        replacements: { project_id: projectId },
+        replacements: { organizationId, project_id: projectId },
         transaction,
       }
     )) as [{ id: number }[], number];
     const result = await sequelize.query(
-      `INSERT INTO "${tenant}".controls_eu(control_meta_id, implementation_details, status, projects_frameworks_id, is_demo) VALUES (
-        :control_meta_id, :implementation_details, :status, :projects_frameworks_id, :is_demo
+      `INSERT INTO controls_eu(organization_id, control_meta_id, implementation_details, status, projects_frameworks_id, is_demo) VALUES (
+        :organizationId, :control_meta_id, :implementation_details, :status, :projects_frameworks_id, :is_demo
       ) RETURNING id;`,
       {
         replacements: {
+          organizationId,
           control_meta_id: controlStruct.id!,
           implementation_details: enable_ai_data_insertion
             ? demoControls[controlCtr].implementation_details
             : null,
           status: enable_ai_data_insertion ? "Waiting" : null,
           projects_frameworks_id: projectFrameworkId[0][0].id,
-          is_demo: await findIsDemo("projects", projectId, tenant, transaction),
+          is_demo: await findIsDemo("projects", projectId, organizationId, transaction),
         },
         mapToModel: true,
         model: ControlEUModel,
@@ -781,14 +810,14 @@ export const createNewControlsQuery = async (
       demoControls[controlCtr++]?.subControls || [],
       result[0].id!,
       enable_ai_data_insertion,
-      tenant,
+      organizationId,
       transaction,
       is_mock_data
     );
   }
   const compliances = await getCompliancesEUByIdQuery(
     controlIds,
-    tenant,
+    organizationId,
     transaction
   );
   return compliances;
@@ -799,12 +828,12 @@ export const createNewSubControlsQuery = async (
   demoSubControls: any[],
   controlId: number,
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean
 ) => {
   const subControlMetaIds = await sequelize.query(
-    `SELECT id FROM public.subcontrols_struct_eu WHERE control_id = :control_id`,
+    `SELECT id FROM subcontrols_struct_eu WHERE control_id = :control_id`,
     {
       replacements: { control_id: controlStructId },
       transaction,
@@ -814,11 +843,12 @@ export const createNewSubControlsQuery = async (
   let createdSubControls: SubcontrolEUModel[] = [];
   for (let subControl of subControlMetaIds[0] as { id: number }[]) {
     const result = await sequelize.query(
-      `INSERT INTO "${tenant}".subcontrols_eu(control_id, subcontrol_meta_id, implementation_details, evidence_description, feedback_description, status, is_demo) VALUES (
-        :control_id, :subcontrol_meta_id, :implementation_details, :evidence_description, :feedback_description, :status, :is_demo
+      `INSERT INTO subcontrols_eu(organization_id, control_id, subcontrol_meta_id, implementation_details, evidence_description, feedback_description, status, is_demo) VALUES (
+        :organizationId, :control_id, :subcontrol_meta_id, :implementation_details, :evidence_description, :feedback_description, :status, :is_demo
       ) RETURNING *`,
       {
         replacements: {
+          organizationId,
           control_id: controlId,
           subcontrol_meta_id: subControl.id,
           implementation_details: enable_ai_data_insertion
@@ -842,7 +872,7 @@ export const createNewSubControlsQuery = async (
           is_demo: await findIsDemo(
             "controls_eu",
             controlId,
-            tenant,
+            organizationId,
             transaction
           ),
         },
@@ -860,21 +890,21 @@ export const createNewSubControlsQuery = async (
 export const createEUFrameworkQuery = async (
   projectId: number,
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean = false
 ) => {
   const assessments: Object = await createNewAssessmentEUQuery(
     { project_id: projectId },
     enable_ai_data_insertion,
-    tenant,
+    organizationId,
     transaction,
     is_mock_data
   );
   const controls = await createNewControlsQuery(
     projectId,
     enable_ai_data_insertion,
-    tenant,
+    organizationId,
     transaction,
     is_mock_data
   );
@@ -887,10 +917,10 @@ export const createEUFrameworkQuery = async (
 export const updateControlEUByIdQuery = async (
   id: number,
   control: Partial<ControlEU>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ControlEU> => {
-  const updateControl: Partial<Record<keyof ControlEU, any>> = {};
+  const updateControl: Partial<Record<keyof ControlEU, any>> & { organizationId?: number } = {};
   const setClause = [
     "status",
     "approver",
@@ -916,8 +946,9 @@ export const updateControlEUByIdQuery = async (
     return control as ControlEU;
   }
 
-  const query = `UPDATE "${tenant}".controls_eu SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE controls_eu SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
+  updateControl.organizationId = organizationId;
   updateControl.id = id;
 
   const result = await sequelize.query(query, {
@@ -952,67 +983,11 @@ export const updateSubcontrolEUByIdQuery = async (
     uploaded_time: Date;
   }[] = [],
   deletedFiles: number[] = [],
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<SubcontrolEU> => {
-  const files = await sequelize.query(
-    `SELECT evidence_files, feedback_files FROM "${tenant}".subcontrols_eu WHERE id = :id`,
-    {
-      replacements: { id },
-      mapToModel: true,
-      model: SubcontrolEUModel,
-      transaction,
-    }
-  );
-
-  let currentEvidenceFiles = (
-    files[0].evidence_files ? files[0].evidence_files : []
-  ) as {
-    id: string;
-    fileName: string;
-    project_id?: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[];
-  let currentFeedbackFiles = (
-    files[0].feedback_files ? files[0].feedback_files : []
-  ) as {
-    id: string;
-    fileName: string;
-    project_id?: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[];
-
-  // Store original arrays to check for deletions specific to this subcontrol
-  const originalEvidenceFiles = [...currentEvidenceFiles];
-  const originalFeedbackFiles = [...currentFeedbackFiles];
-
-  currentEvidenceFiles = currentEvidenceFiles.filter(
-    (f) => !deletedFiles.includes(parseInt(f.id))
-  );
-  currentEvidenceFiles = currentEvidenceFiles.concat(evidenceUploadedFiles);
-
-  currentFeedbackFiles = currentFeedbackFiles.filter(
-    (f) => !deletedFiles.includes(parseInt(f.id))
-  );
-  currentFeedbackFiles = currentFeedbackFiles.concat(feedbackUploadedFiles);
-
-  // Track if files were modified for THIS subcontrol (uploads or deletes)
-  // Check if any deleted files belong to this subcontrol's files
-  const hasEvidenceDeletes = originalEvidenceFiles.some((f) =>
-    deletedFiles.includes(parseInt(f.id))
-  );
-  const hasFeedbackDeletes = originalFeedbackFiles.some((f) =>
-    deletedFiles.includes(parseInt(f.id))
-  );
-
-  const hasEvidenceFileChanges =
-    evidenceUploadedFiles.length > 0 || hasEvidenceDeletes;
-  const hasFeedbackFileChanges =
-    feedbackUploadedFiles.length > 0 || hasFeedbackDeletes;
-
-  const updateSubControl: Partial<Record<keyof SubcontrolEU, any>> = {};
+  // Build update for non-file fields only (files are managed via file_entity_links)
+  const updateSubControl: Partial<Record<keyof SubcontrolEU, any>> & { organizationId?: number } = {};
   const setClause = [
     "status",
     "approver",
@@ -1023,22 +998,8 @@ export const updateSubcontrolEUByIdQuery = async (
     "implementation_details",
     "evidence_description",
     "feedback_description",
-    "evidence_files",
-    "feedback_files",
   ]
     .filter((f) => {
-      // Always update evidence_files if there were changes (uploads or deletes)
-      if (f == "evidence_files" && hasEvidenceFileChanges) {
-        updateSubControl["evidence_files"] =
-          JSON.stringify(currentEvidenceFiles);
-        return true;
-      }
-      // Always update feedback_files if there were changes (uploads or deletes)
-      if (f == "feedback_files" && hasFeedbackFileChanges) {
-        updateSubControl["feedback_files"] =
-          JSON.stringify(currentFeedbackFiles);
-        return true;
-      }
       if (
         subcontrol[f as keyof SubcontrolEU] !== undefined &&
         subcontrol[f as keyof SubcontrolEU]
@@ -1054,34 +1015,48 @@ export const updateSubcontrolEUByIdQuery = async (
     })
     .join(", ");
 
+  let subcontrolResult: any;
+
   if (setClause.length === 0) {
-    return subcontrol as SubcontrolEU;
+    // No fields to update, but we still need to handle file operations
+    // Fetch the current subcontrol
+    const existing = await sequelize.query(
+      `SELECT * FROM subcontrols_eu WHERE organization_id = :organizationId AND id = :id`,
+      {
+        replacements: { organizationId, id },
+        mapToModel: true,
+        model: SubcontrolEUModel,
+        transaction,
+      }
+    );
+    subcontrolResult = existing[0];
+  } else {
+    const query = `UPDATE subcontrols_eu SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+
+    updateSubControl.organizationId = organizationId;
+    updateSubControl.id = id;
+
+    const result = await sequelize.query(query, {
+      replacements: updateSubControl,
+      mapToModel: true,
+      model: SubcontrolEUModel,
+      transaction,
+    });
+
+    subcontrolResult = result[0] as any;
   }
 
-  const query = `UPDATE "${tenant}".subcontrols_eu SET ${setClause} WHERE id = :id RETURNING *;`;
-
-  updateSubControl.id = id;
-
-  const result = await sequelize.query(query, {
-    replacements: updateSubControl,
-    mapToModel: true,
-    model: SubcontrolEUModel,
-    // type: QueryTypes.UPDATE,
-    transaction,
-  });
-
-  const subcontrolResult = result[0] as any;
   (subcontrolResult as any).risks = [];
 
   // Create file entity links for new evidence files
   for (const file of evidenceUploadedFiles) {
     await sequelize.query(
-      `INSERT INTO "${tenant}".file_entity_links
-        (file_id, framework_type, entity_type, entity_id, link_type, created_at)
-       VALUES (:fileId, 'eu_ai_act', 'subcontrol', :entityId, 'evidence', NOW())
+      `INSERT INTO file_entity_links
+        (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_at)
+       VALUES (:organizationId, :fileId, 'eu_ai_act', 'subcontrol', :entityId, 'evidence', NOW())
        ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
       {
-        replacements: { fileId: parseInt(file.id), entityId: id },
+        replacements: { organizationId, fileId: parseInt(file.id), entityId: id },
         transaction,
       }
     );
@@ -1090,12 +1065,12 @@ export const updateSubcontrolEUByIdQuery = async (
   // Create file entity links for new feedback files
   for (const file of feedbackUploadedFiles) {
     await sequelize.query(
-      `INSERT INTO "${tenant}".file_entity_links
-        (file_id, framework_type, entity_type, entity_id, link_type, created_at)
-       VALUES (:fileId, 'eu_ai_act', 'subcontrol', :entityId, 'feedback', NOW())
+      `INSERT INTO file_entity_links
+        (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_at)
+       VALUES (:organizationId, :fileId, 'eu_ai_act', 'subcontrol', :entityId, 'feedback', NOW())
        ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
       {
-        replacements: { fileId: parseInt(file.id), entityId: id },
+        replacements: { organizationId, fileId: parseInt(file.id), entityId: id },
         transaction,
       }
     );
@@ -1104,10 +1079,14 @@ export const updateSubcontrolEUByIdQuery = async (
   // Remove file entity links for deleted files
   for (const fileId of deletedFiles) {
     await sequelize.query(
-      `DELETE FROM "${tenant}".file_entity_links
-       WHERE file_id = :fileId AND entity_type = 'subcontrol' AND entity_id = :entityId`,
+      `DELETE FROM file_entity_links
+       WHERE organization_id = :organizationId
+         AND file_id = :fileId
+         AND framework_type = 'eu_ai_act'
+         AND entity_type = 'subcontrol'
+         AND entity_id = :entityId`,
       {
-        replacements: { fileId, entityId: id },
+        replacements: { organizationId, fileId, entityId: id },
         transaction,
       }
     );
@@ -1129,9 +1108,9 @@ export const updateSubcontrolEUByIdQuery = async (
     );
 
     const risks = (await sequelize.query(
-      `SELECT projects_risks_id FROM "${tenant}".subcontrols_eu__risks WHERE subcontrol_id = :id`,
+      `SELECT projects_risks_id FROM subcontrols_eu__risks WHERE organization_id = :organizationId AND subcontrol_id = :id`,
       {
-        replacements: { id },
+        replacements: { organizationId, id },
         transaction,
       }
     )) as [{ projects_risks_id: number }[], number];
@@ -1141,9 +1120,9 @@ export const updateSubcontrolEUByIdQuery = async (
     currentRisks = currentRisks.concat(risksMitigated);
 
     await sequelize.query(
-      `DELETE FROM "${tenant}".subcontrols_eu__risks WHERE subcontrol_id = :id;`,
+      `DELETE FROM subcontrols_eu__risks WHERE organization_id = :organizationId AND subcontrol_id = :id;`,
       {
-        replacements: { id },
+        replacements: { organizationId, id },
         transaction,
       }
     );
@@ -1151,9 +1130,9 @@ export const updateSubcontrolEUByIdQuery = async (
     if (currentRisks.length > 0) {
       // Create parameterized placeholders for safe insertion
       const placeholders = currentRisks
-        .map((_, i) => `(:subcontrol_id${i}, :projects_risks_id${i})`)
+        .map((_, i) => `(:organizationId, :subcontrol_id${i}, :projects_risks_id${i})`)
         .join(", ");
-      const replacements: { [key: string]: any } = {};
+      const replacements: { [key: string]: any } = { organizationId };
 
       // Build replacement parameters safely
       currentRisks.forEach((risk, i) => {
@@ -1162,7 +1141,7 @@ export const updateSubcontrolEUByIdQuery = async (
       });
 
       const subcontrolRisksInsertResult = (await sequelize.query(
-        `INSERT INTO "${tenant}".subcontrols_eu__risks (subcontrol_id, projects_risks_id) VALUES ${placeholders} RETURNING projects_risks_id;`,
+        `INSERT INTO subcontrols_eu__risks (organization_id, subcontrol_id, projects_risks_id) VALUES ${placeholders} RETURNING projects_risks_id;`,
         {
           replacements,
           transaction,
@@ -1176,9 +1155,9 @@ export const updateSubcontrolEUByIdQuery = async (
   } else {
     // If no risk updates provided, load existing risks
     const risks = (await sequelize.query(
-      `SELECT projects_risks_id FROM "${tenant}".subcontrols_eu__risks WHERE subcontrol_id = :id`,
+      `SELECT projects_risks_id FROM subcontrols_eu__risks WHERE organization_id = :organizationId AND subcontrol_id = :id`,
       {
-        replacements: { id },
+        replacements: { organizationId, id },
         transaction,
       }
     )) as [{ projects_risks_id: number }[], number];
@@ -1201,78 +1180,44 @@ export const addFileToAnswerEU = async (
     uploaded_time: Date;
   }[],
   deletedFiles: number[],
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
-): Promise<QuestionStructEUModel & AnswerEUModel> => {
+): Promise<QuestionStructEUModel & AnswerEUModel & { evidence_files: any[] }> => {
   const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM "${tenant}".projects_frameworks WHERE project_id = :project_id AND framework_id = 1`,
+    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1`,
     {
-      replacements: { project_id: projectId },
+      replacements: { organizationId, project_id: projectId },
       transaction,
     }
   )) as [{ id: number }[], number];
   const assessmentId = (await sequelize.query(
-    `SELECT id FROM "${tenant}".assessments WHERE projects_frameworks_id = :project_framework_id;`,
+    `SELECT id FROM assessments WHERE organization_id = :organizationId AND projects_frameworks_id = :project_framework_id;`,
     {
-      replacements: { project_framework_id: projectFrameworkId[0][0].id },
+      replacements: { organizationId, project_framework_id: projectFrameworkId[0][0].id },
       transaction,
     }
   )) as [{ id: number }[], number];
-  // get the existing evidence files
-  const evidenceFilesResult = await sequelize.query(
-    `SELECT evidence_files FROM "${tenant}".answers_eu WHERE question_id = :id AND assessment_id = :assessment_id`,
-    {
-      replacements: { id: questionId, assessment_id: assessmentId[0][0].id },
-      mapToModel: true,
-      model: AnswerEUModel,
-      transaction,
-    }
-  );
 
-  // convert to list of objects
-  let evidenceFiles = (
-    evidenceFilesResult[0].evidence_files
-      ? evidenceFilesResult[0].evidence_files
-      : []
-  ) as {
-    id: string;
-    fileName: string;
-    project_id?: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[];
-
-  // remove the deleted file ids
-  evidenceFiles = evidenceFiles.filter(
-    (f) => !deletedFiles.includes(parseInt(f.id))
-  );
-
-  // combine the files lists
-  evidenceFiles = evidenceFiles.concat(uploadedFiles);
-
-  // update
+  // Get the answer record
   const answer = (await sequelize.query(
-    `UPDATE "${tenant}".answers_eu SET evidence_files = :evidence_files WHERE question_id = :id AND assessment_id = :assessment_id RETURNING *;`,
+    `SELECT * FROM answers_eu WHERE organization_id = :organizationId AND question_id = :id AND assessment_id = :assessment_id`,
     {
-      replacements: {
-        evidence_files: JSON.stringify(evidenceFiles),
-        id: questionId,
-        assessment_id: assessmentId[0][0].id,
-      },
+      replacements: { organizationId, id: questionId, assessment_id: assessmentId[0][0].id },
       transaction,
     }
   )) as [AnswerEUModel[], number];
 
-  // Create file entity links for new evidence files
   const answerId = answer[0][0].id;
+
+  // Create file entity links for new evidence files
   for (const file of uploadedFiles) {
     await sequelize.query(
-      `INSERT INTO "${tenant}".file_entity_links
-        (file_id, framework_type, entity_type, entity_id, link_type, created_at)
-       VALUES (:fileId, 'eu_ai_act', 'assessment', :entityId, 'evidence', NOW())
+      `INSERT INTO file_entity_links
+        (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_at)
+       VALUES (:organizationId, :fileId, 'eu_ai_act', 'assessment', :entityId, 'evidence', NOW())
        ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
       {
-        replacements: { fileId: parseInt(file.id), entityId: answerId },
+        replacements: { organizationId, fileId: parseInt(file.id), entityId: answerId },
         transaction,
       }
     );
@@ -1281,21 +1226,36 @@ export const addFileToAnswerEU = async (
   // Remove file entity links for deleted files
   for (const fileId of deletedFiles) {
     await sequelize.query(
-      `DELETE FROM "${tenant}".file_entity_links
-       WHERE file_id = :fileId AND entity_type = 'assessment' AND entity_id = :entityId`,
+      `DELETE FROM file_entity_links
+       WHERE organization_id = :organizationId
+         AND file_id = :fileId
+         AND framework_type = 'eu_ai_act'
+         AND entity_type = 'assessment'
+         AND entity_id = :entityId`,
       {
-        replacements: { fileId, entityId: answerId },
+        replacements: { organizationId, fileId, entityId: answerId },
         transaction,
       }
     );
   }
 
   const question = (await sequelize.query(
-    `SELECT * FROM public.questions_struct_eu WHERE id = :id`,
+    `SELECT * FROM questions_struct_eu WHERE id = :id`,
     { replacements: { id: answer[0][0].question_id }, transaction }
   )) as [QuestionStructEUModel[], number];
-  return {
+
+  // Fetch evidence files from file_entity_links
+  const evidenceFilesMap = await getEvidenceFilesForEntities(
+    organizationId,
+    "eu_ai_act",
+    "assessment",
+    [answerId!],
+    "evidence"
+  );
+
+  const result = {
     ...answer[0][0],
+    evidence_files: evidenceFilesMap.get(answerId!) || [],
     question: question[0][0].question,
     order_no: question[0][0].order_no,
     hint: question[0][0].hint,
@@ -1305,7 +1265,9 @@ export const addFileToAnswerEU = async (
     evidence_required: question[0][0].evidence_required,
     is_required: question[0][0].is_required,
     subtopic_id: question[0][0].subtopic_id,
-  } as QuestionStructEUModel & AnswerEUModel;
+  };
+
+  return result as unknown as QuestionStructEUModel & AnswerEUModel & { evidence_files: any[] };
 };
 
 export const updateQuestionEUByIdQuery = async (
@@ -1315,15 +1277,16 @@ export const updateQuestionEUByIdQuery = async (
       risksDelete: number[];
       risksMitigated: number[];
       delete?: number[];
+      evidence_files?: { id: string | number }[];
     }
   >,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<AnswerEU | null> => {
-  const updateQuestion: Partial<Record<keyof AnswerEU, any>> = {};
+  const updateQuestion: Partial<Record<keyof AnswerEU, any>> & { organizationId?: number } = {};
   const setClause: string[] = [];
 
-  // Handle answer and status
+  // Handle answer and status (no longer handling evidence_files JSONB)
   ["answer", "status"].forEach((f) => {
     if (question[f as keyof AnswerEU] !== undefined) {
       updateQuestion[f as keyof AnswerEU] = question[f as keyof AnswerEU];
@@ -1334,117 +1297,56 @@ export const updateQuestionEUByIdQuery = async (
     }
   });
 
-  // Handle evidence_files: merge existing files with new ones, remove deleted ones
-  const hasFileOperations =
-    question.evidence_files !== undefined || question.delete !== undefined;
-
-  if (hasFileOperations) {
-    // Get existing evidence files
-    const existingFilesResult = await sequelize.query(
-      `SELECT evidence_files FROM "${tenant}".answers_eu WHERE id = :id`,
-      {
-        replacements: { id },
-        mapToModel: true,
-        model: AnswerEUModel,
-        transaction,
-      }
-    );
-
-    let currentEvidenceFiles: any[] = [];
-    // Access pattern matches existing code at line 938: files[0].evidence_files
-    // With mapToModel: true, result[0] appears to be the model instance directly (not an array)
-    // This matches the pattern used in ISO27001: files[0].evidence_links
-    if (existingFilesResult[0]) {
-      const evidenceFilesData = (existingFilesResult[0] as any).evidence_files;
-
-      if (evidenceFilesData !== null && evidenceFilesData !== undefined) {
-        if (Array.isArray(evidenceFilesData)) {
-          currentEvidenceFiles = evidenceFilesData;
-        } else if (typeof evidenceFilesData === "string") {
-          try {
-            currentEvidenceFiles = JSON.parse(evidenceFilesData);
-          } catch {
-            currentEvidenceFiles = [];
-          }
-        } else {
-          currentEvidenceFiles = [evidenceFilesData];
-        }
-      }
-    }
-
-    // Remove deleted files
-    const filesToDelete = question.delete || [];
-    if (Array.isArray(filesToDelete) && filesToDelete.length > 0) {
-      currentEvidenceFiles = currentEvidenceFiles.filter(
-        (f: any) => !filesToDelete.includes(parseInt(f.id?.toString() || "0"))
-      );
-    }
-
-    // Add new uploaded files
-    // Note: question.evidence_files may be an empty array if only deletions occurred
-    if (
-      question.evidence_files !== undefined &&
-      Array.isArray(question.evidence_files)
-    ) {
-      currentEvidenceFiles = currentEvidenceFiles.concat(
-        question.evidence_files
-      );
-    }
-
-    // Update evidence_files in the query
-    updateQuestion.evidence_files = JSON.stringify(currentEvidenceFiles);
-    setClause.push(`evidence_files = :evidence_files`);
-  }
+  let answer: any;
 
   if (setClause.length === 0) {
-    // No fields to update, just return the existing answer
+    // No fields to update, just fetch the existing answer
     const result = await sequelize.query(
-      `SELECT * FROM "${tenant}".answers_eu WHERE id = :id`,
+      `SELECT * FROM answers_eu WHERE organization_id = :organizationId AND id = :id`,
       {
-        replacements: { id },
+        replacements: { organizationId, id },
         mapToModel: true,
         model: AnswerEUModel,
         transaction,
       }
     );
-    // With mapToModel: true, result is [ModelInstance[], number]
-    const answer =
+    answer =
       Array.isArray(result[0]) && result[0].length > 0
         ? result[0][0]
         : (result[0] as any);
-    return answer || null;
+    if (!answer) return null;
+  } else {
+    const query = `UPDATE answers_eu SET ${setClause.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+
+    updateQuestion.organizationId = organizationId;
+    updateQuestion.id = id;
+
+    const result = await sequelize.query(query, {
+      replacements: updateQuestion,
+      mapToModel: true,
+      model: AnswerEUModel,
+      transaction,
+    });
+    answer =
+      Array.isArray(result[0]) && result[0].length > 0
+        ? result[0][0]
+        : (result[0] as any);
   }
 
-  const query = `UPDATE "${tenant}".answers_eu SET ${setClause.join(", ")} WHERE id = :id RETURNING *;`;
-
-  updateQuestion.id = id;
-
-  const result = await sequelize.query(query, {
-    replacements: updateQuestion,
-    mapToModel: true,
-    model: AnswerEUModel,
-    // type: QueryTypes.UPDATE,
-    transaction,
-  });
-  // With mapToModel: true, result is [ModelInstance[], number]
-  // For a single UPDATE, result[0] is an array with one model instance
-  const answer =
-    Array.isArray(result[0]) && result[0].length > 0
-      ? result[0][0]
-      : (result[0] as any);
   (answer as any).dataValues.risks = [];
 
+  // Handle file operations via file_entity_links only
   // Create file entity links for new evidence files
   if (question.evidence_files && Array.isArray(question.evidence_files)) {
     for (const file of question.evidence_files) {
       const fileData = file as { id: string };
       await sequelize.query(
-        `INSERT INTO "${tenant}".file_entity_links
-          (file_id, framework_type, entity_type, entity_id, link_type, created_at)
-         VALUES (:fileId, 'eu_ai_act', 'assessment', :entityId, 'evidence', NOW())
+        `INSERT INTO file_entity_links
+          (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_at)
+         VALUES (:organizationId, :fileId, 'eu_ai_act', 'assessment', :entityId, 'evidence', NOW())
          ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
         {
-          replacements: { fileId: parseInt(fileData.id), entityId: id },
+          replacements: { organizationId, fileId: parseInt(fileData.id), entityId: id },
           transaction,
         }
       );
@@ -1455,20 +1357,34 @@ export const updateQuestionEUByIdQuery = async (
   if (question.delete && Array.isArray(question.delete)) {
     for (const fileId of question.delete) {
       await sequelize.query(
-        `DELETE FROM "${tenant}".file_entity_links
-         WHERE file_id = :fileId AND entity_type = 'assessment' AND entity_id = :entityId`,
+        `DELETE FROM file_entity_links
+         WHERE organization_id = :organizationId
+           AND file_id = :fileId
+           AND framework_type = 'eu_ai_act'
+           AND entity_type = 'assessment'
+           AND entity_id = :entityId`,
         {
-          replacements: { fileId, entityId: id },
+          replacements: { organizationId, fileId, entityId: id },
           transaction,
         }
       );
     }
   }
 
+  // Fetch current evidence files from file_entity_links
+  const evidenceFilesMap = await getEvidenceFilesForEntities(
+    organizationId,
+    "eu_ai_act",
+    "assessment",
+    [id],
+    "evidence"
+  );
+  (answer as any).dataValues.evidence_files = evidenceFilesMap.get(id) || [];
+
   const risks = (await sequelize.query(
-    `SELECT projects_risks_id FROM "${tenant}".answers_eu__risks WHERE answer_id = :id`,
+    `SELECT projects_risks_id FROM answers_eu__risks WHERE organization_id = :organizationId AND answer_id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       transaction,
     }
   )) as [AnswerEURisksModel[], number];
@@ -1482,18 +1398,18 @@ export const updateQuestionEUByIdQuery = async (
   );
 
   await sequelize.query(
-    `DELETE FROM "${tenant}".answers_eu__risks WHERE answer_id = :id;`,
+    `DELETE FROM answers_eu__risks WHERE organization_id = :organizationId AND answer_id = :id;`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       transaction,
     }
   );
   if (currentRisks.length > 0) {
     // Create parameterized placeholders for safe insertion
     const placeholders = currentRisks
-      .map((_, i) => `(:answer_id${i}, :projects_risks_id${i})`)
+      .map((_, i) => `(:organizationId, :answer_id${i}, :projects_risks_id${i})`)
       .join(", ");
-    const replacements: { [key: string]: any } = {};
+    const replacements: { [key: string]: any } = { organizationId };
 
     // Build replacement parameters safely
     currentRisks.forEach((risk, i) => {
@@ -1502,7 +1418,7 @@ export const updateQuestionEUByIdQuery = async (
     });
 
     const subClauseRisksInsertResult = (await sequelize.query(
-      `INSERT INTO "${tenant}".answers_eu__risks (answer_id, projects_risks_id) VALUES ${placeholders} RETURNING projects_risks_id;`,
+      `INSERT INTO answers_eu__risks (organization_id, answer_id, projects_risks_id) VALUES ${placeholders} RETURNING projects_risks_id;`,
       {
         replacements,
         transaction,
@@ -1518,38 +1434,63 @@ export const updateQuestionEUByIdQuery = async (
 
 export const deleteAssessmentEUByProjectIdQuery = async (
   projectFrameworkId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const assessmentId = (await sequelize.query(
-    `SELECT id FROM "${tenant}".assessments WHERE projects_frameworks_id = :projects_frameworks_id`,
+    `SELECT id FROM assessments WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
     {
-      replacements: { projects_frameworks_id: projectFrameworkId },
+      replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       transaction,
     }
   )) as [{ id: number }[], number];
   if (assessmentId[0].length === 0) {
     return false;
   }
+
+  // Get all answer IDs to clean up file_entity_links
+  const answerIds = (await sequelize.query(
+    `SELECT id FROM answers_eu WHERE organization_id = :organizationId AND assessment_id = :assessment_id`,
+    {
+      replacements: { organizationId, assessment_id: assessmentId[0][0].id },
+      transaction,
+    }
+  )) as [{ id: number }[], number];
+
+  // Clean up file_entity_links for answers (evidence files)
+  if (answerIds[0].length > 0) {
+    await sequelize.query(
+      `DELETE FROM file_entity_links
+       WHERE organization_id = :organizationId
+         AND framework_type = 'eu_ai_act'
+         AND entity_type = 'assessment'
+         AND entity_id IN (:entityIds)`,
+      {
+        replacements: { organizationId, entityIds: answerIds[0].map(a => a.id) },
+        transaction,
+      }
+    );
+  }
+
   // Delete answers_eu__risks first (FK: answer_id -> answers_eu.id)
   await sequelize.query(
-    `DELETE FROM "${tenant}".answers_eu__risks WHERE answer_id IN (SELECT id FROM "${tenant}".answers_eu WHERE assessment_id = :assessment_id)`,
+    `DELETE FROM answers_eu__risks WHERE organization_id = :organizationId AND answer_id IN (SELECT id FROM answers_eu WHERE organization_id = :organizationId AND assessment_id = :assessment_id)`,
     {
-      replacements: { assessment_id: assessmentId[0][0].id },
+      replacements: { organizationId, assessment_id: assessmentId[0][0].id },
       transaction,
     }
   );
   await sequelize.query(
-    `DELETE FROM "${tenant}".answers_eu WHERE assessment_id = :assessment_id`,
+    `DELETE FROM answers_eu WHERE organization_id = :organizationId AND assessment_id = :assessment_id`,
     {
-      replacements: { assessment_id: assessmentId[0][0].id },
+      replacements: { organizationId, assessment_id: assessmentId[0][0].id },
       transaction,
     }
   );
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".assessments WHERE id = :assessment_id RETURNING *`,
+    `DELETE FROM assessments WHERE organization_id = :organizationId AND id = :assessment_id RETURNING *`,
     {
-      replacements: { assessment_id: assessmentId[0][0].id },
+      replacements: { organizationId, assessment_id: assessmentId[0][0].id },
       mapToModel: true,
       model: AssessmentEUModel,
       type: QueryTypes.DELETE,
@@ -1561,34 +1502,59 @@ export const deleteAssessmentEUByProjectIdQuery = async (
 
 export const deleteComplianeEUByProjectIdQuery = async (
   projectFrameworkId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const controlIds = (await sequelize.query(
-    `SELECT id FROM "${tenant}".controls_eu WHERE projects_frameworks_id = :projects_frameworks_id`,
+    `SELECT id FROM controls_eu WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
     {
-      replacements: { projects_frameworks_id: projectFrameworkId },
+      replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       transaction,
     }
   )) as [{ id: number }[], number];
   if (controlIds[0].length === 0) {
     return false;
   }
+
+  // Get all subcontrol IDs to clean up file_entity_links
+  const subcontrolIds = (await sequelize.query(
+    `SELECT id FROM subcontrols_eu WHERE organization_id = :organizationId AND control_id IN (:controlIds)`,
+    {
+      replacements: { organizationId, controlIds: controlIds[0].map(c => c.id) },
+      transaction,
+    }
+  )) as [{ id: number }[], number];
+
+  // Clean up file_entity_links for subcontrols (evidence and feedback files)
+  if (subcontrolIds[0].length > 0) {
+    await sequelize.query(
+      `DELETE FROM file_entity_links
+       WHERE organization_id = :organizationId
+         AND framework_type = 'eu_ai_act'
+         AND entity_type = 'subcontrol'
+         AND entity_id IN (:entityIds)`,
+      {
+        replacements: { organizationId, entityIds: subcontrolIds[0].map(s => s.id) },
+        transaction,
+      }
+    );
+  }
+
   for (let control of controlIds[0]) {
     // Delete controls_eu__risks first (FK: control_id -> controls_eu.id)
     await sequelize.query(
-      `DELETE FROM "${tenant}".controls_eu__risks WHERE control_id = :control_id`,
-      { replacements: { control_id: control.id }, transaction }
+      `DELETE FROM controls_eu__risks WHERE organization_id = :organizationId AND control_id = :control_id`,
+      { replacements: { organizationId, control_id: control.id }, transaction }
     );
     await sequelize.query(
-      `DELETE FROM "${tenant}".subcontrols_eu WHERE control_id = :control_id`,
-      { replacements: { control_id: control.id }, transaction }
+      `DELETE FROM subcontrols_eu WHERE organization_id = :organizationId AND control_id = :control_id`,
+      { replacements: { organizationId, control_id: control.id }, transaction }
     );
   }
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".controls_eu WHERE projects_frameworks_id = :projects_frameworks_id RETURNING *`,
+    `DELETE FROM controls_eu WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id RETURNING *`,
     {
-      replacements: { projects_frameworks_id: projectFrameworkId },
+      replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       mapToModel: true,
       model: ControlEUModel,
       type: QueryTypes.DELETE,
@@ -1600,30 +1566,30 @@ export const deleteComplianeEUByProjectIdQuery = async (
 
 export const deleteProjectFrameworkEUQuery = async (
   projectId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM "${tenant}".projects_frameworks WHERE project_id = :project_id AND framework_id = 1`,
+    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1`,
     {
-      replacements: { project_id: projectId },
+      replacements: { organizationId, project_id: projectId },
       transaction,
     }
   )) as [{ id: number }[], number];
   const assessmentDeleted = await deleteAssessmentEUByProjectIdQuery(
     projectFrameworkId[0][0].id,
-    tenant,
+    organizationId,
     transaction
   );
   const complianceDeleted = await deleteComplianeEUByProjectIdQuery(
     projectFrameworkId[0][0].id,
-    tenant,
+    organizationId,
     transaction
   );
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".projects_frameworks WHERE project_id = :project_id AND framework_id = 1 RETURNING *`,
+    `DELETE FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1 RETURNING *`,
     {
-      replacements: { project_id: projectId },
+      replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: ProjectFrameworksModel,
       type: QueryTypes.DELETE,

@@ -5,24 +5,25 @@ import { TokenModel } from "../domain.layer/models/tokens/tokens.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 export const getNumberOfApiTokensQuery = async (
-  tenant: string,
+  organizationId: number,
 ) => {
   const numberOfTokens = await sequelize.query(
-    `SELECT COUNT(*) FROM "${tenant}".api_tokens;`
+    `SELECT COUNT(*) FROM api_tokens WHERE organization_id = :organizationId;`,
+    { replacements: { organizationId } }
   ) as [{ count: string }[], number];
   return parseInt(numberOfTokens[0][0].count, 10);
 }
 
 export const createApiTokenQuery = async (
   tokenPayload: IToken,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   // Check if a token with this name already exists
   const existingToken = await sequelize.query(
-    `SELECT id FROM "${tenant}".api_tokens WHERE name = :name;`,
+    `SELECT id FROM api_tokens WHERE organization_id = :organizationId AND name = :name;`,
     {
-      replacements: { name: tokenPayload.name },
+      replacements: { organizationId, name: tokenPayload.name },
       transaction
     }
   ) as [{ id: number }[], number];
@@ -32,12 +33,13 @@ export const createApiTokenQuery = async (
   }
 
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".api_tokens (
-      token, name, expires_at, created_by
+    `INSERT INTO api_tokens (
+      organization_id, token, name, expires_at, created_by
     ) VALUES (
-      :token, :name, :expires_at, :created_by
+      :organizationId, :token, :name, :expires_at, :created_by
     ) RETURNING *;`, {
     replacements: {
+      organizationId,
       token: tokenPayload.token,
       name: tokenPayload.name,
       expires_at: tokenPayload.expires_at,
@@ -49,20 +51,22 @@ export const createApiTokenQuery = async (
 }
 
 export const getApiTokensQuery = async (
-  tenant: string
+  organizationId: number
 ) => {
   const result = await sequelize.query(
-    `SELECT id, name, expires_at, created_by, created_at FROM "${tenant}".api_tokens ORDER BY created_at DESC;`,) as [TokenModel[], number];
+    `SELECT id, name, expires_at, created_by, created_at FROM api_tokens WHERE organization_id = :organizationId ORDER BY created_at DESC;`,
+    { replacements: { organizationId } }
+  ) as [TokenModel[], number];
   return result[0];
 }
 
 export const deleteApiTokenQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ) => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".api_tokens WHERE id = :id RETURNING *;`, {
-    replacements: { id },
+    `DELETE FROM api_tokens WHERE organization_id = :organizationId AND id = :id RETURNING *;`, {
+    replacements: { organizationId, id },
     mapToModel: true,
     model: TokenModel,
     type: QueryTypes.DELETE

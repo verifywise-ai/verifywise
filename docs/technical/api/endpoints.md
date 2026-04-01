@@ -751,6 +751,35 @@ All change history endpoints follow the same pattern:
 
 ---
 
+## Features to Frontend Pages Mapping
+
+| Feature | Backend Route | Frontend Page |
+|---------|--------------|---------------|
+| Dashboard | `/api/dashboard` | `/` |
+| Projects/Use Cases | `/api/projects` | `/project-view` |
+| Risk Management | `/api/projectRisks` | `/risk-management` |
+| Vendors | `/api/vendors`, `/api/vendorRisks` | `/vendors` |
+| Model Inventory | `/api/modelInventory`, `/api/modelRisks` | `/model-inventory` |
+| Datasets | `/api/datasets` | `/datasets` |
+| Policies | `/api/policies` | `/policies` |
+| Tasks | `/api/tasks` | `/tasks` |
+| Automations | `/api/automations` | `/automations` |
+| Incidents | `/api/ai-incident-managements` | `/ai-incident-managements` |
+| File Manager | `/api/files`, `/api/file-manager` | `/file-manager` |
+| Reporting | `/api/reporting` | `/reporting` |
+| Training Registry | `/api/training` | `/training` |
+| AI Trust Center | `/api/aiTrustCentre` | `/ai-trust-center` |
+| Plugins | `/api/plugins` | `/plugins` |
+| Settings | `/api/organizations` | `/settings` |
+| LLM Evals | `/api/deepeval` | `/evals` |
+| AI Detection | `/api/ai-detection` | `/ai-detection` |
+| Shadow AI | `/api/shadow-ai` | `/shadow-ai` |
+| Agent Discovery | `/api/agent-primitives` | `/agent-discovery` |
+| Approval Workflows | `/api/approval-workflows` | `/approval-workflows` |
+| Post-Market Monitoring | `/api/pmm` | `/monitoring` |
+
+---
+
 ## Key Files
 
 | File | Purpose |

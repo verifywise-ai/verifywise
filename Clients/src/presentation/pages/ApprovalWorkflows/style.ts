@@ -1,5 +1,6 @@
 import { Theme } from "@mui/material";
 import { CSSProperties } from "styled-components";
+import { brand, background } from "../../themes/palette";
 
 // Main page styles (index.tsx)
 export const workflowMainStack = {
@@ -17,12 +18,12 @@ export const workflowRowHover = {
 
 export const workflowTableRowDeletingStyle = {
     opacity: 0.6,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: `${background.surface}`,
 };
 
 export const addNewWorkflowButton = {
-    backgroundColor: "#13715B",
-    border: "1px solid #13715B",
+    backgroundColor: `${brand.primary}`,
+    border: `1px solid ${brand.primary}`,
     gap: "8px",
 };
 
@@ -136,37 +137,37 @@ export const headerLabelStyle = (isActive: boolean, theme?: Theme) => ({
 export const sortIconBoxStyle = (isActive: boolean, theme?: Theme) => ({
     display: "flex",
     alignItems: "center",
-    color: isActive && theme ? theme.palette.primary.main : "#9CA3AF",
+    color: isActive && theme ? theme.palette.primary.main : "text.disabled",
 });
 
 // Body cell styles
 export const bodyCellTitleStyle = (cellStyle: CSSProperties, isHighlighted: boolean) => ({
     ...cellStyle,
-    backgroundColor: isHighlighted ? "#f5f5f5" : "#fafafa",
+    backgroundColor: isHighlighted ? "background.surface" : "#fafafa",
 });
 
 export const bodyCellEntityStyle = (cellStyle: CSSProperties, isHighlighted: boolean) => ({
     ...cellStyle,
     width: "18%",
-    backgroundColor: isHighlighted ? "#f5f5f5" : "#ffffff",
+    backgroundColor: isHighlighted ? "background.surface" : "background.main",
 });
 
 export const bodyCellStepsStyle = (cellStyle: CSSProperties, isHighlighted: boolean) => ({
     ...cellStyle,
     width: "15%",
-    backgroundColor: isHighlighted ? "#f5f5f5" : "#ffffff",
+    backgroundColor: isHighlighted ? "background.surface" : "background.main",
 });
 
 export const bodyCellDateStyle = (cellStyle: CSSProperties, isHighlighted: boolean) => ({
     ...cellStyle,
     width: "22%",
-    backgroundColor: isHighlighted ? "#f5f5f5" : "#ffffff",
+    backgroundColor: isHighlighted ? "background.surface" : "background.main",
 });
 
 export const bodyCellActionsStyle = (cellStyle: CSSProperties) => ({
     ...cellStyle,
     width: "12%",
-    backgroundColor: "#ffffff",
+    backgroundColor: "background.main",
 });
 
 export const actionStackStyle = {

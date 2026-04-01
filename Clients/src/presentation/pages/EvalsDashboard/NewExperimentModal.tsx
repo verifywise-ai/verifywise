@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -514,8 +514,8 @@ export default function NewExperimentModal({
       const modelName = config.model.name;
       const modelProvider = config.model.accessMethod;
 
-      // Skip validation if user already acknowledged the warning
-      if (!apiKeyWarningAcknowledged && modelName && modelProvider !== "ollama" && modelProvider !== "huggingface") {
+      // Skip validation if user already acknowledged the warning, or if they provided a key inline
+      if (!apiKeyWarningAcknowledged && !config.model.apiKey && modelName && modelProvider !== "ollama" && modelProvider !== "huggingface") {
         try {
           const validation = await validateModel(modelName, modelProvider);
           if (!validation.valid) {
@@ -1701,6 +1701,38 @@ export default function NewExperimentModal({
                         ? `${selectedScorerIds.length} scorer${selectedScorerIds.length > 1 ? 's' : ''} selected. Only these will run during evaluation.`
                         : "No scorers selected. All enabled scorers will run if none are selected."}
                     </FormHelperText>
+                    {missingKeyProviders.length > 0 && (
+                      <Box
+                        sx={{
+                          mt: 1.5,
+                          p: 1.5,
+                          borderRadius: "8px",
+                          backgroundColor: palette.status.warning.bg,
+                          border: `1px solid ${palette.status.warning.text}`,
+                        }}
+                      >
+                        <Typography sx={{ fontSize: "12px", color: palette.status.warning.text }}>
+                          Missing API {missingKeyProviders.length > 1 ? "keys" : "key"} for{" "}
+                          <strong>
+                            {missingKeyProviders
+                              .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+                              .join(", ")}
+                          </strong>
+                          . Save the {missingKeyProviders.length > 1 ? "keys" : "key"} in{" "}
+                          <span
+                            onClick={() => window.open(`/evals/${projectId}#settings`, "_blank")}
+                            style={{
+                              textDecoration: "underline",
+                              cursor: "pointer",
+                              fontWeight: 600,
+                            }}
+                          >
+                            LLM Evals Settings
+                          </span>{" "}
+                          before running the experiment.
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
                 ) : (
                   <Box sx={{ py: 4, textAlign: "center", border: `1px dashed ${palette.border.dark}`, borderRadius: "8px" }}>
@@ -2684,6 +2716,30 @@ export default function NewExperimentModal({
     }
   };
 
+  // Providers required by selected scorers that have no saved API key in org settings.
+  // Self-hosted / Ollama scorers are excluded since they don't need a cloud key.
+  const missingKeyProviders = useMemo(() => {
+    if (judgeMode !== "scorer" && judgeMode !== "both") return [];
+    const scorersToCheck =
+      selectedScorerIds.length > 0
+        ? userScorers.filter((s) => selectedScorerIds.includes(s.id))
+        : userScorers;
+    const missing: string[] = [];
+    for (const scorer of scorersToCheck) {
+      const judgeModel = scorer.config?.judgeModel;
+      if (typeof judgeModel === "object" && judgeModel?.provider) {
+        const provider = judgeModel.provider.toLowerCase();
+        if (provider !== "self-hosted" && provider !== "ollama") {
+          const hasKey = configuredApiKeys.some((k) => k.provider === provider);
+          if (!hasKey && !missing.includes(provider)) {
+            missing.push(provider);
+          }
+        }
+      }
+    }
+    return missing;
+  }, [judgeMode, selectedScorerIds, userScorers, configuredApiKeys]);
+
   const canProceed = (() => {
     if (activeStep === 0) {
       // Step 1: Model validation
@@ -2718,9 +2774,10 @@ export default function NewExperimentModal({
     if (activeStep === 2) {
       // Step 3: Scorer / Judge validation
       if (judgeMode === "scorer") {
-        // Custom scorer only - can proceed even with no selection (all enabled scorers will run)
-        // But if there are no enabled scorers at all, can't proceed
-        return userScorers.length > 0;
+        // Custom scorer only - must have at least one scorer and all required API keys
+        if (userScorers.length === 0) return false;
+        if (missingKeyProviders.length > 0) return false;
+        return true;
       } else if (judgeMode === "standard") {
         // Standard judge only - must have provider and model (API key is from saved settings)
         const hasBase = !!(config.judgeLlm.provider && config.judgeLlm.model);
@@ -2730,8 +2787,9 @@ export default function NewExperimentModal({
         }
         return hasBase;
       } else {
-        // Both mode - can proceed if scorers exist AND standard judge configured
+        // Both mode - scorers exist, all scorer API keys present, AND standard judge configured
         const hasScorers = userScorers.length > 0;
+        if (missingKeyProviders.length > 0) return false;
         let hasJudge = !!(config.judgeLlm.provider && config.judgeLlm.model);
         if (config.judgeLlm.provider === "custom_api") {
           hasJudge = hasJudge && !!config.judgeLlm.endpointUrl;

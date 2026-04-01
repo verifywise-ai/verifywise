@@ -18,7 +18,6 @@ import {
   EntityGraphViewConfig,
 } from "../domain.layer/models/entityGraphViews/entityGraphViews.model";
 import {
-  ensureViewsTableExists,
   createViewQuery,
   getViewsByUserQuery,
   getViewByIdQuery,
@@ -53,7 +52,6 @@ export class EntityGraphViewsService {
    * @param {EntityGraphViewConfig} config - View configuration
    * @param {number} userId - User ID
    * @param {number} organizationId - Organization ID
-   * @param {string} tenantId - Tenant schema ID
    * @returns {Promise<EntityGraphViewsModel>} Created view
    * @throws {ValidationException} If validation fails
    */
@@ -61,15 +59,14 @@ export class EntityGraphViewsService {
     name: string,
     config: EntityGraphViewConfig,
     userId: number,
-    organizationId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<EntityGraphViewsModel> {
     logProcessing({
       description: "Starting EntityGraphViewsService.createView",
       functionName: "createView",
       fileName: "entityGraphViewsService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
@@ -103,14 +100,10 @@ export class EntityGraphViewsService {
         );
       }
 
-      // Ensure table exists
-      await ensureViewsTableExists(tenantId);
-
       // Check if user has reached the limit
       const viewCount = await getViewCountByUserQuery(
         userId,
-        organizationId,
-        tenantId
+        organizationId
       );
 
       if (viewCount >= MAX_VIEWS_PER_USER) {
@@ -130,7 +123,7 @@ export class EntityGraphViewsService {
       );
 
       // Save to database
-      const savedView = await createViewQuery(view, tenantId);
+      const savedView = await createViewQuery(view, organizationId);
 
       await logSuccess({
         eventType: "Create",
@@ -138,7 +131,7 @@ export class EntityGraphViewsService {
         functionName: "createView",
         fileName: "entityGraphViewsService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return savedView;
@@ -150,7 +143,7 @@ export class EntityGraphViewsService {
         fileName: "entityGraphViewsService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -163,27 +156,22 @@ export class EntityGraphViewsService {
    * @async
    * @param {number} userId - User ID
    * @param {number} organizationId - Organization ID
-   * @param {string} tenantId - Tenant schema ID
    * @returns {Promise<EntityGraphViewsModel[]>} Array of views
    */
   static async getViews(
     userId: number,
-    organizationId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<EntityGraphViewsModel[]> {
     logProcessing({
       description: "Starting EntityGraphViewsService.getViews",
       functionName: "getViews",
       fileName: "entityGraphViewsService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
-      // Ensure table exists
-      await ensureViewsTableExists(tenantId);
-
-      const views = await getViewsByUserQuery(userId, organizationId, tenantId);
+      const views = await getViewsByUserQuery(userId, organizationId);
 
       await logSuccess({
         eventType: "Read",
@@ -191,7 +179,7 @@ export class EntityGraphViewsService {
         functionName: "getViews",
         fileName: "entityGraphViewsService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return views;
@@ -203,7 +191,7 @@ export class EntityGraphViewsService {
         fileName: "entityGraphViewsService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -216,19 +204,16 @@ export class EntityGraphViewsService {
    * @async
    * @param {number} viewId - View ID
    * @param {number} userId - User ID (for permission check)
-   * @param {string} tenantId - Tenant schema ID
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<EntityGraphViewsModel | null>} View or null
    */
   static async getViewById(
     viewId: number,
     userId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<EntityGraphViewsModel | null> {
     try {
-      // Ensure table exists
-      await ensureViewsTableExists(tenantId);
-
-      const view = await getViewByIdQuery(viewId, tenantId);
+      const view = await getViewByIdQuery(viewId, organizationId);
 
       // Only return if user owns the view
       if (view && !view.isOwnedBy(userId)) {
@@ -250,7 +235,7 @@ export class EntityGraphViewsService {
    * @param {string | undefined} name - New name (optional)
    * @param {EntityGraphViewConfig | undefined} config - New config (optional)
    * @param {number} userId - User ID attempting update
-   * @param {string} tenantId - Tenant schema ID
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<EntityGraphViewsModel>} Updated view
    * @throws {BusinessLogicException} If user lacks permission
    */
@@ -259,14 +244,14 @@ export class EntityGraphViewsService {
     name: string | undefined,
     config: EntityGraphViewConfig | undefined,
     userId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<EntityGraphViewsModel> {
     logProcessing({
       description: `Starting EntityGraphViewsService.updateView for ID ${viewId}`,
       functionName: "updateView",
       fileName: "entityGraphViewsService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
@@ -298,11 +283,8 @@ export class EntityGraphViewsService {
         sanitizedConfig = configValidation.sanitized as EntityGraphViewConfig;
       }
 
-      // Ensure table exists
-      await ensureViewsTableExists(tenantId);
-
       // Fetch existing view
-      const existingView = await getViewByIdQuery(viewId, tenantId);
+      const existingView = await getViewByIdQuery(viewId, organizationId);
 
       if (!existingView) {
         throw new Error(`View with ID ${viewId} not found`);
@@ -322,7 +304,7 @@ export class EntityGraphViewsService {
         viewId,
         sanitizedName,
         sanitizedConfig,
-        tenantId
+        organizationId
       );
 
       if (!updatedView) {
@@ -335,7 +317,7 @@ export class EntityGraphViewsService {
         functionName: "updateView",
         fileName: "entityGraphViewsService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return updatedView;
@@ -347,7 +329,7 @@ export class EntityGraphViewsService {
         fileName: "entityGraphViewsService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }
@@ -360,29 +342,26 @@ export class EntityGraphViewsService {
    * @async
    * @param {number} viewId - View ID
    * @param {number} userId - User ID attempting deletion
-   * @param {string} tenantId - Tenant schema ID
+   * @param {number} organizationId - Organization ID
    * @returns {Promise<boolean>} True if deleted successfully
    * @throws {BusinessLogicException} If user lacks permission
    */
   static async deleteView(
     viewId: number,
     userId: number,
-    tenantId: string
+    organizationId: number
   ): Promise<boolean> {
     logProcessing({
       description: `Starting EntityGraphViewsService.deleteView for ID ${viewId}`,
       functionName: "deleteView",
       fileName: "entityGraphViewsService.ts",
       userId: userId,
-      tenantId: tenantId,
+      organizationId: organizationId,
     });
 
     try {
-      // Ensure table exists
-      await ensureViewsTableExists(tenantId);
-
       // Fetch existing view
-      const view = await getViewByIdQuery(viewId, tenantId);
+      const view = await getViewByIdQuery(viewId, organizationId);
 
       if (!view) {
         throw new Error(`View with ID ${viewId} not found`);
@@ -398,7 +377,7 @@ export class EntityGraphViewsService {
       }
 
       // Delete from database
-      const deleteCount = await deleteViewByIdQuery(viewId, tenantId);
+      const deleteCount = await deleteViewByIdQuery(viewId, organizationId);
 
       if (deleteCount === 0) {
         throw new Error(`Failed to delete view with ID ${viewId}`);
@@ -410,7 +389,7 @@ export class EntityGraphViewsService {
         functionName: "deleteView",
         fileName: "entityGraphViewsService.ts",
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
 
       return true;
@@ -422,7 +401,7 @@ export class EntityGraphViewsService {
         fileName: "entityGraphViewsService.ts",
         error: error as Error,
         userId: userId,
-        tenantId: tenantId,
+        organizationId: organizationId,
       });
       throw error;
     }

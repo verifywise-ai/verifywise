@@ -4,6 +4,7 @@ import { Copy, Plus, Trash2 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { ButtonToggle } from "../../../components/button-toggle";
 import CodeBlock from "../components/CodeBlock";
+import { brand, text, status } from "../../../themes/palette";
 
 // Code snippets
 const customizableButtonSnippets = {
@@ -133,12 +134,12 @@ const ButtonsSection: React.FC = () => {
           <SpecCard title="Border radius" value="4px" note="All buttons" onCopy={handleCopy} />
           <SpecCard title="Font size" value="13px" note="Medium size (default)" onCopy={handleCopy} />
           <SpecCard title="Font weight" value="500" note="Medium weight" onCopy={handleCopy} />
-          <SpecCard title="Primary color" value="#13715B" note="Main action buttons" onCopy={handleCopy} />
+          <SpecCard title="Primary color" value={brand.primary} note="Main action buttons" onCopy={handleCopy} />
           <SpecCard title="Primary hover" value="#0f604d" note="Hover state" onCopy={handleCopy} />
           <SpecCard title="Secondary color" value="#F4F4F4" note="Utility buttons (light bg)" onCopy={handleCopy} />
-          <SpecCard title="Error color" value="#D32F2F" note="Destructive actions" onCopy={handleCopy} />
-          <SpecCard title="Disabled bg" value="#E5E7EB" note="Disabled state" onCopy={handleCopy} />
-          <SpecCard title="Disabled text" value="#9CA3AF" note="Disabled text" onCopy={handleCopy} />
+          <SpecCard title="Error color" value={status.error.text} note="Destructive actions" onCopy={handleCopy} />
+          <SpecCard title="Disabled bg" value={status.default.border} note="Disabled state" onCopy={handleCopy} />
+          <SpecCard title="Disabled text" value={text.disabled} note="Disabled text" onCopy={handleCopy} />
           <SpecCard title="Transition" value="0.2s ease" note="All interactions" onCopy={handleCopy} />
           <SpecCard title="Text transform" value="none" note="No uppercase" onCopy={handleCopy} />
         </SpecGrid>
@@ -323,11 +324,11 @@ const ButtonsSection: React.FC = () => {
         </Typography>
 
         <Box sx={{ display: "flex", gap: "16px", flexWrap: "wrap", mb: "24px" }}>
-          <ColorSwatch label="Primary" color="#13715B" hoverColor="#0f604d" onCopy={handleCopy} />
+          <ColorSwatch label="Primary" color={brand.primary} hoverColor="#0f604d" onCopy={handleCopy} />
           <ColorSwatch label="Secondary" color="#F4F4F4" hoverColor="#e3e3e3" onCopy={handleCopy} />
-          <ColorSwatch label="Success" color="#138A5E" hoverColor="#0F5A47" onCopy={handleCopy} />
+          <ColorSwatch label="Success" color={status.success.text} hoverColor={brand.primaryHover} onCopy={handleCopy} />
           <ColorSwatch label="Warning" color="#795548" hoverColor="#5D4037" onCopy={handleCopy} />
-          <ColorSwatch label="Error" color="#D32F2F" hoverColor="#B71C1C" onCopy={handleCopy} />
+          <ColorSwatch label="Error" color={status.error.text} hoverColor="#B71C1C" onCopy={handleCopy} />
           <ColorSwatch label="Info" color="#1565C0" hoverColor="#0D47A1" onCopy={handleCopy} />
         </Box>
 

@@ -74,7 +74,7 @@ export async function uploadDatasetFile(req: Request, res: Response) {
 
     const savedDataset = await createNewDatasetQuery(
       dataset,
-      req.tenantId!,
+      req.organizationId!,
       metadata.models || [],
       metadata.projects || [],
       transaction
@@ -85,7 +85,7 @@ export async function uploadDatasetFile(req: Request, res: Response) {
       req.file,
       req.userId!,
       req.organizationId!,
-      req.tenantId!,
+      req.organizationId!,
       {
         source: "dataset_bulk_upload",
         transaction,
@@ -102,7 +102,7 @@ export async function uploadDatasetFile(req: Request, res: Response) {
         link_type: "source_data",
         created_by: req.userId,
       },
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -110,7 +110,7 @@ export async function uploadDatasetFile(req: Request, res: Response) {
     await recordDatasetCreation(
       savedDataset.id!,
       req.userId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 

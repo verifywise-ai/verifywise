@@ -10,11 +10,11 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'AI Detection scans GitHub repositories to identify AI and machine learning libraries in your codebase. It helps organizations discover "shadow AI" — AI usage that may not be formally documented or approved — and supports compliance efforts by maintaining an inventory of AI technologies.',
+      text: 'AI Detection scans GitHub repositories for AI and machine learning usage in your codebase. It finds "shadow AI" (AI usage that hasn\'t been formally documented or approved) and keeps an inventory of detected AI technologies.',
     },
     {
       type: 'paragraph',
-      text: 'The scanner analyzes source files, dependency manifests, CI/CD workflows, container definitions, and model files to detect over 80 AI/ML frameworks and infrastructure patterns including OpenAI, TensorFlow, PyTorch, LangChain, and more. Results are stored for audit purposes and can be reviewed at any time from the scan results.',
+      text: 'The scanner checks source files, dependency manifests, CI/CD workflows, container definitions, and model files against 100+ AI/ML patterns (OpenAI, TensorFlow, PyTorch, LangChain, etc.). A 2-phase LLM vulnerability pipeline also checks for the 10 OWASP LLM Top 10 vulnerability types. All results are stored and can be reviewed from the scan results page.',
     },
     {
       type: 'heading',
@@ -45,7 +45,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Once initiated, the scan proceeds through several stages. A progress indicator shows real-time status including the current file being analyzed, total files processed, and findings discovered.',
+      text: 'The scan runs through a few stages. A progress indicator shows which file is being analyzed, how many files have been processed, and how many findings have been found so far.',
     },
     {
       type: 'bullet-list',
@@ -73,17 +73,17 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The scan page displays key statistics about your AI Detection activity. These cards provide a quick overview of your scanning efforts and findings.',
+      text: 'The scan page shows statistics about your AI Detection activity in card form:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Total scans', text: 'Number of scans performed, with a count of completed scans' },
         { bold: 'Repositories', text: 'Unique repositories that have been scanned' },
-        { bold: 'Total findings', text: 'Combined count of all AI/ML detections across all scans' },
+        { bold: 'Total findings', text: 'Total AI/ML detections across all scans' },
         { bold: 'Libraries', text: 'AI/ML library imports and dependencies detected' },
         { bold: 'API calls', text: 'Direct API calls to AI providers (OpenAI, Anthropic, etc.)' },
-        { bold: 'Security issues', text: 'Hardcoded secrets and model file vulnerabilities combined' },
+        { bold: 'Security issues', text: 'Hardcoded secrets and model file vulnerabilities' },
       ],
     },
     {
@@ -99,12 +99,13 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Scan results are organized into eight tabs covering different aspects of AI/ML usage in your codebase:',
+      text: 'Scan results are organized into nine tabs covering different aspects of AI/ML usage in your codebase:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Libraries', text: 'Detected AI/ML frameworks and packages' },
+        { bold: 'Vulnerabilities', text: 'OWASP LLM Top 10 vulnerability findings detected via 2-phase LLM analysis' },
         { bold: 'API calls', text: 'Direct integrations with AI provider APIs' },
         { bold: 'Models', text: 'References to AI/ML model files and pre-trained models' },
         { bold: 'RAG', text: 'Retrieval-Augmented Generation components and vector databases' },
@@ -122,7 +123,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Libraries tab displays all detected AI/ML technologies. Each finding shows the library name, provider, risk level, confidence level, and number of files where it was found. Click any row to expand and view specific file paths and line numbers. Detection covers source code imports, dependency manifests, Dockerfiles, and docker-compose configurations.',
+      text: 'The Libraries tab lists all detected AI/ML technologies. Each row shows the library name, provider, risk level, confidence, and file count. Click a row to see specific file paths and line numbers. The scanner checks source imports, dependency manifests, Dockerfiles, and docker-compose files.',
     },
     {
       type: 'paragraph',
@@ -131,9 +132,9 @@ export const scanningContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'High risk', text: 'Data sent to external cloud APIs. Risk of data leakage, vendor lock-in, and compliance violations.' },
-        { bold: 'Medium risk', text: 'Framework that can connect to cloud APIs depending on configuration. Review usage to assess actual risk.' },
-        { bold: 'Low risk', text: 'Local processing only. Data stays on your infrastructure with minimal external exposure.' },
+        { bold: 'High risk', text: 'Data is sent to external cloud APIs. Potential for data leakage and compliance issues.' },
+        { bold: 'Medium risk', text: 'Can connect to cloud APIs depending on how it\'s configured. Check your usage.' },
+        { bold: 'Low risk', text: 'Runs locally. Data stays on your infrastructure.' },
       ],
     },
     {
@@ -143,9 +144,9 @@ export const scanningContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'High', text: 'Direct, unambiguous match such as explicit imports or dependency declarations' },
-        { bold: 'Medium', text: 'Likely match with some ambiguity, such as generic utility imports' },
-        { bold: 'Low', text: 'Possible match requiring manual verification' },
+        { bold: 'High', text: 'Direct match, like an explicit import or dependency declaration' },
+        { bold: 'Medium', text: 'Likely match but with some ambiguity (generic utility imports, etc.)' },
+        { bold: 'Low', text: 'Possible match; needs manual verification' },
       ],
     },
     {
@@ -156,7 +157,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each library finding can be assigned a governance status to track review progress. Click the status icon on any finding row to set or change its status:',
+      text: 'You can assign a governance status to any library finding to track your review. Click the status icon on a row to change it:',
     },
     {
       type: 'bullet-list',
@@ -174,13 +175,51 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'vulnerabilities-tab',
+      level: 3,
+      text: 'Vulnerabilities tab',
+    },
+    {
+      type: 'paragraph',
+      text: 'The Vulnerabilities tab shows findings from the 2-phase LLM vulnerability pipeline. Phase 1 runs a regex pre-filter against known patterns. Phase 2 sends candidates to an LLM for analysis using type-specific rubric prompts.',
+    },
+    {
+      type: 'paragraph',
+      text: 'It covers all 10 OWASP LLM Top 10 vulnerability types:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'LLM01: Prompt injection', text: 'Untrusted input concatenated into prompts without sanitization' },
+        { bold: 'LLM02: Insecure output handling', text: 'LLM output passed to dangerous sinks (eval, SQL, shell commands)' },
+        { bold: 'LLM03: Training data poisoning', text: 'Insecure deserialization or untrusted model sources' },
+        { bold: 'LLM04: Model denial of service', text: 'Missing token limits, timeouts, or rate limiting on LLM calls' },
+        { bold: 'LLM05: Supply chain', text: 'Unpinned dependency versions, untrusted model URLs, missing checksum validation' },
+        { bold: 'LLM06: Sensitive info disclosure', text: 'PII, session tokens, or credentials passed to LLM context' },
+        { bold: 'LLM07: Insecure plugin design', text: 'Tools or plugins that accept raw input without validation or schemas' },
+        { bold: 'LLM08: Excessive agency', text: 'Agents with broad tool access, no human-in-the-loop, auto-approve patterns' },
+        { bold: 'LLM09: Overreliance', text: 'No human review, no confidence thresholds, silent failures without fallbacks' },
+        { bold: 'LLM10: Model theft', text: 'Model files in public directories or served without authentication' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Each finding shows severity, confidence, a description, and a suggested fix. Findings that share file paths with library, agent, or security findings get a cross-reference badge so you can see related detections together.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'LLM vulnerability detection needs an LLM key configured and vulnerability scanning enabled in **AI Detection → Settings**. Without it, only the regex pre-filter runs, and findings may be less accurate.',
+    },
+    {
+      type: 'heading',
       id: 'api-calls-tab',
       level: 3,
       text: 'API Calls tab',
     },
     {
       type: 'paragraph',
-      text: 'The API Calls tab shows direct integrations with AI provider APIs detected in your codebase. These represent active usage of AI models and services, such as calls to OpenAI, Anthropic, Google AI, and other providers.',
+      text: 'The API Calls tab shows direct calls to AI provider APIs found in your code, like OpenAI, Anthropic, and Google AI.',
     },
     {
       type: 'paragraph',
@@ -208,7 +247,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Secrets tab identifies hardcoded API keys and credentials in your codebase. These should be moved to environment variables or a secrets manager to prevent accidental exposure.',
+      text: 'The Secrets tab finds hardcoded API keys and credentials in your code. Move these to environment variables or a secrets manager.',
     },
     {
       type: 'paragraph',
@@ -227,7 +266,7 @@ export const scanningContent: ArticleContent = {
       type: 'callout',
       variant: 'warning',
       title: 'Security risk',
-      text: 'Hardcoded secrets in source code can be exposed if the repository is made public or accessed by unauthorized users. Rotate any exposed credentials immediately.',
+      text: 'Hardcoded secrets get exposed if the repository goes public or is accessed by someone it shouldn\'t be. Rotate any exposed credentials right away.',
     },
     {
       type: 'heading',
@@ -237,7 +276,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Security tab shows findings from model file analysis. Serialized model files (`.pkl`, `.pt`, `.h5`) can contain malicious code that executes when loaded. The scanner detects dangerous patterns such as system command execution, network access, and code injection.',
+      text: 'The Security tab shows findings from model file analysis. Serialized model files (`.pkl`, `.pt`, `.h5`) can contain malicious code that runs when loaded. The scanner looks for system command execution, network access, and code injection patterns.',
     },
     {
       type: 'paragraph',
@@ -246,17 +285,17 @@ export const scanningContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Critical', text: 'Direct code execution risk — immediate investigation required' },
+        { bold: 'Critical', text: 'Direct code execution risk. Investigate immediately.' },
         { bold: 'High', text: 'Indirect execution or data exfiltration risk' },
         { bold: 'Medium', text: 'Potentially dangerous depending on context' },
-        { bold: 'Low', text: 'Informational or minimal risk' },
+        { bold: 'Low', text: 'Informational, minimal risk' },
       ],
     },
     {
       type: 'callout',
       variant: 'warning',
       title: 'Security risk',
-      text: 'Model files flagged with Critical severity should not be loaded until verified. Malicious models can execute arbitrary code on your system when loaded with standard ML frameworks.',
+      text: 'Don\'t load model files flagged as Critical until you\'ve verified them. Malicious models can run arbitrary code on your system when loaded with standard ML frameworks.',
     },
     {
       type: 'image',
@@ -272,7 +311,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Models tab displays references to AI/ML model files detected in your codebase. This includes pre-trained models, model checkpoints, and model loading patterns.',
+      text: 'The Models tab lists AI/ML model file references found in your code: pre-trained models, checkpoints, and model loading patterns.',
     },
     {
       type: 'bullet-list',
@@ -290,7 +329,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The RAG (Retrieval-Augmented Generation) tab identifies components used for building RAG systems. These systems combine retrieval mechanisms with generative AI models.',
+      text: 'The RAG (Retrieval-Augmented Generation) tab lists components used in RAG systems, which combine retrieval with generative AI.',
     },
     {
       type: 'bullet-list',
@@ -308,7 +347,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Agents tab shows AI agent frameworks and autonomous system components. AI agents can execute multi-step tasks, use tools, and make decisions independently.',
+      text: 'The Agents tab shows AI agent frameworks and autonomous system components found in the repo.',
     },
     {
       type: 'bullet-list',
@@ -322,7 +361,7 @@ export const scanningContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'AI agents may have elevated access to external systems and data. Review agent implementations carefully for security and compliance implications.',
+      text: 'AI agents often have access to external systems and data. Review agent implementations for security and compliance issues.',
     },
     {
       type: 'heading',
@@ -332,7 +371,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Compliance tab maps your scan findings to EU AI Act requirements and generates a compliance checklist. This helps identify regulatory obligations based on the AI technologies detected in your codebase.',
+      text: 'The Compliance tab maps scan findings to EU AI Act requirements and generates a checklist based on the AI technologies found in your code.',
     },
     {
       type: 'paragraph',
@@ -356,7 +395,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Beyond source code, the scanner also detects AI usage in infrastructure and CI/CD configuration files. This helps surface AI technologies that may not appear in application code but are present in deployment pipelines and container definitions.',
+      text: 'The scanner also checks infrastructure and CI/CD config files, catching AI usage that lives in deployment pipelines and containers rather than application code.',
     },
     {
       type: 'heading',
@@ -366,7 +405,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'YAML workflow files (.yml, .yaml) are scanned for references to AI services. The scanner detects GitHub Actions that use AI provider actions and secrets references such as OPENAI_API_KEY, ANTHROPIC_API_KEY, and similar tokens in workflow environment variables.',
+      text: 'YAML workflow files (.yml, .yaml) are checked for AI service references: GitHub Actions that call AI providers, and secrets like OPENAI_API_KEY or ANTHROPIC_API_KEY in workflow environment variables.',
     },
     {
       type: 'heading',
@@ -395,7 +434,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The scanner detects Model Context Protocol (MCP) configuration files such as mcp.json and claude_desktop_config.json. These files define MCP servers that extend AI assistants with external tools and data sources, and are flagged as agent-type findings.',
+      text: 'The scanner picks up Model Context Protocol (MCP) config files like mcp.json and claude_desktop_config.json. These define MCP servers that give AI assistants access to external tools and data, so they\'re flagged as agent-type findings.',
     },
     {
       type: 'heading',
@@ -405,21 +444,21 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Completed scans offer several features for analysis and reporting:',
+      text: 'After a scan completes, you can:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Risk scoring', text: 'Calculate an AI Governance Risk Score (AGRS) that evaluates findings across five risk dimensions. Optionally enable LLM-enhanced analysis for narrative summaries, recommendations, and suggested risks that can be added to your risk register.' },
-        { bold: 'View graph', text: 'Opens an interactive dependency graph showing relationships between AI components. Nodes represent findings and edges show inferred dependencies based on shared files and providers.' },
-        { bold: 'Export AI-BOM', text: 'Downloads the scan results as an AI Bill of Materials (AI-BOM) in JSON format. The AI-BOM follows a CycloneDX-inspired structure and includes all detected components, their providers, risk levels, and file locations.' },
+        { bold: 'Risk scoring', text: 'Calculate an AI Governance Risk Score (AGRS) across 5 risk dimensions. You can also enable LLM-enhanced analysis for written summaries, recommendations, and suggested risks to add to your risk register.' },
+        { bold: 'View graph', text: 'Open an interactive dependency graph. Nodes are findings, edges are inferred dependencies based on shared files and providers.' },
+        { bold: 'Export AI-BOM', text: 'Download scan results as an AI Bill of Materials (AI-BOM) in JSON. The format is CycloneDX-inspired and includes all detected components, providers, risk levels, and file locations.' },
       ],
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'AI-BOM for compliance',
-      text: 'The AI-BOM export provides a structured inventory of AI components suitable for regulatory submissions, vendor assessments, and internal governance documentation.',
+      text: 'The AI-BOM export gives you a structured inventory of AI components you can use for regulatory submissions, vendor assessments, or internal documentation.',
     },
     {
       type: 'heading',
@@ -429,13 +468,13 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Security findings include industry-standard references to help with compliance reporting:',
+      text: 'Security findings include standard reference IDs for compliance reporting:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'CWE', text: 'Common Weakness Enumeration — industry standard for software security weaknesses (e.g., CWE-502 for deserialization vulnerabilities)' },
-        { bold: 'OWASP ML Top 10', text: 'OWASP Machine Learning Security Top 10 — identifies critical security risks in ML systems (e.g., ML06 for AI Supply Chain Attacks)' },
+        { bold: 'CWE', text: 'Common Weakness Enumeration, the standard catalog for software security weaknesses (e.g., CWE-502 for deserialization)' },
+        { bold: 'OWASP ML Top 10', text: 'OWASP Machine Learning Security Top 10, covering the top ML security risks (e.g., ML06 for AI Supply Chain Attacks)' },
       ],
     },
     {

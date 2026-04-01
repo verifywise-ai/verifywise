@@ -30,3 +30,14 @@ export async function deleteLLMKey(id: string): Promise<any> {
   const response = await apiServices.delete(`/llm-keys/${id}`);
   return response;
 }
+
+export interface LLMKeyStatus {
+  hasKeys: boolean;
+  keyCount: number;
+  providers: string[];
+}
+
+export async function getLLMKeyStatus(): Promise<LLMKeyStatus> {
+  const response = await apiServices.get("/llm-keys/status");
+  return (response.data as any).data as LLMKeyStatus;
+}

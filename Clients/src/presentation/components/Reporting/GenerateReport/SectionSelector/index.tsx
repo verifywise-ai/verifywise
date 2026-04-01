@@ -12,17 +12,19 @@ import {
   Collapse,
   useTheme,
 } from "@mui/material";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 import {
   getAvailableSections,
   ReportSectionGroup,
 } from "../constants";
+import { brand } from "../../../../themes/palette";
 
 interface SectionSelectorProps {
   frameworkId: number;
   isOrganizational: boolean;
   selection: Record<string, boolean>;
   onSelectionChange: (selection: Record<string, boolean>) => void;
+  aiEnhanced?: boolean;
 }
 
 const SectionSelector: React.FC<SectionSelectorProps> = ({
@@ -30,6 +32,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
   isOrganizational,
   selection,
   onSelectionChange,
+  aiEnhanced = false,
 }) => {
   const theme = useTheme();
   const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>({
@@ -137,10 +140,10 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
     minWidth: "20px",
     minHeight: "20px",
     "&.Mui-checked": {
-      color: "#13715B",
+      color: `${brand.primary}`,
     },
     "&.MuiCheckbox-indeterminate": {
-      color: "#13715B",
+      color: `${brand.primary}`,
     },
     "& .MuiSvgIcon-root": {
       width: "16px",
@@ -268,9 +271,15 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
                         fontSize: "13px",
                         fontWeight: 400,
                         color: theme.palette.text.primary,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.5,
                       }}
                     >
                       {section.label}
+                      {aiEnhanced && (
+                        <Sparkles size={12} color={brand.primary} />
+                      )}
                     </Typography>
                   </Box>
                 ))}

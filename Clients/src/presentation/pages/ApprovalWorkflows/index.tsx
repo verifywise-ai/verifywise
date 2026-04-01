@@ -13,6 +13,8 @@ import { ApprovalStatus } from "../../../domain/enums/aiApprovalWorkflow.enum";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { SearchBox } from "../../components/Search";
+import { ColumnSelector } from "../../components/Table/ColumnSelector";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import {
     getAllApprovalWorkflows,
     getApprovalWorkflowById,
@@ -20,6 +22,21 @@ import {
     updateApprovalWorkflow,
     deleteApprovalWorkflow,
 } from "../../../application/repository/approvalWorkflow.repository";
+
+type ApprovalWorkflowColumnKey =
+    | "workflow_title"
+    | "entity_name"
+    | "steps"
+    | "date_updated"
+    | "actions";
+
+const APPROVAL_WORKFLOW_TABLE_COLUMNS: ColumnConfig<ApprovalWorkflowColumnKey>[] = [
+    { key: "workflow_title", label: "Title", defaultVisible: true, alwaysVisible: true },
+    { key: "entity_name", label: "Entity", defaultVisible: true },
+    { key: "steps", label: "Steps count", defaultVisible: true },
+    { key: "date_updated", label: "Date updated", defaultVisible: true },
+    { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
 
 const ApprovalWorkflows: React.FC = () => {
 
@@ -29,6 +46,17 @@ const ApprovalWorkflows: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [isNewWorkflowModalOpen, setIsNewWorkflowModalOpen] = useState(false);
     const [archivedId, setArchivedId] = useState<string | null>(null);
+
+    // Column visibility
+    const {
+        visibleColumns: workflowVisibleColumns,
+        allColumns: allWorkflowColumns,
+        toggleColumn: toggleWorkflowColumn,
+        resetToDefaults: resetWorkflowColumns,
+    } = useColumnVisibility({
+        tableId: "approval-workflows-table",
+        columns: APPROVAL_WORKFLOW_TABLE_COLUMNS,
+    });
 
 
     // FilterBy - Filter columns configuration
@@ -286,6 +314,12 @@ const ApprovalWorkflows: React.FC = () => {
                             columns={workflowFilterColumns}
                             onFilterChange={handleWorkflowFilterChange}
                         />
+                        <ColumnSelector
+                            columns={allWorkflowColumns}
+                            visibleColumns={workflowVisibleColumns}
+                            onToggleColumn={toggleWorkflowColumn}
+                            onResetToDefaults={resetWorkflowColumns}
+                        />
                         <SearchBox
                             placeholder="Search workflows..."
                             value={searchTerm}
@@ -311,6 +345,7 @@ const ApprovalWorkflows: React.FC = () => {
                     onEdit={handleEditWorkflowClick}
                     onArchive={handleArchiveWorkflow}
                     archivedId={archivedId}
+                    visibleColumns={workflowVisibleColumns}
                 />
             </Stack>
             <CreateNewApprovalWorkflow

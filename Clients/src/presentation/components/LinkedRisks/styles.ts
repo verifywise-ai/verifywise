@@ -1,5 +1,6 @@
+import { brand, text, background } from "../../themes/palette";
 export const textfieldStyle = {
-  backgroundColor: "#FFFFFF",
+  backgroundColor: `${background.main}`,
   "& input": {
     padding: "0 14px",
   },
@@ -8,11 +9,11 @@ export const textfieldStyle = {
 export const styles = {
   textBase : {
     fontSize: "13px", 
-    color: "#475467"
+    color: `${text.tertiary}`
   },
   textTitle : {
     fontSize: 16, 
-    color: "#344054", 
+    color: `${text.secondary}`, 
     fontWeight: "bold"
   },
   container: {
@@ -38,19 +39,19 @@ export const styles = {
     marginBottom: "24px"
   },
   clearIconStyle: {
-    color: "#98A2B3", 
+    color: `${text.muted}`, 
     cursor: "pointer"
   },
   CustomizableButton: {
     width: { xs: "100%", sm: 160 },
-    backgroundColor: "#13715B",
-    color: "#fff",
-    border: "1px solid #13715B",
+    backgroundColor: `${brand.primary}`,
+    color: `${background.main}`,
+    border: `1px solid ${brand.primary}`,
     gap: 2,
   },
   cancelBtn: {
     fontSize: "13px", 
-    color: "#475467",
+    color: `${text.tertiary}`,
     marginRight: "27px"
   }
 }

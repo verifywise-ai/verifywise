@@ -3,6 +3,7 @@ import { Box, Typography, Stack } from "@mui/material";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { UserPlus, Settings, Shield } from "lucide-react";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
+import { text, background, status } from "../../../themes/palette";
 
 const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
   const setupTasks = [
@@ -58,7 +59,7 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
             left: "50px",
             fontWeight: 600,
             fontSize: "24px",
-            color: "#FFFFFF",
+            color: `${background.main}`,
           }}
         >
           Set up your organization
@@ -69,7 +70,7 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
         <Typography
           sx={{
             fontSize: "14px",
-            color: "#667085",
+            color: `${text.icon}`,
             marginBottom: 3,
             lineHeight: 1.6,
           }}
@@ -85,7 +86,7 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
             sx={{
               padding: 3,
               backgroundColor: "white",
-              border: "2px solid #E5E7EB",
+              border: `2px solid ${status.default.border}`,
               borderRadius: "4px",
               transition: "all 0.2s",
               "&:hover": {
@@ -124,13 +125,13 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
                   <Typography
                     sx={{
                       fontSize: "15px",
-                      color: "#6B7280",
+                      color: "status.default.text",
                     }}
                   >
                     ({task.hint})
                   </Typography>
                 </Stack>
-                <Typography sx={{ fontSize: "13px", color: "#6B7280" }}>
+                <Typography sx={{ fontSize: "13px", color: "status.default.text" }}>
                   {task.description}
                 </Typography>
               </Box>

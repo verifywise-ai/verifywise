@@ -6,15 +6,16 @@ import { ApprovalStepApproversModel } from "../domain.layer/models/approvalWorkf
 import { EntityType } from "../domain.layer/enums/approval-workflow.enum";
 
 /**
- * Get all approval workflows for a tenant
+ * Get all approval workflows for an organization
  */
 export const getAllApprovalWorkflowsQuery = async (
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ): Promise<ApprovalWorkflowModel[]> => {
   const workflows = await sequelize.query(
-    `SELECT * FROM "${tenantId}".approval_workflows WHERE is_active = true ORDER BY created_at DESC`,
+    `SELECT * FROM approval_workflows WHERE organization_id = :organizationId AND is_active = true ORDER BY created_at DESC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: ApprovalWorkflowModel,
       ...(transaction && { transaction }),
@@ -23,7 +24,7 @@ export const getAllApprovalWorkflowsQuery = async (
 
   // Load steps for each workflow
   for (const workflow of workflows) {
-    const steps = await getWorkflowStepsQuery(workflow.id!, tenantId, transaction);
+    const steps = await getWorkflowStepsQuery(workflow.id!, organizationId, transaction);
     workflow.setDataValue('steps', steps);
   }
 
@@ -35,13 +36,13 @@ export const getAllApprovalWorkflowsQuery = async (
  */
 export const getApprovalWorkflowByIdQuery = async (
   workflowId: number,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ): Promise<ApprovalWorkflowModel | null> => {
   const workflows = await sequelize.query(
-    `SELECT * FROM "${tenantId}".approval_workflows WHERE id = :workflowId`,
+    `SELECT * FROM approval_workflows WHERE organization_id = :organizationId AND id = :workflowId`,
     {
-      replacements: { workflowId },
+      replacements: { organizationId, workflowId },
       mapToModel: true,
       model: ApprovalWorkflowModel,
       ...(transaction && { transaction }),
@@ -55,7 +56,7 @@ export const getApprovalWorkflowByIdQuery = async (
   const workflow = workflows[0];
 
   // Load steps
-  const steps = await getWorkflowStepsQuery(workflowId, tenantId, transaction);
+  const steps = await getWorkflowStepsQuery(workflowId, organizationId, transaction);
 
   // Set steps on workflow instance
   workflow.setDataValue('steps', steps);
@@ -68,15 +69,16 @@ export const getApprovalWorkflowByIdQuery = async (
  */
 export const getWorkflowStepsQuery = async (
   workflowId: number,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ): Promise<ApprovalWorkflowStepModel[]> => {
   const steps = await sequelize.query(
-    `SELECT * FROM "${tenantId}".approval_workflow_steps
-     WHERE workflow_id = :workflowId
+    `SELECT * FROM approval_workflow_steps
+     WHERE organization_id = :organizationId
+       AND workflow_id = :workflowId
      ORDER BY step_number ASC`,
     {
-      replacements: { workflowId },
+      replacements: { organizationId, workflowId },
       mapToModel: true,
       model: ApprovalWorkflowStepModel,
       ...(transaction && { transaction }),
@@ -86,9 +88,9 @@ export const getWorkflowStepsQuery = async (
   // Load approvers for each step
   for (const step of steps) {
     const approvers = await sequelize.query(
-      `SELECT * FROM "${tenantId}".approval_step_approvers WHERE workflow_step_id = :stepId`,
+      `SELECT * FROM approval_step_approvers WHERE organization_id = :organizationId AND workflow_step_id = :stepId`,
       {
-        replacements: { stepId: step.id },
+        replacements: { organizationId, stepId: step.id },
         mapToModel: true,
         model: ApprovalStepApproversModel,
         ...(transaction && { transaction }),
@@ -116,17 +118,18 @@ export const createApprovalWorkflowQuery = async (
       requires_all_approvers: boolean;
     }>;
   },
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ApprovalWorkflowModel> => {
   // Create workflow
   const [workflow] = await sequelize.query(
-    `INSERT INTO "${tenantId}".approval_workflows
-     (workflow_title, entity_type, description, created_by, is_active, created_at, updated_at)
-     VALUES (:workflow_title, :entity_type, :description, :created_by, true, NOW(), NOW())
+    `INSERT INTO approval_workflows
+     (organization_id, workflow_title, entity_type, description, created_by, is_active, created_at, updated_at)
+     VALUES (:organizationId, :workflow_title, :entity_type, :description, :created_by, true, NOW(), NOW())
      RETURNING *`,
     {
       replacements: {
+        organizationId,
         workflow_title: workflowData.workflow_title,
         entity_type: workflowData.entity_type,
         description: workflowData.description || null,
@@ -143,12 +146,13 @@ export const createApprovalWorkflowQuery = async (
     const stepData = workflowData.steps[i];
 
     const [step] = await sequelize.query(
-      `INSERT INTO "${tenantId}".approval_workflow_steps
-       (workflow_id, step_number, step_name, description, requires_all_approvers, created_at)
-       VALUES (:workflow_id, :step_number, :step_name, :description, :requires_all_approvers, NOW())
+      `INSERT INTO approval_workflow_steps
+       (organization_id, workflow_id, step_number, step_name, description, requires_all_approvers, created_at)
+       VALUES (:organizationId, :workflow_id, :step_number, :step_name, :description, :requires_all_approvers, NOW())
        RETURNING *`,
       {
         replacements: {
+          organizationId,
           workflow_id: (workflow as any).id,
           step_number: i + 1,
           step_name: stepData.step_name,
@@ -164,11 +168,12 @@ export const createApprovalWorkflowQuery = async (
     // Create approvers for this step
     for (const approverId of stepData.approver_ids) {
       await sequelize.query(
-        `INSERT INTO "${tenantId}".approval_step_approvers
-         (workflow_step_id, approver_id, created_at)
-         VALUES (:workflow_step_id, :approver_id, NOW())`,
+        `INSERT INTO approval_step_approvers
+         (organization_id, workflow_step_id, approver_id, created_at)
+         VALUES (:organizationId, :workflow_step_id, :approver_id, NOW())`,
         {
           replacements: {
+            organizationId,
             workflow_step_id: (step as any).id,
             approver_id: approverId,
           },
@@ -179,7 +184,7 @@ export const createApprovalWorkflowQuery = async (
   }
 
   // Fetch and return the complete workflow with steps
-  const createdWorkflow = await getApprovalWorkflowByIdQuery((workflow as any).id, tenantId, transaction);
+  const createdWorkflow = await getApprovalWorkflowByIdQuery((workflow as any).id, organizationId, transaction);
 
   if (!createdWorkflow) {
     throw new Error("Failed to retrieve created workflow");
@@ -203,18 +208,19 @@ export const updateApprovalWorkflowQuery = async (
       requires_all_approvers: boolean;
     }>;
   },
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ApprovalWorkflowModel | null> => {
   // Update workflow
   await sequelize.query(
-    `UPDATE "${tenantId}".approval_workflows
+    `UPDATE approval_workflows
      SET workflow_title = COALESCE(:workflow_title, workflow_title),
          description = COALESCE(:description, description),
          updated_at = NOW()
-     WHERE id = :workflowId`,
+     WHERE organization_id = :organizationId AND id = :workflowId`,
     {
       replacements: {
+        organizationId,
         workflowId,
         workflow_title: workflowData.workflow_title || null,
         description: workflowData.description || null,
@@ -227,21 +233,22 @@ export const updateApprovalWorkflowQuery = async (
   if (workflowData.steps) {
     // Delete old approvers
     await sequelize.query(
-      `DELETE FROM "${tenantId}".approval_step_approvers
-       WHERE workflow_step_id IN (
-         SELECT id FROM "${tenantId}".approval_workflow_steps WHERE workflow_id = :workflowId
-       )`,
+      `DELETE FROM approval_step_approvers
+       WHERE organization_id = :organizationId
+         AND workflow_step_id IN (
+           SELECT id FROM approval_workflow_steps WHERE organization_id = :organizationId AND workflow_id = :workflowId
+         )`,
       {
-        replacements: { workflowId },
+        replacements: { organizationId, workflowId },
         transaction,
       }
     );
 
     // Delete old steps
     await sequelize.query(
-      `DELETE FROM "${tenantId}".approval_workflow_steps WHERE workflow_id = :workflowId`,
+      `DELETE FROM approval_workflow_steps WHERE organization_id = :organizationId AND workflow_id = :workflowId`,
       {
-        replacements: { workflowId },
+        replacements: { organizationId, workflowId },
         transaction,
       }
     );
@@ -251,12 +258,13 @@ export const updateApprovalWorkflowQuery = async (
       const stepData = workflowData.steps[i];
 
       const [step] = await sequelize.query(
-        `INSERT INTO "${tenantId}".approval_workflow_steps
-         (workflow_id, step_number, step_name, description, requires_all_approvers, created_at)
-         VALUES (:workflow_id, :step_number, :step_name, :description, :requires_all_approvers, NOW())
+        `INSERT INTO approval_workflow_steps
+         (organization_id, workflow_id, step_number, step_name, description, requires_all_approvers, created_at)
+         VALUES (:organizationId, :workflow_id, :step_number, :step_name, :description, :requires_all_approvers, NOW())
          RETURNING *`,
         {
           replacements: {
+            organizationId,
             workflow_id: workflowId,
             step_number: i + 1,
             step_name: stepData.step_name,
@@ -272,11 +280,12 @@ export const updateApprovalWorkflowQuery = async (
       // Create approvers for this step
       for (const approverId of stepData.approver_ids) {
         await sequelize.query(
-          `INSERT INTO "${tenantId}".approval_step_approvers
-           (workflow_step_id, approver_id, created_at)
-           VALUES (:workflow_step_id, :approver_id, NOW())`,
+          `INSERT INTO approval_step_approvers
+           (organization_id, workflow_step_id, approver_id, created_at)
+           VALUES (:organizationId, :workflow_step_id, :approver_id, NOW())`,
           {
             replacements: {
+              organizationId,
               workflow_step_id: (step as any).id,
               approver_id: approverId,
             },
@@ -287,7 +296,7 @@ export const updateApprovalWorkflowQuery = async (
     }
   }
 
-  return await getApprovalWorkflowByIdQuery(workflowId, tenantId, transaction);
+  return await getApprovalWorkflowByIdQuery(workflowId, organizationId, transaction);
 };
 
 /**
@@ -295,15 +304,15 @@ export const updateApprovalWorkflowQuery = async (
  */
 export const deleteApprovalWorkflowQuery = async (
   workflowId: number,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenantId}".approval_workflows
+    `UPDATE approval_workflows
      SET is_active = false, updated_at = NOW()
-     WHERE id = :workflowId`,
+     WHERE organization_id = :organizationId AND id = :workflowId`,
     {
-      replacements: { workflowId },
+      replacements: { organizationId, workflowId },
       transaction,
     }
   );

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { Database } from "lucide-react";
 import {
   Stack,
   Typography,
@@ -200,7 +201,7 @@ const RiskDatabaseModal = ({
                       align="center"
                       sx={{ border: "none", p: 0 }}
                     >
-                      <EmptyState message="No risks found in database" />
+                      <EmptyState icon={Database} message="No risks found in database" />
                     </TableCell>
                   </TableRow>
                 ) : (

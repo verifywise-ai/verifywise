@@ -48,14 +48,13 @@ export async function saveGapRules(req: Request, res: Response): Promise<any> {
     functionName: "saveGapRules",
     fileName: "entityGraphGapRules.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { rules } = req.body;
     const userId = req.userId!;
     const organizationId = req.organizationId!;
-    const tenantId = req.tenantId!;
 
     // Validate required fields
     if (!rules || !Array.isArray(rules)) {
@@ -69,8 +68,7 @@ export async function saveGapRules(req: Request, res: Response): Promise<any> {
     const savedRules = await EntityGraphGapRulesService.saveGapRules(
       rules,
       userId,
-      organizationId,
-      tenantId
+      organizationId
     );
 
     return res.status(201).json(
@@ -87,7 +85,7 @@ export async function saveGapRules(req: Request, res: Response): Promise<any> {
       fileName: "entityGraphGapRules.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {
@@ -119,16 +117,16 @@ export async function getGapRules(req: Request, res: Response): Promise<any> {
     functionName: "getGapRules",
     fileName: "entityGraphGapRules.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const userId = req.userId!;
-    const tenantId = req.tenantId!;
+    const organizationId = req.organizationId!;
 
     const result = await EntityGraphGapRulesService.getGapRules(
       userId,
-      tenantId
+      organizationId
     );
 
     return res.status(200).json(STATUS_CODE[200](result));
@@ -140,7 +138,7 @@ export async function getGapRules(req: Request, res: Response): Promise<any> {
       fileName: "entityGraphGapRules.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(
@@ -169,16 +167,16 @@ export async function resetGapRules(req: Request, res: Response): Promise<any> {
     functionName: "resetGapRules",
     fileName: "entityGraphGapRules.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const userId = req.userId!;
-    const tenantId = req.tenantId!;
+    const organizationId = req.organizationId!;
 
     const result = await EntityGraphGapRulesService.resetToDefaults(
       userId,
-      tenantId
+      organizationId
     );
 
     return res.status(200).json(STATUS_CODE[200](result));
@@ -190,7 +188,7 @@ export async function resetGapRules(req: Request, res: Response): Promise<any> {
       fileName: "entityGraphGapRules.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(
@@ -223,7 +221,7 @@ export async function getDefaultGapRules(
     functionName: "getDefaultGapRules",
     fileName: "entityGraphGapRules.ctrl.ts",
     userId: _req.userId!,
-    tenantId: _req.tenantId!,
+    organizationId: _req.organizationId!,
   });
 
   try {
@@ -243,7 +241,7 @@ export async function getDefaultGapRules(
       fileName: "entityGraphGapRules.ctrl.ts",
       error: error as Error,
       userId: _req.userId!,
-      tenantId: _req.tenantId!,
+      organizationId: _req.organizationId!,
     });
 
     return res.status(500).json(

@@ -269,7 +269,7 @@ export const validateReportDeletionBusinessRules = (reportData: any, userContext
   // Validate user permissions for deletion
   if (reportData && userContext) {
     // Check if user is trying to delete someone else's report
-    if (reportData.created_by !== userContext.userId && userContext.role !== 'Admin') {
+    if (reportData.created_by !== userContext.userId && userContext.role !== 'Admin' && userContext.role !== 'SuperAdmin') {
       errors.push({
         field: 'reportId',
         message: 'You can only delete reports you created, unless you are an administrator',
@@ -283,7 +283,7 @@ export const validateReportDeletionBusinessRules = (reportData: any, userContext
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      if (reportDate < thirtyDaysAgo && userContext.role !== 'Admin') {
+      if (reportDate < thirtyDaysAgo && userContext.role !== 'Admin' && userContext.role !== 'SuperAdmin') {
         errors.push({
           field: 'reportId',
           message: 'Reports older than 30 days can only be deleted by administrators',

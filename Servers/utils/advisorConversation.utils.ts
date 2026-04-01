@@ -9,16 +9,16 @@ import {
  * Get a conversation by user ID and domain
  */
 export const getConversationQuery = async (
-  tenant: string,
+  organizationId: number,
   userId: number,
   domain: string
 ): Promise<IAdvisorConversation | null> => {
   const result = await sequelize.query(
     `SELECT id, user_id, domain, messages, created_at, updated_at
-     FROM "${tenant}".advisor_conversations
-     WHERE user_id = :userId AND domain = :domain;`,
+     FROM advisor_conversations
+     WHERE organization_id = :organizationId AND user_id = :userId AND domain = :domain;`,
     {
-      replacements: { userId, domain },
+      replacements: { organizationId, userId, domain },
     }
   );
 
@@ -32,7 +32,7 @@ export const getConversationQuery = async (
  * Automatically trims messages to MAX_MESSAGES_PER_CONVERSATION
  */
 export const upsertConversationQuery = async (
-  tenant: string,
+  organizationId: number,
   userId: number,
   domain: string,
   messages: IAdvisorMessage[]
@@ -41,15 +41,16 @@ export const upsertConversationQuery = async (
   const trimmedMessages = messages.slice(-MAX_MESSAGES_PER_CONVERSATION);
 
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".advisor_conversations (user_id, domain, messages, created_at, updated_at)
-     VALUES (:userId, :domain, :messages::jsonb, NOW(), NOW())
-     ON CONFLICT (user_id, domain)
+    `INSERT INTO advisor_conversations (organization_id, user_id, domain, messages, created_at, updated_at)
+     VALUES (:organizationId, :userId, :domain, :messages::jsonb, NOW(), NOW())
+     ON CONFLICT (organization_id, user_id, domain)
      DO UPDATE SET
        messages = :messages::jsonb,
        updated_at = NOW()
      RETURNING id, user_id, domain, messages, created_at, updated_at;`,
     {
       replacements: {
+        organizationId,
         userId,
         domain,
         messages: JSON.stringify(trimmedMessages),
@@ -67,13 +68,13 @@ export const upsertConversationQuery = async (
  * Automatically trims to MAX_MESSAGES_PER_CONVERSATION
  */
 export const addMessageToConversationQuery = async (
-  tenant: string,
+  organizationId: number,
   userId: number,
   domain: string,
   message: IAdvisorMessage
 ): Promise<IAdvisorConversation> => {
   // First, try to get existing conversation
-  const existing = await getConversationQuery(tenant, userId, domain);
+  const existing = await getConversationQuery(organizationId, userId, domain);
 
   let messages: IAdvisorMessage[];
   if (existing) {
@@ -85,22 +86,22 @@ export const addMessageToConversationQuery = async (
   }
 
   // Upsert with the new messages array
-  return upsertConversationQuery(tenant, userId, domain, messages);
+  return upsertConversationQuery(organizationId, userId, domain, messages);
 };
 
 /**
  * Clear a conversation (delete all messages for a user/domain)
  */
 export const clearConversationQuery = async (
-  tenant: string,
+  organizationId: number,
   userId: number,
   domain: string
 ): Promise<boolean> => {
   await sequelize.query(
-    `DELETE FROM "${tenant}".advisor_conversations
-     WHERE user_id = :userId AND domain = :domain;`,
+    `DELETE FROM advisor_conversations
+     WHERE organization_id = :organizationId AND user_id = :userId AND domain = :domain;`,
     {
-      replacements: { userId, domain },
+      replacements: { organizationId, userId, domain },
     }
   );
 
@@ -111,16 +112,16 @@ export const clearConversationQuery = async (
  * Get all conversations for a user
  */
 export const getAllConversationsForUserQuery = async (
-  tenant: string,
+  organizationId: number,
   userId: number
 ): Promise<IAdvisorConversation[]> => {
   const result = await sequelize.query(
     `SELECT id, user_id, domain, messages, created_at, updated_at
-     FROM "${tenant}".advisor_conversations
-     WHERE user_id = :userId
+     FROM advisor_conversations
+     WHERE organization_id = :organizationId AND user_id = :userId
      ORDER BY updated_at DESC;`,
     {
-      replacements: { userId },
+      replacements: { organizationId, userId },
     }
   );
 

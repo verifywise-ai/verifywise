@@ -50,7 +50,7 @@ export interface UpdateVendorInput extends Partial<CreateVendorInput> {}
 export interface ServiceContext {
   userId: number;
   role: string;
-  tenantId: string;
+  organizationId: number;
 }
 
 // ============================================================================
@@ -61,7 +61,7 @@ export interface ServiceContext {
  * Creates a new vendor with validation and change tracking.
  *
  * @param input - The vendor data to create
- * @param ctx - Service context containing userId, role, and tenantId
+ * @param ctx - Service context containing userId, role, and organizationId
  * @param transaction - Database transaction for atomicity
  * @returns The created vendor model
  * @throws {DatabaseException} If vendor creation fails
@@ -101,7 +101,7 @@ export async function createVendor(
   // Persist to database
   const createdVendor = await createNewVendorQuery(
     vendorModel,
-    ctx.tenantId,
+    ctx.organizationId,
     transaction
   );
 
@@ -113,7 +113,7 @@ export async function createVendor(
   await recordVendorCreation(
     createdVendor.id,
     ctx.userId,
-    ctx.tenantId,
+    ctx.organizationId,
     input,
     transaction
   );
@@ -130,7 +130,7 @@ export async function createVendor(
  *
  * @param vendorId - The ID of the vendor to update
  * @param input - The vendor data to update (partial)
- * @param ctx - Service context containing userId, role, and tenantId
+ * @param ctx - Service context containing userId, role, and organizationId
  * @param transaction - Database transaction for atomicity
  * @returns The updated vendor model or null if not found
  */
@@ -141,7 +141,7 @@ export async function updateVendor(
   transaction: Transaction
 ): Promise<VendorModel | null> {
   // Find existing vendor
-  const existingVendor = await getVendorByIdQuery(vendorId, ctx.tenantId);
+  const existingVendor = await getVendorByIdQuery(vendorId, ctx.organizationId);
 
   if (!existingVendor) {
     return null;
@@ -185,7 +185,7 @@ export async function updateVendor(
       role: ctx.role,
       transaction,
     },
-    ctx.tenantId
+    ctx.organizationId
   );
 
   if (!updatedVendor) {
@@ -197,7 +197,7 @@ export async function updateVendor(
     await recordMultipleFieldChanges(
       vendorId,
       ctx.userId,
-      ctx.tenantId,
+      ctx.organizationId,
       changes,
       transaction
     );

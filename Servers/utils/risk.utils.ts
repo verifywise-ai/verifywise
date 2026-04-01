@@ -26,7 +26,7 @@ export const validateRiskFrameworksQuery = async (
   frameworks: number[]
 ): Promise<boolean> => {
   const result = (await sequelize.query(
-    `SELECT id FROM public.frameworks WHERE is_organizational = true;`
+    `SELECT id FROM frameworks WHERE is_organizational = true;`
   )) as [{ id: number }[], number];
   const orgFrameworks = result[0].map((f) => f.id);
   for (let f of frameworks) {
@@ -39,10 +39,11 @@ export const validateRiskFrameworksQuery = async (
 
 export const validateRiskProjectsQuery = async (
   projects: number[],
-  tenant: string
+  organizationId: number
 ): Promise<boolean> => {
   const result = (await sequelize.query(
-    `SELECT id FROM "${tenant}".projects WHERE is_organizational = false;`
+    `SELECT id FROM projects WHERE organization_id = :organizationId AND is_organizational = false;`,
+    { replacements: { organizationId } }
   )) as [{ id: number }[], number];
   const nonOrgProjects = result[0].map((p) => p.id);
   for (let p of projects) {
@@ -54,19 +55,19 @@ export const validateRiskProjectsQuery = async (
 };
 
 export const getAllRisksQuery = async (
-  tenant: string,
+  organizationId: number,
   filter: "active" | "deleted" | "all" = "active"
 ): Promise<IRisk[]> => {
-  let whereClause = "";
+  let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
     case "active":
-      whereClause = "WHERE r.is_deleted = false";
+      whereClause += " AND r.is_deleted = false";
       break;
     case "deleted":
-      whereClause = "WHERE r.is_deleted = true";
+      whereClause += " AND r.is_deleted = true";
       break;
     case "all":
-      whereClause = "";
+      // No additional filter
       break;
   }
 
@@ -84,15 +85,15 @@ export const getAllRisksQuery = async (
         JSON_AGG(DISTINCT fr.framework_id) FILTER (WHERE fr.framework_id IS NOT NULL),
         '[]'
       ) as frameworks
-    FROM "${tenant}".risks r
-    LEFT JOIN "${tenant}".projects_risks pr ON r.id = pr.risk_id
-    LEFT JOIN "${tenant}".frameworks_risks fr ON r.id = fr.risk_id
+    FROM risks r
+    LEFT JOIN projects_risks pr ON r.id = pr.risk_id AND pr.organization_id = :organizationId
+    LEFT JOIN frameworks_risks fr ON r.id = fr.risk_id AND fr.organization_id = :organizationId
     ${whereClause}
     GROUP BY r.id
     ORDER BY r.created_at DESC, r.id ASC
   `;
 
-  const result = (await sequelize.query(query)) as [any[], number];
+  const result = (await sequelize.query(query, { replacements: { organizationId } })) as [any[], number];
   const risks = result[0];
 
   // Parse JSON strings if needed
@@ -122,19 +123,19 @@ export const getAllRisksQuery = async (
  * Use getAllRisksQuery for list views and getRiskByIdQuery for single risk with full relationships.
  */
 export const getAllRisksQueryWithRelationships = async (
-  tenant: string,
+  organizationId: number,
   filter: "active" | "deleted" | "all" = "active"
 ): Promise<IRisk[]> => {
-  let whereClause = "";
+  let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
     case "active":
-      whereClause = "WHERE is_deleted = false";
+      whereClause += " AND is_deleted = false";
       break;
     case "deleted":
-      whereClause = "WHERE is_deleted = true";
+      whereClause += " AND is_deleted = true";
       break;
     case "all":
-      whereClause = "";
+      // No additional filter
       break;
   }
 
@@ -213,7 +214,7 @@ export const getAllRisksQueryWithRelationships = async (
         JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
           'id', scr_27001.subclause_id,
           'meta_id', sc_27001.subclause_meta_id,
-          'sup_id', csi_27001.arrangement,
+          'sup_id', csi_27001.order_no,
           'title', scs_27001.title,
           'sub_id', scs_27001.order_no,
           'parent_id', csi_27001.id,
@@ -221,69 +222,69 @@ export const getAllRisksQueryWithRelationships = async (
         )) FILTER (WHERE scr_27001.subclause_id IS NOT NULL),
         '[]'
       ) as sub_clauses_27001
-    FROM "${tenant}".risks r
+    FROM risks r
 
     -- Projects relationship
-    LEFT JOIN "${tenant}".projects_risks pr ON r.id = pr.risk_id
+    LEFT JOIN projects_risks pr ON r.id = pr.risk_id AND pr.organization_id = :organizationId
 
     -- Frameworks relationship
-    LEFT JOIN "${tenant}".frameworks_risks fr ON r.id = fr.risk_id
+    LEFT JOIN frameworks_risks fr ON r.id = fr.risk_id AND fr.organization_id = :organizationId
 
     -- SubClauses ISO relationship
-    LEFT JOIN "${tenant}".subclauses_iso__risks scr ON r.id = scr.projects_risks_id
-    LEFT JOIN "${tenant}".subclauses_iso sc ON scr.subclause_id = sc.id
-    LEFT JOIN public.subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
-    LEFT JOIN public.clauses_struct_iso csi ON csi.id = scs.clause_id
-    LEFT JOIN "${tenant}".projects_frameworks pf_sc ON pf_sc.framework_id = csi.framework_id
-      AND pf_sc.project_id IN (SELECT project_id FROM "${tenant}".projects_risks WHERE risk_id = r.id)
+    LEFT JOIN subclauses_iso__risks scr ON r.id = scr.projects_risks_id AND scr.organization_id = :organizationId
+    LEFT JOIN subclauses_iso sc ON scr.subclause_id = sc.id AND sc.organization_id = :organizationId
+    LEFT JOIN subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
+    LEFT JOIN clauses_struct_iso csi ON csi.id = scs.clause_id
+    LEFT JOIN projects_frameworks pf_sc ON pf_sc.framework_id = csi.framework_id AND pf_sc.organization_id = :organizationId
+      AND pf_sc.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
 
     -- Annex Categories relationship
-    LEFT JOIN "${tenant}".annexcategories_iso__risks acr ON r.id = acr.projects_risks_id
-    LEFT JOIN "${tenant}".annexcategories_iso ac ON acr.annexcategory_id = ac.id
-    LEFT JOIN public.annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
-    LEFT JOIN public.annex_struct_iso asi ON asi.id = acs.annex_id
-    LEFT JOIN "${tenant}".projects_frameworks pf_ac ON pf_ac.framework_id = asi.framework_id
-      AND pf_ac.project_id IN (SELECT project_id FROM "${tenant}".projects_risks WHERE risk_id = r.id)
+    LEFT JOIN annexcategories_iso__risks acr ON r.id = acr.projects_risks_id AND acr.organization_id = :organizationId
+    LEFT JOIN annexcategories_iso ac ON acr.annexcategory_id = ac.id AND ac.organization_id = :organizationId
+    LEFT JOIN annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
+    LEFT JOIN annex_struct_iso asi ON asi.id = acs.annex_id
+    LEFT JOIN projects_frameworks pf_ac ON pf_ac.framework_id = asi.framework_id AND pf_ac.organization_id = :organizationId
+      AND pf_ac.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
 
     -- Controls EU relationship
-    LEFT JOIN "${tenant}".controls_eu__risks cr ON r.id = cr.projects_risks_id
-    LEFT JOIN "${tenant}".controls_eu ac_eu ON cr.control_id = ac_eu.id
-    LEFT JOIN public.controls_struct_eu cse ON cse.id = ac_eu.control_meta_id
-    LEFT JOIN public.controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
-    LEFT JOIN "${tenant}".projects_frameworks pf_cr ON pf_cr.framework_id = ccs.framework_id
-      AND pf_cr.project_id IN (SELECT project_id FROM "${tenant}".projects_risks WHERE risk_id = r.id)
+    LEFT JOIN controls_eu__risks cr ON r.id = cr.projects_risks_id AND cr.organization_id = :organizationId
+    LEFT JOIN controls_eu ac_eu ON cr.control_id = ac_eu.id AND ac_eu.organization_id = :organizationId
+    LEFT JOIN controls_struct_eu cse ON cse.id = ac_eu.control_meta_id
+    LEFT JOIN controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
+    LEFT JOIN projects_frameworks pf_cr ON pf_cr.framework_id = ccs.framework_id AND pf_cr.organization_id = :organizationId
+      AND pf_cr.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
 
     -- Answers/Assessments EU relationship
-    LEFT JOIN "${tenant}".answers_eu__risks aur ON r.id = aur.projects_risks_id
-    LEFT JOIN "${tenant}".answers_eu ans ON aur.answer_id = ans.id
-    LEFT JOIN public.questions_struct_eu qse ON qse.id = ans.question_id
-    LEFT JOIN public.subtopics_struct_eu sts ON sts.id = qse.subtopic_id
-    LEFT JOIN public.topics_struct_eu ts ON ts.id = sts.topic_id
-    LEFT JOIN "${tenant}".projects_frameworks pf_ans ON pf_ans.framework_id = ts.framework_id
-      AND pf_ans.project_id IN (SELECT project_id FROM "${tenant}".projects_risks WHERE risk_id = r.id)
+    LEFT JOIN answers_eu__risks aur ON r.id = aur.projects_risks_id AND aur.organization_id = :organizationId
+    LEFT JOIN answers_eu ans ON aur.answer_id = ans.id AND ans.organization_id = :organizationId
+    LEFT JOIN questions_struct_eu qse ON qse.id = ans.question_id
+    LEFT JOIN subtopics_struct_eu sts ON sts.id = qse.subtopic_id
+    LEFT JOIN topics_struct_eu ts ON ts.id = sts.topic_id
+    LEFT JOIN projects_frameworks pf_ans ON pf_ans.framework_id = ts.framework_id AND pf_ans.organization_id = :organizationId
+      AND pf_ans.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
 
     -- Annex Controls ISO 27001 relationship
-    LEFT JOIN "${tenant}".annexcontrols_iso27001__risks acr_27001 ON r.id = acr_27001.projects_risks_id
-    LEFT JOIN "${tenant}".annexcontrols_iso27001 ac_27001 ON acr_27001.annexcontrol_id = ac_27001.id
-    LEFT JOIN public.annexcontrols_struct_iso27001 cse_27001 ON cse_27001.id = ac_27001.annexcontrol_meta_id
-    LEFT JOIN public.annex_struct_iso27001 ccs_27001 ON ccs_27001.id = cse_27001.annex_id
-    LEFT JOIN "${tenant}".projects_frameworks pf_ac27001 ON pf_ac27001.framework_id = ccs_27001.framework_id
-      AND pf_ac27001.project_id IN (SELECT project_id FROM "${tenant}".projects_risks WHERE risk_id = r.id)
+    LEFT JOIN annexcontrols_iso27001__risks acr_27001 ON r.id = acr_27001.projects_risks_id AND acr_27001.organization_id = :organizationId
+    LEFT JOIN annexcontrols_iso27001 ac_27001 ON acr_27001.annexcontrol_id = ac_27001.id AND ac_27001.organization_id = :organizationId
+    LEFT JOIN annexcontrols_struct_iso27001 cse_27001 ON cse_27001.id = ac_27001.annexcontrol_meta_id
+    LEFT JOIN annex_struct_iso27001 ccs_27001 ON ccs_27001.id = cse_27001.annex_id
+    LEFT JOIN projects_frameworks pf_ac27001 ON pf_ac27001.framework_id = ccs_27001.framework_id AND pf_ac27001.organization_id = :organizationId
+      AND pf_ac27001.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
 
     -- SubClauses ISO 27001 relationship
-    LEFT JOIN "${tenant}".subclauses_iso27001__risks scr_27001 ON r.id = scr_27001.projects_risks_id
-    LEFT JOIN "${tenant}".subclauses_iso27001 sc_27001 ON scr_27001.subclause_id = sc_27001.id
-    LEFT JOIN public.subclauses_struct_iso27001 scs_27001 ON scs_27001.id = sc_27001.subclause_meta_id
-    LEFT JOIN public.clauses_struct_iso27001 csi_27001 ON csi_27001.id = scs_27001.clause_id
-    LEFT JOIN "${tenant}".projects_frameworks pf_sc27001 ON pf_sc27001.framework_id = csi_27001.framework_id
-      AND pf_sc27001.project_id IN (SELECT project_id FROM "${tenant}".projects_risks WHERE risk_id = r.id)
+    LEFT JOIN subclauses_iso27001__risks scr_27001 ON r.id = scr_27001.projects_risks_id AND scr_27001.organization_id = :organizationId
+    LEFT JOIN subclauses_iso27001 sc_27001 ON scr_27001.subclause_id = sc_27001.id AND sc_27001.organization_id = :organizationId
+    LEFT JOIN subclauses_struct_iso27001 scs_27001 ON scs_27001.id = sc_27001.subclause_meta_id
+    LEFT JOIN clauses_struct_iso27001 csi_27001 ON csi_27001.id = scs_27001.clause_id
+    LEFT JOIN projects_frameworks pf_sc27001 ON pf_sc27001.framework_id = csi_27001.framework_id AND pf_sc27001.organization_id = :organizationId
+      AND pf_sc27001.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
 
     ${whereClause}
     GROUP BY r.id
     ORDER BY r.created_at DESC, r.id ASC
   `;
 
-  const result = (await sequelize.query(query)) as [any[], number];
+  const result = (await sequelize.query(query, { replacements: { organizationId } })) as [any[], number];
   const risks = result[0];
 
   // Helper function to transform arrays - hoisted outside loop for performance
@@ -335,19 +336,19 @@ export const getAllRisksQueryWithRelationships = async (
 
 export const getRisksByProjectQuery = async (
   projectId: number,
-  tenant: string,
+  organizationId: number,
   filter: "active" | "deleted" | "all" = "active"
 ): Promise<IRisk[] | null> => {
-  let whereClause = "";
+  let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
     case "active":
-      whereClause = "WHERE r.is_deleted = false";
+      whereClause += " AND r.is_deleted = false";
       break;
     case "deleted":
-      whereClause = "WHERE r.is_deleted = true";
+      whereClause += " AND r.is_deleted = true";
       break;
     case "all":
-      whereClause = "";
+      // No additional filter
       break;
   }
 
@@ -362,35 +363,35 @@ export const getRisksByProjectQuery = async (
         JSON_AGG(DISTINCT f.id) FILTER (WHERE f.id IS NOT NULL),
         '[]'
       ) as frameworks
-    FROM "${tenant}".risks r
-      INNER JOIN "${tenant}".projects_risks pr_filter ON r.id = pr_filter.risk_id AND pr_filter.project_id = :projectId
-      LEFT JOIN "${tenant}".projects_risks pr ON r.id = pr.risk_id
-      LEFT JOIN "${tenant}".projects p ON pr.project_id = p.id
-      LEFT JOIN "${tenant}".frameworks_risks fr ON r.id = fr.risk_id
-      LEFT JOIN public.frameworks f ON fr.framework_id = f.id
+    FROM risks r
+      INNER JOIN projects_risks pr_filter ON r.id = pr_filter.risk_id AND pr_filter.project_id = :projectId AND pr_filter.organization_id = :organizationId
+      LEFT JOIN projects_risks pr ON r.id = pr.risk_id AND pr.organization_id = :organizationId
+      LEFT JOIN projects p ON pr.project_id = p.id AND p.organization_id = :organizationId
+      LEFT JOIN frameworks_risks fr ON r.id = fr.risk_id AND fr.organization_id = :organizationId
+      LEFT JOIN frameworks f ON fr.framework_id = f.id
       ${whereClause}
       GROUP BY r.id
       ORDER BY r.created_at DESC, r.id ASC`,
-    { replacements: { projectId } }
+    { replacements: { projectId, organizationId } }
   )) as [IRisk[], number];
   return result[0];
 };
 
 export const getRisksByFrameworkQuery = async (
   frameworkId: number,
-  tenant: string,
+  organizationId: number,
   filter: "active" | "deleted" | "all" = "active"
 ): Promise<IRisk[] | null> => {
-  let whereClause = "";
+  let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
     case "active":
-      whereClause = "WHERE r.is_deleted = false";
+      whereClause += " AND r.is_deleted = false";
       break;
     case "deleted":
-      whereClause = "WHERE r.is_deleted = true";
+      whereClause += " AND r.is_deleted = true";
       break;
     case "all":
-      whereClause = "";
+      // No additional filter
       break;
   }
 
@@ -405,32 +406,32 @@ export const getRisksByFrameworkQuery = async (
         JSON_AGG(DISTINCT f.id) FILTER (WHERE f.id IS NOT NULL),
         '[]'
       ) AS frameworks
-    FROM "${tenant}".risks r
-    INNER JOIN "${tenant}".frameworks_risks fr_filter ON r.id = fr_filter.risk_id AND fr_filter.framework_id = :frameworkId
-    LEFT JOIN "${tenant}".projects_risks pr ON r.id = pr.risk_id
-    LEFT JOIN "${tenant}".projects p ON pr.project_id = p.id
-    LEFT JOIN "${tenant}".frameworks_risks fr ON r.id = fr.risk_id
-    LEFT JOIN public.frameworks f ON fr.framework_id = f.id
+    FROM risks r
+    INNER JOIN frameworks_risks fr_filter ON r.id = fr_filter.risk_id AND fr_filter.framework_id = :frameworkId AND fr_filter.organization_id = :organizationId
+    LEFT JOIN projects_risks pr ON r.id = pr.risk_id AND pr.organization_id = :organizationId
+    LEFT JOIN projects p ON pr.project_id = p.id AND p.organization_id = :organizationId
+    LEFT JOIN frameworks_risks fr ON r.id = fr.risk_id AND fr.organization_id = :organizationId
+    LEFT JOIN frameworks f ON fr.framework_id = f.id
     ${whereClause}
     GROUP BY r.id
     ORDER BY r.created_at DESC, r.id ASC;
     `,
-    { replacements: { frameworkId } }
+    { replacements: { frameworkId, organizationId } }
   )) as [IRisk[], number];
   return result[0];
 };
 
 export const getRiskByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   includeDeleted: boolean = false
 ): Promise<IRisk | null> => {
   const whereClause = includeDeleted
-    ? "WHERE id = :id"
-    : "WHERE id = :id AND is_deleted = false";
+    ? "WHERE id = :id AND organization_id = :organizationId"
+    : "WHERE id = :id AND organization_id = :organizationId AND is_deleted = false";
   const result = (await sequelize.query(
-    `SELECT * FROM "${tenant}".risks ${whereClause}`,
-    { replacements: { id } }
+    `SELECT * FROM risks ${whereClause}`,
+    { replacements: { id, organizationId } }
   )) as [IRisk[], number];
   const projectRisk = result[0][0];
   if (!projectRisk) return null;
@@ -440,8 +441,8 @@ export const getRiskByIdQuery = async (
   // Run query ONLY if risk_owner exists
   if (projectRisk.risk_owner) {
     const ownerResult = await sequelize.query(
-      `SELECT name || ' ' || surname AS full_name 
-      FROM public.users 
+      `SELECT name || ' ' || surname AS full_name
+      FROM users
       WHERE id = :owner_id;`,
       {
         replacements: { owner_id: projectRisk.risk_owner }
@@ -455,7 +456,7 @@ export const getRiskByIdQuery = async (
   let approverFullName = "";
   if (projectRisk.risk_approval) {
     const approver_name = (await sequelize.query(
-      `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :approver_id;`,
+      `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
       {
         replacements: { approver_id: projectRisk.risk_approval },
       }
@@ -474,8 +475,8 @@ export const getRiskByIdQuery = async (
   (projectRisk as any).annexControls_27001 = [];
 
   const attachedProjects = (await sequelize.query(
-    `SELECT project_id FROM "${tenant}".projects_risks WHERE risk_id = :riskId`,
-    { replacements: { riskId: projectRisk.id } }
+    `SELECT project_id FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
+    { replacements: { riskId: projectRisk.id, organizationId } }
   )) as [{ project_id: number }[], number];
   if (attachedProjects[0].length > 0) {
     (projectRisk as any).projects = attachedProjects[0].map(
@@ -484,8 +485,8 @@ export const getRiskByIdQuery = async (
   }
 
   const attachedFrameworks = (await sequelize.query(
-    `SELECT framework_id FROM "${tenant}".frameworks_risks WHERE risk_id = :riskId`,
-    { replacements: { riskId: projectRisk.id } }
+    `SELECT framework_id FROM frameworks_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
+    { replacements: { riskId: projectRisk.id, organizationId } }
   )) as [{ framework_id: number }[], number];
   if (attachedFrameworks[0].length > 0) {
     (projectRisk as any).frameworks = attachedFrameworks[0].map(
@@ -496,12 +497,12 @@ export const getRiskByIdQuery = async (
   const attachedSubClauses = (await sequelize.query(
     `SELECT
         scr.subclause_id AS id, sc.subclause_meta_id AS meta_id, csi.clause_no AS sup_id, scs.title, scs.order_no AS sub_id, csi.id AS parent_id, pf.project_id AS project_id
-      FROM "${tenant}".subclauses_iso__risks scr JOIN "${tenant}".subclauses_iso sc ON scr.subclause_id = sc.id
-      JOIN public.subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
-      JOIN public.clauses_struct_iso csi ON csi.id = scs.clause_id
-      JOIN "${tenant}".projects_frameworks pf ON pf.framework_id = csi.framework_id
-      WHERE projects_risks_id = :riskId`,
-    { replacements: { riskId: projectRisk.id } }
+      FROM subclauses_iso__risks scr JOIN subclauses_iso sc ON scr.subclause_id = sc.id AND sc.organization_id = :organizationId
+      JOIN subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
+      JOIN clauses_struct_iso csi ON csi.id = scs.clause_id
+      JOIN projects_frameworks pf ON pf.framework_id = csi.framework_id AND pf.organization_id = :organizationId
+      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId`,
+    { replacements: { riskId: projectRisk.id, organizationId } }
   )) as [Mitigation[], number];
   if (attachedSubClauses[0].length > 0) {
     (projectRisk as any).subClauses = attachedSubClauses[0];
@@ -510,12 +511,12 @@ export const getRiskByIdQuery = async (
   const attachedAnnexCategories = (await sequelize.query(
     `SELECT
        acr.annexcategory_id AS id, ac.annexcategory_meta_id AS meta_id, asi.annex_no AS sup_id, acs.sub_id AS sub_id, acs.title, asi.id AS parent_id, pf.project_id AS project_id
-      FROM "${tenant}".annexcategories_iso__risks acr JOIN "${tenant}".annexcategories_iso ac ON acr.annexcategory_id = ac.id
-      JOIN public.annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
-      JOIN public.annex_struct_iso asi ON asi.id = acs.annex_id
-      JOIN "${tenant}".projects_frameworks pf ON pf.framework_id = asi.framework_id
-      WHERE projects_risks_id = :riskId`,
-    { replacements: { riskId: projectRisk.id } }
+      FROM annexcategories_iso__risks acr JOIN annexcategories_iso ac ON acr.annexcategory_id = ac.id AND ac.organization_id = :organizationId
+      JOIN annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
+      JOIN annex_struct_iso asi ON asi.id = acs.annex_id
+      JOIN projects_frameworks pf ON pf.framework_id = asi.framework_id AND pf.organization_id = :organizationId
+      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId`,
+    { replacements: { riskId: projectRisk.id, organizationId } }
   )) as [Mitigation[], number];
   if (attachedAnnexCategories[0].length > 0) {
     (projectRisk as any).annexCategories = attachedAnnexCategories[0];
@@ -523,28 +524,28 @@ export const getRiskByIdQuery = async (
 
   const attachedControls = (await sequelize.query(
     `SELECT cr.control_id AS id, ac.control_meta_id AS meta_id, ccs.id AS sup_id, cse.id AS sub_id, cse.title, cse.id AS parent_id, pf.project_id AS project_id
-      FROM "${tenant}".controls_eu__risks cr JOIN "${tenant}".controls_eu ac ON cr.control_id = ac.id
-      JOIN public.controls_struct_eu cse ON cse.id = ac.control_meta_id
-      JOIN public.controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
-      JOIN "${tenant}".projects_frameworks pf ON pf.framework_id = ccs.framework_id
-      WHERE projects_risks_id = :riskId`,
-    { replacements: { riskId: projectRisk.id } }
+      FROM controls_eu__risks cr JOIN controls_eu ac ON cr.control_id = ac.id AND ac.organization_id = :organizationId
+      JOIN controls_struct_eu cse ON cse.id = ac.control_meta_id
+      JOIN controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
+      JOIN projects_frameworks pf ON pf.framework_id = ccs.framework_id AND pf.organization_id = :organizationId
+      WHERE cr.projects_risks_id = :riskId AND cr.organization_id = :organizationId`,
+    { replacements: { riskId: projectRisk.id, organizationId } }
   )) as [Mitigation[], number];
   if (attachedControls[0].length > 0) {
     (projectRisk as any).controls = attachedControls[0];
   }
 
   const attachedAssessments = (await sequelize.query(
-    `SELECT ans.id AS id, ans.question_id AS meta_id, ts.id AS sup_id, sts.id AS sub_id, 
-        ts.title || '. ' || sts.title || '. ' || qse.question AS title, 
+    `SELECT ans.id AS id, ans.question_id AS meta_id, ts.id AS sup_id, sts.id AS sub_id,
+        ts.title || '. ' || sts.title || '. ' || qse.question AS title,
         qse.id AS parent_id, pf.project_id AS project_id
-      FROM "${tenant}".answers_eu__risks aur JOIN "${tenant}".answers_eu ans ON aur.answer_id = ans.id
-      JOIN public.questions_struct_eu qse ON qse.id = ans.question_id
-      JOIN public.subtopics_struct_eu sts ON sts.id = qse.subtopic_id
-      JOIN public.topics_struct_eu ts ON ts.id = sts.topic_id
-      JOIN "${tenant}".projects_frameworks pf ON pf.framework_id = ts.framework_id
-      WHERE projects_risks_id = :riskId`,
-    { replacements: { riskId: projectRisk.id } }
+      FROM answers_eu__risks aur JOIN answers_eu ans ON aur.answer_id = ans.id AND ans.organization_id = :organizationId
+      JOIN questions_struct_eu qse ON qse.id = ans.question_id
+      JOIN subtopics_struct_eu sts ON sts.id = qse.subtopic_id
+      JOIN topics_struct_eu ts ON ts.id = sts.topic_id
+      JOIN projects_frameworks pf ON pf.framework_id = ts.framework_id AND pf.organization_id = :organizationId
+      WHERE aur.projects_risks_id = :riskId AND aur.organization_id = :organizationId`,
+    { replacements: { riskId: projectRisk.id, organizationId } }
   )) as [Mitigation[], number];
   if (attachedAssessments[0].length > 0) {
     (projectRisk as any).assessments = attachedAssessments[0];
@@ -552,12 +553,12 @@ export const getRiskByIdQuery = async (
 
   const attachedAnnexControls_27001 = (await sequelize.query(
     `SELECT acr.annexcontrol_id AS id, ac.annexcontrol_meta_id AS meta_id, ccs.id AS sup_id, cse.id AS sub_id, cse.title, cse.id AS parent_id, pf.project_id AS project_id
-      FROM "${tenant}".annexcontrols_iso27001__risks acr JOIN "${tenant}".annexcontrols_iso27001 ac ON acr.annexcontrol_id = ac.id
-      JOIN public.annexcontrols_struct_iso27001 cse ON cse.id = ac.annexcontrol_meta_id
-      JOIN public.annex_struct_iso27001 ccs ON ccs.id = cse.annex_id
-      JOIN "${tenant}".projects_frameworks pf ON pf.framework_id = ccs.framework_id
-      WHERE projects_risks_id = :riskId`,
-    { replacements: { riskId: projectRisk.id } }
+      FROM annexcontrols_iso27001__risks acr JOIN annexcontrols_iso27001 ac ON acr.annexcontrol_id = ac.id AND ac.organization_id = :organizationId
+      JOIN annexcontrols_struct_iso27001 cse ON cse.id = ac.annexcontrol_meta_id
+      JOIN annex_struct_iso27001 ccs ON ccs.id = cse.annex_id
+      JOIN projects_frameworks pf ON pf.framework_id = ccs.framework_id AND pf.organization_id = :organizationId
+      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId`,
+    { replacements: { riskId: projectRisk.id, organizationId } }
   )) as [Mitigation[], number];
   if (attachedAnnexControls_27001[0].length > 0) {
     (projectRisk as any).annexControls_27001 = attachedAnnexControls_27001[0];
@@ -565,13 +566,13 @@ export const getRiskByIdQuery = async (
 
   const attachedSubClauses_27001 = (await sequelize.query(
     `SELECT
-        scr.subclause_id AS id, sc.subclause_meta_id AS meta_id, csi.arrangement AS sup_id, scs.title, scs.order_no AS sub_id, csi.id AS parent_id, pf.project_id AS project_id
-      FROM "${tenant}".subclauses_iso27001__risks scr JOIN "${tenant}".subclauses_iso27001 sc ON scr.subclause_id = sc.id
-      JOIN public.subclauses_struct_iso27001 scs ON scs.id = sc.subclause_meta_id
-      JOIN public.clauses_struct_iso27001 csi ON csi.id = scs.clause_id
-      JOIN "${tenant}".projects_frameworks pf ON pf.framework_id = csi.framework_id
-      WHERE projects_risks_id = :riskId`,
-    { replacements: { riskId: projectRisk.id } }
+        scr.subclause_id AS id, sc.subclause_meta_id AS meta_id, csi.order_no AS sup_id, scs.title, scs.order_no AS sub_id, csi.id AS parent_id, pf.project_id AS project_id
+      FROM subclauses_iso27001__risks scr JOIN subclauses_iso27001 sc ON scr.subclause_id = sc.id AND sc.organization_id = :organizationId
+      JOIN subclauses_struct_iso27001 scs ON scs.id = sc.subclause_meta_id
+      JOIN clauses_struct_iso27001 csi ON csi.id = scs.clause_id
+      JOIN projects_frameworks pf ON pf.framework_id = csi.framework_id AND pf.organization_id = :organizationId
+      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId`,
+    { replacements: { riskId: projectRisk.id, organizationId } }
   )) as [Mitigation[], number];
   if (attachedSubClauses_27001[0].length > 0) {
     (projectRisk as any).subClauses_27001 = attachedSubClauses_27001[0];
@@ -583,22 +584,23 @@ export const getRiskByIdQuery = async (
 const createProjectRiskLink = async (
   projects: number[],
   riskId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<void> => {
   const projectReplacements: { [key: string]: number }[] = [];
   const placeholders = projects
     .map((_, index) => {
       projectReplacements.push({ [`projectId_${index}`]: projects![index] });
-      return `(:projectId_${index}, :riskId)`;
+      return `(:projectId_${index}, :riskId, :organizationId)`;
     })
     .join(", ");
   const replacements: any = {
     riskId: riskId,
+    organizationId,
     ...Object.assign({}, ...projectReplacements),
   };
   await sequelize.query(
-    `INSERT INTO "${tenant}".projects_risks (project_id, risk_id) VALUES ${placeholders}`,
+    `INSERT INTO projects_risks (project_id, risk_id, organization_id) VALUES ${placeholders}`,
     {
       replacements,
       transaction,
@@ -609,7 +611,7 @@ const createProjectRiskLink = async (
 const createFrameworkRiskLink = async (
   frameworks: number[],
   riskId: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<void> => {
   const frameworkReplacements: { [key: string]: number }[] = [];
@@ -618,15 +620,16 @@ const createFrameworkRiskLink = async (
       frameworkReplacements.push({
         [`frameworkId_${index}`]: frameworks![index],
       });
-      return `(:frameworkId_${index}, :riskId)`;
+      return `(:frameworkId_${index}, :riskId, :organizationId)`;
     })
     .join(", ");
   const replacements: any = {
     riskId: riskId,
+    organizationId,
     ...Object.assign({}, ...frameworkReplacements),
   };
   await sequelize.query(
-    `INSERT INTO "${tenant}".frameworks_risks (framework_id, risk_id) VALUES ${placeholders}`,
+    `INSERT INTO frameworks_risks (framework_id, risk_id, organization_id) VALUES ${placeholders}`,
     {
       replacements,
       transaction,
@@ -638,27 +641,42 @@ export const createRiskQuery = async (
   projectRisk: Partial<
     RiskModel & { projects: number[]; frameworks: number[] }
   >,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<RiskModel> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".risks (
-      risk_name, risk_owner, ai_lifecycle_phase, risk_description,
+    `INSERT INTO risks (
+      organization_id, risk_name, risk_owner, ai_lifecycle_phase, risk_description,
       risk_category, impact, assessment_mapping, controls_mapping, likelihood,
       severity, risk_level_autocalculated, review_notes, mitigation_status,
       current_risk_level, deadline, mitigation_plan, implementation_strategy,
       mitigation_evidence_document, likelihood_mitigation, risk_severity,
-      final_risk_level, risk_approval, approval_status, date_of_assessment, is_demo
+      final_risk_level, risk_approval, approval_status, date_of_assessment, is_demo,
+      event_frequency_min, event_frequency_likely, event_frequency_max,
+      loss_regulatory_min, loss_regulatory_likely, loss_regulatory_max,
+      loss_operational_min, loss_operational_likely, loss_operational_max,
+      loss_litigation_min, loss_litigation_likely, loss_litigation_max,
+      loss_reputational_min, loss_reputational_likely, loss_reputational_max,
+      total_loss_likely, ale_estimate, control_effectiveness, residual_ale,
+      mitigation_cost_annual, roi_percentage, benchmark_id, currency
     ) VALUES (
-      :risk_name, :risk_owner, :ai_lifecycle_phase, :risk_description,
+      :organization_id, :risk_name, :risk_owner, :ai_lifecycle_phase, :risk_description,
       :risk_category::enum_projectrisks_risk_category[], :impact, :assessment_mapping, :controls_mapping, :likelihood,
       :severity, :risk_level_autocalculated, :review_notes, :mitigation_status,
       :current_risk_level, :deadline, :mitigation_plan, :implementation_strategy,
       :mitigation_evidence_document, :likelihood_mitigation, :risk_severity,
-      :final_risk_level, :risk_approval, :approval_status, :date_of_assessment, :is_demo
+      :final_risk_level, :risk_approval, :approval_status, :date_of_assessment, :is_demo,
+      :event_frequency_min, :event_frequency_likely, :event_frequency_max,
+      :loss_regulatory_min, :loss_regulatory_likely, :loss_regulatory_max,
+      :loss_operational_min, :loss_operational_likely, :loss_operational_max,
+      :loss_litigation_min, :loss_litigation_likely, :loss_litigation_max,
+      :loss_reputational_min, :loss_reputational_likely, :loss_reputational_max,
+      :total_loss_likely, :ale_estimate, :control_effectiveness, :residual_ale,
+      :mitigation_cost_annual, :roi_percentage, :benchmark_id, :currency
     ) RETURNING *`,
     {
       replacements: {
+        organization_id: organizationId,
         risk_name: projectRisk.risk_name,
         risk_owner: projectRisk.risk_owner,
         ai_lifecycle_phase: projectRisk.ai_lifecycle_phase,
@@ -684,6 +702,29 @@ export const createRiskQuery = async (
         approval_status: projectRisk.approval_status,
         date_of_assessment: projectRisk.date_of_assessment,
         is_demo: projectRisk.is_demo || false,
+        event_frequency_min: projectRisk.event_frequency_min ?? null,
+        event_frequency_likely: projectRisk.event_frequency_likely ?? null,
+        event_frequency_max: projectRisk.event_frequency_max ?? null,
+        loss_regulatory_min: projectRisk.loss_regulatory_min ?? null,
+        loss_regulatory_likely: projectRisk.loss_regulatory_likely ?? null,
+        loss_regulatory_max: projectRisk.loss_regulatory_max ?? null,
+        loss_operational_min: projectRisk.loss_operational_min ?? null,
+        loss_operational_likely: projectRisk.loss_operational_likely ?? null,
+        loss_operational_max: projectRisk.loss_operational_max ?? null,
+        loss_litigation_min: projectRisk.loss_litigation_min ?? null,
+        loss_litigation_likely: projectRisk.loss_litigation_likely ?? null,
+        loss_litigation_max: projectRisk.loss_litigation_max ?? null,
+        loss_reputational_min: projectRisk.loss_reputational_min ?? null,
+        loss_reputational_likely: projectRisk.loss_reputational_likely ?? null,
+        loss_reputational_max: projectRisk.loss_reputational_max ?? null,
+        total_loss_likely: projectRisk.total_loss_likely ?? null,
+        ale_estimate: projectRisk.ale_estimate ?? null,
+        control_effectiveness: projectRisk.control_effectiveness ?? null,
+        residual_ale: projectRisk.residual_ale ?? null,
+        mitigation_cost_annual: projectRisk.mitigation_cost_annual ?? null,
+        roi_percentage: projectRisk.roi_percentage ?? null,
+        benchmark_id: projectRisk.benchmark_id ?? null,
+        currency: projectRisk.currency ?? 'USD',
       },
       mapToModel: true,
       model: RiskModel,
@@ -696,7 +737,7 @@ export const createRiskQuery = async (
     await createProjectRiskLink(
       projectRisk.projects,
       result[0].id!,
-      tenant,
+      organizationId,
       transaction
     );
   }
@@ -705,7 +746,7 @@ export const createRiskQuery = async (
     await createFrameworkRiskLink(
       projectRisk.frameworks,
       result[0].id!,
-      tenant,
+      organizationId,
       transaction
     );
   }
@@ -717,8 +758,8 @@ export const createRiskQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_added' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -731,14 +772,14 @@ export const createRiskQuery = async (
     const automation = automations[0][0];
     if (automation["trigger_key"] === "risk_added") {
       const owner_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :owner_id;`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
         {
           replacements: { owner_id: createdRisk.dataValues.risk_owner },
           transaction,
         }
       )) as [{ full_name: string }[], number];
       const approver_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :approver_id;`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
         {
           replacements: { approver_id: createdRisk.dataValues.risk_approval },
           transaction,
@@ -765,7 +806,7 @@ export const createRiskQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -777,15 +818,15 @@ export const createRiskQuery = async (
   // Record history snapshots for all tracked parameters
   try {
     await Promise.all([
-      recordSnapshotIfChanged("severity", tenant, undefined, transaction),
-      recordSnapshotIfChanged("likelihood", tenant, undefined, transaction),
+      recordSnapshotIfChanged("severity", organizationId, undefined, transaction),
+      recordSnapshotIfChanged("likelihood", organizationId, undefined, transaction),
       recordSnapshotIfChanged(
         "mitigation_status",
-        tenant,
+        organizationId,
         undefined,
         transaction
       ),
-      recordSnapshotIfChanged("risk_level", tenant, undefined, transaction),
+      recordSnapshotIfChanged("risk_level", organizationId, undefined, transaction),
     ]);
   } catch (historyError) {
     console.error("Error recording risk history snapshots:", historyError);
@@ -805,11 +846,11 @@ export const updateRiskByIdQuery = async (
       deletedLinkedFrameworks?: boolean;
     }
   >,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<RiskModel | null> => {
-  const existingRisk = await getRiskByIdQuery(id, tenant, true);
-  const updateProjectRisk: Partial<Record<keyof RiskModel, any>> = {};
+  const existingRisk = await getRiskByIdQuery(id, organizationId, true);
+  const updateProjectRisk: Partial<Record<keyof RiskModel, any>> & { organizationId?: number } = {};
   const setClause = [
     "risk_name",
     "risk_owner",
@@ -835,19 +876,53 @@ export const updateRiskByIdQuery = async (
     "risk_approval",
     "approval_status",
     "date_of_assessment",
+    // Quantitative (FAIR) fields
+    "event_frequency_min",
+    "event_frequency_likely",
+    "event_frequency_max",
+    "loss_regulatory_min",
+    "loss_regulatory_likely",
+    "loss_regulatory_max",
+    "loss_operational_min",
+    "loss_operational_likely",
+    "loss_operational_max",
+    "loss_litigation_min",
+    "loss_litigation_likely",
+    "loss_litigation_max",
+    "loss_reputational_min",
+    "loss_reputational_likely",
+    "loss_reputational_max",
+    "total_loss_likely",
+    "ale_estimate",
+    "control_effectiveness",
+    "residual_ale",
+    "mitigation_cost_annual",
+    "roi_percentage",
+    "benchmark_id",
+    "currency",
   ]
     .filter((f) => {
-      if (
-        projectRisk[f as keyof RiskModel] !== undefined &&
-        projectRisk[f as keyof RiskModel]
-      ) {
+      const value = projectRisk[f as keyof RiskModel];
+      // For quantitative FAIR fields, allow null and 0 as valid update values
+      const isQuantitativeField = [
+        "event_frequency_min", "event_frequency_likely", "event_frequency_max",
+        "loss_regulatory_min", "loss_regulatory_likely", "loss_regulatory_max",
+        "loss_operational_min", "loss_operational_likely", "loss_operational_max",
+        "loss_litigation_min", "loss_litigation_likely", "loss_litigation_max",
+        "loss_reputational_min", "loss_reputational_likely", "loss_reputational_max",
+        "total_loss_likely", "ale_estimate", "control_effectiveness", "residual_ale",
+        "mitigation_cost_annual", "roi_percentage", "benchmark_id", "currency",
+      ].includes(f);
+      const hasValue = isQuantitativeField
+        ? value !== undefined
+        : value !== undefined && value;
+      if (hasValue) {
         if (f === "risk_category") {
           // Format array for PostgreSQL
-          const arr = projectRisk[f as keyof RiskModel] as string[];
+          const arr = value as string[];
           updateProjectRisk[f as keyof RiskModel] = `{${(arr || []).join(',')}}` as any;
         } else {
-          updateProjectRisk[f as keyof RiskModel] =
-            projectRisk[f as keyof RiskModel];
+          updateProjectRisk[f as keyof RiskModel] = value;
         }
         return true;
       }
@@ -860,10 +935,11 @@ export const updateRiskByIdQuery = async (
       return `${f} = :${f}`;
     });
 
-  let query = `UPDATE "${tenant}".risks SET ${setClause.join(", ")} WHERE id = :id RETURNING *;`;
+  let query = `UPDATE risks SET ${setClause.join(", ")} WHERE id = :id AND organization_id = :organizationId RETURNING *;`;
   if (setClause.length === 0) {
-    query = `SELECT * FROM "${tenant}".risks WHERE id = :id;`;
+    query = `SELECT * FROM risks WHERE id = :id AND organization_id = :organizationId;`;
   }
+  updateProjectRisk.organizationId = organizationId;
 
   updateProjectRisk.id = id;
 
@@ -882,9 +958,9 @@ export const updateRiskByIdQuery = async (
   ) {
     // First, get the current projects linked to this risk to identify deleted ones
     const currentProjectsResult = (await sequelize.query(
-      `SELECT project_id FROM "${tenant}".projects_risks WHERE risk_id = :riskId`,
+      `SELECT project_id FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
       {
-        replacements: { riskId: id },
+        replacements: { riskId: id, organizationId },
         transaction,
       }
     )) as [{ project_id: number }[], number];
@@ -902,9 +978,9 @@ export const updateRiskByIdQuery = async (
     // Clean up mitigation mappings for deleted projects
     if (deletedProjectIds.length > 0) {
       const projectFrameworks = (await sequelize.query(
-        `SELECT * FROM "${tenant}".projects_frameworks WHERE project_id IN (:deletedProjectIds)`,
+        `SELECT * FROM projects_frameworks WHERE project_id IN (:deletedProjectIds) AND organization_id = :organizationId`,
         {
-          replacements: { deletedProjectIds },
+          replacements: { deletedProjectIds, organizationId },
           transaction,
         }
       )) as [(IProjectFrameworks & { id: number })[], number];
@@ -912,17 +988,17 @@ export const updateRiskByIdQuery = async (
       for (let pf of projectFrameworks[0]) {
         if (pf.framework_id === 1) {
           await sequelize.query(
-            `DELETE FROM "${tenant}".answers_eu__risks WHERE answer_id IN (
-              SELECT ae.id FROM "${tenant}".answers_eu ae JOIN "${tenant}".assessments a ON ae.assessment_id = a.id WHERE a.projects_frameworks_id = :pfId
+            `DELETE FROM answers_eu__risks WHERE organization_id = :organizationId AND answer_id IN (
+              SELECT ae.id FROM answers_eu ae JOIN assessments a ON ae.assessment_id = a.id AND ae.organization_id = :organizationId AND a.organization_id = :organizationId WHERE a.projects_frameworks_id = :pfId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
           );
 
           await sequelize.query(
-            `DELETE FROM "${tenant}".controls_eu__risks WHERE control_id IN (
-              SELECT sc.id FROM "${tenant}".controls_eu c JOIN "${tenant}".subcontrols_eu sc ON c.id = sc.control_id WHERE c.projects_frameworks_id = :pfId
+            `DELETE FROM controls_eu__risks WHERE organization_id = :organizationId AND control_id IN (
+              SELECT sc.id FROM controls_eu c JOIN subcontrols_eu sc ON c.id = sc.control_id AND c.organization_id = :organizationId AND sc.organization_id = :organizationId WHERE c.projects_frameworks_id = :pfId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
           );
         }
       }
@@ -930,9 +1006,9 @@ export const updateRiskByIdQuery = async (
 
     // Delete all project-risk links
     await sequelize.query(
-      `DELETE FROM "${tenant}".projects_risks WHERE risk_id = :riskId`,
+      `DELETE FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
       {
-        replacements: { riskId: id },
+        replacements: { riskId: id, organizationId },
         transaction,
       }
     );
@@ -941,7 +1017,7 @@ export const updateRiskByIdQuery = async (
       await createProjectRiskLink(
         projectRisk.projects,
         id,
-        tenant,
+        organizationId,
         transaction
       );
     }
@@ -954,9 +1030,9 @@ export const updateRiskByIdQuery = async (
   ) {
     // First, get the current frameworks linked to this risk to identify deleted ones
     const currentFrameworksResult = (await sequelize.query(
-      `SELECT framework_id FROM "${tenant}".frameworks_risks WHERE risk_id = :riskId`,
+      `SELECT framework_id FROM frameworks_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
       {
-        replacements: { riskId: id },
+        replacements: { riskId: id, organizationId },
         transaction,
       }
     )) as [{ framework_id: number }[], number];
@@ -974,42 +1050,42 @@ export const updateRiskByIdQuery = async (
     // Clean up mitigation mappings for deleted frameworks (if framework-specific cleanup is needed)
     if (deletedFrameworkIds.length > 0) {
       const projectFrameworks = (await sequelize.query(
-        `SELECT * FROM "${tenant}".projects_frameworks WHERE framework_id IN (:deletedFrameworkIds)`,
+        `SELECT * FROM projects_frameworks WHERE framework_id IN (:deletedFrameworkIds) AND organization_id = :organizationId`,
         {
-          replacements: { deletedFrameworkIds },
+          replacements: { deletedFrameworkIds, organizationId },
           transaction,
         }
       )) as [(IProjectFrameworks & { id: number })[], number];
       for (let pf of projectFrameworks[0]) {
         if (pf.framework_id === 2) {
           await sequelize.query(
-            `DELETE FROM "${tenant}".subclauses_iso__risks WHERE subclause_id IN (
-              SELECT sc.id FROM "${tenant}".subclauses_iso sc WHERE sc.projects_frameworks_id = :pfId
+            `DELETE FROM subclauses_iso__risks WHERE organization_id = :organizationId AND subclause_id IN (
+              SELECT sc.id FROM subclauses_iso sc WHERE sc.projects_frameworks_id = :pfId AND sc.organization_id = :organizationId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
           );
 
           await sequelize.query(
-            `DELETE FROM "${tenant}".annexcategories_iso__risks WHERE annexcategory_id IN (
-              SELECT ac.id FROM "${tenant}".annexcategories_iso ac WHERE ac.projects_frameworks_id = :pfId
+            `DELETE FROM annexcategories_iso__risks WHERE organization_id = :organizationId AND annexcategory_id IN (
+              SELECT ac.id FROM annexcategories_iso ac WHERE ac.projects_frameworks_id = :pfId AND ac.organization_id = :organizationId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
           );
         }
 
         if (pf.framework_id === 3) {
           await sequelize.query(
-            `DELETE FROM "${tenant}".subclauses_iso27001__risks WHERE subclause_id IN (
-              SELECT sc.id FROM "${tenant}".subclauses_iso27001 sc WHERE sc.projects_frameworks_id = :pfId
+            `DELETE FROM subclauses_iso27001__risks WHERE organization_id = :organizationId AND subclause_id IN (
+              SELECT sc.id FROM subclauses_iso27001 sc WHERE sc.projects_frameworks_id = :pfId AND sc.organization_id = :organizationId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
           );
 
           await sequelize.query(
-            `DELETE FROM "${tenant}".annexcontrols_iso27001__risks WHERE annexcontrol_id IN (
-              SELECT ac.id FROM "${tenant}".annexcontrols_iso27001 ac WHERE ac.projects_frameworks_id = :pfId
+            `DELETE FROM annexcontrols_iso27001__risks WHERE organization_id = :organizationId AND annexcontrol_id IN (
+              SELECT ac.id FROM annexcontrols_iso27001 ac WHERE ac.projects_frameworks_id = :pfId AND ac.organization_id = :organizationId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
           );
         }
       }
@@ -1017,9 +1093,9 @@ export const updateRiskByIdQuery = async (
 
     // Delete all framework-risk links
     await sequelize.query(
-      `DELETE FROM "${tenant}".frameworks_risks WHERE risk_id = :riskId`,
+      `DELETE FROM frameworks_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
       {
-        replacements: { riskId: id },
+        replacements: { riskId: id, organizationId },
         transaction,
       }
     );
@@ -1028,7 +1104,7 @@ export const updateRiskByIdQuery = async (
       await createFrameworkRiskLink(
         projectRisk.frameworks,
         id,
-        tenant,
+        organizationId,
         transaction
       );
     }
@@ -1040,8 +1116,8 @@ export const updateRiskByIdQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_updated' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -1058,7 +1134,7 @@ export const updateRiskByIdQuery = async (
         if (updatedRisk.dataValues.risk_owner) {
           const ownerResult = await sequelize.query(
             `SELECT name || ' ' || surname AS full_name 
-            FROM public.users 
+            FROM users 
             WHERE id = :owner_id;`,
             {
               replacements: { owner_id: updatedRisk.dataValues.risk_owner },
@@ -1072,7 +1148,7 @@ export const updateRiskByIdQuery = async (
         let approverFullName = "";
         if (updatedRisk.dataValues.risk_approval) {
           const approver_name = await sequelize.query(
-            `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :approver_id;`,
+            `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
             {
               replacements: { approver_id: updatedRisk.dataValues.risk_approval }, transaction
             }
@@ -1100,7 +1176,7 @@ export const updateRiskByIdQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -1126,7 +1202,7 @@ export const updateRiskByIdQuery = async (
         (existingRisk as any)[param] !== (updatedRisk.dataValues as any)[param]
       ) {
         snapshotPromises.push(
-          recordSnapshotIfChanged(key, tenant, undefined, transaction)
+          recordSnapshotIfChanged(key, organizationId, undefined, transaction)
         );
       }
     }
@@ -1144,13 +1220,13 @@ export const updateRiskByIdQuery = async (
 
 export const deleteRiskByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = (await sequelize.query(
-    `UPDATE "${tenant}".risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND is_deleted = false RETURNING *`,
+    `UPDATE risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :organizationId AND is_deleted = false RETURNING *`,
     {
-      replacements: { id },
+      replacements: { id, organizationId },
       mapToModel: true,
       // model: RiskModel,
       // type: QueryTypes.UPDATE,
@@ -1164,8 +1240,8 @@ export const deleteRiskByIdQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -1178,14 +1254,14 @@ export const deleteRiskByIdQuery = async (
     const automation = automations[0][0];
     if (automation["trigger_key"] === "risk_deleted") {
       const owner_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :owner_id;`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
         {
           replacements: { owner_id: deletedRisk.risk_owner },
           transaction,
         }
       )) as [{ full_name: string }[], number];
       const approver_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM public.users WHERE id = :approver_id;`,
+        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
         {
           replacements: { approver_id: deletedRisk.risk_approval },
           transaction,
@@ -1212,7 +1288,7 @@ export const deleteRiskByIdQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -1224,15 +1300,15 @@ export const deleteRiskByIdQuery = async (
   // Record history snapshots for all tracked parameters after deletion
   try {
     await Promise.all([
-      recordSnapshotIfChanged("severity", tenant, undefined, transaction),
-      recordSnapshotIfChanged("likelihood", tenant, undefined, transaction),
+      recordSnapshotIfChanged("severity", organizationId, undefined, transaction),
+      recordSnapshotIfChanged("likelihood", organizationId, undefined, transaction),
       recordSnapshotIfChanged(
         "mitigation_status",
-        tenant,
+        organizationId,
         undefined,
         transaction
       ),
-      recordSnapshotIfChanged("risk_level", tenant, undefined, transaction),
+      recordSnapshotIfChanged("risk_level", organizationId, undefined, transaction),
     ]);
   } catch (historyError) {
     console.error("Error recording risk history snapshots:", historyError);

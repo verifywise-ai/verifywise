@@ -16,10 +16,10 @@ interface InvitationRow {
 
 /**
  * Create or update an invitation record.
- * Uses ON CONFLICT with partial unique index (email) WHERE status='pending'.
+ * Uses ON CONFLICT with partial unique index (organization_id, email) WHERE status='pending'.
  */
 export const createInvitationQuery = async (
-  tenant: string,
+  organizationId: number,
   email: string,
   name: string,
   surname: string,
@@ -28,9 +28,9 @@ export const createInvitationQuery = async (
   expiresAt: Date
 ): Promise<InvitationRow> => {
   const result = (await sequelize.query(
-    `INSERT INTO "${tenant}".invitations (email, name, surname, role_id, status, invited_by, expires_at)
-     VALUES (:email, :name, :surname, :roleId, 'pending', :invitedBy, :expiresAt)
-     ON CONFLICT (email) WHERE status = 'pending'
+    `INSERT INTO invitations (organization_id, email, name, surname, role_id, status, invited_by, expires_at)
+     VALUES (:organizationId, :email, :name, :surname, :roleId, 'pending', :invitedBy, :expiresAt)
+     ON CONFLICT (organization_id, email) WHERE status = 'pending'
      DO UPDATE SET
        name = EXCLUDED.name,
        surname = EXCLUDED.surname,
@@ -42,6 +42,7 @@ export const createInvitationQuery = async (
      RETURNING *`,
     {
       replacements: {
+        organizationId,
         email,
         name,
         surname,
@@ -56,10 +57,10 @@ export const createInvitationQuery = async (
 };
 
 /**
- * Get all pending invitations for a tenant, joined with role name.
+ * Get all pending invitations for an organization, joined with role name.
  */
-export const getInvitationsByTenantQuery = async (
-  tenant: string
+export const getInvitationsByOrganizationQuery = async (
+  organizationId: number
 ): Promise<InvitationRow[]> => {
   const result = (await sequelize.query(
     `SELECT i.id, i.email, i.name, i.surname, i.role_id, i.status, i.invited_by,
@@ -67,28 +68,34 @@ export const getInvitationsByTenantQuery = async (
             to_char(i.expires_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS expires_at,
             i.updated_at,
             r.name AS role_name
-     FROM "${tenant}".invitations i
-     LEFT JOIN public.roles r ON r.id = i.role_id
-     WHERE i.status = 'pending'
+     FROM invitations i
+     LEFT JOIN roles r ON r.id = i.role_id
+     WHERE i.organization_id = :organizationId AND i.status = 'pending'
      ORDER BY i.created_at DESC`,
+    { replacements: { organizationId } }
   )) as [InvitationRow[], number];
 
   return result[0];
 };
 
 /**
+ * @deprecated Use getInvitationsByOrganizationQuery instead
+ */
+export const getInvitationsByTenantQuery = getInvitationsByOrganizationQuery;
+
+/**
  * Get a single invitation by id.
  */
 export const getInvitationByIdQuery = async (
-  tenant: string,
+  organizationId: number,
   id: number
 ): Promise<InvitationRow | null> => {
   const result = (await sequelize.query(
     `SELECT i.*, r.name AS role_name
-     FROM "${tenant}".invitations i
-     LEFT JOIN public.roles r ON r.id = i.role_id
-     WHERE i.id = :id AND i.status = 'pending'`,
-    { replacements: { id } }
+     FROM invitations i
+     LEFT JOIN roles r ON r.id = i.role_id
+     WHERE i.organization_id = :organizationId AND i.id = :id AND i.status = 'pending'`,
+    { replacements: { organizationId, id } }
   )) as [InvitationRow[], number];
 
   return result[0][0] || null;
@@ -98,14 +105,14 @@ export const getInvitationByIdQuery = async (
  * Revoke (delete) an invitation.
  */
 export const revokeInvitationQuery = async (
-  tenant: string,
+  organizationId: number,
   id: number
 ): Promise<boolean> => {
   const result = (await sequelize.query(
-    `DELETE FROM "${tenant}".invitations
-     WHERE id = :id AND status = 'pending'
+    `DELETE FROM invitations
+     WHERE organization_id = :organizationId AND id = :id AND status = 'pending'
      RETURNING id`,
-    { replacements: { id } }
+    { replacements: { organizationId, id } }
   )) as [InvitationRow[], number];
 
   return result[0].length > 0;
@@ -115,14 +122,14 @@ export const revokeInvitationQuery = async (
  * Mark invitation as accepted when user registers via invite link.
  */
 export const markInvitationAcceptedQuery = async (
-  tenant: string,
+  organizationId: number,
   email: string
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".invitations
+    `UPDATE invitations
      SET status = 'accepted', updated_at = CURRENT_TIMESTAMP
-     WHERE email = :email AND status = 'pending'`,
-    { replacements: { email } }
+     WHERE organization_id = :organizationId AND email = :email AND status = 'pending'`,
+    { replacements: { organizationId, email } }
   );
 };
 
@@ -130,15 +137,15 @@ export const markInvitationAcceptedQuery = async (
  * Update invitation expiry after resend.
  */
 export const updateInvitationExpiryQuery = async (
-  tenant: string,
+  organizationId: number,
   id: number,
   expiresAt: Date
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".invitations
+    `UPDATE invitations
      SET created_at = CURRENT_TIMESTAMP, expires_at = :expiresAt, updated_at = CURRENT_TIMESTAMP
-     WHERE id = :id`,
-    { replacements: { id, expiresAt: expiresAt.toISOString() } }
+     WHERE organization_id = :organizationId AND id = :id`,
+    { replacements: { organizationId, id, expiresAt: expiresAt.toISOString() } }
   );
 };
 
@@ -147,14 +154,14 @@ export const updateInvitationExpiryQuery = async (
  * Used during registration to verify the invitation wasn't revoked.
  */
 export const checkPendingInvitationQuery = async (
-  tenant: string,
+  organizationId: number,
   email: string
 ): Promise<boolean> => {
   const result = (await sequelize.query(
-    `SELECT id FROM "${tenant}".invitations
-     WHERE email = :email AND status = 'pending'
+    `SELECT id FROM invitations
+     WHERE organization_id = :organizationId AND email = :email AND status = 'pending'
      LIMIT 1`,
-    { replacements: { email } }
+    { replacements: { organizationId, email } }
   )) as [InvitationRow[], number];
 
   return result[0].length > 0;

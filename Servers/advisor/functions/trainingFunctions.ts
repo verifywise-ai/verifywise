@@ -10,10 +10,10 @@ export interface FetchTrainingRecordsParams {
 
 const fetchTrainingRecords = async (
   params: FetchTrainingRecordsParams,
-  tenant: string
+  organizationId: number
 ): Promise<any[]> => {
   try {
-    let records = await getAllTrainingRegistarQuery(tenant);
+    let records = await getAllTrainingRegistarQuery(organizationId);
 
     // Apply filters
     if (params.status) {
@@ -59,10 +59,10 @@ const fetchTrainingRecords = async (
 
 const getTrainingAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const records = await getAllTrainingRegistarQuery(tenant);
+    const records = await getAllTrainingRegistarQuery(organizationId);
     const total = records.length;
 
     // Status distribution
@@ -113,10 +113,10 @@ const getTrainingAnalytics = async (
 
 const getTrainingExecutiveSummary = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const records = await getAllTrainingRegistarQuery(tenant);
+    const records = await getAllTrainingRegistarQuery(organizationId);
     const total = records.length;
 
     const completedCount = records.filter(

@@ -5,9 +5,11 @@ import Plugins from "../../presentation/pages/Plugins";
 import PluginManagement from "../../presentation/pages/Plugins/PluginManagement";
 import Setting from "../../presentation/pages/SettingsPage";
 import Organization from "../../presentation/pages/SettingsPage/Organization";
-import RegisterAdmin from "../../presentation/pages/Authentication/RegisterAdmin";
 import RegisterUser from "../../presentation/pages/Authentication/RegisterUser";
-import RegisterMultiTenant from "../../presentation/pages/Authentication/RegisterMultiTenant";
+import SuperAdminOrganizations from "../../presentation/pages/SuperAdmin/Organizations";
+import SuperAdminUsers from "../../presentation/pages/SuperAdmin/Users";
+import SuperAdminAllUsers from "../../presentation/pages/SuperAdmin/AllUsers";
+import SuperAdminSettings from "../../presentation/pages/SuperAdmin/Settings";
 import Login from "../../presentation/pages/Authentication/Login";
 import ForgotPassword from "../../presentation/pages/Authentication/ForgotPassword";
 import ResetPassword from "../../presentation/pages/Authentication/ResetPassword";
@@ -28,6 +30,7 @@ import SharedView from "../../presentation/pages/SharedView";
 
 import Training from "../../presentation/pages/TrainingRegistar";
 import PolicyDashboard from "../../presentation/pages/PolicyDashboard/PoliciesDashboard";
+import PolicyEditorPage from "../../presentation/pages/PolicyDashboard/PolicyEditorPage";
 import WatchTower from "../../presentation/pages/WatchTower";
 import ModelInventory from "../../presentation/pages/ModelInventory";
 import ModelLifecycleDetail from "../../presentation/pages/ModelInventory/ModelLifecycleDetail";
@@ -37,6 +40,7 @@ import AgentDiscovery from "../../presentation/pages/AgentDiscovery";
 import Framework from "../../presentation/pages/Framework";
 import Tasks from "../../presentation/pages/Tasks";
 import IntegratedDashboard from "../../presentation/pages/DashboardOverview/IntegratedDashboard";
+import StartHere from "../../presentation/pages/StartHere";
 import RiskManagement from "../../presentation/pages/RiskManagement";
 import AutomationsPage from "../../presentation/pages/Automations";
 import StyleGuide from "../../presentation/pages/StyleGuide";
@@ -54,6 +58,16 @@ import UserActivityPage from "../../presentation/pages/ShadowAI/UserActivityPage
 import AIToolsPage from "../../presentation/pages/ShadowAI/AIToolsPage";
 import RulesPage from "../../presentation/pages/ShadowAI/RulesPage";
 import ShadowAISettingsPage from "../../presentation/pages/ShadowAI/SettingsPage";
+import AIGatewayEndpointsPage from "../../presentation/pages/AIGateway/Endpoints";
+import AIGatewayAnalyticsPage from "../../presentation/pages/AIGateway/SpendDashboard";
+import AIGatewayPlaygroundPage from "../../presentation/pages/AIGateway/Playground";
+import AIGatewayGuardrailsPage from "../../presentation/pages/AIGateway/Guardrails";
+import AIGatewayLogsPage from "../../presentation/pages/AIGateway/Logs";
+import AIGatewayModelsPage from "../../presentation/pages/AIGateway/Models";
+import AIGatewaySettingsPage from "../../presentation/pages/AIGateway/Settings";
+import AIGatewayVirtualKeysPage from "../../presentation/pages/AIGateway/VirtualKeys";
+import AIGatewayPromptsPage from "../../presentation/pages/AIGateway/Prompts";
+import AIGatewayPromptEditorPage from "../../presentation/pages/AIGateway/Prompts/PromptEditor";
 import MonitoringForm from "../../presentation/pages/PostMarketMonitoring/MonitoringForm";
 import ReportsArchive from "../../presentation/pages/PostMarketMonitoring/ReportsArchive";
 import IntakeFormsListPage from "../../presentation/pages/IntakeFormBuilder/IntakeFormsListPage";
@@ -96,6 +110,7 @@ export const createRoutes = (
       <Route path="/file-manager" element={<FileManager />} />
     <Route path="/reporting" element={<Reporting />} />
     <Route index element={<IntegratedDashboard />} />
+    <Route path="/start-here" element={<StartHere />} />
     <Route path="/overview" element={<VWHome />} />
     <Route path="/framework/:tab?" element={<Framework />} />
     <Route path="/project-view" element={<VWProjectView />} />
@@ -106,6 +121,8 @@ export const createRoutes = (
     <Route path="/training" element={<Training />} />
     <Route path="/ai-trust-center" element={<AITrustCenter />} />
     <Route path="/ai-trust-center/:tab" element={<AITrustCenter />} />
+    <Route path="/policies/new" element={<PolicyEditorPage />} />
+    <Route path="/policies/:id/edit" element={<PolicyEditorPage />} />
     <Route path="/policies" element={<PolicyDashboard />}>
       <Route index element={<PolicyDashboard />} /> {/* Default tab */}
       <Route path="templates" element={<PolicyDashboard />} /> {/* Policy Templates tab */}
@@ -143,6 +160,20 @@ export const createRoutes = (
     <Route path="/shadow-ai/rules" element={<RulesPage />} />
     <Route path="/shadow-ai/rules/alerts" element={<RulesPage />} />
     <Route path="/shadow-ai/settings" element={<ShadowAISettingsPage />} />
+    <Route path="/ai-gateway" element={<Navigate to="/ai-gateway/dashboard" replace />} />
+    <Route path="/ai-gateway/endpoints" element={<AIGatewayEndpointsPage />} />
+    <Route path="/ai-gateway/dashboard" element={<AIGatewayAnalyticsPage />} />
+    <Route path="/ai-gateway/playground" element={<AIGatewayPlaygroundPage />} />
+    <Route path="/ai-gateway/guardrails" element={<Navigate to="/ai-gateway/guardrails/pii" replace />} />
+    <Route path="/ai-gateway/guardrails/:tab" element={<AIGatewayGuardrailsPage />} />
+    <Route path="/ai-gateway/models" element={<Navigate to="/ai-gateway/models/catalog" replace />} />
+    <Route path="/ai-gateway/models/:tab" element={<AIGatewayModelsPage />} />
+    <Route path="/ai-gateway/logs" element={<AIGatewayLogsPage />} />
+    <Route path="/ai-gateway/prompts" element={<AIGatewayPromptsPage />} />
+    <Route path="/ai-gateway/prompts/:id" element={<AIGatewayPromptEditorPage />} />
+    <Route path="/ai-gateway/virtual-keys" element={<AIGatewayVirtualKeysPage />} />
+    <Route path="/ai-gateway/settings" element={<Navigate to="/ai-gateway/settings/api-keys" replace />} />
+    <Route path="/ai-gateway/settings/:tab" element={<AIGatewaySettingsPage />} />
     <Route path="/monitoring/cycle/:cycleId" element={<MonitoringForm />} />
     <Route path="/monitoring/reports" element={<ReportsArchive />} />
     <Route path="/intake-forms" element={<IntakeFormsListPage />}>
@@ -150,12 +181,12 @@ export const createRoutes = (
       <Route path="submissions" element={<IntakeFormsListPage />} />
     </Route>
     <Route path="/intake-forms/:formId/edit" element={<IntakeFormBuilder />} />
+    <Route path="/super-admin" element={<SuperAdminOrganizations />} />
+    <Route path="/super-admin/users" element={<SuperAdminAllUsers />} />
+    <Route path="/super-admin/organizations/:id/users" element={<SuperAdminUsers />} />
+    <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
+    <Route path="/super-admin/settings/:tab" element={<SuperAdminSettings />} />
   </Route>,
-  <Route
-    key="admin-reg"
-    path="/admin-reg"
-    element={<ProtectedRoute Component={RegisterAdmin} />}
-  />,
   <Route
     key="user-reg"
     path="/user-reg"
@@ -164,7 +195,12 @@ export const createRoutes = (
   <Route
     key="register"
     path="/register"
-    element={<ProtectedRoute Component={RegisterMultiTenant} />}
+    element={<Navigate to="/login" replace />}
+  />,
+  <Route
+    key="admin-reg"
+    path="/admin-reg"
+    element={<Navigate to="/login" replace />}
   />,
   <Route
     key="login"

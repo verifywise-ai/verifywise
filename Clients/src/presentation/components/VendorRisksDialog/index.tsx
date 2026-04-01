@@ -29,7 +29,7 @@ import {
 } from "../Table/styles";
 import { EmptyState } from "../EmptyState";
 import TablePaginationActions from "../TablePagination";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, ShieldAlert } from "lucide-react";
 import {
   IVendorRisk,
   IVendorRisksDialogProps,
@@ -322,7 +322,7 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
                         colSpan={4}
                         sx={{ border: "none", p: 0 }}
                       >
-                        <EmptyState message="No risks found for this vendor." />
+                        <EmptyState icon={ShieldAlert} message="No risks found for this vendor." />
                       </TableCell>
                     </TableRow>
                   </TableBody>

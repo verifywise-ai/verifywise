@@ -1,61 +1,19 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
-import { NISTAIMRFFunctionType } from "../../enums/nist-ai-rmf-function.enum";
-import { FrameworkModel } from "../../models/frameworks/frameworks.model";
-
-@Table({
-  tableName: "nist_ai_rmf_functions",
-  timestamps: false,
-})
-export class NISTAIMRFFunctionModel extends Model<NISTAIMRFFunctionModel> {
-  @Column({
-    type: DataType.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  })
-  id?: number;
-
-  @Column({
-    type: DataType.ENUM(...Object.values(NISTAIMRFFunctionType)),
-  })
-  type?: NISTAIMRFFunctionType;
-
-  @Column({
-    type: DataType.STRING,
-  })
-  title?: string;
-
-  @Column({
-    type: DataType.STRING,
-  })
-  description?: string;
-
-  @ForeignKey(() => FrameworkModel)
-  @Column({
-    type: DataType.INTEGER,
-  })
-  framework_id?: number;
-
-  @Column({
-    type: DataType.DATE,
-    defaultValue: DataType.NOW,
-  })
-  created_at?: Date;
-
-  @Column({
-    type: DataType.BOOLEAN,
-    defaultValue: false,
-  })
-  is_demo?: boolean;
-
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: true,
-  })
-  index?: number;
+/**
+ * NIST AI RMF Function
+ *
+ * Functions are derived from the categories_struct table (GOVERN, MAP, MEASURE, MANAGE).
+ * There is no separate functions table - this interface defines the shape of
+ * function data returned by utility functions.
+ */
+export interface NISTAIMRFFunctionModel {
+  function: string;
+  title: string;
+  description: string;
+  order_no: number;
 }
+
+/**
+ * NIST AI RMF Function Types
+ */
+export const NIST_AI_RMF_FUNCTIONS = ['GOVERN', 'MAP', 'MEASURE', 'MANAGE'] as const;
+export type NISTAIMRFFunctionType = typeof NIST_AI_RMF_FUNCTIONS[number];

@@ -5,17 +5,12 @@ jest.mock("../jwt.utils", () => ({
   generateToken: jest.fn(),
   generateRefreshToken: jest.fn(),
 }));
-jest.mock("../../tools/getTenantHash", () => ({
-  getTenantHash: jest.fn(),
-}));
 
 import { generateUserTokens } from "../auth.utils";
 import { generateToken, generateRefreshToken } from "../jwt.utils";
-import { getTenantHash } from "../../tools/getTenantHash";
 
 const mockGenerateToken = generateToken as jest.MockedFunction<typeof generateToken>;
 const mockGenerateRefreshToken = generateRefreshToken as jest.MockedFunction<typeof generateRefreshToken>;
-const mockGetTenantHash = getTenantHash as jest.MockedFunction<typeof getTenantHash>;
 
 describe("auth.utils", () => {
   beforeAll(() => {
@@ -24,7 +19,6 @@ describe("auth.utils", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetTenantHash.mockReturnValue("a1b2c3d4e5");
     mockGenerateToken.mockReturnValue("access-token-123");
     mockGenerateRefreshToken.mockReturnValue("refresh-token-456");
   });
@@ -51,17 +45,15 @@ describe("auth.utils", () => {
       expect(result.refreshToken).toBe("refresh-token-456");
     });
 
-    it("should include tenant hash in token payload", () => {
+    it("should include organizationId in token payload", () => {
       const res = createMockRes();
       generateUserTokens(userData, res);
 
-      expect(mockGetTenantHash).toHaveBeenCalledWith(10);
       expect(mockGenerateToken).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 1,
           email: "user@test.com",
           roleName: "Admin",
-          tenantId: "a1b2c3d4e5",
           organizationId: 10,
         })
       );

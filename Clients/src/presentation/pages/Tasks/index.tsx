@@ -49,9 +49,11 @@ import {
 } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
+import { ColumnSelector } from "../../components/Table/ColumnSelector";
 
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { displayFormattedDate } from "../../tools/isoDateToString";
 import Alert from "../../components/Alert";
 import TabBar from "../../components/TabBar";
@@ -74,6 +76,17 @@ const STATUS_DISPLAY_MAP: Record<string, string> = {
   [TaskStatus.OVERDUE]: "Overdue",
   [TaskStatus.DELETED]: "Archived", // Show "Archived" instead of "Deleted" for better UX
 };
+
+type TaskColumnKey = "title" | "priority" | "status" | "due_date" | "assignees" | "actions";
+
+const TASKS_TABLE_COLUMNS: ColumnConfig<TaskColumnKey>[] = [
+  { key: "title", label: "Task", defaultVisible: true, alwaysVisible: true },
+  { key: "priority", label: "Priority", defaultVisible: true },
+  { key: "status", label: "Status", defaultVisible: true },
+  { key: "due_date", label: "Due date", defaultVisible: true },
+  { key: "assignees", label: "Assignees", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
 
 const Tasks: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -121,6 +134,17 @@ const Tasks: React.FC = () => {
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
   const isCreatingDisabled =
     !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+
+  // Column visibility for the tasks table
+  const {
+    visibleColumns,
+    allColumns: allTaskColumns,
+    toggleColumn: toggleTaskColumn,
+    resetToDefaults: resetTaskColumns,
+  } = useColumnVisibility({
+    tableId: "tasks-table",
+    columns: TASKS_TABLE_COLUMNS,
+  });
 
   // Calculate summary from tasks data
   const summary: TaskSummary = useMemo(
@@ -809,110 +833,120 @@ const Tasks: React.FC = () => {
 
       {/* Filter Controls - Only show for List view */}
       {activeTab === "list" && (
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-      >
-        <Stack direction="row" gap={2} alignItems="center">
-          {/* FilterBy */}
-          <Box data-joyride-id="task-filters">
-            <FilterBy
-              columns={taskFilterColumns}
-              onFilterChange={handleTaskFilterChange}
-            />
-          </Box>
-
-          {/* GroupBy */}
-          <GroupBy
-            options={[
-              { id: "status", label: "Status" },
-              { id: "priority", label: "Priority" },
-              { id: "assignees", label: "Assignees" },
-              { id: "due_date", label: "Due date" },
-            ]}
-            onGroupChange={handleGroupChange}
-          />
-
-          {/* SearchBox */}
-          <Box data-joyride-id="task-search">
-            <SearchBox
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={setSearchQuery}
-              inputProps={{ "aria-label": "Search tasks" }}
-              fullWidth={false}
-            />
-          </Box>
-
-          {/* My Tasks toggle - Admin only */}
-          {userRoleName === "Admin" && (
-            <Stack
-              sx={toggleContainerStyle}
-              data-joyride-id="my-tasks-toggle"
-            >
-              <Typography
-                component="span"
-                variant="body2"
-                color="text.secondary"
-                sx={toggleLabelStyle}
-              >
-                My tasks only
-              </Typography>
-              <Toggle
-                checked={showMyTasksOnly}
-                onChange={(_, checked) => setShowMyTasksOnly(checked)}
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Stack direction="row" gap="8px" alignItems="center">
+            {/* FilterBy */}
+            <Box data-joyride-id="task-filters">
+              <FilterBy
+                columns={taskFilterColumns}
+                onFilterChange={handleTaskFilterChange}
               />
-            </Stack>
-          )}
+            </Box>
 
-          {/* Include archived toggle */}
+            {/* GroupBy */}
+            <GroupBy
+              options={[
+                { id: "status", label: "Status" },
+                { id: "priority", label: "Priority" },
+                { id: "assignees", label: "Assignees" },
+                { id: "due_date", label: "Due date" },
+              ]}
+              onGroupChange={handleGroupChange}
+            />
+
+            <ColumnSelector
+              columns={allTaskColumns}
+              visibleColumns={visibleColumns}
+              onToggleColumn={toggleTaskColumn}
+              onResetToDefaults={resetTaskColumns}
+            />
+
+            {/* SearchBox */}
+            <Box data-joyride-id="task-search">
+              <SearchBox
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={setSearchQuery}
+                inputProps={{ "aria-label": "Search tasks" }}
+                fullWidth={false}
+              />
+            </Box>
+
+            {/* Toggles group with 16px spacing */}
+            <Stack direction="row" gap="16px" alignItems="center" sx={{ ml: "8px" }}>
+              {/* My Tasks toggle - Admin only */}
+              {userRoleName === "Admin" && (
+                <Stack
+                  sx={toggleContainerStyle}
+                  data-joyride-id="my-tasks-toggle"
+                >
+                  <Typography
+                    component="span"
+                    variant="body2"
+                    color="text.secondary"
+                    sx={toggleLabelStyle}
+                  >
+                    My tasks only
+                  </Typography>
+                  <Toggle
+                    checked={showMyTasksOnly}
+                    onChange={(_, checked) => setShowMyTasksOnly(checked)}
+                  />
+                </Stack>
+              )}
+
+              {/* Include archived toggle */}
+              <Stack
+                sx={toggleContainerStyle}
+                data-joyride-id="include-archived-toggle"
+              >
+                <Typography
+                  component="span"
+                  variant="body2"
+                  color="text.secondary"
+                  sx={toggleLabelStyle}
+                >
+                  Include archived
+                </Typography>
+                <Toggle
+                  checked={includeArchived}
+                  onChange={(_, checked) => setIncludeArchived(checked)}
+                />
+              </Stack>
+            </Stack>
+          </Stack>
+
+          {/* Right side: Export and Add button */}
           <Stack
-            sx={toggleContainerStyle}
-            data-joyride-id="include-archived-toggle"
+            direction="row"
+            gap="8px"
+            alignItems="center"
+            data-joyride-id="add-task-button"
           >
-            <Typography
-              component="span"
-              variant="body2"
-              color="text.secondary"
-              sx={toggleLabelStyle}
-            >
-              Include archived
-            </Typography>
-            <Toggle
-              checked={includeArchived}
-              onChange={(_, checked) => setIncludeArchived(checked)}
+            <ExportMenu
+              data={exportData}
+              columns={exportColumns}
+              filename="tasks"
+              title="Task Management"
+            />
+            <CustomizableButton
+              variant="contained"
+              text="Add new task"
+              sx={{
+                backgroundColor: "brand.primary",
+                border: "1px solid brand.primary",
+                gap: 2,
+              }}
+              icon={<AddCircleIcon size={16} />}
+              onClick={handleCreateTask}
+              isDisabled={isCreatingDisabled}
             />
           </Stack>
         </Stack>
-
-        {/* Right side: Export and Add button */}
-        <Stack
-          direction="row"
-          gap="8px"
-          alignItems="center"
-          data-joyride-id="add-task-button"
-        >
-          <ExportMenu
-            data={exportData}
-            columns={exportColumns}
-            filename="tasks"
-            title="Task Management"
-          />
-          <CustomizableButton
-            variant="contained"
-            text="Add new task"
-            sx={{
-              backgroundColor: "#13715B",
-              border: "1px solid #13715B",
-              gap: 2,
-            }}
-            icon={<AddCircleIcon size={16} />}
-            onClick={handleCreateTask}
-            isDisabled={isCreatingDisabled}
-          />
-        </Stack>
-      </Stack>
       )}
 
       {/* Content Area */}
@@ -962,6 +996,7 @@ const Tasks: React.FC = () => {
                 onRestore={handleRestoreTask}
                 onHardDelete={handleHardDeleteTask}
                 flashRowId={flashRowId}
+                visibleColumns={visibleColumns}
               />
             )}
           />

@@ -18,6 +18,8 @@ describe("authSlice", () => {
     expirationDate: null as number | null,
     onboardingStatus: "completed",
     isOrgCreator: false,
+    isSuperAdmin: false,
+    activeOrganizationId: null as number | null,
   };
 
   it("should return initial state on unknown action", () => {

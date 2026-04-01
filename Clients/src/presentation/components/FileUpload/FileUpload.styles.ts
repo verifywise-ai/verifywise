@@ -52,7 +52,7 @@ export const DragDropArea = styled("div", {
   justifyContent: "center",
   gap: 4,
   borderRadius: "8px",
-  backgroundColor: "#FFFFFF",
+  backgroundColor: "background.main",
   transition: "height 0.3s ease",
   overflowY: "auto",
   margin: "0 auto",
@@ -76,7 +76,7 @@ export const ButtonWrapper = styled("div")({
 
 export const fileListStyleFrame = {
   mt: 2,
-  borderTop: "1px solid #e5e7eb",
+  borderTop: "1px solid status.default.border",
   width: "100%",
   padding: "8px",
   maxHeight: "300px",

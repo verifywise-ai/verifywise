@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
@@ -8,9 +8,6 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
   Collapse,
   useTheme,
 } from "@mui/material";
@@ -26,6 +23,7 @@ import {
   ClipboardList,
   Pencil,
   PaintBucket,
+  Plus,
 } from "lucide-react";
 import {
   getIntakeForm,
@@ -36,8 +34,8 @@ import {
 } from "../../../application/repository/intakeForm.repository";
 import CustomAxios from "../../../infrastructure/api/customAxios";
 import { LLMKeysModel } from "../../../domain/models/Common/llmKeys/llmKeys.model";
-import { FieldPalette, SuggestedQuestionsPanel } from "./FieldPalette";
-import { FormCanvas } from "./FormCanvas";
+import { FieldPalette, SuggestedQuestionsPanel, SuggestedQuestionsPanelHandle } from "./FieldPalette";
+import { FormCanvas, FormCanvasHandle } from "./FormCanvas";
 import { FieldEditor } from "./FieldEditor";
 import { DesignPanel } from "./DesignPanel";
 import CustomizableMultiSelect from "../../components/Inputs/Select/Multi";
@@ -48,6 +46,8 @@ import {
   generateFieldId,
   generateSlug,
   DEFAULT_DESIGN_SETTINGS,
+  analyzeMappingCoverage,
+  createFieldFromMapping,
 } from "./types";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -75,12 +75,15 @@ export function IntakeFormBuilder() {
   const { formId } = useParams<{ formId?: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const entityTypeParam = searchParams.get("entityType");
   const theme = useTheme();
 
   // --- Builder state ---
   const isEditing = Boolean(formId) && formId !== "new";
   const [builderMode, setBuilderMode] = useState<"edit" | "design">("edit");
   const [form, setForm] = useState<IntakeForm>(createEmptyForm());
+  const canvasRef = useRef<FormCanvasHandle>(null);
+  const suggestedPanelRef = useRef<SuggestedQuestionsPanelHandle>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isLoadingForm, setIsLoadingForm] = useState(false);
@@ -119,7 +122,6 @@ export function IntakeFormBuilder() {
         })
         .finally(() => setIsLoadingForm(false));
     } else if (formId === "new") {
-      const entityTypeParam = searchParams.get("entityType");
       const entityType = entityTypeParam === IntakeEntityType.MODEL
         ? IntakeEntityType.MODEL
         : IntakeEntityType.USE_CASE;
@@ -127,7 +129,7 @@ export function IntakeFormBuilder() {
       setSelectedFieldId(null);
       setIsDirty(false);
     }
-  }, [formId, isEditing, searchParams]);
+  }, [formId, isEditing, entityTypeParam]);
 
   // Load LLM keys & users (once)
   useEffect(() => {
@@ -174,6 +176,7 @@ export function IntakeFormBuilder() {
     }));
     setIsDirty(true);
     setSelectedFieldId(field.id);
+    canvasRef.current?.scrollToBottom();
   }, []);
 
   const requestDeleteField = useCallback((fId: string) => {
@@ -258,7 +261,7 @@ export function IntakeFormBuilder() {
         ...form,
         slug: form.slug || generateSlug(form.name),
         recipients: form.recipients ?? [],
-        riskTierSystem: form.riskTierSystem ?? "generic",
+        riskTierSystem: form.riskTierSystem ?? "eu_ai_act",
         llmKeyId: form.llmKeyId ?? null,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
       };
@@ -302,6 +305,50 @@ export function IntakeFormBuilder() {
     }
   };
 
+  const doPublish = async () => {
+    setIsSaving(true);
+    try {
+      const formData = {
+        ...form,
+        slug: form.slug || generateSlug(form.name),
+        recipients: form.recipients ?? [],
+        riskTierSystem: form.riskTierSystem ?? "eu_ai_act",
+        llmKeyId: form.llmKeyId ?? null,
+        suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
+        status: IntakeFormStatus.ACTIVE,
+      };
+      const formIdNum = isEditing && formId ? parseInt(formId) : undefined;
+      let publishedData;
+      if (formIdNum) {
+        const response = await updateIntakeForm(formIdNum, formData);
+        publishedData = response.data;
+      } else {
+        const response = await createIntakeForm(formData);
+        publishedData = response.data;
+        if (publishedData?.id) {
+          navigate(`/intake-forms/${publishedData.id}/edit`, { replace: true });
+        }
+      }
+      if (publishedData) {
+        setForm((prev) => ({ ...prev, ...publishedData, status: IntakeFormStatus.ACTIVE }));
+      }
+      setIsDirty(false);
+      setSnackbar({
+        open: true,
+        message: "Form published successfully",
+        severity: "success",
+      });
+    } catch {
+      setSnackbar({
+        open: true,
+        message: "Failed to publish form",
+        severity: "error",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handlePublish = async () => {
     if (form.schema.fields.length === 0) {
       setSnackbar({
@@ -311,29 +358,44 @@ export function IntakeFormBuilder() {
       });
       return;
     }
-    try {
-      const savedId = await handleSave();
-      if (savedId) {
-        const publishResponse = await updateIntakeForm(savedId, { status: IntakeFormStatus.ACTIVE });
-        const publishedData = publishResponse.data;
-        setForm((prev) => ({
-          ...prev,
-          status: IntakeFormStatus.ACTIVE,
-          ...(publishedData?.publicId ? { publicId: publishedData.publicId } : {}),
-        }));
-        setSnackbar({
-          open: true,
-          message: "Form published successfully",
-          severity: "success",
-        });
-      }
-    } catch {
+    if (!form.name.trim()) {
       setSnackbar({
         open: true,
-        message: "Failed to publish form",
+        message: "Form name is required",
         severity: "error",
       });
+      return;
     }
+
+    // Block publish if required entity fields are unmapped
+    if (mappingCoverage.missingRequired.length > 0) {
+      setRequiredFieldsModalOpen(true);
+      return;
+    }
+
+    // Block publish if any mapped field has incompatible type
+    if (mappingCoverage.typeMismatches.length > 0) {
+      const details = mappingCoverage.typeMismatches
+        .map(
+          (m) =>
+            `"${m.formField.label}" is ${m.formField.type} but "${m.entityMapping.label}" requires ${m.entityMapping.requiredFieldType.join(" or ")}`
+        )
+        .join("; ");
+      setSnackbar({
+        open: true,
+        message: `Field type mismatch: ${details}`,
+        severity: "error",
+      });
+      return;
+    }
+
+    // Warn if optional entity fields are unmapped
+    if (mappingCoverage.missingOptional.length > 0) {
+      setPublishWarningOpen(true);
+      return;
+    }
+
+    await doPublish();
   };
 
   const handleArchiveBuilder = async () => {
@@ -381,9 +443,17 @@ export function IntakeFormBuilder() {
     if (publicId) window.open(`/${publicId}/use-case-form-intake`, "_blank");
   };
 
+  const [publishWarningOpen, setPublishWarningOpen] = useState(false);
+  const [requiredFieldsModalOpen, setRequiredFieldsModalOpen] = useState(false);
+
   // ============================================================================
   // Derived values
   // ============================================================================
+
+  const mappingCoverage = useMemo(
+    () => analyzeMappingCoverage(form.schema.fields, form.entityType),
+    [form.schema.fields, form.entityType]
+  );
 
   const selectedField = form.schema.fields.find(
     (f) => f.id === selectedFieldId
@@ -525,7 +595,7 @@ export function IntakeFormBuilder() {
                       color: builderMode === "edit" ? theme.palette.background.main : theme.palette.text.secondary,
                       transition: "all 0.15s ease",
                       "&:hover": {
-                        backgroundColor: builderMode === "edit" ? "#0F5A47" : theme.palette.background.accent,
+                        backgroundColor: builderMode === "edit" ? "brand.primaryHover" : theme.palette.background.accent,
                       },
                     }}
                   >
@@ -549,7 +619,7 @@ export function IntakeFormBuilder() {
                       color: builderMode === "design" ? theme.palette.background.main : theme.palette.text.secondary,
                       transition: "all 0.15s ease",
                       "&:hover": {
-                        backgroundColor: builderMode === "design" ? "#0F5A47" : theme.palette.background.accent,
+                        backgroundColor: builderMode === "design" ? "brand.primaryHover" : theme.palette.background.accent,
                       },
                     }}
                   >
@@ -647,7 +717,7 @@ export function IntakeFormBuilder() {
                         height: 34,
                         fontSize: "13px",
                         backgroundColor: theme.palette.primary.main,
-                        "&:hover": { backgroundColor: "#0F5A47" },
+                        "&:hover": { backgroundColor: "brand.primaryHover" },
                       }}
                     />
                   )}
@@ -671,6 +741,7 @@ export function IntakeFormBuilder() {
                   }}
                 >
                   <FormCanvas
+                    ref={canvasRef}
                     fields={form.schema.fields}
                     selectedFieldId={selectedFieldId}
                     onSelectField={setSelectedFieldId}
@@ -682,12 +753,18 @@ export function IntakeFormBuilder() {
                     formDescription={form.description}
                     onNameChange={(name) => updateForm({ name })}
                     onDescriptionChange={(description) => updateForm({ description })}
-                    collectContactInfo={form.designSettings?.collectContactInfo ?? false}
+                    collectContactInfo
                   />
-                  <SuggestedQuestionsPanel
-                    fieldCount={form.schema.fields.length}
-                    onAdd={addField}
-                  />
+                  {form.suggestedQuestionsEnabled && (
+                    <SuggestedQuestionsPanel
+                      ref={suggestedPanelRef}
+                      fieldCount={form.schema.fields.length}
+                      existingFieldLabels={form.schema.fields.map((f) => f.label)}
+                      entityType={form.entityType}
+                      llmKeyId={form.llmKeyId}
+                      onAdd={addField}
+                    />
+                  )}
                 </Box>
                 {builderMode === "design" ? (
                   <DesignPanel
@@ -703,6 +780,7 @@ export function IntakeFormBuilder() {
                     usedEntityMappings={form.schema.fields
                       .filter((f) => f.id !== selectedField.id && f.entityFieldMapping)
                       .map((f) => f.entityFieldMapping!)}
+                    llmKeyId={form.llmKeyId}
                     onChange={updateField}
                     onClose={() => setSelectedFieldId(null)}
                   />
@@ -764,6 +842,107 @@ export function IntakeFormBuilder() {
                           gap: "20px",
                         }}
                       >
+                        {/* Entity field mapping coverage */}
+                        {(() => {
+                          const { missingRequired, missingOptional, typeMismatches } = mappingCoverage;
+                          const allMapped = missingRequired.length === 0 && missingOptional.length === 0 && typeMismatches.length === 0;
+                          const entityLabel = form.entityType === IntakeEntityType.USE_CASE ? "use case" : "model";
+                          const handleAddField = (m: typeof missingRequired[0]) => {
+                            const newField = createFieldFromMapping(m, form.schema.fields.length);
+                            setForm((prev) => ({
+                              ...prev,
+                              schema: { ...prev.schema, fields: [...prev.schema.fields, newField] },
+                            }));
+                            setIsDirty(true);
+                          };
+
+                          return (
+                            <Box>
+                              <Typography sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.secondary, mb: allMapped ? 0 : "4px" }}>
+                                {allMapped
+                                  ? `All ${entityLabel} fields mapped`
+                                  : "Optional but not mapped fields"}
+                              </Typography>
+                              {missingRequired.length > 0 && (
+                                <Box sx={{ mb: "6px" }}>
+                                  <Typography sx={{ fontSize: 11, color: "#DC2626", fontWeight: 500, mb: "2px" }}>
+                                    Required (blocks publishing):
+                                  </Typography>
+                                  {missingRequired.map((m) => (
+                                    <Stack key={m.field} direction="row" alignItems="center" justifyContent="space-between" sx={{ py: "2px" }}>
+                                      <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                                        {m.label}
+                                        <Typography component="span" sx={{ fontSize: 11, color: theme.palette.text.accent, ml: "4px" }}>
+                                          ({m.requiredFieldType.join(" or ")})
+                                        </Typography>
+                                      </Typography>
+                                      <Typography
+                                        component="span"
+                                        onClick={() => handleAddField(m)}
+                                        sx={{
+                                          fontSize: 11,
+                                          fontWeight: 500,
+                                          color: "brand.primary",
+                                          cursor: "pointer",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "2px",
+                                          whiteSpace: "nowrap",
+                                          "&:hover": { textDecoration: "underline" },
+                                        }}
+                                      >
+                                        <Plus size={11} strokeWidth={2} />
+                                        Add field
+                                      </Typography>
+                                    </Stack>
+                                  ))}
+                                </Box>
+                              )}
+                              {typeMismatches.length > 0 && (
+                                <Box sx={{ mb: "6px" }}>
+                                  <Typography sx={{ fontSize: 11, color: "#DC2626", fontWeight: 500, mb: "2px" }}>
+                                    Type mismatch (blocks publishing):
+                                  </Typography>
+                                  {typeMismatches.map((m) => (
+                                    <Typography key={m.formField.id} sx={{ fontSize: 12, color: theme.palette.text.secondary, py: "2px" }}>
+                                      &quot;{m.formField.label}&quot; is {m.formField.type}, needs {m.entityMapping.requiredFieldType.join(" or ")}
+                                    </Typography>
+                                  ))}
+                                </Box>
+                              )}
+                              {missingOptional.length > 0 && (
+                                <Box>
+                                  {missingOptional.map((m) => (
+                                    <Stack key={m.field} direction="row" alignItems="center" justifyContent="space-between" sx={{ py: "2px" }}>
+                                      <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                                        {m.label}
+                                      </Typography>
+                                      <Typography
+                                        component="span"
+                                        onClick={() => handleAddField(m)}
+                                        sx={{
+                                          fontSize: 11,
+                                          fontWeight: 500,
+                                          color: "brand.primary",
+                                          cursor: "pointer",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "2px",
+                                          whiteSpace: "nowrap",
+                                          "&:hover": { textDecoration: "underline" },
+                                        }}
+                                      >
+                                        <Plus size={11} strokeWidth={2} />
+                                        Add field
+                                      </Typography>
+                                    </Stack>
+                                  ))}
+                                </Box>
+                              )}
+                            </Box>
+                          );
+                        })()}
+
                         <Box>
                           <CustomizableMultiSelect
                             label="Recipients"
@@ -781,7 +960,14 @@ export function IntakeFormBuilder() {
                             }))}
                             placeholder="Select recipients"
                             sx={{
-                              fontSize: "12px",
+                              fontSize: 13,
+                              minHeight: 34,
+                              backgroundColor: theme.palette.background.main,
+                              borderRadius: "4px",
+                              "& .MuiOutlinedInput-input": {
+                                paddingTop: "6px",
+                                paddingBottom: "6px",
+                              },
                             }}
                           />
                           <Typography
@@ -798,84 +984,8 @@ export function IntakeFormBuilder() {
                         <Box>
                           <Typography
                             sx={{
-                              fontSize: "12px",
-                              fontWeight: 600,
-                              color: theme.palette.text.secondary,
-                              mb: "4px",
-                            }}
-                          >
-                            Risk tier system
-                          </Typography>
-                          <RadioGroup
-                            value={form.riskTierSystem ?? "generic"}
-                            onChange={(e) =>
-                              updateForm({
-                                riskTierSystem: e.target.value,
-                              })
-                            }
-                            sx={{ pl: "16px", gap: "8px" }}
-                          >
-                            <FormControlLabel
-                              value="generic"
-                              sx={{ mr: 0 }}
-                              control={
-                                <Radio
-                                  size="small"
-                                  sx={{
-                                    color: theme.palette.text.accent,
-                                    "&.Mui-checked": {
-                                      color: theme.palette.primary.main,
-                                    },
-                                    p: 0.5,
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography
-                                  sx={{
-                                    fontSize: "12px",
-                                    color: theme.palette.text.secondary,
-                                  }}
-                                >
-                                  Generic (Low / Med / High / Critical)
-                                </Typography>
-                              }
-                            />
-                            <FormControlLabel
-                              value="eu_ai_act"
-                              sx={{ mr: 0 }}
-                              control={
-                                <Radio
-                                  size="small"
-                                  sx={{
-                                    color: theme.palette.text.accent,
-                                    "&.Mui-checked": {
-                                      color: theme.palette.primary.main,
-                                    },
-                                    p: 0.5,
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography
-                                  sx={{
-                                    fontSize: "12px",
-                                    color: theme.palette.text.secondary,
-                                  }}
-                                >
-                                  EU AI Act (Minimal / Limited / High /
-                                  Unacceptable)
-                                </Typography>
-                              }
-                            />
-                          </RadioGroup>
-                        </Box>
-
-                        <Box>
-                          <Typography
-                            sx={{
-                              fontSize: "12px",
-                              fontWeight: 600,
+                              fontSize: 13,
+                              fontWeight: 500,
                               color: theme.palette.text.secondary,
                               mb: "4px",
                             }}
@@ -900,12 +1010,25 @@ export function IntakeFormBuilder() {
                             sx={{
                               "& .MuiOutlinedInput-root": {
                                 height: 34,
-                                fontSize: "12px",
+                                fontSize: 13,
                               },
                             }}
                           />
+                          <Typography
+                            sx={{
+                              fontSize: "11px",
+                              color: theme.palette.text.accent,
+                              mt: "6px",
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {form.llmKeyId
+                              ? "Submissions will be scored using AI-enhanced risk analysis. You can also generate suggested questions and field guidance text with AI."
+                              : "Without an LLM key, submissions are scored using rule-based risk analysis only. Add a key in Settings > LLM keys to enable AI features."}
+                          </Typography>
                         </Box>
 
+                        {form.llmKeyId && (
                         <Box
                           sx={{
                             display: "flex",
@@ -949,64 +1072,12 @@ export function IntakeFormBuilder() {
                             <Typography
                               sx={{ fontSize: "11px", color: theme.palette.text.accent }}
                             >
-                              Show AI-suggested questions to form submitters
+                              Show AI-suggested questions while building the form
                             </Typography>
                           </Box>
                         </Box>
+                        )}
 
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "4px",
-                            cursor: "pointer",
-                          }}
-                          onClick={() => {
-                            const ds = form.designSettings ?? { ...DEFAULT_DESIGN_SETTINGS };
-                            updateForm({
-                              designSettings: {
-                                ...DEFAULT_DESIGN_SETTINGS,
-                                ...ds,
-                                collectContactInfo: !(ds.collectContactInfo ?? false),
-                              },
-                            });
-                          }}
-                        >
-                          <Checkbox
-                            id="collect-contact-info"
-                            isChecked={form.designSettings?.collectContactInfo ?? false}
-                            value="collectContactInfo"
-                            onChange={() => {
-                              const ds = form.designSettings ?? { ...DEFAULT_DESIGN_SETTINGS };
-                              updateForm({
-                                designSettings: {
-                                  ...DEFAULT_DESIGN_SETTINGS,
-                                  ...ds,
-                                  collectContactInfo: !(ds.collectContactInfo ?? false),
-                                },
-                              });
-                            }}
-                            size="small"
-                            label=""
-                            sx={{ p: 0, mt: "1px", flexShrink: 0 }}
-                          />
-                          <Box>
-                            <Typography
-                              sx={{
-                                fontSize: "12px",
-                                fontWeight: 600,
-                                color: theme.palette.text.secondary,
-                              }}
-                            >
-                              Collect contact information
-                            </Typography>
-                            <Typography
-                              sx={{ fontSize: "11px", color: theme.palette.text.accent }}
-                            >
-                              Show name and email fields on the public form
-                            </Typography>
-                          </Box>
-                        </Box>
                       </Box>
                     </Collapse>
                   </Box>
@@ -1032,6 +1103,63 @@ export function IntakeFormBuilder() {
         maxWidth="440px"
         fitContent
       />
+
+      {/* Publish warning modal (optional fields unmapped) */}
+      <StandardModal
+        title="Publish with unmapped fields?"
+        description=""
+        isOpen={publishWarningOpen}
+        onClose={() => setPublishWarningOpen(false)}
+        onSubmit={async () => {
+          setPublishWarningOpen(false);
+          await doPublish();
+        }}
+        submitButtonText="Publish anyway"
+        maxWidth="480px"
+        fitContent
+      >
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary, mb: "12px" }}>
+          The following optional fields are not mapped to any form field. These fields will be empty when the entity is created.
+        </Typography>
+        <Box component="ul" sx={{ pl: "20px", m: 0 }}>
+          {mappingCoverage.missingOptional.map((m) => (
+            <Typography
+              key={m.field}
+              component="li"
+              sx={{ fontSize: 13, color: theme.palette.text.secondary, mb: "4px" }}
+            >
+              {m.label}
+            </Typography>
+          ))}
+        </Box>
+      </StandardModal>
+
+      {/* Required fields not mapped modal */}
+      <StandardModal
+        title="Required fields not mapped"
+        description=""
+        isOpen={requiredFieldsModalOpen}
+        onClose={() => setRequiredFieldsModalOpen(false)}
+        onSubmit={() => setRequiredFieldsModalOpen(false)}
+        submitButtonText="OK"
+        maxWidth="480px"
+        fitContent
+      >
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary, mb: "12px" }}>
+          The following required fields are not mapped to any form field. Add form fields mapped to these before publishing.
+        </Typography>
+        <Box component="ul" sx={{ pl: "20px", m: 0 }}>
+          {mappingCoverage.missingRequired.map((m) => (
+            <Typography
+              key={m.field}
+              component="li"
+              sx={{ fontSize: 13, color: theme.palette.text.secondary, mb: "4px" }}
+            >
+              {m.label}
+            </Typography>
+          ))}
+        </Box>
+      </StandardModal>
 
       {/* Snackbar */}
       <Snackbar

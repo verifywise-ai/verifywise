@@ -288,15 +288,13 @@ GET /vendors?sort=vendor_name&order=asc
 
 ## Multi-tenancy
 
-### Tenant Header
+### Organization Isolation
 
-Tenant is determined from JWT token, not request headers.
+Organization context is determined from JWT token (`req.organizationId`), not request headers.
 
-### Tenant Isolation
-
-All data queries include tenant schema:
+All data queries include organization_id:
 ```sql
-SELECT * FROM "tenant_abc123".risks WHERE ...
+SELECT * FROM risks WHERE organization_id = :organizationId AND ...
 ```
 
 ## Rate Limiting

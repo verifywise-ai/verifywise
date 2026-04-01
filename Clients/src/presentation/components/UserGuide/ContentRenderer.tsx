@@ -566,6 +566,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
   const renderCode = (block: CodeBlock, index: number) => (
     <div
       key={index}
+      className="user-guide-code-block"
       style={{
         backgroundColor: colors.background.code,
         borderRadius: border.radius,

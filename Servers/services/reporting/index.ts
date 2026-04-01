@@ -13,6 +13,7 @@ import { ReportType } from "../../domain.layer/models/reporting/reporting.model"
 import { createDataCollector } from "./dataCollector";
 import { generatePDF, closeBrowser } from "./pdfGenerator";
 import { generateDOCX } from "./docxGenerator";
+import logger from "../../utils/logger/fileLogger";
 
 /**
  * Valid section keys that can be passed directly from the frontend
@@ -89,12 +90,12 @@ function getRequestedSections(reportType: string | string[]): string[] {
 export async function generateReport(
   request: ReportGenerationRequest,
   userId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<ReportGenerationResult> {
   try {
     // Create data collector
     const dataCollector = createDataCollector(
-      tenantId,
+      organizationId,
       request.projectId,
       request.frameworkId,
       request.projectFrameworkId,
@@ -106,6 +107,20 @@ export async function generateReport(
 
     // Collect all report data
     const reportData = await dataCollector.collectAllData(sections);
+
+    // AI Enhancement (optional)
+    if (request.aiEnhanced) {
+      try {
+        const { generateAISummaries } = await import("./aiSummarizer");
+        reportData.aiSummaries = await generateAISummaries(
+          reportData,
+          reportData.metadata.organizationId,
+          request.llmKeyId
+        );
+      } catch (error) {
+        logger.warn("AI summarization failed, continuing with standard report:", error);
+      }
+    }
 
     // Apply custom branding if provided
     if (request.branding) {
@@ -132,6 +147,13 @@ export async function generateReport(
         : `${request.reportName}${extension}`;
     }
 
+    // Mark AI-enhanced reports in the filename for frontend badge detection
+    if (request.aiEnhanced && result.success && reportData.aiSummaries) {
+      const ext = request.format === "pdf" ? ".pdf" : ".docx";
+      const baseName = result.filename.replace(ext, "");
+      result.filename = `${baseName}_AI_${ext}`;
+    }
+
     return result;
   } catch (error) {
     console.error("Error generating report:", error);
@@ -151,10 +173,10 @@ export async function generateReport(
 export async function getReportData(
   request: Omit<ReportGenerationRequest, "format">,
   userId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<ReportData> {
   const dataCollector = createDataCollector(
-    tenantId,
+    organizationId,
     request.projectId,
     request.frameworkId,
     request.projectFrameworkId,

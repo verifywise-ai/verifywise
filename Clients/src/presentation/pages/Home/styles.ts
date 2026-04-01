@@ -13,7 +13,7 @@ export const NoProjectBox = styled(Box)(({ theme }) => ({
 
 export const styles = {
     title: {
-      color: "#1A1919",
+      color: "text.primary",
       fontSize: 16,
       fontWeight: 600,
     },

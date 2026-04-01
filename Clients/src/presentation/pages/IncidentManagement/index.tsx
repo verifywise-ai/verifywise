@@ -3,11 +3,10 @@ import React, {
   useState,
   useEffect,
   useMemo,
-  Suspense,
   useCallback,
   useRef,
 } from "react";
-import { Box, Stack, Fade } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import { ReactComponent as AddCircleOutlineIcon } from "../../assets/icons/plus-circle-white.svg";
 import { SearchBox } from "../../components/Search";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -25,7 +24,6 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import {
   addNewIncidentButton,
   incidentFilterRow,
-  incidentToastContainer,
 } from "./style";
 import IncidentTable from "./IncidentTable";
 import NewIncident from "../../components/Modals/NewIncident";
@@ -34,7 +32,7 @@ import {
   Severity,
 } from "../../../domain/enums/aiIncidentManagement.enum";
 import { createIncidentManagement } from "../../../application/repository/incident_management.repository";
-import IncidentStatusCard from "./IncidentStatusCard";
+import { StatusTileCards } from "../../components/Cards/StatusTileCards";
 import PageTour from "../../components/PageTour";
 import IncidentManagementSteps from "./IncidentManagementSteps";
 import { AIIncidentManagementModel } from "../../../domain/models/Common/incidentManagement/incidentManagement.model";
@@ -47,8 +45,31 @@ import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import { ColumnSelector } from "../../components/Table/ColumnSelector";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 
 const Alert = React.lazy(() => import("../../components/Alert"));
+
+type IncidentColumnKey =
+  | "incident_id"
+  | "ai_project"
+  | "type"
+  | "severity"
+  | "status"
+  | "occurred_date"
+  | "approved_by"
+  | "actions";
+
+const INCIDENT_TABLE_COLUMNS: ColumnConfig<IncidentColumnKey>[] = [
+  { key: "incident_id", label: "Incident ID", defaultVisible: true, alwaysVisible: true },
+  { key: "ai_project", label: "AI project", defaultVisible: true },
+  { key: "type", label: "Type", defaultVisible: true },
+  { key: "severity", label: "Severity", defaultVisible: true },
+  { key: "status", label: "Status", defaultVisible: true },
+  { key: "occurred_date", label: "Occurred date", defaultVisible: true },
+  { key: "approved_by", label: "Approved by", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
 
 const IncidentManagement: React.FC = () => {
   const location = useLocation();
@@ -71,7 +92,7 @@ const IncidentManagement: React.FC = () => {
     title?: string;
     body: string;
   } | null>(null);
-  const [showAlert, setShowAlert] = useState(false);
+  const [, setShowAlert] = useState(false);
   const [tableKey, setTableKey] = useState(0);
 
   const { userRoleName } = useAuth();
@@ -81,10 +102,33 @@ const IncidentManagement: React.FC = () => {
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Card filter state
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
+  // Auto-dismiss info alerts after 3 seconds
+  useEffect(() => {
+    if (alert && alert.variant === "info") {
+      const timer = setTimeout(() => setAlert(null), 3000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [alert]);
+
   const [mode, setModalMode] = useState("");
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
+
+  // Column visibility
+  const {
+    visibleColumns: incidentVisibleColumns,
+    allColumns: allIncidentColumns,
+    toggleColumn: toggleIncidentColumn,
+    resetToDefaults: resetIncidentColumns,
+  } = useColumnVisibility({
+    tableId: "incidents-table",
+    columns: INCIDENT_TABLE_COLUMNS,
+  });
 
   const isCreatingDisabled =
     !userRoleName || !["Admin", "Editor"].includes(userRoleName);
@@ -210,8 +254,13 @@ const IncidentManagement: React.FC = () => {
     // Filter out archived items first
     const nonArchivedData = incidentsData.filter((i) => !i.archived);
 
+    // Apply card filter by status
+    let result = selectedStatus
+      ? nonArchivedData.filter((i) => i.status === selectedStatus)
+      : nonArchivedData;
+
     // Apply FilterBy conditions
-    let result = filterIncidentData(nonArchivedData);
+    result = filterIncidentData(result);
 
     // Apply search filter last
     if (searchTerm) {
@@ -225,7 +274,7 @@ const IncidentManagement: React.FC = () => {
     }
 
     return result;
-  }, [filterIncidentData, incidentsData, searchTerm]);
+  }, [filterIncidentData, incidentsData, searchTerm, selectedStatus]);
 
   // Define how to get the group key for each incident
   const getIncidentGroupKey = (
@@ -505,28 +554,48 @@ const IncidentManagement: React.FC = () => {
         tipBoxEntity="ai-incident-managements"
         alert={
           alert ? (
-            <Suspense fallback={<div>Loading...</div>}>
-              <Fade in={showAlert} timeout={300} style={incidentToastContainer}>
-                <Box mb={2}>
                   <Alert
                     variant={alert.variant}
                     title={alert.title}
                     body={alert.body}
                     isToast={true}
-                    onClick={() => {
-                      setShowAlert(false);
-                      setTimeout(() => setAlert(null), 300);
-                    }}
+                    onClick={() => setAlert(null)}
                   />
-                </Box>
-              </Fade>
-            </Suspense>
           ) : undefined
         }
         summaryCards={
           /* TODO: Refactor to always show cards (like Model Inventory) to prevent layout shift and beacon positioning issues */
           incidentsData.length > 0 ? (
-            <IncidentStatusCard incidents={incidentsData} />
+            <StatusTileCards
+              items={[
+                { key: IncidentManagementStatus.OPEN, label: "Open", color: "#F9A825", count: incidentsData.filter((i) => i.status === IncidentManagementStatus.OPEN && !i.archived).length },
+                { key: IncidentManagementStatus.INVESTIGATED, label: "Investigating", color: "#FB8C00", count: incidentsData.filter((i) => i.status === IncidentManagementStatus.INVESTIGATED && !i.archived).length },
+                { key: IncidentManagementStatus.MITIGATED, label: "Mitigated", color: "#2E7D32", count: incidentsData.filter((i) => i.status === IncidentManagementStatus.MITIGATED && !i.archived).length },
+                { key: IncidentManagementStatus.CLOSED, label: "Closed", color: "#455A64", count: incidentsData.filter((i) => i.status === IncidentManagementStatus.CLOSED && !i.archived).length },
+              ]}
+              entityName="incident"
+              size="small"
+              onCardClick={(key) => {
+                if (key === selectedStatus) {
+                  setSelectedStatus(null);
+                  setAlert(null);
+                } else {
+                  setSelectedStatus(key);
+                  const label = [
+                    { key: IncidentManagementStatus.OPEN, label: "Open" },
+                    { key: IncidentManagementStatus.INVESTIGATED, label: "Investigating" },
+                    { key: IncidentManagementStatus.MITIGATED, label: "Mitigated" },
+                    { key: IncidentManagementStatus.CLOSED, label: "Closed" },
+                  ].find((s) => s.key === key)?.label || key;
+                  setAlert({
+                    variant: "info",
+                    title: `Filtering by ${label}`,
+                    body: "Click the card again to see all incidents.",
+                  });
+                }
+              }}
+              selectedKey={selectedStatus}
+            />
           ) : undefined
         }
         summaryCardsJoyrideId="incident-status-cards"
@@ -553,6 +622,13 @@ const IncidentManagement: React.FC = () => {
                 { id: "ai_project", label: "AI Project" },
               ]}
               onGroupChange={handleGroupChange}
+            />
+
+            <ColumnSelector
+              columns={allIncidentColumns}
+              visibleColumns={incidentVisibleColumns}
+              onToggleColumn={toggleIncidentColumn}
+              onResetToDefaults={resetIncidentColumns}
             />
 
             <Box data-joyride-id="incident-search">
@@ -599,6 +675,7 @@ const IncidentManagement: React.FC = () => {
               onView={handleViewIncident}
               archivedId={archiveId}
               hidePagination={options?.hidePagination}
+              visibleColumns={incidentVisibleColumns}
             />
           )}
         />

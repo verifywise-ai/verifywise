@@ -17,7 +17,7 @@ export const getUseCaseHistory = async (req: Request, res: Response) => {
 
     const result = await getUseCaseChangeHistory(
       useCaseId,
-      req.tenantId!,
+      req.organizationId!,
       limit,
       offset
     );

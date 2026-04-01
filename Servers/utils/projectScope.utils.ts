@@ -4,11 +4,12 @@ import { QueryTypes, Transaction } from "sequelize";
 import { IProjectScope } from "../domain.layer/interfaces/i.projectScope";
 
 export const getAllProjectScopesQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<IProjectScope[]> => {
   const projectScopes = await sequelize.query(
-    `SELECT * FROM "${tenant}".projectscopes ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM projectscopes WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: ProjectScopeModel,
     }
@@ -18,12 +19,12 @@ export const getAllProjectScopesQuery = async (
 
 export const getProjectScopeByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<IProjectScope | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".projectscopes WHERE id = :id`,
+    `SELECT * FROM projectscopes WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: ProjectScopeModel,
     }
@@ -33,21 +34,22 @@ export const getProjectScopeByIdQuery = async (
 
 export const createProjectScopeQuery = async (
   projectScope: Partial<ProjectScopeModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ProjectScopeModel> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".projectscopes (
-      assessment_id, describe_ai_environment, is_new_ai_technology,
+    `INSERT INTO projectscopes (
+      organization_id, assessment_id, describe_ai_environment, is_new_ai_technology,
       uses_personal_data, project_scope_documents, technology_type,
       has_ongoing_monitoring, unintended_outcomes, technology_documentation
     ) VALUES (
-      :assessment_id, :describe_ai_environment, :is_new_ai_technology,
+      :organizationId, :assessment_id, :describe_ai_environment, :is_new_ai_technology,
       :uses_personal_data, :project_scope_documents, :technology_type,
       :has_ongoing_monitoring, :unintended_outcomes, :technology_documentation
     ) RETURNING *`,
     {
       replacements: {
+        organizationId,
         assessmentId: projectScope.assessmentId,
         describeAiEnvironment: projectScope.describeAiEnvironment,
         isNewAiTechnology: projectScope.isNewAiTechnology,
@@ -70,10 +72,10 @@ export const createProjectScopeQuery = async (
 export const updateProjectScopeByIdQuery = async (
   id: number,
   projectScope: Partial<ProjectScopeModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ProjectScopeModel | null> => {
-  const updateProjectScope: Partial<Record<keyof ProjectScopeModel, any>> = {};
+  const updateProjectScope: Partial<Record<keyof ProjectScopeModel, any>> & { organizationId?: number } = {};
   const setClause = [
     "assessment_id",
     "describe_ai_environment",
@@ -99,9 +101,10 @@ export const updateProjectScopeByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE "${tenant}".projectscopes SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE projectscopes SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateProjectScope.id = id;
+  updateProjectScope.organizationId = organizationId;
 
   const result = await sequelize.query(query, {
     replacements: updateProjectScope,
@@ -116,13 +119,13 @@ export const updateProjectScopeByIdQuery = async (
 
 export const deleteProjectScopeByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".projectscopes WHERE id = :id RETURNING *`,
+    `DELETE FROM projectscopes WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: ProjectScopeModel,
       type: QueryTypes.DELETE,

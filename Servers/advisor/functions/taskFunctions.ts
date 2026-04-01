@@ -19,19 +19,19 @@ interface TaskWithAssignees extends TasksModel {
   creator_name?: string;
 }
 
-const getAllTasksQuery = async (tenant: string): Promise<TaskWithAssignees[]> => {
+const getAllTasksQuery = async (organizationId: number): Promise<TaskWithAssignees[]> => {
   try {
     const tasks = await sequelize.query(
       `SELECT t.*,
         COALESCE(
-          (SELECT json_agg(ta.user_id) FROM "${tenant}".task_assignees ta WHERE ta.task_id = t.id),
+          (SELECT json_agg(ta.user_id) FROM task_assignees ta WHERE ta.task_id = t.id AND ta.organization_id = :organizationId),
           '[]'::json
         ) as assignees
-       FROM "${tenant}".tasks t
-       WHERE t.status != :deletedStatus
+       FROM tasks t
+       WHERE t.organization_id = :organizationId AND t.status != :deletedStatus
        ORDER BY t.created_at DESC`,
       {
-        replacements: { deletedStatus: TaskStatus.DELETED },
+        replacements: { organizationId, deletedStatus: TaskStatus.DELETED },
         type: QueryTypes.SELECT,
       }
     );
@@ -46,12 +46,12 @@ const getAllTasksQuery = async (tenant: string): Promise<TaskWithAssignees[]> =>
 
 const fetchTasks = async (
   params: FetchTasksParams,
-  tenant: string
+  organizationId: number
 ): Promise<Partial<TaskWithAssignees>[]> => {
   let tasks: TaskWithAssignees[] = [];
 
   try {
-    tasks = await getAllTasksQuery(tenant);
+    tasks = await getAllTasksQuery(organizationId);
 
     // Apply filters
     if (params.status) {
@@ -136,10 +136,10 @@ export interface TaskAnalytics {
 
 const getTaskAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<TaskAnalytics> => {
   try {
-    const tasks = await getAllTasksQuery(tenant);
+    const tasks = await getAllTasksQuery(organizationId);
     const totalTasks = tasks.length;
     const now = new Date();
 
@@ -318,10 +318,10 @@ export interface TaskExecutiveSummary {
 
 const getTaskExecutiveSummary = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<TaskExecutiveSummary> => {
   try {
-    const tasks = await getAllTasksQuery(tenant);
+    const tasks = await getAllTasksQuery(organizationId);
     const totalTasks = tasks.length;
     const now = new Date();
 

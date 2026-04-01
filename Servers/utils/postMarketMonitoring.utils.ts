@@ -22,7 +22,7 @@ import {
 
 export const getPMMConfigByProjectIdQuery = async (
   projectId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMConfigWithDetails | null> => {
   const result = await sequelize.query(
     `SELECT
@@ -30,13 +30,13 @@ export const getPMMConfigByProjectIdQuery = async (
       p.project_title,
       u.name as escalation_contact_name,
       u.email as escalation_contact_email,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_questions WHERE config_id = c.id) as questions_count
-    FROM "${tenant}".post_market_monitoring_configs c
-    LEFT JOIN "${tenant}".projects p ON c.project_id = p.id
-    LEFT JOIN public.users u ON c.escalation_contact_id = u.id
-    WHERE c.project_id = :projectId;`,
+      (SELECT COUNT(*) FROM post_market_monitoring_questions WHERE organization_id = :organizationId AND config_id = c.id) as questions_count
+    FROM post_market_monitoring_configs c
+    LEFT JOIN projects p ON c.project_id = p.id AND p.organization_id = :organizationId
+    LEFT JOIN users u ON c.escalation_contact_id = u.id
+    WHERE c.organization_id = :organizationId AND c.project_id = :projectId;`,
     {
-      replacements: { projectId },
+      replacements: { projectId, organizationId },
     }
   ) as [IPMMConfigWithDetails[], number];
 
@@ -45,7 +45,7 @@ export const getPMMConfigByProjectIdQuery = async (
   const config = result[0][0];
 
   // Get active cycle if exists
-  const activeCycle = await getActiveCycleByConfigIdQuery(config.id!, tenant);
+  const activeCycle = await getActiveCycleByConfigIdQuery(config.id!, organizationId);
   config.active_cycle = activeCycle;
 
   return config;
@@ -54,21 +54,22 @@ export const getPMMConfigByProjectIdQuery = async (
 export const createPMMConfigQuery = async (
   configData: IPMMConfigCreateRequest,
   userId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IPMMConfig> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".post_market_monitoring_configs (
-      project_id, frequency_value, frequency_unit, start_date,
+    `INSERT INTO post_market_monitoring_configs (
+      organization_id, project_id, frequency_value, frequency_unit, start_date,
       reminder_days, escalation_days, escalation_contact_id,
       notification_hour, created_by
     ) VALUES (
-      :project_id, :frequency_value, :frequency_unit, :start_date,
+      :organizationId, :project_id, :frequency_value, :frequency_unit, :start_date,
       :reminder_days, :escalation_days, :escalation_contact_id,
       :notification_hour, :created_by
     ) RETURNING *;`,
     {
       replacements: {
+        organizationId,
         project_id: configData.project_id,
         frequency_value: configData.frequency_value || 30,
         frequency_unit: configData.frequency_unit || "days",
@@ -89,11 +90,11 @@ export const createPMMConfigQuery = async (
 export const updatePMMConfigQuery = async (
   configId: number,
   updateData: IPMMConfigUpdateRequest,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IPMMConfig | null> => {
   const setClauses: string[] = [];
-  const replacements: Record<string, any> = { configId };
+  const replacements: Record<string, any> = { configId, organizationId };
 
   if (updateData.is_active !== undefined) {
     setClauses.push("is_active = :is_active");
@@ -133,16 +134,16 @@ export const updatePMMConfigQuery = async (
   if (setClauses.length === 1) {
     // Only updated_at, nothing to update
     const result = await sequelize.query(
-      `SELECT * FROM "${tenant}".post_market_monitoring_configs WHERE id = :configId;`,
-      { replacements: { configId }, transaction }
+      `SELECT * FROM post_market_monitoring_configs WHERE organization_id = :organizationId AND id = :configId;`,
+      { replacements: { configId, organizationId }, transaction }
     ) as [IPMMConfig[], number];
     return result[0][0] || null;
   }
 
   const result = await sequelize.query(
-    `UPDATE "${tenant}".post_market_monitoring_configs
+    `UPDATE post_market_monitoring_configs
      SET ${setClauses.join(", ")}
-     WHERE id = :configId
+     WHERE organization_id = :organizationId AND id = :configId
      RETURNING *;`,
     { replacements, transaction }
   ) as [IPMMConfig[], number];
@@ -152,19 +153,19 @@ export const updatePMMConfigQuery = async (
 
 export const deletePMMConfigQuery = async (
   configId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".post_market_monitoring_configs WHERE id = :configId;`,
-    { replacements: { configId }, transaction }
+    `DELETE FROM post_market_monitoring_configs WHERE organization_id = :organizationId AND id = :configId;`,
+    { replacements: { configId, organizationId }, transaction }
   );
   return (result as any)[1] > 0;
 };
 
 export const getActiveConfigsForNotificationHourQuery = async (
   hour: number,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMConfigWithDetails[]> => {
   const result = await sequelize.query(
     `SELECT
@@ -172,11 +173,11 @@ export const getActiveConfigsForNotificationHourQuery = async (
       p.project_title,
       u.name as escalation_contact_name,
       u.email as escalation_contact_email
-    FROM "${tenant}".post_market_monitoring_configs c
-    LEFT JOIN "${tenant}".projects p ON c.project_id = p.id
-    LEFT JOIN public.users u ON c.escalation_contact_id = u.id
-    WHERE c.is_active = true AND c.notification_hour = :hour;`,
-    { replacements: { hour } }
+    FROM post_market_monitoring_configs c
+    LEFT JOIN projects p ON c.project_id = p.id AND p.organization_id = :organizationId
+    LEFT JOIN users u ON c.escalation_contact_id = u.id
+    WHERE c.organization_id = :organizationId AND c.is_active = true AND c.notification_hour = :hour;`,
+    { replacements: { hour, organizationId } }
   ) as [IPMMConfigWithDetails[], number];
 
   return result[0];
@@ -188,17 +189,17 @@ export const getActiveConfigsForNotificationHourQuery = async (
 
 export const getPMMQuestionsQuery = async (
   configId: number | null,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMQuestion[]> => {
   const whereClause = configId === null
     ? "config_id IS NULL"
     : "config_id = :configId";
 
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".post_market_monitoring_questions
-     WHERE ${whereClause}
+    `SELECT * FROM post_market_monitoring_questions
+     WHERE organization_id = :organizationId AND ${whereClause}
      ORDER BY display_order ASC;`,
-    { replacements: { configId } }
+    { replacements: { configId, organizationId } }
   ) as [IPMMQuestion[], number];
 
   return result[0];
@@ -206,31 +207,32 @@ export const getPMMQuestionsQuery = async (
 
 export const addPMMQuestionQuery = async (
   questionData: IPMMQuestionCreate,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IPMMQuestion> => {
   // Get next display order
   const orderResult = await sequelize.query(
     `SELECT COALESCE(MAX(display_order), 0) + 1 as next_order
-     FROM "${tenant}".post_market_monitoring_questions
-     WHERE ${questionData.config_id ? "config_id = :configId" : "config_id IS NULL"};`,
-    { replacements: { configId: questionData.config_id }, transaction }
+     FROM post_market_monitoring_questions
+     WHERE organization_id = :organizationId AND ${questionData.config_id ? "config_id = :configId" : "config_id IS NULL"};`,
+    { replacements: { configId: questionData.config_id, organizationId }, transaction }
   ) as [{ next_order: number }[], number];
 
   const nextOrder = questionData.display_order ?? orderResult[0][0].next_order;
 
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".post_market_monitoring_questions (
-      config_id, question_text, question_type, options,
+    `INSERT INTO post_market_monitoring_questions (
+      organization_id, config_id, question_text, question_type, options,
       suggestion_text, is_required, allows_flag_for_concern,
       display_order, eu_ai_act_article
     ) VALUES (
-      :config_id, :question_text, :question_type, :options,
+      :organizationId, :config_id, :question_text, :question_type, :options,
       :suggestion_text, :is_required, :allows_flag_for_concern,
       :display_order, :eu_ai_act_article
     ) RETURNING *;`,
     {
       replacements: {
+        organizationId,
         config_id: questionData.config_id || null,
         question_text: questionData.question_text,
         question_type: questionData.question_type,
@@ -251,11 +253,11 @@ export const addPMMQuestionQuery = async (
 export const updatePMMQuestionQuery = async (
   questionId: number,
   updateData: IPMMQuestionUpdate,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IPMMQuestion | null> => {
   const setClauses: string[] = [];
-  const replacements: Record<string, any> = { questionId };
+  const replacements: Record<string, any> = { questionId, organizationId };
 
   if (updateData.question_text !== undefined) {
     setClauses.push("question_text = :question_text");
@@ -292,16 +294,16 @@ export const updatePMMQuestionQuery = async (
 
   if (setClauses.length === 0) {
     const result = await sequelize.query(
-      `SELECT * FROM "${tenant}".post_market_monitoring_questions WHERE id = :questionId;`,
-      { replacements: { questionId }, transaction }
+      `SELECT * FROM post_market_monitoring_questions WHERE organization_id = :organizationId AND id = :questionId;`,
+      { replacements: { questionId, organizationId }, transaction }
     ) as [IPMMQuestion[], number];
     return result[0][0] || null;
   }
 
   const result = await sequelize.query(
-    `UPDATE "${tenant}".post_market_monitoring_questions
+    `UPDATE post_market_monitoring_questions
      SET ${setClauses.join(", ")}
-     WHERE id = :questionId
+     WHERE organization_id = :organizationId AND id = :questionId
      RETURNING *;`,
     { replacements, transaction }
   ) as [IPMMQuestion[], number];
@@ -311,29 +313,29 @@ export const updatePMMQuestionQuery = async (
 
 export const deletePMMQuestionQuery = async (
   questionId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".post_market_monitoring_questions
-     WHERE id = :questionId AND is_system_default = false;`,
-    { replacements: { questionId }, transaction }
+    `DELETE FROM post_market_monitoring_questions
+     WHERE organization_id = :organizationId AND id = :questionId AND is_system_default = false;`,
+    { replacements: { questionId, organizationId }, transaction }
   );
   return (result as any)[1] > 0;
 };
 
 export const reorderPMMQuestionsQuery = async (
   questionOrders: Array<{ id: number; display_order: number }>,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   for (const item of questionOrders) {
     await sequelize.query(
-      `UPDATE "${tenant}".post_market_monitoring_questions
+      `UPDATE post_market_monitoring_questions
        SET display_order = :display_order
-       WHERE id = :id;`,
+       WHERE organization_id = :organizationId AND id = :id;`,
       {
-        replacements: { id: item.id, display_order: item.display_order },
+        replacements: { id: item.id, display_order: item.display_order, organizationId },
         transaction,
       }
     );
@@ -349,17 +351,18 @@ export const createPMMCycleQuery = async (
   cycleNumber: number,
   dueAt: Date,
   stakeholderId: number | null,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IPMMCycle> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".post_market_monitoring_cycles (
-      config_id, cycle_number, status, started_at, due_at, assigned_stakeholder_id
+    `INSERT INTO post_market_monitoring_cycles (
+      organization_id, config_id, cycle_number, status, started_at, due_at, assigned_stakeholder_id
     ) VALUES (
-      :config_id, :cycle_number, 'pending', NOW(), :due_at, :stakeholder_id
+      :organizationId, :config_id, :cycle_number, 'pending', NOW(), :due_at, :stakeholder_id
     ) RETURNING *;`,
     {
       replacements: {
+        organizationId,
         config_id: configId,
         cycle_number: cycleNumber,
         due_at: dueAt,
@@ -374,7 +377,7 @@ export const createPMMCycleQuery = async (
 
 export const getActiveCycleByConfigIdQuery = async (
   configId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMCycleWithDetails | null> => {
   const result = await sequelize.query(
     `SELECT
@@ -384,18 +387,18 @@ export const getActiveCycleByConfigIdQuery = async (
       u.name as stakeholder_name,
       u.email as stakeholder_email,
       cu.name as completed_by_name,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_responses r WHERE r.cycle_id = c.id AND r.is_flagged = true) > 0 as has_flagged_concerns,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_responses r WHERE r.cycle_id = c.id) as responses_count,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_questions q WHERE q.config_id = c.config_id) as questions_count
-    FROM "${tenant}".post_market_monitoring_cycles c
-    LEFT JOIN "${tenant}".post_market_monitoring_configs cfg ON c.config_id = cfg.id
-    LEFT JOIN "${tenant}".projects p ON cfg.project_id = p.id
-    LEFT JOIN public.users u ON c.assigned_stakeholder_id = u.id
-    LEFT JOIN public.users cu ON c.completed_by = cu.id
-    WHERE c.config_id = :configId AND c.status IN ('pending', 'in_progress', 'escalated')
+      (SELECT COUNT(*) FROM post_market_monitoring_responses r WHERE r.organization_id = :organizationId AND r.cycle_id = c.id AND r.is_flagged = true) > 0 as has_flagged_concerns,
+      (SELECT COUNT(*) FROM post_market_monitoring_responses r WHERE r.organization_id = :organizationId AND r.cycle_id = c.id) as responses_count,
+      (SELECT COUNT(*) FROM post_market_monitoring_questions q WHERE q.organization_id = :organizationId AND q.config_id = c.config_id) as questions_count
+    FROM post_market_monitoring_cycles c
+    LEFT JOIN post_market_monitoring_configs cfg ON c.config_id = cfg.id AND cfg.organization_id = :organizationId
+    LEFT JOIN projects p ON cfg.project_id = p.id AND p.organization_id = :organizationId
+    LEFT JOIN users u ON c.assigned_stakeholder_id = u.id
+    LEFT JOIN users cu ON c.completed_by = cu.id
+    WHERE c.organization_id = :organizationId AND c.config_id = :configId AND c.status IN ('pending', 'in_progress', 'escalated')
     ORDER BY c.cycle_number DESC
     LIMIT 1;`,
-    { replacements: { configId } }
+    { replacements: { configId, organizationId } }
   ) as [IPMMCycleWithDetails[], number];
 
   return result[0][0] || null;
@@ -403,7 +406,7 @@ export const getActiveCycleByConfigIdQuery = async (
 
 export const getActiveCycleByProjectIdQuery = async (
   projectId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMCycleWithDetails | null> => {
   const result = await sequelize.query(
     `SELECT
@@ -412,16 +415,16 @@ export const getActiveCycleByProjectIdQuery = async (
       p.project_title,
       u.name as stakeholder_name,
       u.email as stakeholder_email,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_responses r WHERE r.cycle_id = c.id) as responses_count,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_questions q WHERE q.config_id = c.config_id) as questions_count
-    FROM "${tenant}".post_market_monitoring_cycles c
-    LEFT JOIN "${tenant}".post_market_monitoring_configs cfg ON c.config_id = cfg.id
-    LEFT JOIN "${tenant}".projects p ON cfg.project_id = p.id
-    LEFT JOIN public.users u ON c.assigned_stakeholder_id = u.id
-    WHERE cfg.project_id = :projectId AND c.status IN ('pending', 'in_progress', 'escalated')
+      (SELECT COUNT(*) FROM post_market_monitoring_responses r WHERE r.organization_id = :organizationId AND r.cycle_id = c.id) as responses_count,
+      (SELECT COUNT(*) FROM post_market_monitoring_questions q WHERE q.organization_id = :organizationId AND q.config_id = c.config_id) as questions_count
+    FROM post_market_monitoring_cycles c
+    LEFT JOIN post_market_monitoring_configs cfg ON c.config_id = cfg.id AND cfg.organization_id = :organizationId
+    LEFT JOIN projects p ON cfg.project_id = p.id AND p.organization_id = :organizationId
+    LEFT JOIN users u ON c.assigned_stakeholder_id = u.id
+    WHERE c.organization_id = :organizationId AND cfg.project_id = :projectId AND c.status IN ('pending', 'in_progress', 'escalated')
     ORDER BY c.cycle_number DESC
     LIMIT 1;`,
-    { replacements: { projectId } }
+    { replacements: { projectId, organizationId } }
   ) as [IPMMCycleWithDetails[], number];
 
   return result[0][0] || null;
@@ -429,7 +432,7 @@ export const getActiveCycleByProjectIdQuery = async (
 
 export const getCycleByIdQuery = async (
   cycleId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMCycleWithDetails | null> => {
   const result = await sequelize.query(
     `SELECT
@@ -439,23 +442,23 @@ export const getCycleByIdQuery = async (
       u.name as stakeholder_name,
       u.email as stakeholder_email,
       cu.name as completed_by_name,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_responses r WHERE r.cycle_id = c.id AND r.is_flagged = true) > 0 as has_flagged_concerns,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_responses r WHERE r.cycle_id = c.id) as responses_count,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_questions q WHERE q.config_id = c.config_id) as questions_count
-    FROM "${tenant}".post_market_monitoring_cycles c
-    LEFT JOIN "${tenant}".post_market_monitoring_configs cfg ON c.config_id = cfg.id
-    LEFT JOIN "${tenant}".projects p ON cfg.project_id = p.id
-    LEFT JOIN public.users u ON c.assigned_stakeholder_id = u.id
-    LEFT JOIN public.users cu ON c.completed_by = cu.id
-    WHERE c.id = :cycleId;`,
-    { replacements: { cycleId } }
+      (SELECT COUNT(*) FROM post_market_monitoring_responses r WHERE r.organization_id = :organizationId AND r.cycle_id = c.id AND r.is_flagged = true) > 0 as has_flagged_concerns,
+      (SELECT COUNT(*) FROM post_market_monitoring_responses r WHERE r.organization_id = :organizationId AND r.cycle_id = c.id) as responses_count,
+      (SELECT COUNT(*) FROM post_market_monitoring_questions q WHERE q.organization_id = :organizationId AND q.config_id = c.config_id) as questions_count
+    FROM post_market_monitoring_cycles c
+    LEFT JOIN post_market_monitoring_configs cfg ON c.config_id = cfg.id AND cfg.organization_id = :organizationId
+    LEFT JOIN projects p ON cfg.project_id = p.id AND p.organization_id = :organizationId
+    LEFT JOIN users u ON c.assigned_stakeholder_id = u.id
+    LEFT JOIN users cu ON c.completed_by = cu.id
+    WHERE c.organization_id = :organizationId AND c.id = :cycleId;`,
+    { replacements: { cycleId, organizationId } }
   ) as [IPMMCycleWithDetails[], number];
 
   return result[0][0] || null;
 };
 
 export const getPendingCyclesForProcessingQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<IPMMCycleWithDetails[]> => {
   const result = await sequelize.query(
     `SELECT
@@ -469,14 +472,14 @@ export const getPendingCyclesForProcessingQuery = async (
       u.email as stakeholder_email,
       eu.name as escalation_contact_name,
       eu.email as escalation_contact_email
-    FROM "${tenant}".post_market_monitoring_cycles c
-    JOIN "${tenant}".post_market_monitoring_configs cfg ON c.config_id = cfg.id
-    LEFT JOIN "${tenant}".projects p ON cfg.project_id = p.id
-    LEFT JOIN public.users u ON c.assigned_stakeholder_id = u.id
-    LEFT JOIN public.users eu ON cfg.escalation_contact_id = eu.id
-    WHERE cfg.is_active = true
+    FROM post_market_monitoring_cycles c
+    JOIN post_market_monitoring_configs cfg ON c.config_id = cfg.id AND cfg.organization_id = :organizationId
+    LEFT JOIN projects p ON cfg.project_id = p.id AND p.organization_id = :organizationId
+    LEFT JOIN users u ON c.assigned_stakeholder_id = u.id
+    LEFT JOIN users eu ON cfg.escalation_contact_id = eu.id
+    WHERE c.organization_id = :organizationId AND cfg.is_active = true
       AND c.status IN ('pending', 'in_progress', 'escalated');`,
-    {}
+    { replacements: { organizationId } }
   ) as [IPMMCycleWithDetails[], number];
 
   return result[0];
@@ -485,80 +488,80 @@ export const getPendingCyclesForProcessingQuery = async (
 export const updateCycleStatusQuery = async (
   cycleId: number,
   status: string,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".post_market_monitoring_cycles
+    `UPDATE post_market_monitoring_cycles
      SET status = :status
-     WHERE id = :cycleId;`,
-    { replacements: { cycleId, status }, transaction }
+     WHERE organization_id = :organizationId AND id = :cycleId;`,
+    { replacements: { cycleId, status, organizationId }, transaction }
   );
 };
 
 export const markCycleReminderSentQuery = async (
   cycleId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".post_market_monitoring_cycles
+    `UPDATE post_market_monitoring_cycles
      SET reminder_sent_at = NOW()
-     WHERE id = :cycleId;`,
-    { replacements: { cycleId }, transaction }
+     WHERE organization_id = :organizationId AND id = :cycleId;`,
+    { replacements: { cycleId, organizationId }, transaction }
   );
 };
 
 export const markCycleEscalationSentQuery = async (
   cycleId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".post_market_monitoring_cycles
+    `UPDATE post_market_monitoring_cycles
      SET escalation_sent_at = NOW(), status = 'escalated'
-     WHERE id = :cycleId;`,
-    { replacements: { cycleId }, transaction }
+     WHERE organization_id = :organizationId AND id = :cycleId;`,
+    { replacements: { cycleId, organizationId }, transaction }
   );
 };
 
 export const completeCycleQuery = async (
   cycleId: number,
   userId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".post_market_monitoring_cycles
+    `UPDATE post_market_monitoring_cycles
      SET status = 'completed', completed_at = NOW(), completed_by = :userId
-     WHERE id = :cycleId;`,
-    { replacements: { cycleId, userId }, transaction }
+     WHERE organization_id = :organizationId AND id = :cycleId;`,
+    { replacements: { cycleId, userId, organizationId }, transaction }
   );
 };
 
 export const reassignCycleStakeholderQuery = async (
   cycleId: number,
   newStakeholderId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".post_market_monitoring_cycles
+    `UPDATE post_market_monitoring_cycles
      SET assigned_stakeholder_id = :stakeholderId
-     WHERE id = :cycleId;`,
-    { replacements: { cycleId, stakeholderId: newStakeholderId }, transaction }
+     WHERE organization_id = :organizationId AND id = :cycleId;`,
+    { replacements: { cycleId, stakeholderId: newStakeholderId, organizationId }, transaction }
   );
 };
 
 export const getLatestCycleNumberQuery = async (
   configId: number,
-  tenant: string
+  organizationId: number
 ): Promise<number> => {
   const result = await sequelize.query(
     `SELECT COALESCE(MAX(cycle_number), 0) as latest_cycle
-     FROM "${tenant}".post_market_monitoring_cycles
-     WHERE config_id = :configId;`,
-    { replacements: { configId } }
+     FROM post_market_monitoring_cycles
+     WHERE organization_id = :organizationId AND config_id = :configId;`,
+    { replacements: { configId, organizationId } }
   ) as [{ latest_cycle: number }[], number];
 
   return result[0][0].latest_cycle;
@@ -571,16 +574,16 @@ export const getLatestCycleNumberQuery = async (
 export const savePMMResponseQuery = async (
   cycleId: number,
   responseData: IPMMResponseSave,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IPMMResponse> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".post_market_monitoring_responses (
-      cycle_id, question_id, response_value, is_flagged
+    `INSERT INTO post_market_monitoring_responses (
+      organization_id, cycle_id, question_id, response_value, is_flagged
     ) VALUES (
-      :cycle_id, :question_id, :response_value, :is_flagged
+      :organizationId, :cycle_id, :question_id, :response_value, :is_flagged
     )
-    ON CONFLICT (cycle_id, question_id)
+    ON CONFLICT (organization_id, cycle_id, question_id)
     DO UPDATE SET
       response_value = :response_value,
       is_flagged = :is_flagged,
@@ -588,6 +591,7 @@ export const savePMMResponseQuery = async (
     RETURNING *;`,
     {
       replacements: {
+        organizationId,
         cycle_id: cycleId,
         question_id: responseData.question_id,
         response_value: JSON.stringify(responseData.response_value),
@@ -603,13 +607,13 @@ export const savePMMResponseQuery = async (
 export const savePMMResponsesQuery = async (
   cycleId: number,
   responses: IPMMResponseSave[],
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IPMMResponse[]> => {
   const savedResponses: IPMMResponse[] = [];
 
   for (const response of responses) {
-    const saved = await savePMMResponseQuery(cycleId, response, tenant, transaction);
+    const saved = await savePMMResponseQuery(cycleId, response, organizationId, transaction);
     savedResponses.push(saved);
   }
 
@@ -618,7 +622,7 @@ export const savePMMResponsesQuery = async (
 
 export const getPMMResponsesQuery = async (
   cycleId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMResponse[]> => {
   const result = await sequelize.query(
     `SELECT
@@ -627,11 +631,11 @@ export const getPMMResponsesQuery = async (
       q.question_type,
       q.suggestion_text,
       q.eu_ai_act_article
-    FROM "${tenant}".post_market_monitoring_responses r
-    JOIN "${tenant}".post_market_monitoring_questions q ON r.question_id = q.id
-    WHERE r.cycle_id = :cycleId
+    FROM post_market_monitoring_responses r
+    JOIN post_market_monitoring_questions q ON r.question_id = q.id AND q.organization_id = :organizationId
+    WHERE r.organization_id = :organizationId AND r.cycle_id = :cycleId
     ORDER BY q.display_order ASC;`,
-    { replacements: { cycleId } }
+    { replacements: { cycleId, organizationId } }
   ) as [IPMMResponse[], number];
 
   return result[0];
@@ -639,7 +643,7 @@ export const getPMMResponsesQuery = async (
 
 export const getFlaggedResponsesQuery = async (
   cycleId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMResponse[]> => {
   const result = await sequelize.query(
     `SELECT
@@ -648,11 +652,11 @@ export const getFlaggedResponsesQuery = async (
       q.question_type,
       q.suggestion_text,
       q.eu_ai_act_article
-    FROM "${tenant}".post_market_monitoring_responses r
-    JOIN "${tenant}".post_market_monitoring_questions q ON r.question_id = q.id
-    WHERE r.cycle_id = :cycleId AND r.is_flagged = true
+    FROM post_market_monitoring_responses r
+    JOIN post_market_monitoring_questions q ON r.question_id = q.id AND q.organization_id = :organizationId
+    WHERE r.organization_id = :organizationId AND r.cycle_id = :cycleId AND r.is_flagged = true
     ORDER BY q.display_order ASC;`,
-    { replacements: { cycleId } }
+    { replacements: { cycleId, organizationId } }
   ) as [IPMMResponse[], number];
 
   return result[0];
@@ -667,17 +671,18 @@ export const createPMMReportQuery = async (
   contextSnapshot: IPMMContextSnapshot,
   fileId: number | null,
   userId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<IPMMReport> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".post_market_monitoring_reports (
-      cycle_id, file_id, context_snapshot, generated_by
+    `INSERT INTO post_market_monitoring_reports (
+      organization_id, cycle_id, file_id, context_snapshot, generated_by
     ) VALUES (
-      :cycle_id, :file_id, :context_snapshot, :generated_by
+      :organizationId, :cycle_id, :file_id, :context_snapshot, :generated_by
     ) RETURNING *;`,
     {
       replacements: {
+        organizationId,
         cycle_id: cycleId,
         file_id: fileId,
         context_snapshot: JSON.stringify(contextSnapshot),
@@ -692,14 +697,14 @@ export const createPMMReportQuery = async (
 
 export const getPMMReportByCycleIdQuery = async (
   cycleId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMReport | null> => {
   const result = await sequelize.query(
     `SELECT r.*, f.filename as file_name
-     FROM "${tenant}".post_market_monitoring_reports r
-     LEFT JOIN "${tenant}".files f ON r.file_id = f.id
-     WHERE r.cycle_id = :cycleId;`,
-    { replacements: { cycleId } }
+     FROM post_market_monitoring_reports r
+     LEFT JOIN files f ON r.file_id = f.id AND f.organization_id = :organizationId
+     WHERE r.organization_id = :organizationId AND r.cycle_id = :cycleId;`,
+    { replacements: { cycleId, organizationId } }
   ) as [IPMMReport[], number];
 
   return result[0][0] || null;
@@ -715,14 +720,14 @@ export const getPMMReportsQuery = async (
     page?: number;
     limit?: number;
   },
-  tenant: string
+  organizationId: number
 ): Promise<{ reports: any[]; total: number }> => {
   const page = filters.page || 1;
   const limit = filters.limit || 10;
   const offset = (page - 1) * limit;
 
-  const whereClauses: string[] = [];
-  const replacements: Record<string, any> = { limit, offset };
+  const whereClauses: string[] = ["r.organization_id = :organizationId"];
+  const replacements: Record<string, any> = { limit, offset, organizationId };
 
   if (filters.projectId) {
     whereClauses.push("cfg.project_id = :projectId");
@@ -741,16 +746,16 @@ export const getPMMReportsQuery = async (
     replacements.completedBy = filters.completedBy;
   }
   if (filters.flaggedOnly) {
-    whereClauses.push(`(SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_responses resp WHERE resp.cycle_id = c.id AND resp.is_flagged = true) > 0`);
+    whereClauses.push(`(SELECT COUNT(*) FROM post_market_monitoring_responses resp WHERE resp.organization_id = :organizationId AND resp.cycle_id = c.id AND resp.is_flagged = true) > 0`);
   }
 
   const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
   const countResult = await sequelize.query(
     `SELECT COUNT(*) as total
-     FROM "${tenant}".post_market_monitoring_reports r
-     JOIN "${tenant}".post_market_monitoring_cycles c ON r.cycle_id = c.id
-     JOIN "${tenant}".post_market_monitoring_configs cfg ON c.config_id = cfg.id
+     FROM post_market_monitoring_reports r
+     JOIN post_market_monitoring_cycles c ON r.cycle_id = c.id AND c.organization_id = :organizationId
+     JOIN post_market_monitoring_configs cfg ON c.config_id = cfg.id AND cfg.organization_id = :organizationId
      ${whereClause};`,
     { replacements }
   ) as [{ total: string }[], number];
@@ -767,13 +772,13 @@ export const getPMMReportsQuery = async (
       p.project_title,
       u.name as completed_by_name,
       f.filename as file_name,
-      (SELECT COUNT(*) FROM "${tenant}".post_market_monitoring_responses resp WHERE resp.cycle_id = c.id AND resp.is_flagged = true) > 0 as has_flagged_concerns
-     FROM "${tenant}".post_market_monitoring_reports r
-     JOIN "${tenant}".post_market_monitoring_cycles c ON r.cycle_id = c.id
-     JOIN "${tenant}".post_market_monitoring_configs cfg ON c.config_id = cfg.id
-     LEFT JOIN "${tenant}".projects p ON cfg.project_id = p.id
-     LEFT JOIN public.users u ON c.completed_by = u.id
-     LEFT JOIN "${tenant}".files f ON r.file_id = f.id
+      (SELECT COUNT(*) FROM post_market_monitoring_responses resp WHERE resp.organization_id = :organizationId AND resp.cycle_id = c.id AND resp.is_flagged = true) > 0 as has_flagged_concerns
+     FROM post_market_monitoring_reports r
+     JOIN post_market_monitoring_cycles c ON r.cycle_id = c.id AND c.organization_id = :organizationId
+     JOIN post_market_monitoring_configs cfg ON c.config_id = cfg.id AND cfg.organization_id = :organizationId
+     LEFT JOIN projects p ON cfg.project_id = p.id AND p.organization_id = :organizationId
+     LEFT JOIN users u ON c.completed_by = u.id
+     LEFT JOIN files f ON r.file_id = f.id AND f.organization_id = :organizationId
      ${whereClause}
      ORDER BY r.generated_at DESC
      LIMIT :limit OFFSET :offset;`,
@@ -789,12 +794,12 @@ export const getPMMReportsQuery = async (
 
 export const getContextSnapshotQuery = async (
   projectId: number,
-  tenant: string
+  organizationId: number
 ): Promise<IPMMContextSnapshot> => {
   // Get project details
   const projectResult = await sequelize.query(
-    `SELECT project_title, status FROM "${tenant}".projects WHERE id = :projectId;`,
-    { replacements: { projectId } }
+    `SELECT project_title, status FROM projects WHERE organization_id = :organizationId AND id = :projectId;`,
+    { replacements: { projectId, organizationId } }
   ) as [{ project_title: string; status: string }[], number];
 
   const project = projectResult[0][0] || { project_title: "", status: "" };
@@ -806,17 +811,17 @@ export const getContextSnapshotQuery = async (
       SUM(CASE WHEN risk_severity = 'High' OR risk_severity = 'high' THEN 1 ELSE 0 END) as high_count,
       SUM(CASE WHEN risk_severity = 'Medium' OR risk_severity = 'medium' THEN 1 ELSE 0 END) as medium_count,
       SUM(CASE WHEN risk_severity = 'Low' OR risk_severity = 'low' THEN 1 ELSE 0 END) as low_count
-     FROM "${tenant}".risks
-     WHERE project_id = :projectId;`,
-    { replacements: { projectId } }
+     FROM risks
+     WHERE organization_id = :organizationId AND project_id = :projectId;`,
+    { replacements: { projectId, organizationId } }
   ) as [{ total: string; high_count: string; medium_count: string; low_count: string }[], number];
 
   const risks = riskResult[0][0] || { total: "0", high_count: "0", medium_count: "0", low_count: "0" };
 
   // Get model counts
   const modelResult = await sequelize.query(
-    `SELECT COUNT(*) as total FROM "${tenant}".model_inventory WHERE project_id = :projectId;`,
-    { replacements: { projectId } }
+    `SELECT COUNT(*) as total FROM model_inventories WHERE organization_id = :organizationId AND project_id = :projectId;`,
+    { replacements: { projectId, organizationId } }
   ) as [{ total: string }[], number];
 
   const models = parseInt(modelResult[0][0]?.total || "0", 10);
@@ -824,10 +829,10 @@ export const getContextSnapshotQuery = async (
   // Get model risks count
   const modelRiskResult = await sequelize.query(
     `SELECT COUNT(*) as total
-     FROM "${tenant}".model_risks mr
-     JOIN "${tenant}".model_inventory mi ON mr.model_id = mi.id
-     WHERE mi.project_id = :projectId;`,
-    { replacements: { projectId } }
+     FROM model_risks mr
+     JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = :organizationId
+     WHERE mr.organization_id = :organizationId AND mi.project_id = :projectId;`,
+    { replacements: { projectId, organizationId } }
   ) as [{ total: string }[], number];
 
   const modelRisks = parseInt(modelRiskResult[0][0]?.total || "0", 10);
@@ -835,10 +840,10 @@ export const getContextSnapshotQuery = async (
   // Get vendor counts
   const vendorResult = await sequelize.query(
     `SELECT COUNT(DISTINCT v.id) as total
-     FROM "${tenant}".vendors v
-     JOIN "${tenant}".vendors_projects vp ON v.id = vp.vendor_id
-     WHERE vp.project_id = :projectId;`,
-    { replacements: { projectId } }
+     FROM vendors v
+     JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = :organizationId
+     WHERE v.organization_id = :organizationId AND vp.project_id = :projectId;`,
+    { replacements: { projectId, organizationId } }
   ) as [{ total: string }[], number];
 
   const vendors = parseInt(vendorResult[0][0]?.total || "0", 10);
@@ -846,11 +851,11 @@ export const getContextSnapshotQuery = async (
   // Get vendor risks count
   const vendorRiskResult = await sequelize.query(
     `SELECT COUNT(*) as total
-     FROM "${tenant}".vendor_risks vr
-     JOIN "${tenant}".vendors v ON vr.vendor_id = v.id
-     JOIN "${tenant}".vendors_projects vp ON v.id = vp.vendor_id
-     WHERE vp.project_id = :projectId;`,
-    { replacements: { projectId } }
+     FROM vendorrisks vr
+     JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = :organizationId
+     JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = :organizationId
+     WHERE vr.organization_id = :organizationId AND vp.project_id = :projectId;`,
+    { replacements: { projectId, organizationId } }
   ) as [{ total: string }[], number];
 
   const vendorRisks = parseInt(vendorRiskResult[0][0]?.total || "0", 10);
@@ -876,17 +881,17 @@ export const getContextSnapshotQuery = async (
 
 export const getAssignedStakeholderQuery = async (
   projectId: number,
-  tenant: string
+  organizationId: number
 ): Promise<{ id: number; name: string; email: string } | null> => {
   // First try to get an assigned stakeholder from project members
   const result = await sequelize.query(
     `SELECT u.id, u.name, u.email
-     FROM public.users u
-     JOIN "${tenant}".projects_members pm ON u.id = pm.user_id
+     FROM users u
+     JOIN projects_members pm ON u.id = pm.user_id AND pm.organization_id = :organizationId
      WHERE pm.project_id = :projectId
      ORDER BY pm.id ASC
      LIMIT 1;`,
-    { replacements: { projectId } }
+    { replacements: { projectId, organizationId } }
   ) as [{ id: number; name: string; email: string }[], number];
 
   if (result[0].length > 0) {
@@ -896,10 +901,10 @@ export const getAssignedStakeholderQuery = async (
   // Fallback to project owner
   const ownerResult = await sequelize.query(
     `SELECT u.id, u.name, u.email
-     FROM public.users u
-     JOIN "${tenant}".projects p ON u.id = p.owner
+     FROM users u
+     JOIN projects p ON u.id = p.owner AND p.organization_id = :organizationId
      WHERE p.id = :projectId;`,
-    { replacements: { projectId } }
+    { replacements: { projectId, organizationId } }
   ) as [{ id: number; name: string; email: string }[], number];
 
   return ownerResult[0][0] || null;
@@ -907,15 +912,15 @@ export const getAssignedStakeholderQuery = async (
 
 export const getProjectStakeholdersQuery = async (
   projectId: number,
-  tenant: string
+  organizationId: number
 ): Promise<Array<{ id: number; name: string; email: string }>> => {
   const result = await sequelize.query(
     `SELECT DISTINCT u.id, u.name, u.email
-     FROM public.users u
-     LEFT JOIN "${tenant}".projects_members pm ON u.id = pm.user_id AND pm.project_id = :projectId
-     LEFT JOIN "${tenant}".projects p ON u.id = p.owner AND p.id = :projectId
+     FROM users u
+     LEFT JOIN projects_members pm ON u.id = pm.user_id AND pm.organization_id = :organizationId AND pm.project_id = :projectId
+     LEFT JOIN projects p ON u.id = p.owner AND p.organization_id = :organizationId AND p.id = :projectId
      WHERE pm.project_id = :projectId OR p.id = :projectId;`,
-    { replacements: { projectId } }
+    { replacements: { projectId, organizationId } }
   ) as [{ id: number; name: string; email: string }[], number];
 
   return result[0];
@@ -927,26 +932,26 @@ export const getProjectStakeholdersQuery = async (
 
 export const deactivateConfigForProjectQuery = async (
   projectId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".post_market_monitoring_configs
+    `UPDATE post_market_monitoring_configs
      SET is_active = false, updated_at = NOW()
-     WHERE project_id = :projectId;`,
-    { replacements: { projectId }, transaction }
+     WHERE organization_id = :organizationId AND project_id = :projectId;`,
+    { replacements: { projectId, organizationId }, transaction }
   );
 };
 
 export const cancelPendingCyclesForConfigQuery = async (
   configId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenant}".post_market_monitoring_cycles
+    `UPDATE post_market_monitoring_cycles
      SET status = 'completed', completed_at = NOW()
-     WHERE config_id = :configId AND status IN ('pending', 'in_progress');`,
-    { replacements: { configId }, transaction }
+     WHERE organization_id = :organizationId AND config_id = :configId AND status IN ('pending', 'in_progress');`,
+    { replacements: { configId, organizationId }, transaction }
   );
 };

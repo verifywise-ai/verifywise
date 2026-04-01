@@ -20,56 +20,41 @@ Create a migration file in `Servers/database/migrations/`:
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Get all tenant schemas
-    const [tenants] = await queryInterface.sequelize.query(
-      `SELECT schema_name FROM information_schema.schemata
-       WHERE schema_name LIKE 'tenant_%'`
-    );
-
-    for (const tenant of tenants) {
-      const schema = tenant.schema_name;
-
-      await queryInterface.createTable(
-        { tableName: "features", schema },
-        {
-          id: {
-            type: Sequelize.INTEGER,
-            primaryKey: true,
-            autoIncrement: true,
-          },
-          name: {
-            type: Sequelize.STRING(255),
-            allowNull: false,
-          },
-          status: {
-            type: Sequelize.ENUM("Active", "Inactive"),
-            defaultValue: "Active",
-          },
-          created_at: {
-            type: Sequelize.DATE,
-            defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
-          },
-          updated_at: {
-            type: Sequelize.DATE,
-            defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
-          },
-        }
-      );
-    }
+    // All tables live in the verifywise schema (resolved via search_path).
+    // Use unqualified table names — no schema prefix needed.
+    await queryInterface.createTable("features", {
+      id: {
+        type: Sequelize.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      organization_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: { model: "organizations", key: "id" },
+        onDelete: "CASCADE",
+      },
+      name: {
+        type: Sequelize.STRING(255),
+        allowNull: false,
+      },
+      status: {
+        type: Sequelize.ENUM("Active", "Inactive"),
+        defaultValue: "Active",
+      },
+      created_at: {
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+      },
+      updated_at: {
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+      },
+    });
   },
 
   async down(queryInterface, Sequelize) {
-    const [tenants] = await queryInterface.sequelize.query(
-      `SELECT schema_name FROM information_schema.schemata
-       WHERE schema_name LIKE 'tenant_%'`
-    );
-
-    for (const tenant of tenants) {
-      await queryInterface.dropTable({
-        tableName: "features",
-        schema: tenant.schema_name,
-      });
-    }
+    await queryInterface.dropTable("features");
   },
 };
 ```
@@ -170,49 +155,52 @@ import { IFeature } from "../domain.layer/interfaces/i.feature";
 import { FeatureModel } from "../domain.layer/models/feature/feature.model";
 
 export const getAllFeaturesQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<FeatureModel[]> => {
   const query = `
-    SELECT * FROM "${tenant}".features
+    SELECT * FROM features
+    WHERE organization_id = :organizationId
     ORDER BY created_at DESC
   `;
   return sequelize.query(query, {
     type: QueryTypes.SELECT,
     model: FeatureModel,
     mapToModel: true,
+    replacements: { organizationId },
   });
 };
 
 export const getFeatureByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<FeatureModel | null> => {
   const query = `
-    SELECT * FROM "${tenant}".features
-    WHERE id = :id
+    SELECT * FROM features
+    WHERE id = :id AND organization_id = :organizationId
   `;
   const results = await sequelize.query(query, {
     type: QueryTypes.SELECT,
     model: FeatureModel,
     mapToModel: true,
-    replacements: { id },
+    replacements: { id, organizationId },
   });
   return results[0] || null;
 };
 
 export const createFeatureQuery = async (
   feature: IFeature,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<FeatureModel> => {
   const query = `
-    INSERT INTO "${tenant}".features (name, status, created_at, updated_at)
-    VALUES (:name, :status, NOW(), NOW())
+    INSERT INTO features (organization_id, name, status, created_at, updated_at)
+    VALUES (:organizationId, :name, :status, NOW(), NOW())
     RETURNING *
   `;
   const [result] = await sequelize.query(query, {
     type: QueryTypes.INSERT,
     replacements: {
+      organizationId,
       name: feature.name,
       status: feature.status || "Active",
     },
@@ -224,11 +212,11 @@ export const createFeatureQuery = async (
 export const updateFeatureQuery = async (
   id: number,
   feature: Partial<IFeature>,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<FeatureModel | null> => {
   const setClauses: string[] = [];
-  const replacements: Record<string, any> = { id };
+  const replacements: Record<string, any> = { id, organizationId };
 
   if (feature.name !== undefined) {
     setClauses.push("name = :name");
@@ -241,9 +229,9 @@ export const updateFeatureQuery = async (
   setClauses.push("updated_at = NOW()");
 
   const query = `
-    UPDATE "${tenant}".features
+    UPDATE features
     SET ${setClauses.join(", ")}
-    WHERE id = :id
+    WHERE id = :id AND organization_id = :organizationId
     RETURNING *
   `;
   const [result] = await sequelize.query(query, {
@@ -256,16 +244,16 @@ export const updateFeatureQuery = async (
 
 export const deleteFeatureQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> => {
   const query = `
-    DELETE FROM "${tenant}".features
-    WHERE id = :id
+    DELETE FROM features
+    WHERE id = :id AND organization_id = :organizationId
   `;
   await sequelize.query(query, {
     type: QueryTypes.DELETE,
-    replacements: { id },
+    replacements: { id, organizationId },
     transaction,
   });
   return true;
@@ -293,8 +281,8 @@ export const getAllFeatures = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const tenant = req.tenantId;
-    const features = await getAllFeaturesQuery(tenant);
+    const organizationId = req.organizationId;
+    const features = await getAllFeaturesQuery(organizationId);
 
     if (!features.length) {
       return res.status(204).json([]);
@@ -313,13 +301,13 @@ export const getFeatureById = async (
 ): Promise<Response> => {
   try {
     const { id } = req.params;
-    const tenant = req.tenantId;
+    const organizationId = req.organizationId;
 
     if (!Number.isSafeInteger(Number(id))) {
       return res.status(400).json({ message: "Invalid ID" });
     }
 
-    const feature = await getFeatureByIdQuery(Number(id), tenant);
+    const feature = await getFeatureByIdQuery(Number(id), organizationId);
 
     if (!feature) {
       return res.status(404).json({ message: "Feature not found" });
@@ -338,10 +326,10 @@ export const createFeature = async (
 ): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
-    const tenant = req.tenantId;
+    const organizationId = req.organizationId;
     const featureData = req.body;
 
-    const feature = await createFeatureQuery(featureData, tenant, transaction);
+    const feature = await createFeatureQuery(featureData, organizationId, transaction);
 
     await transaction.commit();
     return res.status(201).json(feature);
@@ -359,7 +347,7 @@ export const updateFeature = async (
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const tenant = req.tenantId;
+    const organizationId = req.organizationId;
     const updateData = req.body;
 
     if (!Number.isSafeInteger(Number(id))) {
@@ -369,7 +357,7 @@ export const updateFeature = async (
     const feature = await updateFeatureQuery(
       Number(id),
       updateData,
-      tenant,
+      organizationId,
       transaction
     );
 
@@ -394,13 +382,13 @@ export const deleteFeature = async (
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const tenant = req.tenantId;
+    const organizationId = req.organizationId;
 
     if (!Number.isSafeInteger(Number(id))) {
       return res.status(400).json({ message: "Invalid ID" });
     }
 
-    await deleteFeatureQuery(Number(id), tenant, transaction);
+    await deleteFeatureQuery(Number(id), organizationId, transaction);
 
     await transaction.commit();
     return res.status(202).json({ message: "Feature deleted" });
@@ -638,7 +626,7 @@ Add to sidebar in `Clients/src/presentation/components/Sidebar/`:
 
 Before submitting your feature:
 
-- [ ] Migration creates tables in all tenant schemas
+- [ ] Migration creates table in the verifywise schema with `organization_id` column
 - [ ] Model uses `toSafeJSON()` for API responses
 - [ ] Controller uses transactions for create/update/delete
 - [ ] Routes are protected with `authenticateJWT`

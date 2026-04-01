@@ -13,6 +13,7 @@ import { Trash2, MoreVertical } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { ModelRow } from "./index";
 import { CustomizableButton } from "../../button/customizable-button";
+import { text, background, border as borderPalette, status } from "../../../themes/palette";
 
 interface ModelsTableBodyProps {
   rows: ModelRow[];
@@ -47,7 +48,7 @@ const getProviderColor = (provider: string): { bg: string; text: string } => {
         xai: { bg: "#FAFAFA", text: "#212121" },
         bedrock: { bg: "#FFF3E0", text: "#FF6F00" },
     };
-    return colors[provider.toLowerCase()] || { bg: "#F5F5F5", text: "#616161" };
+    return colors[provider.toLowerCase()] || { bg: `${background.surface}`, text: "#616161" };
 };
 
 const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
@@ -93,7 +94,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                                 ...singleTheme.tableStyles.primary.body.row,
                                 cursor: onRowClick ? "pointer" : "default",
                                 "&:hover": {
-                                    backgroundColor: "#F9FAFB",
+                                    backgroundColor: `${background.accent}`,
                                 },
                             }}
                         >
@@ -142,7 +143,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                                     textTransform: "none",
                                 }}
                             >
-                                <Typography sx={{ fontSize: "13px", color: "#6B7280" }}>
+                                <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>
                                     {formatDate(model.updatedAt)}
                                 </Typography>
                             </TableCell>
@@ -161,10 +162,10 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                                     size="small"
                                     onClick={(e) => handleMenuOpen(e, model)}
                                     sx={{
-                                        color: "#667085",
+                                        color: `${text.icon}`,
                                         padding: "6px",
                                         "&:hover": {
-                                            backgroundColor: "#F3F4F6",
+                                            backgroundColor: `${background.hover}`,
                                         },
                                     }}
                                 >
@@ -187,7 +188,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                     "& .MuiPopover-paper": {
                         minWidth: 120,
                         borderRadius: "4px",
-                        border: "1px solid #d0d5dd",
+                        border: `1px solid ${borderPalette.dark}`,
                         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                         overflow: "hidden",
                         mt: 0.5,
@@ -206,7 +207,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                                 fontSize: "13px",
                                 fontWeight: 500,
                                 color: "#DC2626",
-                                borderColor: "#d0d5dd",
+                                borderColor: `${borderPalette.dark}`,
                                 backgroundColor: "transparent",
                                 justifyContent: "flex-start",
                                 "&:hover": {

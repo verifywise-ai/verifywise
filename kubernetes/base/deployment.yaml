@@ -76,6 +76,8 @@ spec:
               value: "587"
             - name: LLM_EVALS_URL
               value: http://localhost:8000
+            - name: AI_GATEWAY_URL
+              value: http://localhost:8100
 
         - name: verifywise-worker
           image: ghcr.io/verifywise-ai/verifywise-backend:latest
@@ -117,6 +119,8 @@ spec:
                   key: JWT_SECRET
             - name: REDIS_URL
               value: redis://localhost:6379/0
+            - name: AI_GATEWAY_URL
+              value: http://localhost:8100
 
         - name: verifywise-frontend
           image: ghcr.io/verifywise-ai/verifywise-frontend:latest
@@ -149,6 +153,49 @@ spec:
             readOnlyRootFilesystem: false
             seccompProfile:
               type: RuntimeDefault
+
+        - name: verifywise-ai-gateway
+          image: ghcr.io/verifywise-ai/verifywise-ai-gateway:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8100
+              name: web
+              protocol: TCP
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: verifywise-config
+            - secretRef:
+                name: verifywise-secret
+          env:
+            - name: DB_HOST
+              value: localhost
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: verifywise-config
+                  key: DB_USER
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: verifywise-config
+                  key: DB_PORT
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verifywise-secret
+                  key: DB_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: verifywise-config
+                  key: DB_NAME
+            - name: REDIS_URL
+              value: redis://localhost:6379/0
+            - name: EXPRESS_BACKEND_URL
+              value: http://localhost:3000
+            - name: AI_GATEWAY_PORT
+              value: "8100"
 
         - name: verifywise-eval-server
           image: ghcr.io/verifywise-ai/verifywise-eval-server:latest

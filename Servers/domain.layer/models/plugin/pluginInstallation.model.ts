@@ -2,7 +2,6 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { IPluginInstallation } from "../../interfaces/i.pluginInstallation";
 import { PluginInstallationStatus } from "../../enums/plugin.enum";
-import { getTenantHash } from "../../../tools/getTenantHash";
 import {
   ValidationException,
   NotFoundException,
@@ -37,15 +36,13 @@ export class PluginInstallationModel {
       );
     }
 
-    const tenantHash = getTenantHash(organization_id);
-
     // Check if already installed
     const existing = await sequelize.query(
-      `SELECT * FROM "${tenantHash}".plugin_installations
-       WHERE plugin_key = :plugin_key
+      `SELECT * FROM plugin_installations
+       WHERE organization_id = :organization_id AND plugin_key = :plugin_key
        LIMIT 1`,
       {
-        replacements: { plugin_key: plugin_key.trim() },
+        replacements: { organization_id, plugin_key: plugin_key.trim() },
         type: QueryTypes.SELECT,
       }
     );
@@ -60,12 +57,13 @@ export class PluginInstallationModel {
 
     // Create installation record
     const result = await sequelize.query(
-      `INSERT INTO "${tenantHash}".plugin_installations
-       (plugin_key, status, created_at, updated_at)
-       VALUES (:plugin_key, :status, NOW(), NOW())
+      `INSERT INTO plugin_installations
+       (organization_id, plugin_key, status, created_at, updated_at)
+       VALUES (:organization_id, :plugin_key, :status, NOW(), NOW())
        RETURNING *`,
       {
         replacements: {
+          organization_id,
           plugin_key: plugin_key.trim(),
           status: PluginInstallationStatus.INSTALLED,
         },
@@ -83,14 +81,12 @@ export class PluginInstallationModel {
     plugin_key: string,
     organization_id: number
   ): Promise<IPluginInstallation | null> {
-    const tenantHash = getTenantHash(organization_id);
-
     const results = await sequelize.query(
-      `SELECT * FROM "${tenantHash}".plugin_installations
-       WHERE plugin_key = :plugin_key
+      `SELECT * FROM plugin_installations
+       WHERE organization_id = :organization_id AND plugin_key = :plugin_key
        LIMIT 1`,
       {
-        replacements: { plugin_key: plugin_key.trim() },
+        replacements: { organization_id, plugin_key: plugin_key.trim() },
         type: QueryTypes.SELECT,
       }
     );
@@ -104,12 +100,12 @@ export class PluginInstallationModel {
   static async getInstalledPlugins(
     organization_id: number
   ): Promise<IPluginInstallation[]> {
-    const tenantHash = getTenantHash(organization_id);
-
     const results = await sequelize.query(
-      `SELECT * FROM "${tenantHash}".plugin_installations
+      `SELECT * FROM plugin_installations
+       WHERE organization_id = :organization_id
        ORDER BY installed_at DESC`,
       {
+        replacements: { organization_id },
         type: QueryTypes.SELECT,
       }
     );
@@ -132,14 +128,12 @@ export class PluginInstallationModel {
       );
     }
 
-    const tenantHash = getTenantHash(organization_id);
-
     const results = await sequelize.query(
-      `SELECT * FROM "${tenantHash}".plugin_installations
-       WHERE id = :id
+      `SELECT * FROM plugin_installations
+       WHERE organization_id = :organization_id AND id = :id
        LIMIT 1`,
       {
-        replacements: { id },
+        replacements: { organization_id, id },
         type: QueryTypes.SELECT,
       }
     );
@@ -171,15 +165,13 @@ export class PluginInstallationModel {
     organization_id: number,
     status: PluginInstallationStatus
   ): Promise<IPluginInstallation> {
-    const tenantHash = getTenantHash(organization_id);
-
     const results = await sequelize.query(
-      `UPDATE "${tenantHash}".plugin_installations
+      `UPDATE plugin_installations
        SET status = :status, installed_at = NOW(), error_message = NULL, updated_at = NOW()
-       WHERE id = :id
+       WHERE organization_id = :organization_id AND id = :id
        RETURNING *`,
       {
-        replacements: { id, status },
+        replacements: { organization_id, id, status },
         type: QueryTypes.UPDATE,
       }
     );
@@ -198,13 +190,11 @@ export class PluginInstallationModel {
     id: number,
     organization_id: number
   ): Promise<void> {
-    const tenantHash = getTenantHash(organization_id);
-
     await sequelize.query(
-      `DELETE FROM "${tenantHash}".plugin_installations
-       WHERE id = :id`,
+      `DELETE FROM plugin_installations
+       WHERE organization_id = :organization_id AND id = :id`,
       {
-        replacements: { id },
+        replacements: { organization_id, id },
         type: QueryTypes.DELETE,
       }
     );
@@ -218,15 +208,13 @@ export class PluginInstallationModel {
     organization_id: number,
     configuration: any
   ): Promise<IPluginInstallation> {
-    const tenantHash = getTenantHash(organization_id);
-
     const results = await sequelize.query(
-      `UPDATE "${tenantHash}".plugin_installations
+      `UPDATE plugin_installations
        SET configuration = :configuration, updated_at = NOW()
-       WHERE id = :id
+       WHERE organization_id = :organization_id AND id = :id
        RETURNING *`,
       {
-        replacements: { id, configuration: JSON.stringify(configuration) },
+        replacements: { organization_id, id, configuration: JSON.stringify(configuration) },
         type: QueryTypes.UPDATE,
       }
     );

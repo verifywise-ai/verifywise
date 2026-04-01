@@ -7,7 +7,7 @@ import { createNISTAI_RMFFrameworkQuery, deleteProjectFrameworkNISTQuery } from 
 export const frameworkAdditionMap: Record<number, (
   projectId: number,
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => Promise<Object>> = {
   1: createEUFrameworkQuery,
@@ -16,7 +16,7 @@ export const frameworkAdditionMap: Record<number, (
   4: createNISTAI_RMFFrameworkQuery
 };
 
-export const frameworkDeletionMap: Record<number, (id: number, tenant: string, transaction: Transaction) => Promise<boolean>> = {
+export const frameworkDeletionMap: Record<number, (id: number, organizationId: number, transaction: Transaction) => Promise<boolean>> = {
   1: deleteProjectFrameworkEUQuery,
   2: deleteProjectFrameworkISOQuery,
   3: deleteProjectFrameworkISO27001Query,

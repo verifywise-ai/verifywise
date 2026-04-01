@@ -2,6 +2,7 @@ import { Stack, Typography } from "@mui/material";
 import { X as ClearIcon } from "lucide-react";
 import { ProjectRiskMitigationTable } from "../Table/ProjectRiskMitigationTable/ProjectRiskMitigationTable";
 import { IProjectRiskMitigationProps } from "../../../domain/interfaces/i.project";
+import { text } from "../../themes/palette";
 
 export const ProjectRiskMitigation: React.FC<IProjectRiskMitigationProps> = ({
   onClose,
@@ -34,7 +35,7 @@ export const ProjectRiskMitigation: React.FC<IProjectRiskMitigationProps> = ({
         <Typography
           sx={{
             fontSize: 16,
-            color: "#344054",
+            color: `${text.secondary}`,
             fontWeight: "bold",
           }}
         >
@@ -43,7 +44,7 @@ export const ProjectRiskMitigation: React.FC<IProjectRiskMitigationProps> = ({
         <ClearIcon
           size={20}
           style={{
-            color: "#98A2B3",
+            color: `${text.muted}`,
             cursor: "pointer",
           }}
           onClick={onClose}

@@ -28,7 +28,7 @@ const mockGetDashboardDataQuery = getDashboardDataQuery as jest.MockedFunction<
 function createReq(overrides?: Partial<Request>): Partial<Request> {
   return {
     userId: 1,
-    tenantId: "a1b2c3d4e5",
+    organizationId: 1,
     role: "Admin",
     ...overrides,
   } as any;
@@ -67,7 +67,7 @@ describe("dashboard.ctrl - getDashboardData", () => {
     await getDashboardData(req as Request, res as Response);
 
     expect(mockGetDashboardDataQuery).toHaveBeenCalledWith(
-      "a1b2c3d4e5",
+      1,
       1,
       "Admin"
     );
@@ -106,12 +106,12 @@ describe("dashboard.ctrl - getDashboardData", () => {
     });
   });
 
-  it("should pass tenant, userId and role from request", async () => {
+  it("should pass organizationId, userId and role from request", async () => {
     mockGetDashboardDataQuery.mockResolvedValue({} as any);
 
     const req = createReq({
       userId: 42,
-      tenantId: "x9y8z7w6v5",
+      organizationId: 99,
       role: "Editor",
     } as any);
     const res = createRes();
@@ -119,7 +119,7 @@ describe("dashboard.ctrl - getDashboardData", () => {
     await getDashboardData(req as Request, res as Response);
 
     expect(mockGetDashboardDataQuery).toHaveBeenCalledWith(
-      "x9y8z7w6v5",
+      99,
       42,
       "Editor"
     );

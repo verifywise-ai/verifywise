@@ -17,8 +17,8 @@ interface AiSdkAdvisorParams {
   baseURL: string;
   model: string;
   userPrompt: string;
-  tenant: string;
-  availableTools: Record<string, (params: Record<string, unknown>, tenant: string) => Promise<unknown>>;
+  tenant: number;
+  availableTools: Record<string, (params: Record<string, unknown>, tenant: number) => Promise<unknown>>;
   toolsDefinition: Array<{
     type: string;
     function: {
@@ -89,7 +89,7 @@ const generateChartTool = tool({
 function buildTools(
   toolsDefinition: AiSdkAdvisorParams["toolsDefinition"],
   availableTools: AiSdkAdvisorParams["availableTools"],
-  tenant: string
+  tenant: number
 ): ToolSet {
   const bridged = bridgeTools(toolsDefinition, availableTools, tenant);
   return {

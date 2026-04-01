@@ -16,7 +16,7 @@ from reports.seed_report import build_seed_report
 from reports.render_report import build_render_report
 from reports.perturb_report import build_perturb_report
 
-from render.load_catalogs import load_render_inputs
+from render.load_catalogs import load_render_inputs, validate_render_inputs
 from render.renderer import render_base_scenarios, RenderConfig
 from render.dedup import prompt_hash
 
@@ -24,6 +24,7 @@ from perturb.load_catalog import load_mutation_catalog
 from perturb.perturbator import apply_mutations
 
 from validate.validator import validate_candidates, ValidateConfig
+from validate.semantic import SemanticValidator, SemanticValidatorConfig
 from reports.validate_report import build_validate_report
 
 from seeds.index import ObligationIndex
@@ -110,6 +111,7 @@ def _cmd_generate(args: argparse.Namespace) -> int:
         obligations_version, obligations = load_obligations_yaml(obligations_path)
 
         inputs = load_render_inputs(config_dir=Path("configs"))
+        validate_render_inputs(inputs)
         base_scenarios = render_base_scenarios(
             obligations=obligations,
             inputs=inputs,
@@ -257,9 +259,16 @@ def _cmd_generate(args: argparse.Namespace) -> int:
             return 2
 
         candidates = list(read_jsonl(cand_in))
+        sem_client = (
+            MockChatClient()
+            if args.provider == "mock"
+            else OpenRouterChatClient(model_id=args.validator_model_id)
+        )
+        sem_validator = SemanticValidator(sem_client, SemanticValidatorConfig())
         accepted, rejections = validate_candidates(
             candidates=candidates,
             cfg=ValidateConfig(),
+            semantic_validator=sem_validator,
         )
 
         accepted = enrich_with_obligations(
@@ -270,14 +279,15 @@ def _cmd_generate(args: argparse.Namespace) -> int:
 
         rej_out = intermediate_dir / "rejections.jsonl"
         scenarios_out = final_dir / "scenarios.jsonl"
+        validate_report_path = final_dir / "validate_report.json"
         write_jsonl(rej_out, rejections)
         write_jsonl(scenarios_out, accepted)
 
         report = build_validate_report(accepted=accepted, rejections=rejections)
         report["generated_at"] = datetime.now(timezone.utc).isoformat()
         report["dataset_version"] = args.dataset_version
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        validate_report_path.parent.mkdir(parents=True, exist_ok=True)
+        validate_report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
         manifest = {
             "dataset_version": args.dataset_version,
@@ -296,8 +306,8 @@ def _cmd_generate(args: argparse.Namespace) -> int:
                 "rejections_jsonl_sha256": sha256_file(rej_out),
                 "scenarios_jsonl": str(scenarios_out),
                 "scenarios_jsonl_sha256": sha256_file(scenarios_out),
-                "sampling_report_json": str(report_path),
-                "sampling_report_json_sha256": sha256_file(report_path),
+                "validate_report_json": str(validate_report_path),
+                "validate_report_json_sha256": sha256_file(validate_report_path),
             },
             "counts": {
                 "candidates_in": len(candidates),
@@ -313,7 +323,7 @@ def _cmd_generate(args: argparse.Namespace) -> int:
         console.print(f"- rejected: {len(rejections)}")
         console.print(f"- wrote: {scenarios_out}")
         console.print(f"- wrote: {rej_out}")
-        console.print(f"- wrote: {report_path}")
+        console.print(f"- wrote: {validate_report_path}")
         console.print(f"- wrote: {manifest_path}")
         return 0
 
@@ -613,6 +623,7 @@ def main() -> None:
     gen.add_argument("--inject-constraints-into-prompt", action="store_true")
     gen.add_argument("--model-id", default="mock-model")
     gen.add_argument("--provider", default="mock")
+    gen.add_argument("--validator-model-id", default="openai/gpt-4o-mini")
     gen.add_argument("--temperature", default="0.2")
     gen.add_argument("--max-tokens", default="2048")
     gen.add_argument("--limit", type=int, default=None, help="Max number of scenarios to run inference on")

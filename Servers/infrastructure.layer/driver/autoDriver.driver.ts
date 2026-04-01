@@ -32,16 +32,15 @@ import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum
 import { TaskPriority, TaskStatus } from "../../domain.layer/enums/task-priority.enum";
 import { ModelInventoryModel } from "../../domain.layer/models/modelInventory/modelInventory.model";
 import { DatasetModel } from "../../domain.layer/models/dataset/dataset.model";
-
 export async function insertMockData(
-  tenant: string,
+  organizationId: number,
   _organization: number,
   userId: number
 ) {
   const transaction = await sequelize.transaction();
   try {
     let projects = (
-      (await getData("projects", tenant, transaction)) as ProjectModel[]
+      (await getData("projects", organizationId, transaction)) as ProjectModel[]
     )[0];
     if (!projects) {
       // create project
@@ -61,7 +60,7 @@ export async function insertMockData(
         },
         [], // no additional members
         [1], // frameworks
-        tenant,
+        organizationId,
         userId,
         transaction,
         true // is demo
@@ -70,7 +69,7 @@ export async function insertMockData(
       await createEUFrameworkQuery(
         project.id!,
         true,
-        tenant,
+        organizationId,
         transaction,
         true
       );
@@ -108,7 +107,7 @@ export async function insertMockData(
           frameworks: [1], // EU AI Act framework
           is_demo: true,
         },
-        tenant,
+        organizationId,
         transaction
       );
 
@@ -145,13 +144,13 @@ export async function insertMockData(
           frameworks: [1],
           is_demo: true,
         },
-        tenant,
+        organizationId,
         transaction
       );
 
       // create vendor
       let vendor = (
-        (await getData("vendors", tenant, transaction)) as IVendor[]
+        (await getData("vendors", organizationId, transaction)) as IVendor[]
       )[0];
       if (!vendor) {
         vendor = await createNewVendorQuery(
@@ -167,19 +166,19 @@ export async function insertMockData(
             reviewer: userId,
             review_date: new Date(Date.now()),
           },
-          tenant,
+          organizationId,
           transaction,
           true // is demo
         );
       } else {
-        await addVendorProjects(vendor.id!, [project.id!], tenant, transaction);
+        await addVendorProjects(vendor.id!, [project.id!], organizationId, transaction);
       }
 
       // Always create vendor risks if they don't exist
       // Check for existing demo vendor risks
       const existingVendorRisks = await sequelize.query(
-        `SELECT COUNT(*) as count FROM "${tenant}".vendorrisks WHERE is_demo = true`,
-        { transaction }
+        `SELECT COUNT(*) as count FROM vendorrisks WHERE organization_id = :organizationId AND is_demo = true`,
+        { replacements: { organizationId }, transaction }
       ) as [{ count: string }[], number];
 
       const vendorRiskCount = parseInt(existingVendorRisks[0][0].count) || 0;
@@ -198,7 +197,7 @@ export async function insertMockData(
             risk_level: "High risk",
             is_demo: true,
           },
-          tenant,
+          organizationId,
           transaction
         );
 
@@ -214,7 +213,7 @@ export async function insertMockData(
             risk_level: "Medium risk",
             is_demo: true,
           },
-          tenant,
+          organizationId,
           transaction
         );
 
@@ -230,7 +229,7 @@ export async function insertMockData(
             risk_level: "Low risk",
             is_demo: true,
           },
-          tenant,
+          organizationId,
           transaction
         );
       }
@@ -254,7 +253,7 @@ export async function insertMockData(
           security_assessment_data: [],
           is_demo: true,
         } as unknown as ModelInventoryModel,
-        tenant,
+        organizationId,
         [project.id!],
         [1],
         transaction
@@ -279,7 +278,7 @@ export async function insertMockData(
           model_id: modelInventory.id,
           is_demo: true,
         },
-        tenant,
+        organizationId,
         transaction
       );
 
@@ -301,7 +300,7 @@ export async function insertMockData(
           model_id: modelInventory.id,
           is_demo: true,
         },
-        tenant,
+        organizationId,
         transaction
       );
 
@@ -333,7 +332,7 @@ export async function insertMockData(
           ],
           is_demo: true,
         } as unknown as DatasetModel,
-        tenant,
+        organizationId,
         [modelInventory.id!],
         [project.id!],
         transaction
@@ -352,7 +351,7 @@ export async function insertMockData(
           categories: ["Compliance", "Model Risk"],
           is_demo: true,
         },
-        tenant,
+        organizationId,
         transaction,
         [{ user_id: userId }]
       );
@@ -369,7 +368,7 @@ export async function insertMockData(
           categories: ["Legal", "Vendor Management"],
           is_demo: true,
         },
-        tenant,
+        organizationId,
         transaction,
         [{ user_id: userId }]
       );
@@ -386,7 +385,7 @@ export async function insertMockData(
           categories: ["Development", "Compliance"],
           is_demo: true,
         },
-        tenant,
+        organizationId,
         transaction,
         [{ user_id: userId }]
       );
@@ -403,7 +402,7 @@ export async function insertMockData(
           description: "Comprehensive training on EU AI Act requirements for high-risk AI systems in employment contexts. Covers legal obligations, human oversight requirements, and documentation standards.",
           is_demo: true,
         },
-        tenant,
+        organizationId,
         transaction
       );
 
@@ -418,7 +417,7 @@ export async function insertMockData(
           description: "Hands-on workshop for ML engineers covering bias detection, fairness metrics, explainability techniques, and model documentation best practices.",
           is_demo: true,
         },
-        tenant,
+        organizationId,
         transaction
       );
 
@@ -455,7 +454,7 @@ export async function insertMockData(
           last_updated_by: userId,
           is_demo: true,
         },
-        tenant,
+        organizationId,
         userId,
         transaction
       );
@@ -491,7 +490,7 @@ export async function insertMockData(
           last_updated_by: userId,
           is_demo: true,
         },
-        tenant,
+        organizationId,
         userId,
         transaction
       );
@@ -500,7 +499,7 @@ export async function insertMockData(
     }
 
     // Seed Shadow AI demo data (tools, events, rollups, rules, alerts)
-    await insertShadowAiDemoData(tenant, userId, transaction);
+    await insertShadowAiDemoData(organizationId, userId, transaction);
 
     await transaction.commit();
   } catch (error) {
@@ -509,11 +508,11 @@ export async function insertMockData(
   }
 }
 
-export async function deleteMockData(tenant: string) {
+export async function deleteMockData(organizationId: number) {
   const transaction = await sequelize.transaction();
   try {
     // Clean all Shadow AI demo data first (no FK ties to governance tables)
-    await deleteShadowAiDemoData(tenant, transaction);
+    await deleteShadowAiDemoData(organizationId, transaction);
 
     // =====================================================
     // DELETE ORDER MATTERS - respect foreign key constraints
@@ -521,144 +520,144 @@ export async function deleteMockData(tenant: string) {
 
     // 1. Delete demo tasks (and their assignees first)
     const demoTasks = await sequelize.query(
-      `SELECT id FROM "${tenant}".tasks WHERE is_demo = true`,
-      { transaction }
+      `SELECT id FROM tasks WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     ) as [{ id: number }[], number];
 
     for (const task of demoTasks[0]) {
       await sequelize.query(
-        `DELETE FROM "${tenant}".task_assignees WHERE task_id = :id`,
-        { replacements: { id: task.id }, transaction }
+        `DELETE FROM task_assignees WHERE organization_id = :organizationId AND task_id = :id`,
+        { replacements: { organizationId, id: task.id }, transaction }
       );
     }
     await sequelize.query(
-      `DELETE FROM "${tenant}".tasks WHERE is_demo = true`,
-      { transaction }
+      `DELETE FROM tasks WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     );
 
     // 2. Delete demo training registers
     await sequelize.query(
-      `DELETE FROM "${tenant}".trainingregistar WHERE is_demo = true`,
-      { transaction }
+      `DELETE FROM trainingregistar WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     );
 
     // 3. Delete demo policies (and their reviewer mappings first)
     const demoPolicies = await sequelize.query(
-      `SELECT id FROM "${tenant}".policy_manager WHERE is_demo = true`,
-      { transaction }
+      `SELECT id FROM policy_manager WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     ) as [{ id: number }[], number];
 
     for (const policy of demoPolicies[0]) {
       await sequelize.query(
-        `DELETE FROM "${tenant}".policy_manager__assigned_reviewer_ids WHERE policy_manager_id = :id`,
-        { replacements: { id: policy.id }, transaction }
+        `DELETE FROM policy_manager__assigned_reviewer_ids WHERE organization_id = :organizationId AND policy_manager_id = :id`,
+        { replacements: { organizationId, id: policy.id }, transaction }
       );
     }
     await sequelize.query(
-      `DELETE FROM "${tenant}".policy_manager WHERE is_demo = true`,
-      { transaction }
+      `DELETE FROM policy_manager WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     );
 
     // 4. Delete demo model risks BEFORE model inventories (model_risks.model_id -> model_inventories.id)
     await sequelize.query(
-      `DELETE FROM "${tenant}".model_risks WHERE is_demo = true`,
-      { transaction }
+      `DELETE FROM model_risks WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     );
 
     // 5. Delete demo datasets (and their relationships first)
     const demoDatasets = await sequelize.query(
-      `SELECT id FROM "${tenant}".datasets WHERE is_demo = true`,
-      { transaction }
+      `SELECT id FROM datasets WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     ) as [{ id: number }[], number];
 
     for (const dataset of demoDatasets[0]) {
       await sequelize.query(
-        `DELETE FROM "${tenant}".dataset_model_inventories WHERE dataset_id = :id`,
-        { replacements: { id: dataset.id }, transaction }
+        `DELETE FROM dataset_model_inventories WHERE organization_id = :organizationId AND dataset_id = :id`,
+        { replacements: { organizationId, id: dataset.id }, transaction }
       );
       await sequelize.query(
-        `DELETE FROM "${tenant}".dataset_projects WHERE dataset_id = :id`,
-        { replacements: { id: dataset.id }, transaction }
+        `DELETE FROM dataset_projects WHERE organization_id = :organizationId AND dataset_id = :id`,
+        { replacements: { organizationId, id: dataset.id }, transaction }
       );
     }
     await sequelize.query(
-      `DELETE FROM "${tenant}".datasets WHERE is_demo = true`,
-      { transaction }
+      `DELETE FROM datasets WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     );
 
     // 6. Delete demo model inventories (and their relationships first)
     const demoModels = await sequelize.query(
-      `SELECT id FROM "${tenant}".model_inventories WHERE is_demo = true`,
-      { transaction }
+      `SELECT id FROM model_inventories WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     ) as [{ id: number }[], number];
 
     for (const model of demoModels[0]) {
       await sequelize.query(
-        `DELETE FROM "${tenant}".model_inventories_projects_frameworks WHERE model_inventory_id = :id`,
-        { replacements: { id: model.id }, transaction }
+        `DELETE FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :id`,
+        { replacements: { organizationId, id: model.id }, transaction }
       );
     }
     await sequelize.query(
-      `DELETE FROM "${tenant}".model_inventories WHERE is_demo = true`,
-      { transaction }
+      `DELETE FROM model_inventories WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     );
 
     // 7. Delete demo risks (and their project/framework relationships first)
     const demoRisks = await sequelize.query(
-      `SELECT id FROM "${tenant}".risks WHERE is_demo = true`,
-      { transaction }
+      `SELECT id FROM risks WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     ) as [{ id: number }[], number];
 
     for (const risk of demoRisks[0]) {
       // Delete all risk relationship tables
       await sequelize.query(
-        `DELETE FROM "${tenant}".projects_risks WHERE risk_id = :id`,
-        { replacements: { id: risk.id }, transaction }
+        `DELETE FROM projects_risks WHERE organization_id = :organizationId AND risk_id = :id`,
+        { replacements: { organizationId, id: risk.id }, transaction }
       );
       await sequelize.query(
-        `DELETE FROM "${tenant}".controls_eu__risks WHERE projects_risks_id = :id`,
-        { replacements: { id: risk.id }, transaction }
+        `DELETE FROM controls_eu__risks WHERE organization_id = :organizationId AND projects_risks_id = :id`,
+        { replacements: { organizationId, id: risk.id }, transaction }
       );
       await sequelize.query(
-        `DELETE FROM "${tenant}".answers_eu__risks WHERE projects_risks_id = :id`,
-        { replacements: { id: risk.id }, transaction }
+        `DELETE FROM answers_eu__risks WHERE organization_id = :organizationId AND projects_risks_id = :id`,
+        { replacements: { organizationId, id: risk.id }, transaction }
       );
       await sequelize.query(
-        `DELETE FROM "${tenant}".subclauses_iso__risks WHERE projects_risks_id = :id`,
-        { replacements: { id: risk.id }, transaction }
+        `DELETE FROM subclauses_iso__risks WHERE organization_id = :organizationId AND projects_risks_id = :id`,
+        { replacements: { organizationId, id: risk.id }, transaction }
       );
       await sequelize.query(
-        `DELETE FROM "${tenant}".annexcategories_iso__risks WHERE projects_risks_id = :id`,
-        { replacements: { id: risk.id }, transaction }
+        `DELETE FROM annexcategories_iso__risks WHERE organization_id = :organizationId AND projects_risks_id = :id`,
+        { replacements: { organizationId, id: risk.id }, transaction }
       );
       await sequelize.query(
-        `DELETE FROM "${tenant}".subclauses_iso27001__risks WHERE projects_risks_id = :id`,
-        { replacements: { id: risk.id }, transaction }
+        `DELETE FROM subclauses_iso27001__risks WHERE organization_id = :organizationId AND projects_risks_id = :id`,
+        { replacements: { organizationId, id: risk.id }, transaction }
       );
       await sequelize.query(
-        `DELETE FROM "${tenant}".annexcontrols_iso27001__risks WHERE projects_risks_id = :id`,
-        { replacements: { id: risk.id }, transaction }
+        `DELETE FROM annexcontrols_iso27001__risks WHERE organization_id = :organizationId AND projects_risks_id = :id`,
+        { replacements: { organizationId, id: risk.id }, transaction }
       );
     }
     await sequelize.query(
-      `DELETE FROM "${tenant}".risks WHERE is_demo = true`,
-      { transaction }
+      `DELETE FROM risks WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction }
     );
 
     // 8. Delete vendor related data (includes vendor risks)
-    await deleteDemoVendorsData(tenant, transaction);
+    await deleteDemoVendorsData(organizationId, transaction);
 
     // 9. Delete demo projects (this will also delete projects_frameworks, projects_members, files, etc.)
     const demoProjects = (await getData(
       "projects",
-      tenant,
+      organizationId,
       transaction
     )) as ProjectModel[];
     for (let project of demoProjects) {
       // Delete NIST AI RMF framework data first
-      await deleteProjectFrameworkNISTQuery(project.id!, tenant, transaction);
+      await deleteProjectFrameworkNISTQuery(project.id!, organizationId, transaction);
       // Then delete the project
-      await deleteProjectByIdQuery(project.id!, tenant, transaction);
+      await deleteProjectByIdQuery(project.id!, organizationId, transaction);
     }
 
     // 10. Delete demo users (last, as they may be referenced by other entities)

@@ -34,7 +34,7 @@ export async function getVendorRiskChangeHistoryById(
   try {
     const result = await getVendorRiskChangeHistory(
       vendorRiskId,
-      req.tenantId!,
+      req.organizationId!,
       limit,
       offset
     );

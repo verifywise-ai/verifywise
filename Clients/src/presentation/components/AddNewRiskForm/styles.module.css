@@ -5,7 +5,8 @@
 
 .popupBody {
   padding: 10px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   max-height: calc(100vh - 309px);
 }
 

@@ -1,4 +1,8 @@
-"""API routes for evaluation logs, metrics, and experiments"""
+"""
+API routes for evaluation logs, metrics, and experiments
+
+Shared-schema multi-tenancy: Uses organization_id from request.state.
+"""
 
 from fastapi import APIRouter, Query, Path, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -9,6 +13,14 @@ from sqlalchemy import text
 
 from controllers import evaluation_logs as controller
 from database.db import get_db
+
+
+def _get_organization_id(request: Request) -> int:
+    """Extract organization_id from request state (set by middleware)."""
+    org_id = getattr(request.state, "organization_id", None)
+    if org_id is None:
+        raise HTTPException(status_code=400, detail="Missing organization id")
+    return org_id
 
 
 # ==================== MODEL API KEY VALIDATION ====================
@@ -74,13 +86,13 @@ def check_openrouter_available() -> bool:
     return bool(os.getenv("OPENROUTER_API_KEY"))
 
 
-async def check_db_api_key_available(tenant: str, provider: str) -> bool:
+async def check_db_api_key_available(organization_id: int, provider: str) -> bool:
     """Check if the API key for a provider is stored in the database."""
     try:
         async with get_db() as db:
             result = await db.execute(
-                text(f'SELECT COUNT(*) FROM "{tenant}".llm_evals_api_keys WHERE provider = :provider'),
-                {"provider": provider}
+                text('SELECT COUNT(*) FROM llm_evals_api_keys WHERE organization_id = :organization_id AND provider = :provider'),
+                {"organization_id": organization_id, "provider": provider}
             )
             row = result.fetchone()
             return row[0] > 0 if row else False
@@ -89,9 +101,9 @@ async def check_db_api_key_available(tenant: str, provider: str) -> bool:
         return False
 
 
-async def check_db_openrouter_available(tenant: str) -> bool:
+async def check_db_openrouter_available(organization_id: int) -> bool:
     """Check if OpenRouter is configured in the database as a fallback."""
-    return await check_db_api_key_available(tenant, "openrouter")
+    return await check_db_api_key_available(organization_id, "openrouter")
 
 
 # ==================== REQUEST MODELS ====================
@@ -167,7 +179,7 @@ async def validate_model_api_key(request: Request, payload: ValidateModelRequest
     """
     model_name = payload.model_name
     provider = payload.provider
-    tenant = request.headers.get("x-tenant-id", "default")
+    organization_id = _get_organization_id(request)
 
     # Auto-detect provider if not provided
     if not provider:
@@ -176,7 +188,7 @@ async def validate_model_api_key(request: Request, payload: ValidateModelRequest
     if not provider:
         # Unknown provider - can't validate, assume it's fine
         has_openrouter_env = check_openrouter_available()
-        has_openrouter_db = await check_db_openrouter_available(tenant)
+        has_openrouter_db = await check_db_openrouter_available(organization_id)
         return JSONResponse(content={
             "valid": True,
             "model_name": model_name,
@@ -188,11 +200,11 @@ async def validate_model_api_key(request: Request, payload: ValidateModelRequest
 
     # Check both environment variables and database for API keys
     has_api_key_env = check_api_key_available(provider)
-    has_api_key_db = await check_db_api_key_available(tenant, provider)
+    has_api_key_db = await check_db_api_key_available(organization_id, provider)
     has_api_key = has_api_key_env or has_api_key_db
 
     has_openrouter_env = check_openrouter_available()
-    has_openrouter_db = await check_db_openrouter_available(tenant)
+    has_openrouter_db = await check_db_openrouter_available(organization_id)
     has_openrouter = has_openrouter_env or has_openrouter_db
 
     # Model is valid if it has its API key OR OpenRouter is available as fallback
@@ -226,7 +238,7 @@ async def create_log(
 ):
     """Create a new evaluation log entry"""
     return await controller.create_log_controller(
-        tenant=request.headers["x-tenant-id"],
+        organization_id=_get_organization_id(request),
         user_id=int(request.headers.get("x-user-id", 0)),
         data=log_data.dict(),
     )
@@ -243,7 +255,7 @@ async def get_logs(
 ):
     """Get logs with optional filtering"""
     return await controller.get_logs_controller(
-        tenant=request.headers["x-tenant-id"],
+        organization_id=_get_organization_id(request),
         project_id=project_id,
         experiment_id=experiment_id,
         status=status,
@@ -281,7 +293,7 @@ async def create_metric(
 ):
     """Create a new metric entry"""
     return await controller.create_metric_controller(
-        tenant=request.headers["x-tenant-id"],
+        organization_id=_get_organization_id(request),
         data=metric_data.dict(),
     )
 
@@ -305,7 +317,7 @@ async def get_metric_aggregates(
 ):
     """Get aggregated statistics for a metric"""
     return await controller.get_metric_aggregates_controller(
-        tenant=request.headers["x-tenant-id"],
+        organization_id=_get_organization_id(request),
         project_id=project_id,
         metric_name=metric_name,
         start_date=start_date,
@@ -324,13 +336,13 @@ async def create_experiment(
     print(f"\n{'='*70}")
     print(f"📝 Creating experiment: {experiment_data.name}")
     print(f"   Project ID: {experiment_data.project_id}")
-    print(f"   Tenant: {request.headers.get('x-tenant-id', 'default')}")
+    print(f"   Org ID: {getattr(request.state, 'organization_id', 'unknown')}")
     print(f"   User ID: {request.headers.get('x-user-id', 0)}")
     print(f"{'='*70}\n")
     
     try:
         result = await controller.create_experiment_controller(
-            tenant=request.headers["x-tenant-id"],
+            organization_id=_get_organization_id(request),
             user_id=int(request.headers.get("x-user-id", 0)),
             data=experiment_data.dict(),
         )
@@ -350,7 +362,7 @@ async def create_experiment(
             asyncio.create_task(run_evaluation_task(
                 experiment_id=experiment_id,
                 config=experiment_data.config,
-                tenant=request.headers["x-tenant-id"],
+                organization_id=_get_organization_id(request),
             ))
         
         return result
@@ -361,23 +373,23 @@ async def create_experiment(
         raise
 
 
-async def run_evaluation_task(experiment_id: str, config: Dict, tenant: str):
+async def run_evaluation_task(experiment_id: str, config: Dict, organization_id: int):
     """Background task: run evaluation in a non-blocking subprocess and stream logs asynchronously."""
     import sys
     import json
     from pathlib import Path
     import asyncio
-    
+
     try:
         from database.db import get_db
         from crud import evaluation_logs as crud
-        
+
         async with get_db() as db:
             # Update status to running
             await crud.update_experiment_status(
                 db=db,
                 experiment_id=experiment_id,
-                tenant=tenant,
+                organization_id=organization_id,
                 status="running",
             )
         
@@ -391,7 +403,7 @@ async def run_evaluation_task(experiment_id: str, config: Dict, tenant: str):
         eval_args = json.dumps({
             "experiment_id": experiment_id,
             "config": config,
-            "tenant": tenant,
+            "organization_id": organization_id,
         })
 
         # Async subprocess with piped output (non-blocking)
@@ -436,7 +448,7 @@ async def run_evaluation_task(experiment_id: str, config: Dict, tenant: str):
                 await crud.update_experiment_status(
                     db=db,
                     experiment_id=experiment_id,
-                    tenant=tenant,
+                    organization_id=organization_id,
                     status="failed",
                     error_message=str(e)
                 )
@@ -454,7 +466,7 @@ async def get_experiments(
 ):
     """Get experiments with optional filtering"""
     return await controller.get_experiments_controller(
-        tenant=request.headers["x-tenant-id"],
+        organization_id=_get_organization_id(request),
         project_id=project_id,
         status=status,
         limit=limit,
@@ -471,7 +483,7 @@ async def get_all_experiments(
     """Get all experiments (no pagination) for optional project/status filters"""
     # Use a high limit to return all in one response
     return await controller.get_experiments_controller(
-        tenant=request.headers["x-tenant-id"],
+        organization_id=_get_organization_id(request),
         project_id=project_id,
         status=status,
         limit=10000,
@@ -487,7 +499,7 @@ async def get_experiment(
     """Get a specific experiment by ID"""
     return await controller.get_experiment_by_id_controller(
         experiment_id=experiment_id,
-        tenant=request.headers["x-tenant-id"],
+        organization_id=_get_organization_id(request),
     )
 
 
@@ -502,9 +514,7 @@ async def update_experiment(
     from database.db import get_db
     from crud import evaluation_logs as crud
 
-    tenant = request.headers.get("x-tenant-id")
-    if not tenant:
-        raise HTTPException(status_code=400, detail="Missing tenant ID")
+    organization_id = _get_organization_id(request)
 
     # Parse request body
     body = await request.json()
@@ -518,7 +528,7 @@ async def update_experiment(
         return await controller.update_experiment_controller(
             db=db,
             experiment_id=experiment_id,
-            tenant=tenant,
+            organization_id=organization_id,
             name=name,
             description=description,
         )
@@ -541,19 +551,16 @@ async def delete_experiment(
     experiment_id: str = Path(...),
 ):
     """Delete an experiment and all associated logs"""
-    tenant = request.headers.get("x-tenant-id")
-    
-    if not tenant:
-        raise HTTPException(status_code=400, detail="Missing tenant ID")
-    
+    organization_id = _get_organization_id(request)
+
     from database.db import get_db
     from controllers import evaluation_logs as controllers
-    
+
     async with get_db() as db:
         return await controllers.delete_experiment_controller(
             db=db,
             experiment_id=experiment_id,
-            tenant=tenant,
+            organization_id=organization_id,
         )
 
 
@@ -571,43 +578,43 @@ async def get_monitor_dashboard(
         from datetime import datetime, timedelta
         from crud import evaluation_logs as crud
         from database.db import get_db
-        
-        tenant = request.headers["x-tenant-id"]
-        
+
+        organization_id = _get_organization_id(request)
+
         # Default to last 24 hours if no dates provided
         if not end_date:
             end_dt = datetime.now()
         else:
             end_dt = datetime.fromisoformat(end_date)
-            
+
         if not start_date:
             start_dt = end_dt - timedelta(hours=24)
         else:
             start_dt = datetime.fromisoformat(start_date)
-        
+
         async with get_db() as db:
             # Get metrics overview
             metric_names = ["latency", "token_count", "cost", "score_average"]
             metrics_data = {}
-            
+
             for metric_name in metric_names:
                 aggregates = await crud.get_metric_aggregates(
                     db=db,
-                    tenant=tenant,
+                    organization_id=organization_id,
                     project_id=project_id,
                     metric_name=metric_name,
                     start_date=start_dt,
                     end_date=end_dt,
                 )
                 metrics_data[metric_name] = aggregates
-            
+
             # Get log counts by status
-            total_logs = await crud.get_log_count(db=db, tenant=tenant, project_id=project_id)
-            success_logs = await crud.get_log_count(db=db, tenant=tenant, project_id=project_id, status="success")
-            error_logs = await crud.get_log_count(db=db, tenant=tenant, project_id=project_id, status="error")
-            
+            total_logs = await crud.get_log_count(db=db, organization_id=organization_id, project_id=project_id)
+            success_logs = await crud.get_log_count(db=db, organization_id=organization_id, project_id=project_id, status="success")
+            error_logs = await crud.get_log_count(db=db, organization_id=organization_id, project_id=project_id, status="error")
+
             # Get recent experiments
-            experiments = await crud.get_experiments(db=db, tenant=tenant, project_id=project_id, limit=10)
+            experiments = await crud.get_experiments(db=db, organization_id=organization_id, project_id=project_id, limit=10)
             
             return {
                 "project_id": project_id,

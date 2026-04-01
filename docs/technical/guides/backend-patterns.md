@@ -57,7 +57,7 @@ export async function getTaskById(
     functionName: "getTaskById",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -69,7 +69,7 @@ export async function getTaskById(
     }
 
     // Delegate to utils
-    const task = await getTaskByIdQuery(Number(id), req.tenantId!);
+    const task = await getTaskByIdQuery(Number(id), req.organizationId!);
 
     if (!task) {
       return res.status(404).json(STATUS_CODE[404]("Task not found"));
@@ -81,7 +81,7 @@ export async function getTaskById(
       functionName: "getTaskById",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](task));
@@ -92,7 +92,7 @@ export async function getTaskById(
       functionName: "getTaskById",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {
@@ -184,33 +184,33 @@ import { TaskModel } from "../domain.layer/models/tasks/tasks.model";
 import { ITask, ITaskJSON } from "../domain.layer/interfaces/i.task";
 
 /**
- * Get all tasks for a tenant with optional filters
+ * Get all tasks for an organization with optional filters
  */
 export async function getTasksQuery(
-  tenant: string,
+  organizationId: number,
   filters?: {
     status?: string;
     priority?: string;
     assigneeId?: number;
   }
 ): Promise<ITaskJSON[]> {
-  const whereConditions: string[] = ["1=1"];
-  const replacements: Record<string, any> = {};
+  const whereConditions: string[] = ["t.organization_id = :organizationId"];
+  const replacements: Record<string, any> = { organizationId };
 
   if (filters?.status) {
-    whereConditions.push("status = :status");
+    whereConditions.push("t.status = :status");
     replacements.status = filters.status;
   }
 
   if (filters?.priority) {
-    whereConditions.push("priority = :priority");
+    whereConditions.push("t.priority = :priority");
     replacements.priority = filters.priority;
   }
 
   if (filters?.assigneeId) {
     whereConditions.push(`
-      id IN (
-        SELECT task_id FROM "${tenant}".task_assignees
+      t.id IN (
+        SELECT task_id FROM task_assignees
         WHERE user_id = :assigneeId
       )
     `);
@@ -224,9 +224,9 @@ export async function getTasksQuery(
              json_agg(DISTINCT ta.user_id) FILTER (WHERE ta.user_id IS NOT NULL),
              '[]'
            ) as assignees
-    FROM "${tenant}".tasks t
-    LEFT JOIN public.users u ON t.creator_id = u.id
-    LEFT JOIN "${tenant}".task_assignees ta ON t.id = ta.task_id
+    FROM tasks t
+    LEFT JOIN users u ON t.creator_id = u.id
+    LEFT JOIN task_assignees ta ON t.id = ta.task_id
     WHERE ${whereConditions.join(" AND ")}
     GROUP BY t.id, u.name
     ORDER BY t.created_at DESC
@@ -245,24 +245,24 @@ export async function getTasksQuery(
  */
 export async function createTaskQuery(
   data: Partial<ITask>,
-  tenant: string,
+  organizationId: number,
   assigneeIds?: number[],
   transaction?: Transaction
 ): Promise<ITask> {
   const query = `
-    INSERT INTO "${tenant}".tasks
-      (title, description, creator_id, organization_id, due_date, priority, status, categories)
+    INSERT INTO tasks
+      (organization_id, title, description, creator_id, due_date, priority, status, categories)
     VALUES
-      (:title, :description, :creatorId, :orgId, :dueDate, :priority, :status, :categories)
+      (:organizationId, :title, :description, :creatorId, :dueDate, :priority, :status, :categories)
     RETURNING *
   `;
 
   const [result] = await sequelize.query(query, {
     replacements: {
+      organizationId,
       title: data.title,
       description: data.description || null,
       creatorId: data.creator_id,
-      orgId: data.organization_id,
       dueDate: data.due_date || null,
       priority: data.priority || "Medium",
       status: data.status || "Open",
@@ -276,7 +276,7 @@ export async function createTaskQuery(
 
   // Add assignees if provided
   if (assigneeIds?.length) {
-    await addTaskAssigneesQuery(task.id!, assigneeIds, tenant, transaction);
+    await addTaskAssigneesQuery(task.id!, assigneeIds, organizationId, transaction);
   }
 
   return task;
@@ -289,52 +289,28 @@ export async function createTaskQuery(
 2. **Use parameterized queries** - Prevent SQL injection
 3. **Support transactions** - Accept optional transaction parameter
 4. **Return typed results** - Use interfaces for return types
-5. **Handle multi-tenancy** - Always include tenant in queries
+5. **Handle multi-tenancy** - Always include `organization_id` in queries
 
 ## Multi-Tenant Queries
 
-All queries must be scoped to the tenant schema.
+All tenant-scoped queries must include `organization_id`. Use unqualified table names (resolved via `search_path = verifywise`).
 
 ### Pattern
 
 ```typescript
-// Always use tenant schema prefix
+// Unqualified table name — no schema prefix needed
 const query = `
-  SELECT * FROM "${tenant}".tasks
-  WHERE id = :id
+  SELECT * FROM tasks
+  WHERE organization_id = :organizationId AND id = :id
 `;
 
-// For joins across schemas
+// For joins with other tables (all in verifywise schema)
 const query = `
   SELECT t.*, u.name as creator_name
-  FROM "${tenant}".tasks t
-  LEFT JOIN public.users u ON t.creator_id = u.id
-  WHERE t.id = :id
+  FROM tasks t
+  LEFT JOIN users u ON t.creator_id = u.id
+  WHERE t.organization_id = :organizationId AND t.id = :id
 `;
-
-// Validate tenant before use
-import { isValidTenantHash } from "../utils/security.utils";
-
-if (!isValidTenantHash(tenant)) {
-  throw new ValidationException("Invalid tenant");
-}
-```
-
-### Tenant Validation
-
-```typescript
-// utils/security.utils.ts
-export function isValidTenantHash(tenantId: string): boolean {
-  // 10-character alphanumeric hash
-  return /^[a-zA-Z0-9]{10}$/.test(tenantId);
-}
-
-export function safeSQLIdentifier(tenantId: string): string {
-  if (!isValidTenantHash(tenantId)) {
-    throw new Error("Invalid tenant identifier");
-  }
-  return tenantId;
-}
 ```
 
 ## Error Handling
@@ -492,11 +468,11 @@ export async function createTask(req: Request, res: Response) {
     functionName: "createTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
-    const task = await createTaskQuery(req.body, req.tenantId!);
+    const task = await createTaskQuery(req.body, req.organizationId!);
 
     await logSuccess({
       eventType: "Create",
@@ -504,7 +480,7 @@ export async function createTask(req: Request, res: Response) {
       functionName: "createTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](task));
@@ -515,7 +491,7 @@ export async function createTask(req: Request, res: Response) {
       functionName: "createTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     throw error;
@@ -550,9 +526,8 @@ export async function authenticateJWT(
 
     // Attach user info to request
     req.userId = decoded.userId;
-    req.tenantId = decoded.tenantId;
-    req.userRole = decoded.role;
     req.organizationId = decoded.organizationId;
+    req.userRole = decoded.role;
 
     next();
   } catch (error) {
@@ -744,21 +719,21 @@ Use transactions for operations that modify multiple tables.
 export async function createTaskWithAssignees(
   taskData: Partial<ITask>,
   assigneeIds: number[],
-  tenant: string
+  organizationId: number
 ): Promise<ITask> {
   const transaction = await sequelize.transaction();
 
   try {
     // Create task
-    const task = await createTaskQuery(taskData, tenant, undefined, transaction);
+    const task = await createTaskQuery(taskData, organizationId, undefined, transaction);
 
     // Add assignees
     for (const userId of assigneeIds) {
-      await addTaskAssigneeQuery(task.id!, userId, tenant, transaction);
+      await addTaskAssigneeQuery(task.id!, userId, organizationId, transaction);
     }
 
     // Trigger automation
-    await triggerTaskAutomation("task_added", task, tenant, transaction);
+    await triggerTaskAutomation("task_added", task, organizationId, transaction);
 
     await transaction.commit();
     return task;
@@ -776,14 +751,14 @@ For complex business logic that spans multiple utils.
 ```typescript
 // services/postMarketMonitoring/pmmScheduler.ts
 export class PMMSchedulerService {
-  private readonly tenant: string;
+  private readonly organizationId: number;
 
-  constructor(tenant: string) {
-    this.tenant = tenant;
+  constructor(organizationId: number) {
+    this.organizationId = organizationId;
   }
 
   async checkAndSendNotifications(): Promise<void> {
-    const pendingCycles = await getPendingCyclesQuery(this.tenant);
+    const pendingCycles = await getPendingCyclesQuery(this.organizationId);
 
     for (const cycle of pendingCycles) {
       if (this.shouldSendReminder(cycle)) {

@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import AIDetectionOnboarding from "../../components/Modals/AIDetectionOnboarding";
 import { CustomizableButton } from "../../components/button/customizable-button";
+import { brand, status } from "../../themes/palette";
 
 const WizardShowcase: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,7 +18,7 @@ const WizardShowcase: React.FC = () => {
         <Typography sx={{ fontSize: 24, fontWeight: 700, color: "#111827" }}>
           AI Detection onboarding wizard
         </Typography>
-        <Typography sx={{ fontSize: 14, color: "#6B7280" }}>
+        <Typography sx={{ fontSize: 14, color: `${status.default.text}` }}>
           Preview the onboarding modal for the AI Detection module.
         </Typography>
       </Stack>
@@ -29,8 +30,8 @@ const WizardShowcase: React.FC = () => {
         sx={{
           height: 40,
           fontSize: 14,
-          bgcolor: "#13715B",
-          "&:hover": { bgcolor: "#0F5A47" },
+          bgcolor: `${brand.primary}`,
+          "&:hover": { bgcolor: `${brand.primaryHover}` },
         }}
       />
 

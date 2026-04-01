@@ -1,4 +1,5 @@
 import { Theme } from "@mui/material";
+import { brand, background } from "../../../themes/palette";
 
 export const getToggleStyles = (theme: Theme) => ({
   width: 34,
@@ -11,9 +12,9 @@ export const getToggleStyles = (theme: Theme) => ({
     margin: '2px',
     '&.Mui-checked': {
       transform: 'translateX(16px)',
-      color: '#fff',
+      color: `${background.main}`,
       '& + .MuiSwitch-track': {
-        backgroundColor: '#13715B',
+        backgroundColor: `${brand.primary}`,
         opacity: 1,
         border: 0,
       },
@@ -24,7 +25,7 @@ export const getToggleStyles = (theme: Theme) => ({
     width: 14,
     height: 14,
     borderRadius: '50%',
-    backgroundColor: '#fff',
+    backgroundColor: `${background.main}`,
   },
   '& .MuiSwitch-track': {
     borderRadius: 9,

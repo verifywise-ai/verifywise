@@ -30,7 +30,7 @@ detect_docker_compose() {
 check_and_download_compose_files() {
     if [ ! -f "docker-compose.yml" ]; then
         echo "docker-compose.yml not found. Downloading..."
-        curl -fS --output docker-compose.yml https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/docker-compose.yml
+        curl -fS --output docker-compose.yml https://raw.githubusercontent.com/verifywise-ai/verifywise/develop/docker-compose.yml
         if [ $? -ne 0 ]; then
             echo "Error: Failed to download docker-compose.yml. Please check your internet connection or the URL."
             exit 1
@@ -38,7 +38,7 @@ check_and_download_compose_files() {
     fi
     # if [ ! -f "docker-compose.yml" ]; then
     #     echo "docker-compose.yml not found. Downloading..."
-    #     curl -fSL --output docker-compose.yml https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/docker-compose.yml
+    #     curl -fSL --output docker-compose.yml https://raw.githubusercontent.com/verifywise-ai/verifywise/develop/docker-compose.yml
     #     if [ $? -ne 0 ]; then
     #         echo "Error: Failed to download docker-compose.yml."
     #         exit 1
@@ -52,7 +52,7 @@ check_and_download_compose_files() {
 
     if [ ! -f "docker-compose.prod.yml" ]; then
         echo "docker-compose.prod.yml not found. Downloading..."
-        curl -fS --output docker-compose.prod.yml https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/docker-compose.prod.yml
+        curl -fS --output docker-compose.prod.yml https://raw.githubusercontent.com/verifywise-ai/verifywise/develop/docker-compose.prod.yml
         if [ $? -ne 0 ]; then
             echo "Error: Failed to download docker-compose.prod.yml. Please check your internet connection or the URL."
             exit 1
@@ -60,7 +60,7 @@ check_and_download_compose_files() {
     fi
     # if [ ! -f "docker-compose.prod.yml" ]; then
     #     echo "docker-compose.prod.yml not found. Downloading..."
-    #     curl -fSL --output docker-compose.prod.yml https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/docker-compose.prod.yml
+    #     curl -fSL --output docker-compose.prod.yml https://raw.githubusercontent.com/verifywise-ai/verifywise/develop/docker-compose.prod.yml
     #     if [ $? -ne 0 ]; then
     #         echo "Error: Failed to download docker-compose.prod.yml."
     #         exit 1

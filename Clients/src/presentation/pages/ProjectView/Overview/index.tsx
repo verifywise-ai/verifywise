@@ -7,11 +7,13 @@ import ProgressBar from "../../../components/ProjectCard/ProgressBar";
 import { FC, memo, useCallback, useMemo } from "react";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import Risks from "../../../components/Risks";
+import IntakeSubmissionCard from "../IntakeSubmissionCard";
 import { useSearchParams } from "react-router-dom";
 import useProjectData from "../../../../application/hooks/useProjectData";
 import useProjectStatus from "../../../../application/hooks/useProjectStatus";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import getProjectData from "../../../../application/tools/getProjectData";
+import { text } from "../../../themes/palette";
 
 export type RiskData = {
   veryHighRisks: number;
@@ -134,6 +136,7 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
             <Typography sx={styles.value}>{project.last_updated_by}</Typography>
           </Stack>
         </Stack>
+        <IntakeSubmissionCard projectId={numericProjectId} />
         <Stack direction="row" spacing={18} sx={{ pb: "56px" }} data-joyride-id="framework-progress">
           {progressBarCardRender({
             progress: controlsProgress,
@@ -153,7 +156,7 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
         </Stack>
         <Stack sx={{ mb: 0 }} data-joyride-id="risk-summary">
           <Typography
-            sx={{ color: "#1A1919", fontWeight: 600, mb: "10px", fontSize: 16 }}
+            sx={{ color: `${text.primary}`, fontWeight: 600, mb: "10px", fontSize: 16 }}
           >
             Use case risks
           </Typography>

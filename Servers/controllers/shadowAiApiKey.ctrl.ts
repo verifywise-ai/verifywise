@@ -26,29 +26,29 @@ const FILE_NAME = "shadowAiApiKey.ctrl.ts";
 export async function createApiKey(req: Request, res: Response) {
   const functionName = "createApiKey";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logProcessing({
     description: "creating new Shadow AI API key",
     functionName,
     fileName: FILE_NAME,
     userId,
-    tenantId,
+    organizationId,
   });
 
   try {
     // Check admin role
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res
         .status(403)
         .json(STATUS_CODE[403]("Only admins can manage API keys"));
     }
 
     const { label } = req.body;
-    const { key, keyHash, keyPrefix } = generateApiKey(tenantId);
+    const { key, keyHash, keyPrefix } = generateApiKey(organizationId);
 
     const apiKeyRecord = await createApiKeyQuery(
-      tenantId,
+      organizationId,
       keyHash,
       keyPrefix,
       label || null,
@@ -61,7 +61,7 @@ export async function createApiKey(req: Request, res: Response) {
       functionName,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
     });
 
     // Return the full key only on creation
@@ -78,7 +78,7 @@ export async function createApiKey(req: Request, res: Response) {
       functionName,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
       error: error as Error,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -87,29 +87,29 @@ export async function createApiKey(req: Request, res: Response) {
 
 /**
  * GET /api/shadow-ai/api-keys
- * List all API keys for the tenant. Admin only.
+ * List all API keys for the organization. Admin only.
  */
 export async function listApiKeys(req: Request, res: Response) {
   const functionName = "listApiKeys";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
 
   logProcessing({
     description: "listing Shadow AI API keys",
     functionName,
     fileName: FILE_NAME,
     userId,
-    tenantId,
+    organizationId,
   });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res
         .status(403)
         .json(STATUS_CODE[403]("Only admins can manage API keys"));
     }
 
-    const keys = await listApiKeysQuery(tenantId);
+    const keys = await listApiKeysQuery(organizationId);
 
     await logSuccess({
       eventType: "Read",
@@ -117,7 +117,7 @@ export async function listApiKeys(req: Request, res: Response) {
       functionName,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
     });
 
     return res.status(200).json(STATUS_CODE[200](keys));
@@ -128,7 +128,7 @@ export async function listApiKeys(req: Request, res: Response) {
       functionName,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
       error: error as Error,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -142,7 +142,7 @@ export async function listApiKeys(req: Request, res: Response) {
 export async function revokeApiKey(req: Request, res: Response) {
   const functionName = "revokeApiKey";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
   const keyId = parseInt(
     Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
   );
@@ -152,11 +152,11 @@ export async function revokeApiKey(req: Request, res: Response) {
     functionName,
     fileName: FILE_NAME,
     userId,
-    tenantId,
+    organizationId,
   });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res
         .status(403)
         .json(STATUS_CODE[403]("Only admins can manage API keys"));
@@ -166,7 +166,7 @@ export async function revokeApiKey(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Invalid key ID"));
     }
 
-    const revoked = await revokeApiKeyQuery(tenantId, keyId);
+    const revoked = await revokeApiKeyQuery(organizationId, keyId);
 
     if (!revoked) {
       return res
@@ -183,7 +183,7 @@ export async function revokeApiKey(req: Request, res: Response) {
       functionName,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
     });
 
     return res
@@ -196,7 +196,7 @@ export async function revokeApiKey(req: Request, res: Response) {
       functionName,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
       error: error as Error,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -210,7 +210,7 @@ export async function revokeApiKey(req: Request, res: Response) {
 export async function deleteApiKey(req: Request, res: Response) {
   const functionName = "deleteApiKey";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
+  const organizationId = req.organizationId!;
   const keyId = parseInt(
     Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
   );
@@ -220,11 +220,11 @@ export async function deleteApiKey(req: Request, res: Response) {
     functionName,
     fileName: FILE_NAME,
     userId,
-    tenantId,
+    organizationId,
   });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res
         .status(403)
         .json(STATUS_CODE[403]("Only admins can manage API keys"));
@@ -234,7 +234,7 @@ export async function deleteApiKey(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Invalid key ID"));
     }
 
-    const deleted = await deleteApiKeyQuery(tenantId, keyId);
+    const deleted = await deleteApiKeyQuery(organizationId, keyId);
 
     if (!deleted) {
       return res
@@ -248,7 +248,7 @@ export async function deleteApiKey(req: Request, res: Response) {
       functionName,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
     });
 
     return res
@@ -261,7 +261,7 @@ export async function deleteApiKey(req: Request, res: Response) {
       functionName,
       fileName: FILE_NAME,
       userId,
-      tenantId,
+      organizationId,
       error: error as Error,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

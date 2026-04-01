@@ -33,6 +33,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { EntityType } from './EntityNode';
 import { VWLink } from '../../components/Link';
+import { text } from "../../themes/palette";
 
 export interface EntityDetails {
   id: string;
@@ -98,15 +99,15 @@ const DetailRow: React.FC<{
   isChip?: boolean;
 }> = ({ icon, label, value, isChip }) => (
   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', width: '124px', flexShrink: 0, color: '#667085' }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', width: '124px', flexShrink: 0, color: `${text.icon}` }}>
       <Box sx={{ marginRight: '4px', display: 'flex', alignItems: 'center' }}>{icon}</Box>
-      <Typography sx={{ fontSize: 12, color: '#667085' }}>{label}</Typography>
+      <Typography sx={{ fontSize: 12, color: `${text.icon}` }}>{label}</Typography>
     </Box>
     <Box sx={{ flex: 1, minWidth: 0 }}>
       {isChip ? (
         <Chip label={value} size="small" uppercase={false} />
       ) : (
-        <Typography sx={{ fontSize: 12, color: '#344054', wordBreak: 'break-word' }}>
+        <Typography sx={{ fontSize: 12, color: `${text.secondary}`, wordBreak: 'break-word' }}>
           {value}
         </Typography>
       )}
@@ -117,8 +118,8 @@ const DetailRow: React.FC<{
 // Helper component for multi-line text details
 const DetailText: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <Box sx={{ marginTop: '8px' }}>
-    <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#344054', marginBottom: '4px' }}>{label}</Typography>
-    <Typography sx={{ fontSize: 12, color: '#344054', lineHeight: 1.5 }}>
+    <Typography sx={{ fontSize: 13, fontWeight: 600, color: `${text.secondary}`, marginBottom: '4px' }}>{label}</Typography>
+    <Typography sx={{ fontSize: 12, color: `${text.secondary}`, lineHeight: 1.5 }}>
       {value.substring(0, 200)}
       {value.length > 200 ? '...' : ''}
     </Typography>
@@ -191,7 +192,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
           <Typography
             sx={{
               fontSize: 11,
-              color: '#667085',
+              color: 'text.icon',
               textTransform: 'uppercase',
               letterSpacing: 0.5,
               mb: 0.25,
@@ -213,7 +214,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
             {entity.label}
           </Typography>
           {entity.sublabel && (
-            <Typography sx={{ fontSize: 12, color: '#667085' }}>
+            <Typography sx={{ fontSize: 12, color: 'text.icon' }}>
               {entity.sublabel}
             </Typography>
           )}
@@ -228,7 +229,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
         {/* Status/Risk Level - only show for non-risk entities */}
         {entity.entityType !== 'risk' && (entity.status || entity.riskLevel) && (
           <Box sx={{ marginBottom: '8px' }}>
-            <Typography sx={{ fontSize: 12, color: '#667085', mb: 0.5 }}>
+            <Typography sx={{ fontSize: 12, color: 'text.icon', mb: 0.5 }}>
               {entity.riskLevel ? 'Risk level' : 'Status'}
             </Typography>
             <Chip
@@ -240,7 +241,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
         )}
 
         {/* Entity-Specific Details */}
-        <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#344054', marginBottom: '8px', marginTop: '8px' }}>
+        <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary', marginBottom: '8px', marginTop: '8px' }}>
           Details
         </Typography>
 
@@ -319,9 +320,9 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
               )}
               {Boolean(rawData.website) && (
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', width: '124px', flexShrink: 0, color: '#667085' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', width: '124px', flexShrink: 0, color: 'text.icon' }}>
                     <Box sx={{ marginRight: '4px', display: 'flex', alignItems: 'center' }}><Globe size={14} /></Box>
-                    <Typography sx={{ fontSize: 12, color: '#667085' }}>Website</Typography>
+                    <Typography sx={{ fontSize: 12, color: 'text.icon' }}>Website</Typography>
                   </Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <VWLink
@@ -443,7 +444,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
         {/* Connected Entities */}
         {entity.connectedEntities && entity.connectedEntities.length > 0 && (
           <>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#344054', marginBottom: '8px', marginTop: '8px' }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary', marginBottom: '8px', marginTop: '8px' }}>
               Connected entities
             </Typography>
             <Stack sx={{ gap: '8px' }}>
@@ -452,19 +453,19 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
                   key={connection.type}
                   sx={{
                     p: 1.5,
-                    backgroundColor: '#f9fafb',
+                    backgroundColor: 'background.accent',
                     borderRadius: '4px',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid status.default.border',
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography sx={{ fontSize: 12, color: '#667085', textTransform: 'capitalize' }}>
+                    <Typography sx={{ fontSize: 12, color: 'text.icon', textTransform: 'capitalize' }}>
                       {connection.type.replace(/([A-Z])/g, ' $1').trim()}s
                     </Typography>
                     <MuiChip
                       size="small"
                       label={String(connection.count)}
-                      sx={{ height: 20, fontSize: 11, backgroundColor: '#e5e7eb' }}
+                      sx={{ height: 20, fontSize: 11, backgroundColor: 'status.default.border' }}
                     />
                   </Box>
                   {connection.items.slice(0, 3).map((item) => (
@@ -477,17 +478,17 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
                         justifyContent: 'space-between',
                         py: 0.5,
                         cursor: 'pointer',
-                        '&:hover': { color: '#13715B' },
+                        '&:hover': { color: 'brand.primary' },
                       }}
                     >
-                      <Typography sx={{ fontSize: 12, color: '#344054' }}>
+                      <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
                         {item.label}
                       </Typography>
-                      <ChevronRight size={12} color="#667085" />
+                      <ChevronRight size={12} color={text.icon} />
                     </Box>
                   ))}
                   {connection.items.length > 3 && (
-                    <Typography sx={{ fontSize: 11, color: '#667085', mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 11, color: 'text.icon', mt: 0.5 }}>
                       +{connection.items.length - 3} more
                     </Typography>
                   )}
@@ -514,11 +515,11 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
           fullWidth
           onClick={onClose}
           sx={{
-            borderColor: '#d0d5dd',
-            color: '#344054',
+            borderColor: 'border.dark',
+            color: 'text.secondary',
             textTransform: 'none',
             height: 34,
-            '&:hover': { borderColor: '#9ca3af', backgroundColor: '#f9fafb' },
+            '&:hover': { borderColor: 'text.disabled', backgroundColor: 'background.accent' },
           }}
         >
           Close
@@ -530,7 +531,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
           onClick={handleGoToEntity}
           endIcon={<ExternalLink size={14} />}
           sx={{
-            backgroundColor: '#13715B',
+            backgroundColor: 'brand.primary',
             textTransform: 'none',
             height: 34,
             '&:hover': { backgroundColor: '#0f5a48' },

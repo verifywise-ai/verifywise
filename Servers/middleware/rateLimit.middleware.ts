@@ -31,7 +31,7 @@ interface RateLimitConfig {
 const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
   fileOperations: {
     windowMinutes: 15,
-    maxRequests: 50,
+    maxRequests: 100,
     message:
       "Too many file operation requests from this IP, please try again after 15 minutes",
   },

@@ -68,9 +68,49 @@ def pill(text: str, color: str) -> str:
     )
 
 
+# Reason-code display helpers
+REASON_CODE_LABELS: dict[str, str] = {
+    "TRIG_NO_DIMENSION_TRIGGER": "No governance dimension trigger",
+    "TRIG_NO_SIGNAL_GATE": "No pressure / uncertainty / constraint signal",
+    "TRIG_SEMANTIC_INVALID": "LLM: no valid governance trigger or tension signal",
+    "TRIG_SEMANTIC_PARSE_ERROR": "LLM: response parse error",
+    "QUAL_TOO_LONG": "Prompt too long",
+    "QUAL_DUPLICATE_NEAR_DUPLICATE": "Duplicate / near-duplicate prompt",
+}
+
+REASON_CODE_COLORS: dict[str, str] = {
+    "TRIG_NO_DIMENSION_TRIGGER": "#b8860b",
+    "TRIG_NO_SIGNAL_GATE": "#b8860b",
+    "TRIG_SEMANTIC_INVALID": "#b8860b",
+    "TRIG_SEMANTIC_PARSE_ERROR": "#1a6ab5",
+    "QUAL_TOO_LONG": "#1a6ab5",
+    "QUAL_DUPLICATE_NEAR_DUPLICATE": "#1a6ab5",
+}
+
+
+def rejection_badge(reason_code: str) -> str:
+    label = REASON_CODE_LABELS.get(reason_code, reason_code)
+    color = REASON_CODE_COLORS.get(reason_code, "#555")
+    return (
+        f'<span style="background:{color};color:#fff;padding:4px 12px;'
+        f'border-radius:4px;font-size:0.85em">{label}</span>'
+    )
+
+
 # ---------------------------------------------------------------------------
 # Discovery helpers
 # ---------------------------------------------------------------------------
+
+
+def _dir_fingerprint(version: str) -> float:
+    """Return max mtime of all .jsonl files in the version directory for cache invalidation."""
+    version_dir = DATASETS_DIR / version
+    if not version_dir.exists():
+        return 0.0
+    return max(
+        (p.stat().st_mtime for p in version_dir.rglob("*.jsonl")),
+        default=0.0,
+    )
 
 
 def discover_versions() -> list[str]:
@@ -96,7 +136,7 @@ def discover_models(version: str) -> list[str]:
 
 
 @st.cache_data(show_spinner="Loading intermediate data…")
-def load_intermediate(version: str) -> tuple[dict, dict, dict]:
+def load_intermediate(version: str, mtime: float) -> tuple[dict, dict, dict]:
     """Load obligations, base scenarios, and mutated candidates."""
     inter = DATASETS_DIR / version / "intermediate"
 
@@ -122,7 +162,7 @@ def load_intermediate(version: str) -> tuple[dict, dict, dict]:
 
 
 @st.cache_data(show_spinner="Loading final data…")
-def load_final(version: str, model_stem: str) -> tuple[dict, dict, dict]:
+def load_final(version: str, model_stem: str, mtime: float) -> tuple[dict, dict, dict]:
     """Load final scenarios (or mutated candidates / base scenarios as fallback), responses, and judge scores."""
     base = DATASETS_DIR / version / "final"
     inter = DATASETS_DIR / version / "intermediate"
@@ -172,6 +212,26 @@ def load_final(version: str, model_stem: str) -> tuple[dict, dict, dict]:
             judge_scores = {r["scenario_id"]: r for r in read_jsonl(judge_path)}
 
     return scenarios, responses, judge_scores
+
+
+@st.cache_data(show_spinner="Loading rejections…")
+def load_rejections(version: str, mtime: float) -> tuple[dict, dict]:
+    """Load rejections and a candidate_id-indexed view of mutated candidates."""
+    inter = DATASETS_DIR / version / "intermediate"
+
+    rejections: dict[str, dict] = {}
+    rej_path = inter / "rejections.jsonl"
+    if rej_path.exists():
+        for r in read_jsonl(rej_path):
+            rejections[r["candidate_id"]] = r
+
+    candidates_by_id: dict[str, dict] = {}
+    mut_path = inter / "mutated_candidates.jsonl"
+    if mut_path.exists():
+        for r in read_jsonl(mut_path):
+            candidates_by_id[r["candidate_id"]] = r
+
+    return rejections, candidates_by_id
 
 
 @st.cache_data(show_spinner="Loading rubric…")
@@ -306,7 +366,13 @@ def render_stage_4(scenario: dict) -> None:
     triggers = scenario.get("governance_triggers", {})
     active = [k for k, v in triggers.items() if v]
     inactive = [k for k, v in triggers.items() if not v]
-    st.markdown("**Governance triggers:**")
+    st.markdown(
+        "**Governance triggers:**"
+        '&nbsp;&nbsp;<span style="background:#1a6ab5;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.75em">● active</span>'
+        '&nbsp;'
+        '<span style="background:#ccc;color:#555;padding:1px 8px;border-radius:10px;font-size:0.75em">● inactive</span>',
+        unsafe_allow_html=True,
+    )
     pills_html = ""
     if active:
         pills_html += " ".join(pill(t.replace("_", " "), "#1a6ab5") for t in active)
@@ -318,6 +384,39 @@ def render_stage_4(scenario: dict) -> None:
         )
     if pills_html:
         st.markdown(pills_html, unsafe_allow_html=True)
+
+    metadata = scenario.get("metadata", {})
+    tension_signals = metadata.get("tension_signals", {})
+    if tension_signals:
+        active_sig = [k for k, v in tension_signals.items() if v]
+        inactive_sig = [k for k, v in tension_signals.items() if not v]
+        st.markdown(
+            "**Tension signals:**"
+            '&nbsp;&nbsp;<span style="background:#6a4c93;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.75em">● active</span>'
+            '&nbsp;'
+            '<span style="background:#ccc;color:#555;padding:1px 8px;border-radius:10px;font-size:0.75em">● inactive</span>',
+            unsafe_allow_html=True,
+        )
+        sig_html = ""
+        if active_sig:
+            sig_html += " ".join(pill(s.replace("_", " "), "#6a4c93") for s in active_sig)
+        if inactive_sig:
+            sig_html += " " + " ".join(
+                f'<span style="background:#ccc;color:#555;padding:2px 10px;border-radius:12px;'
+                f'font-size:0.8em;margin:2px;display:inline-block">{s.replace("_", " ")}</span>'
+                for s in inactive_sig
+            )
+        if sig_html:
+            st.markdown(sig_html, unsafe_allow_html=True)
+
+    reasoning = metadata.get("semantic_reasoning", "")
+    used_fallback = metadata.get("used_heuristic_fallback", False)
+    if reasoning or used_fallback:
+        with st.expander("Semantic validation details"):
+            if used_fallback:
+                st.info("Validated via heuristic fallback (MockChatClient — no LLM call).")
+            if reasoning:
+                st.markdown(f"**Reasoning:** {reasoning}")
 
     constraints = scenario.get("constraints", {})
     musts = constraints.get("must", [])
@@ -452,6 +551,96 @@ def render_stage_6(judge: dict | None, scenario: dict, response: dict | None, ru
 
 
 # ---------------------------------------------------------------------------
+# Rejected scenario renderer
+# ---------------------------------------------------------------------------
+
+
+def render_rejected_scenario(rejection: dict, candidate: dict | None, obligation: dict | None) -> None:
+    cid = rejection.get("candidate_id", "—")
+    reason_code = rejection.get("reason_code", "")
+    notes = rejection.get("notes", "")
+
+    # Header row
+    c1, c2 = st.columns([1, 3])
+    c1.markdown(f"**Candidate:** `{cid}`")
+    c2.markdown(rejection_badge(reason_code), unsafe_allow_html=True)
+
+    if notes:
+        st.caption(notes)
+
+    st.divider()
+
+    if candidate is None:
+        st.warning("Candidate record not found in mutated_candidates.jsonl.")
+        return
+
+    # Obligation info
+    st.markdown("### Source Obligation")
+    obl_id = candidate.get("obligation_id", "—")
+    if obligation:
+        src = obligation.get("source", {})
+        col1, col2 = st.columns([2, 3])
+        with col1:
+            st.markdown(f"**Obligation ID:** `{obl_id}`")
+            st.markdown(f"**Source ref:** {src.get('source_ref', '—')}")
+        with col2:
+            musts = obligation.get("must", [])
+            must_nots = obligation.get("must_not", [])
+            if musts:
+                st.markdown("**MUST**")
+                st.markdown(" ".join(pill(m, "#2d7a2d") for m in musts), unsafe_allow_html=True)
+            if must_nots:
+                st.markdown("**MUST NOT**")
+                st.markdown(" ".join(pill(m, "#b22222") for m in must_nots), unsafe_allow_html=True)
+    else:
+        st.markdown(f"**Obligation ID:** `{obl_id}`")
+        st.warning("Obligation details not found.")
+
+    st.divider()
+
+    # Candidate / mutation details
+    st.markdown("### Mutation Applied")
+    mut = candidate.get("mutation", {})
+    family = mut.get("family", "—")
+    mut_id = mut.get("mutation_id", "—")
+    template_id = candidate.get("template_id", "—")
+
+    col1, col2, col3 = st.columns(3)
+    col1.markdown(
+        pill(family.replace("_", " "), "#6a4c93"),
+        unsafe_allow_html=True,
+    )
+    col2.markdown(f"**Mutation ID:** `{mut_id}`")
+    col3.markdown(f"**Template:** `{template_id}`")
+
+    injected_text = mut.get("text", "")
+    if injected_text:
+        st.markdown("**Injected text:**")
+        st.info(injected_text)
+
+    st.divider()
+
+    # Role context
+    st.markdown("### Role Context")
+    role_ctx = candidate.get("role_context", {})
+    st.markdown(f"**Assistant role:** {role_ctx.get('assistant_role', '—')}")
+    st.markdown(f"**User role:** {role_ctx.get('user_role', '—')}")
+    st.markdown(f"**Org context:** {role_ctx.get('org_context', '—')}")
+
+    st.divider()
+
+    # Prompt
+    st.markdown("### Prompt (rejected)")
+    st.text_area(
+        label="rejected_prompt",
+        value=candidate.get("prompt", ""),
+        height=250,
+        disabled=True,
+        label_visibility="collapsed",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Main app
 # ---------------------------------------------------------------------------
 
@@ -461,7 +650,7 @@ def main() -> None:
     st.caption("Full pipeline lifecycle view: obligation → base → mutation → validation → response → judge")
 
     # ------------------------------------------------------------------
-    # Sidebar
+    # Sidebar — dataset / version (shared across tabs)
     # ------------------------------------------------------------------
     with st.sidebar:
         st.header("Dataset")
@@ -484,72 +673,128 @@ def main() -> None:
         st.header("Scenario")
 
     # ------------------------------------------------------------------
-    # Load data
+    # Tabs
     # ------------------------------------------------------------------
-    obligations, base_scenarios, mutated_candidates = load_intermediate(version)
-    scenarios, responses, judge_scores = load_final(version, model_stem)
-    rubric = load_rubric()
-
-    if not scenarios:
-        st.warning("No scenarios found for this version.")
-        st.stop()
-
-    scenario_ids = sorted(scenarios.keys())
-
-    with st.sidebar:
-        selected_id = st.selectbox("Scenario ID", scenario_ids)
+    tab_accepted, tab_rejected = st.tabs(["✅ Accepted Scenarios", "❌ Rejected Scenarios"])
 
     # ------------------------------------------------------------------
-    # Look up all data for the selected scenario
+    # Tab 1 — Accepted (existing behaviour)
     # ------------------------------------------------------------------
-    scenario = scenarios.get(selected_id, {})
-    response = responses.get(selected_id)
-    judge = judge_scores.get(selected_id)
+    with tab_accepted:
+        fp = _dir_fingerprint(version)
+        obligations, base_scenarios, mutated_candidates = load_intermediate(version, fp)
+        scenarios, responses, judge_scores = load_final(version, model_stem, fp)
+        rubric = load_rubric()
 
-    seed_trace = scenario.get("seed_trace", {})
-    mutation_trace = scenario.get("mutation_trace", {})
+        if not scenarios:
+            st.warning("No scenarios found for this version.")
+        else:
+            scenario_ids = sorted(scenarios.keys())
 
-    obl_ids = seed_trace.get("obligation_ids", [])
-    obl_id = obl_ids[0] if obl_ids else ""
-    obligation = obligations.get(obl_id) if obl_id else None
+            with st.sidebar:
+                selected_id = st.selectbox("Scenario ID", scenario_ids)
 
-    base_id = mutation_trace.get("base_scenario_id", "")
-    base_scenario = base_scenarios.get(base_id) if base_id else None
+            scenario = scenarios.get(selected_id, {})
+            response = responses.get(selected_id)
+            judge = judge_scores.get(selected_id)
 
-    mutations = mutation_trace.get("mutations", [])
-    mutation_id = mutations[0].get("mutation_id", "") if mutations else ""
-    candidate = mutated_candidates.get((base_id, mutation_id)) if base_id and mutation_id else None
+            seed_trace = scenario.get("seed_trace", {})
+            mutation_trace = scenario.get("mutation_trace", {})
+
+            obl_ids = seed_trace.get("obligation_ids", [])
+            obl_id = obl_ids[0] if obl_ids else ""
+            obligation = obligations.get(obl_id) if obl_id else None
+
+            base_id = mutation_trace.get("base_scenario_id", "")
+            base_scenario = base_scenarios.get(base_id) if base_id else None
+
+            mutations = mutation_trace.get("mutations", [])
+            mutation_id = mutations[0].get("mutation_id", "") if mutations else ""
+            candidate = mutated_candidates.get((base_id, mutation_id)) if base_id and mutation_id else None
+
+            risk = scenario.get("risk_level", "")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.markdown(f"**Scenario:** `{selected_id}`")
+            c2.markdown(risk_badge(risk), unsafe_allow_html=True)
+            c3.markdown(f"**Domain:** {scenario.get('domain', '—')}")
+            c4.markdown(f"**Industry:** {scenario.get('industry', '—')}")
+
+            st.divider()
+            render_stage_1(obligation, obl_id)
+
+            st.divider()
+            render_stage_2(base_scenario, base_id)
+
+            st.divider()
+            render_stage_3(candidate, scenario)
+
+            st.divider()
+            render_stage_4(scenario)
+
+            st.divider()
+            render_stage_5(response)
+
+            st.divider()
+            render_stage_6(judge, scenario, response, rubric)
 
     # ------------------------------------------------------------------
-    # Header summary
+    # Tab 2 — Rejected
     # ------------------------------------------------------------------
-    risk = scenario.get("risk_level", "")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.markdown(f"**Scenario:** `{selected_id}`")
-    c2.markdown(risk_badge(risk), unsafe_allow_html=True)
-    c3.markdown(f"**Domain:** {scenario.get('domain', '—')}")
-    c4.markdown(f"**Industry:** {scenario.get('industry', '—')}")
+    with tab_rejected:
+        rejections, candidates_by_id = load_rejections(version, _dir_fingerprint(version))
 
-    # ------------------------------------------------------------------
-    # 6 pipeline stages
-    # ------------------------------------------------------------------
-    st.divider()
-    render_stage_1(obligation, obl_id)
+        if not rejections:
+            st.info("No rejections found for this version.")
+        else:
+            obligations_rej, _, _ = load_intermediate(version, _dir_fingerprint(version))
 
-    st.divider()
-    render_stage_2(base_scenario, base_id)
+            rejection_ids = sorted(rejections.keys())
 
-    st.divider()
-    render_stage_3(candidate, scenario)
+            # Group counts by reason code for summary
+            reason_counts: dict[str, int] = {}
+            for r in rejections.values():
+                rc = r.get("reason_code", "unknown")
+                reason_counts[rc] = reason_counts.get(rc, 0) + 1
 
-    st.divider()
-    render_stage_4(scenario)
+            # Summary metrics
+            cols = st.columns(len(reason_counts) + 1)
+            cols[0].metric("Total rejected", len(rejections))
+            for i, (rc, count) in enumerate(sorted(reason_counts.items()), start=1):
+                label = REASON_CODE_LABELS.get(rc, rc)
+                cols[i].metric(label, count)
 
-    st.divider()
-    render_stage_5(response)
+            st.divider()
 
-    st.divider()
-    render_stage_6(judge, scenario, response, rubric)
+            # Selector + optional reason filter
+            filter_col, select_col = st.columns([1, 2])
+            with filter_col:
+                all_codes = sorted(reason_counts.keys())
+                code_options = ["All"] + all_codes
+                selected_code = st.selectbox(
+                    "Filter by reason",
+                    code_options,
+                    format_func=lambda c: "All" if c == "All" else REASON_CODE_LABELS.get(c, c),
+                )
+
+            filtered_ids = (
+                rejection_ids
+                if selected_code == "All"
+                else [rid for rid in rejection_ids if rejections[rid].get("reason_code") == selected_code]
+            )
+
+            with select_col:
+                if not filtered_ids:
+                    st.warning("No rejections match the selected filter.")
+                    st.stop()
+                selected_rej_id = st.selectbox("Candidate ID", filtered_ids)
+
+            rejection = rejections[selected_rej_id]
+            candidate_rec = candidates_by_id.get(selected_rej_id)
+
+            obl_id_rej = candidate_rec.get("obligation_id", "") if candidate_rec else ""
+            obligation_rej = obligations_rej.get(obl_id_rej) if obl_id_rej else None
+
+            render_rejected_scenario(rejection, candidate_rec, obligation_rej)
 
 
 main()

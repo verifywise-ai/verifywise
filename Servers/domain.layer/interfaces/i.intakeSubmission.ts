@@ -113,5 +113,6 @@ export interface IIntakeSubmissionStats {
   pending: number;
   approved: number;
   rejected: number;
+  superseded: number;
   total: number;
 }

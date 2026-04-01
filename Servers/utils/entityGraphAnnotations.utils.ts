@@ -2,11 +2,9 @@
  * @fileoverview Entity Graph Annotations Utility Functions
  *
  * Data access layer for Entity Graph annotations operations.
- * Uses raw SQL queries with tenant-specific schema isolation.
- * All queries are prefixed with tenant schema hash for multi-tenancy.
+ * Uses raw SQL queries with shared-schema multi-tenancy (organization_id column).
  *
  * Functions:
- * - ensureAnnotationsTableExists: Create table if missing
  * - createAnnotationQuery: Create and persist a new annotation
  * - getAnnotationsByUserQuery: Fetch all annotations for a user
  * - getAnnotationByEntityQuery: Fetch annotation for specific entity
@@ -20,105 +18,23 @@
 import { EntityGraphAnnotationsModel } from "../domain.layer/models/entityGraphAnnotations/entityGraphAnnotations.model";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
-import { isValidSchemaName } from "./entityGraphSecurity.utils";
-
-/**
- * Validates schema name for security (defense-in-depth).
- * Schema names should be alphanumeric from getTenantHash.
- *
- * @param {string} schemaName - Schema name to validate
- * @throws {Error} If schema name is invalid
- */
-function validateSchema(schemaName: string): void {
-  if (!isValidSchemaName(schemaName)) {
-    throw new Error("Invalid schema name");
-  }
-}
-
-/**
- * Ensure entity_graph_annotations table exists in tenant schema
- *
- * Creates the table and indexes if they don't exist.
- * Useful for existing tenants created before this feature was added.
- *
- * @async
- * @param {string} tenantSchema - Tenant schema name for multi-tenancy
- * @returns {Promise<void>}
- * @throws {Error} If database operation fails
- */
-export async function ensureAnnotationsTableExists(
-  tenantSchema: string
-): Promise<void> {
-  validateSchema(tenantSchema);
-  try {
-    // Check if table exists
-    const tableExists = await sequelize.query(
-      `SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = :schema
-        AND table_name = 'entity_graph_annotations'
-      )`,
-      {
-        replacements: { schema: tenantSchema },
-        type: QueryTypes.SELECT,
-      }
-    );
-
-    if ((tableExists as any[])[0]?.exists) {
-      return; // Table already exists
-    }
-
-    // Create entity_graph_annotations table
-    await sequelize.query(
-      `CREATE TABLE "${tenantSchema}".entity_graph_annotations (
-        id SERIAL PRIMARY KEY,
-        content TEXT NOT NULL,
-        user_id INTEGER NOT NULL,
-        entity_type VARCHAR(50) NOT NULL,
-        entity_id VARCHAR(100) NOT NULL,
-        organization_id INTEGER NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE,
-        FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE
-      )`
-    );
-
-    // Create unique index for one annotation per user per entity
-    await sequelize.query(
-      `CREATE UNIQUE INDEX IF NOT EXISTS idx_annotations_user_entity_${tenantSchema.replace(/[^a-z0-9]/g, "_")}
-       ON "${tenantSchema}".entity_graph_annotations(user_id, entity_type, entity_id)`
-    );
-
-    // Create index for fetching user's annotations
-    await sequelize.query(
-      `CREATE INDEX IF NOT EXISTS idx_annotations_user_${tenantSchema.replace(/[^a-z0-9]/g, "_")}
-       ON "${tenantSchema}".entity_graph_annotations(user_id, organization_id)`
-    );
-  } catch (error) {
-    throw new Error(
-      `Failed to ensure entity_graph_annotations table exists: ${(error as Error).message}`
-    );
-  }
-}
 
 /**
  * Create and persist a new annotation to the database
  *
  * @async
  * @param {EntityGraphAnnotationsModel} annotation - Model instance to save
- * @param {string} tenantSchema - Tenant schema name for multi-tenancy
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<EntityGraphAnnotationsModel>} Saved annotation instance
  * @throws {Error} If database operation fails
  */
 export async function createAnnotationQuery(
   annotation: EntityGraphAnnotationsModel,
-  tenantSchema: string
+  organizationId: number
 ): Promise<EntityGraphAnnotationsModel> {
-  validateSchema(tenantSchema);
   try {
     const result = await sequelize.query(
-      `INSERT INTO "${tenantSchema}".entity_graph_annotations
+      `INSERT INTO entity_graph_annotations
         (content, user_id, entity_type, entity_id, organization_id, created_at, updated_at)
        VALUES (:content, :user_id, :entity_type, :entity_id, :organization_id, :created_at, :updated_at)
        RETURNING id, content, user_id, entity_type, entity_id, organization_id, created_at, updated_at`,
@@ -128,7 +44,7 @@ export async function createAnnotationQuery(
           user_id: annotation.user_id,
           entity_type: annotation.entity_type,
           entity_id: annotation.entity_id,
-          organization_id: annotation.organization_id,
+          organization_id: organizationId,
           created_at: new Date(),
           updated_at: new Date(),
         },
@@ -161,21 +77,18 @@ export async function createAnnotationQuery(
  *
  * @async
  * @param {number} userId - User ID
- * @param {number} organizationId - Organization ID
- * @param {string} tenantSchema - Tenant schema name
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<EntityGraphAnnotationsModel[]>} Array of annotations
  * @throws {Error} If database operation fails
  */
 export async function getAnnotationsByUserQuery(
   userId: number,
-  organizationId: number,
-  tenantSchema: string
+  organizationId: number
 ): Promise<EntityGraphAnnotationsModel[]> {
-  validateSchema(tenantSchema);
   try {
     const annotations = await sequelize.query(
       `SELECT id, content, user_id, entity_type, entity_id, organization_id, created_at, updated_at
-       FROM "${tenantSchema}".entity_graph_annotations
+       FROM entity_graph_annotations
        WHERE user_id = :user_id AND organization_id = :organization_id
        ORDER BY updated_at DESC`,
       {
@@ -211,7 +124,7 @@ export async function getAnnotationsByUserQuery(
  * @param {number} userId - User ID
  * @param {string} entityType - Entity type
  * @param {string} entityId - Entity ID
- * @param {string} tenantSchema - Tenant schema name
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<EntityGraphAnnotationsModel | null>} Annotation or null
  * @throws {Error} If database operation fails
  */
@@ -219,20 +132,21 @@ export async function getAnnotationByEntityQuery(
   userId: number,
   entityType: string,
   entityId: string,
-  tenantSchema: string
+  organizationId: number
 ): Promise<EntityGraphAnnotationsModel | null> {
-  validateSchema(tenantSchema);
   try {
     const result = await sequelize.query(
       `SELECT id, content, user_id, entity_type, entity_id, organization_id, created_at, updated_at
-       FROM "${tenantSchema}".entity_graph_annotations
+       FROM entity_graph_annotations
        WHERE user_id = :user_id AND entity_type = :entity_type AND entity_id = :entity_id
+         AND organization_id = :organization_id
        LIMIT 1`,
       {
         replacements: {
           user_id: userId,
           entity_type: entityType,
           entity_id: entityId,
+          organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
       }
@@ -263,23 +177,22 @@ export async function getAnnotationByEntityQuery(
  *
  * @async
  * @param {number} annotationId - Annotation ID
- * @param {string} tenantSchema - Tenant schema name
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<EntityGraphAnnotationsModel | null>} Annotation or null
  * @throws {Error} If database operation fails
  */
 export async function getAnnotationByIdQuery(
   annotationId: number,
-  tenantSchema: string
+  organizationId: number
 ): Promise<EntityGraphAnnotationsModel | null> {
-  validateSchema(tenantSchema);
   try {
     const result = await sequelize.query(
       `SELECT id, content, user_id, entity_type, entity_id, organization_id, created_at, updated_at
-       FROM "${tenantSchema}".entity_graph_annotations
-       WHERE id = :id
+       FROM entity_graph_annotations
+       WHERE id = :id AND organization_id = :organization_id
        LIMIT 1`,
       {
-        replacements: { id: annotationId },
+        replacements: { id: annotationId, organization_id: organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -310,35 +223,35 @@ export async function getAnnotationByIdQuery(
  * @async
  * @param {number} annotationId - Annotation ID
  * @param {string} content - New content
- * @param {string} tenantSchema - Tenant schema name
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<EntityGraphAnnotationsModel | null>} Updated annotation
  * @throws {Error} If database operation fails
  */
 export async function updateAnnotationContentQuery(
   annotationId: number,
   content: string,
-  tenantSchema: string
+  organizationId: number
 ): Promise<EntityGraphAnnotationsModel | null> {
-  validateSchema(tenantSchema);
   try {
     const updatedAt = new Date();
 
     await sequelize.query(
-      `UPDATE "${tenantSchema}".entity_graph_annotations
+      `UPDATE entity_graph_annotations
        SET content = :content, updated_at = :updated_at
-       WHERE id = :id`,
+       WHERE id = :id AND organization_id = :organization_id`,
       {
         replacements: {
           id: annotationId,
           content: content,
           updated_at: updatedAt,
+          organization_id: organizationId,
         },
         type: QueryTypes.UPDATE,
       }
     );
 
     // Fetch the updated annotation
-    return getAnnotationByIdQuery(annotationId, tenantSchema);
+    return getAnnotationByIdQuery(annotationId, organizationId);
   } catch (error) {
     throw new Error(`Failed to update annotation: ${(error as Error).message}`);
   }
@@ -352,18 +265,17 @@ export async function updateAnnotationContentQuery(
  *
  * @async
  * @param {EntityGraphAnnotationsModel} annotation - Annotation to upsert
- * @param {string} tenantSchema - Tenant schema name
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<EntityGraphAnnotationsModel>} Upserted annotation
  * @throws {Error} If database operation fails
  */
 export async function upsertAnnotationQuery(
   annotation: EntityGraphAnnotationsModel,
-  tenantSchema: string
+  organizationId: number
 ): Promise<EntityGraphAnnotationsModel> {
-  validateSchema(tenantSchema);
   try {
     const result = await sequelize.query(
-      `INSERT INTO "${tenantSchema}".entity_graph_annotations
+      `INSERT INTO entity_graph_annotations
         (content, user_id, entity_type, entity_id, organization_id, created_at, updated_at)
        VALUES (:content, :user_id, :entity_type, :entity_id, :organization_id, :created_at, :updated_at)
        ON CONFLICT (user_id, entity_type, entity_id)
@@ -375,7 +287,7 @@ export async function upsertAnnotationQuery(
           user_id: annotation.user_id,
           entity_type: annotation.entity_type,
           entity_id: annotation.entity_id,
-          organization_id: annotation.organization_id,
+          organization_id: organizationId,
           created_at: new Date(),
           updated_at: new Date(),
         },
@@ -414,20 +326,21 @@ export async function upsertAnnotationQuery(
  *
  * @async
  * @param {number} annotationId - Annotation ID
- * @param {string} tenantSchema - Tenant schema name
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<number>} Number of rows affected (0 or 1)
  * @throws {Error} If database operation fails
  */
 export async function deleteAnnotationByIdQuery(
   annotationId: number,
-  tenantSchema: string
+  organizationId: number
 ): Promise<number> {
-  validateSchema(tenantSchema);
   try {
     const result = await sequelize.query(
-      `DELETE FROM "${tenantSchema}".entity_graph_annotations WHERE id = :id RETURNING id`,
+      `DELETE FROM entity_graph_annotations
+       WHERE id = :id AND organization_id = :organization_id
+       RETURNING id`,
       {
-        replacements: { id: annotationId },
+        replacements: { id: annotationId, organization_id: organizationId },
         type: QueryTypes.SELECT,
       }
     );
@@ -445,7 +358,7 @@ export async function deleteAnnotationByIdQuery(
  * @param {number} userId - User ID
  * @param {string} entityType - Entity type
  * @param {string} entityId - Entity ID
- * @param {string} tenantSchema - Tenant schema name
+ * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<number>} Number of rows affected
  * @throws {Error} If database operation fails
  */
@@ -453,19 +366,20 @@ export async function deleteAnnotationByEntityQuery(
   userId: number,
   entityType: string,
   entityId: string,
-  tenantSchema: string
+  organizationId: number
 ): Promise<number> {
-  validateSchema(tenantSchema);
   try {
     const result = await sequelize.query(
-      `DELETE FROM "${tenantSchema}".entity_graph_annotations
+      `DELETE FROM entity_graph_annotations
        WHERE user_id = :user_id AND entity_type = :entity_type AND entity_id = :entity_id
+         AND organization_id = :organization_id
        RETURNING id`,
       {
         replacements: {
           user_id: userId,
           entity_type: entityType,
           entity_id: entityId,
+          organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
       }

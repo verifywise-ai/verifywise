@@ -1,12 +1,13 @@
 import { FC, memo } from "react";
 import { Stack, Tooltip, Box, Typography, useTheme } from "@mui/material";
-import { Shield, FlaskConical, ScanSearch, Eye } from "lucide-react";
+import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown } from "lucide-react";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import "./index.css";
 
 interface AppSwitcherProps {
   activeModule: AppModule;
   onModuleChange: (module: AppModule) => void;
+  isSuperAdmin?: boolean;
 }
 
 interface ModuleItem {
@@ -42,18 +43,34 @@ const modules: ModuleItem[] = [
     label: "Shadow AI",
     description: "Detect and govern unauthorized AI tool usage across your organization",
   },
+  {
+    id: "ai-gateway",
+    icon: <Router size={16} strokeWidth={1.5} />,
+    label: "AI Gateway",
+    description: "Proxy, monitor, and control LLM API usage across providers",
+  },
 ];
+
+const superAdminModule: ModuleItem = {
+  id: "super-admin",
+  icon: <Crown size={16} strokeWidth={1.5} />,
+  label: "Super Admin",
+  description: "Manage organizations, users, and system-level settings",
+};
 
 const AppSwitcher: FC<AppSwitcherProps> = ({
   activeModule,
   onModuleChange,
+  isSuperAdmin = false,
 }) => {
   const theme = useTheme();
+
+  const allModules = isSuperAdmin ? [...modules, superAdminModule] : modules;
 
   return (
     <Stack className="app-switcher">
       <Stack className="app-switcher-modules">
-        {modules.map((module) => (
+        {allModules.map((module) => (
           <Tooltip
             key={module.id}
             title={

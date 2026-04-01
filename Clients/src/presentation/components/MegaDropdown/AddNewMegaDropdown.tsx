@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Plus,
 } from "lucide-react";
+import { brand, background } from "../../themes/palette";
 
 /**
  * Represents a single item in the mega dropdown menu
@@ -61,8 +62,7 @@ const items: MegaDropdownItem[] = [
     id: "policy",
     label: "Policy",
     icon: <Shield size={20} strokeWidth={1.5} color="#7986CB" />,
-    path: "/policies",
-    state: { openCreateModal: true },
+    path: "/policies/new",
   },
   {
     id: "vendor-risk",
@@ -138,7 +138,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({
         startIcon={<Plus size={14} />}
         onClick={handleClick}
         sx={{
-          background: "#13715B",
+          background: `${brand.primary}`,
           color: "white",
           fontWeight: 500,
           fontSize: "13px",
@@ -177,7 +177,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({
             borderRadius: "12px",
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
             overflow: "hidden",
-            backgroundColor: "#fff",
+            backgroundColor: `${background.main}`,
           },
         }}
       >
@@ -215,7 +215,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 1,
-                backgroundColor: hoveredItem === item.id ? "#f5f5f5" : "transparent",
+                backgroundColor: hoveredItem === item.id ? "background.surface" : "transparent",
                 border: hoveredItem === item.id ? "1px solid #e0e0e0" : "1px solid transparent",
                 transition: "all 0.15s ease",
                 minWidth: "90px",
@@ -231,7 +231,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({
                   width: 40,
                   height: 40,
                   borderRadius: "10px",
-                  backgroundColor: "#ffffff",
+                  backgroundColor: "background.main",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

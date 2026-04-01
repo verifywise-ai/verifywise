@@ -69,6 +69,12 @@
   </head>
 
   <body>
+    <script>
+      // Apply dark mode before first paint to avoid flash
+      if (localStorage.getItem("vw_dark_mode") === "true") {
+        document.documentElement.classList.add("dark-mode");
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

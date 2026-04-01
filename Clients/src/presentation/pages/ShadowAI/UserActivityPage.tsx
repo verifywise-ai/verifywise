@@ -23,7 +23,7 @@ import {
   useTheme,
 } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
-import { ArrowLeft, Mail, Building2 } from "lucide-react";
+import { ArrowLeft, Mail, Building2, Users, Activity, TrendingUp } from "lucide-react";
 import TabBar from "../../components/TabBar";
 import TablePaginationActions from "../../components/TablePagination";
 import singleTheme from "../../themes/v1SingleTheme";
@@ -39,6 +39,7 @@ import {
   ShadowAiDepartmentActivity,
 } from "../../../domain/interfaces/i.shadowAi";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { DashboardHeaderCard } from "../../components/Cards/DashboardHeaderCard";
 import {
@@ -369,9 +370,26 @@ export default function UserActivityPage() {
         <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
       ) : !hasData ? (
         <EmptyState
-          message="No user activity detected yet."
+          icon={Users}
+          message="No user activity detected yet. Activity will appear here once monitoring is connected."
           showBorder
-        />
+        >
+          <EmptyStateTip
+            icon={Activity}
+            title="What gets tracked?"
+            description="User sessions, tool access frequency, and department-level usage patterns for AI tools."
+          />
+          <EmptyStateTip
+            icon={Building2}
+            title="Department-level insights"
+            description="See which departments have the highest AI tool usage. Identify teams that may need governance training or tool approvals."
+          />
+          <EmptyStateTip
+            icon={TrendingUp}
+            title="Spot usage trends"
+            description="Monitor adoption curves and usage spikes. Correlate activity with policy changes or new tool introductions."
+          />
+        </EmptyState>
       ) : viewMode === "users" ? (
         <TableContainer sx={singleTheme.tableStyles.primary.frame}>
           <Table>

@@ -31,7 +31,7 @@ import { QueryTypes } from "sequelize";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM public.users WHERE id = :userId`,
+    `SELECT name, surname FROM users WHERE id = :userId`,
     { replacements: { userId }, type: QueryTypes.SELECT }
   );
   if (result[0]) {
@@ -46,11 +46,11 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
     functionName: "getAllVendors",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const vendors = await getAllVendorsQuery(req.tenantId!);
+    const vendors = await getAllVendorsQuery(req.organizationId!);
 
     if (vendors) {
       await logSuccess({
@@ -59,7 +59,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
         functionName: "getAllVendors",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendors));
     }
@@ -70,7 +70,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
       functionName: "getAllVendors",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](vendors));
   } catch (error) {
@@ -81,7 +81,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -95,11 +95,11 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
     functionName: "getVendorById",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const vendor = await getVendorByIdQuery(vendorId, req.tenantId!);
+    const vendor = await getVendorByIdQuery(vendorId, req.organizationId!);
 
     if (vendor) {
       await logSuccess({
@@ -108,7 +108,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
         functionName: "getVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendor));
     }
@@ -119,7 +119,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
       functionName: "getVendorById",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](vendor));
   } catch (error) {
@@ -130,7 +130,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -147,11 +147,11 @@ export async function getVendorByProjectId(
     functionName: "getVendorByProjectId",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const vendor = await getVendorByProjectIdQuery(projectId, req.tenantId!);
+    const vendor = await getVendorByProjectIdQuery(projectId, req.organizationId!);
 
     if (vendor !== null) {
       await logSuccess({
@@ -160,7 +160,7 @@ export async function getVendorByProjectId(
         functionName: "getVendorByProjectId",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendor));
     }
@@ -171,7 +171,7 @@ export async function getVendorByProjectId(
       functionName: "getVendorByProjectId",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]([]));
   } catch (error) {
@@ -182,7 +182,7 @@ export async function getVendorByProjectId(
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -197,7 +197,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
     functionName: "createVendor",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -230,7 +230,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
 
     const createdVendor = await createNewVendorQuery(
       vendorModel,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -240,7 +240,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         await recordVendorCreation(
           createdVendor.id!,
           req.userId,
-          req.tenantId!,
+          req.organizationId!,
           vendorData,
           transaction
         );
@@ -253,7 +253,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         functionName: "createVendor",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       // Send assignment notifications (fire-and-forget)
@@ -268,7 +268,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       // Notify assignee if assigned
       if (createdVendor.assignee) {
         notifyUserAssigned(
-          req.tenantId!,
+          req.organizationId!,
           createdVendor.assignee,
           {
             entityType: "vendor",
@@ -286,7 +286,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       // Notify reviewer if assigned
       if (createdVendor.reviewer) {
         notifyUserAssigned(
-          req.tenantId!,
+          req.organizationId!,
           createdVendor.reviewer,
           {
             entityType: "vendor",
@@ -310,7 +310,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       functionName: "createVendor",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
@@ -324,7 +324,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -337,7 +337,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -349,7 +349,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -368,7 +368,7 @@ export async function updateVendorById(
     functionName: "updateVendorById",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -381,13 +381,13 @@ export async function updateVendorById(
         fileName: "vendor.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     // Find existing vendor
-    const existingVendor = await getVendorByIdQuery(vendorId, req.tenantId!);
+    const existingVendor = await getVendorByIdQuery(vendorId, req.organizationId!);
 
     if (!existingVendor) {
       await logSuccess({
@@ -396,7 +396,7 @@ export async function updateVendorById(
         functionName: "updateVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
     }
@@ -438,7 +438,7 @@ export async function updateVendorById(
         role,
         transaction,
       },
-      req.tenantId!
+      req.organizationId!
     );
 
     if (vendor) {
@@ -447,7 +447,7 @@ export async function updateVendorById(
         await recordMultipleFieldChanges(
           vendorId,
           userId,
-          req.tenantId!,
+          req.organizationId!,
           changes,
           transaction
         );
@@ -460,7 +460,7 @@ export async function updateVendorById(
         functionName: "updateVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
 
       // Send assignment notifications for newly assigned users (fire-and-forget)
@@ -477,7 +477,7 @@ export async function updateVendorById(
       const newAssignee = vendor.assignee;
       if (newAssignee && newAssignee !== oldAssignee && newAssignee !== userId) {
         notifyUserAssigned(
-          req.tenantId!,
+          req.organizationId!,
           newAssignee,
           {
             entityType: "vendor",
@@ -497,7 +497,7 @@ export async function updateVendorById(
       const newReviewer = vendor.reviewer;
       if (newReviewer && newReviewer !== oldReviewer && newReviewer !== userId) {
         notifyUserAssigned(
-          req.tenantId!,
+          req.organizationId!,
           newReviewer,
           {
             entityType: "vendor",
@@ -521,7 +521,7 @@ export async function updateVendorById(
       functionName: "updateVendorById",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -535,7 +535,7 @@ export async function updateVendorById(
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -548,7 +548,7 @@ export async function updateVendorById(
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -560,7 +560,7 @@ export async function updateVendorById(
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -578,13 +578,13 @@ export async function deleteVendorById(
     functionName: "deleteVendorById",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     const deletedVendor = await deleteVendorByIdQuery(
       vendorId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -596,7 +596,7 @@ export async function deleteVendorById(
         functionName: "deleteVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](deletedVendor));
     }
@@ -607,7 +607,7 @@ export async function deleteVendorById(
       functionName: "deleteVendorById",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -619,7 +619,7 @@ export async function deleteVendorById(
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

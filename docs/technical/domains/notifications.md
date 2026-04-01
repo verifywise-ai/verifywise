@@ -360,6 +360,96 @@ const sanitizedError = {
 };
 ```
 
+## Notification Types and Entity Types
+
+```typescript
+enum NotificationType {
+  TASK_ASSIGNED = "task_assigned",
+  REVIEW_REQUESTED = "review_requested",
+  REVIEW_APPROVED = "review_approved",
+  REVIEW_REJECTED = "review_rejected",
+  APPROVAL_REQUESTED = "approval_requested",
+  APPROVAL_COMPLETE = "approval_complete",
+  VENDOR_REVIEW_DUE = "vendor_review_due",
+  POLICY_DUE_SOON = "policy_due_soon",
+  TRAINING_ASSIGNED = "training_assigned",
+  // ... more types
+}
+
+enum NotificationEntityType {
+  TASK = "task",
+  RISK = "risk",
+  VENDOR = "vendor",
+  POLICY = "policy",
+  USE_CASE = "use_case",
+  TRAINING = "training",
+  MODEL = "model",
+  INCIDENT = "incident",
+}
+```
+
+## Sending Notifications
+
+### Single Notification
+
+```typescript
+import { sendInAppNotification } from "../services/inAppNotification.service";
+
+await sendInAppNotification(
+  tenantId,
+  {
+    user_id: userId,
+    type: NotificationType.TASK_ASSIGNED,
+    title: "New task assigned",
+    message: "You have been assigned to: Review vendor",
+    entity_type: NotificationEntityType.TASK,
+    entity_id: taskId,
+    entity_name: "Review vendor",
+    action_url: `/tasks?taskId=${taskId}`,
+  },
+  true,  // Also send email notification
+  {
+    template: EMAIL_TEMPLATES.TASK_ASSIGNED,
+    subject: "New task assigned",
+    variables: { taskTitle: "Review vendor", assignerName: "John Doe" }
+  }
+);
+```
+
+### Bulk Notifications
+
+```typescript
+import { sendBulkInAppNotifications } from "../services/inAppNotification.service";
+
+await sendBulkInAppNotifications(
+  tenantId,
+  {
+    user_ids: [1, 2, 3, 4],
+    type: NotificationType.POLICY_DUE_SOON,
+    title: "Policy due soon",
+    message: "Policy XYZ is due in 3 days",
+    entity_type: NotificationEntityType.POLICY,
+    entity_id: policyId,
+    entity_name: "Policy XYZ",
+    action_url: `/policies/${policyId}`,
+  }
+);
+```
+
+### Convenience Functions
+
+```typescript
+import { notifyTaskAssigned } from "../services/inAppNotification.service";
+
+await notifyTaskAssigned(
+  tenantId,
+  assigneeId,
+  { id: taskId, title: "Review vendor", priority: "high", due_date: "2026-03-01" },
+  "John Doe",  // assigner name
+  "https://app.verifywise.ai"
+);
+```
+
 ## Related Documentation
 
 - [Automations](../infrastructure/automations.md)

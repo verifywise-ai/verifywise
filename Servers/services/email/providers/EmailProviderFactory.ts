@@ -68,7 +68,7 @@ export class EmailProviderFactory {
   private static createExchangeOnlineProvider(): EmailProvider {
     const user = process.env.EXCHANGE_ONLINE_USER;
     const pass = process.env.EXCHANGE_ONLINE_PASS;
-    const tenantId = process.env.EXCHANGE_ONLINE_TENANT_ID;
+    const organizationId = process.env.EXCHANGE_ONLINE_TENANT_ID;
 
     if (!user || !pass) {
       throw new Error('Exchange Online configuration incomplete. Required: EXCHANGE_ONLINE_USER, EXCHANGE_ONLINE_PASS');
@@ -77,7 +77,7 @@ export class EmailProviderFactory {
     const config: ExchangeOnlineConfig = {
       user,
       pass,
-      tenantId,
+      organizationId,
     };
 
     return new ExchangeOnlineProvider(config);

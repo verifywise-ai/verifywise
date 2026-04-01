@@ -21,20 +21,20 @@ import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
  * Optionally also sends an email notification
  */
 export const sendInAppNotification = async (
-  tenantId: string,
+  organizationId: number,
   notification: ICreateNotification,
   sendEmailNotification?: boolean,
   emailConfig?: IEmailNotificationConfig
 ): Promise<INotificationJSON> => {
   try {
     // 1. Store notification in database
-    const storedNotification = await createNotificationQuery(notification, tenantId);
+    const storedNotification = await createNotificationQuery(notification, organizationId);
 
     // 2. Publish to Redis for real-time delivery
     await redisClient.publish(
       "in-app-notifications",
       JSON.stringify({
-        tenantId,
+        organizationId,
         userId: notification.user_id,
         notification: storedNotification,
         timestamp: new Date().toISOString(),
@@ -74,21 +74,21 @@ export const sendInAppNotification = async (
  * Send bulk notifications to multiple users
  */
 export const sendBulkInAppNotifications = async (
-  tenantId: string,
+  organizationId: number,
   bulk: IBulkNotification,
   sendEmailNotification?: boolean,
   emailConfig?: IEmailNotificationConfig
 ): Promise<INotificationJSON[]> => {
   try {
     // 1. Store all notifications in database
-    const storedNotifications = await createBulkNotificationsQuery(bulk, tenantId);
+    const storedNotifications = await createBulkNotificationsQuery(bulk, organizationId);
 
     // 2. Publish each to Redis for real-time delivery
     for (const notification of storedNotifications) {
       await redisClient.publish(
         "in-app-notifications",
         JSON.stringify({
-          tenantId,
+          organizationId,
           userId: notification.user_id,
           notification,
           timestamp: new Date().toISOString(),
@@ -181,7 +181,7 @@ async function buildEntityUrlAsync(
   baseUrl: string,
   entityType: string,
   entityId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<string | null> {
   switch (entityType) {
     case "vendor":
@@ -192,19 +192,19 @@ async function buildEntityUrlAsync(
       return `${baseUrl}/policies?policyId=${entityId}`;
 
     case "nist_subcategory": {
-      // Get function type and category info for NIST
-      const result = await sequelize.query<{ func_type: string; category_id: number }>(
-        `SELECT f.type as func_type, c.id as category_id
-         FROM "${tenantId}".nist_ai_rmf_subcategories s
-         JOIN public.nist_ai_rmf_categories c ON s.category_id = c.id
-         JOIN public.nist_ai_rmf_functions f ON c.function_id = f.id
-         WHERE s.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+      // Get function type and category info for NIST - join with struct tables
+      const result = await sequelize.query<{ func_type: string; category_struct_id: number }>(
+        `SELECT ss.function as func_type, cs.id as category_struct_id
+         FROM nist_ai_rmf_subcategories s
+         JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
+         JOIN nist_ai_rmf_categories_struct cs ON ss.category_struct_id = cs.id
+         WHERE s.organization_id = :organizationId AND s.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]) {
         // Tabs expect lowercase: govern, map, measure, manage
         const funcType = result[0].func_type.toLowerCase();
-        return `${baseUrl}/framework?framework=nist-ai-rmf&functionId=${funcType}&categoryId=${result[0].category_id}&subcategoryId=${entityId}`;
+        return `${baseUrl}/framework?framework=nist-ai-rmf&functionId=${funcType}&categoryId=${result[0].category_struct_id}&subcategoryId=${entityId}`;
       }
       return null;
     }
@@ -213,10 +213,10 @@ async function buildEntityUrlAsync(
       // Get clause ID for ISO 42001 subclause - join with struct table
       const result = await sequelize.query<{ clause_id: number }>(
         `SELECT scs.clause_id
-         FROM "${tenantId}".subclauses_iso sc
-         JOIN public.subclauses_struct_iso scs ON sc.subclause_meta_id = scs.id
-         WHERE sc.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM subclauses_iso sc
+         JOIN subclauses_struct_iso scs ON sc.subclause_meta_id = scs.id
+         WHERE sc.organization_id = :organizationId AND sc.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]) {
         return `${baseUrl}/framework?framework=iso-42001&clauseId=${result[0].clause_id}&subClauseId=${entityId}`;
@@ -228,10 +228,10 @@ async function buildEntityUrlAsync(
       // Get annex ID for ISO 42001 annex category - join with struct table
       const result = await sequelize.query<{ annex_id: number }>(
         `SELECT acs.annex_id
-         FROM "${tenantId}".annexcategories_iso ac
-         JOIN public.annexcategories_struct_iso acs ON ac.annexcategory_meta_id = acs.id
-         WHERE ac.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM annexcategories_iso ac
+         JOIN annexcategories_struct_iso acs ON ac.annexcategory_meta_id = acs.id
+         WHERE ac.organization_id = :organizationId AND ac.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]) {
         return `${baseUrl}/framework?framework=iso-42001&annexId=${result[0].annex_id}&annexCategoryId=${entityId}`;
@@ -243,10 +243,10 @@ async function buildEntityUrlAsync(
       // Get clause ID for ISO 27001 subclause - join with struct table
       const result = await sequelize.query<{ clause_id: number }>(
         `SELECT scs.clause_id
-         FROM "${tenantId}".subclauses_iso27001 sc
-         JOIN public.subclauses_struct_iso27001 scs ON sc.subclause_meta_id = scs.id
-         WHERE sc.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM subclauses_iso27001 sc
+         JOIN subclauses_struct_iso27001 scs ON sc.subclause_meta_id = scs.id
+         WHERE sc.organization_id = :organizationId AND sc.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]) {
         return `${baseUrl}/framework?framework=iso-27001&clause27001Id=${result[0].clause_id}&subClause27001Id=${entityId}`;
@@ -258,10 +258,10 @@ async function buildEntityUrlAsync(
       // Get annex ID for ISO 27001 annex control - join with struct table
       const result = await sequelize.query<{ annex_id: number }>(
         `SELECT acs.annex_id
-         FROM "${tenantId}".annexcontrols_iso27001 ac
-         JOIN public.annexcontrols_struct_iso27001 acs ON ac.annexcontrol_meta_id = acs.id
-         WHERE ac.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM annexcontrols_iso27001 ac
+         JOIN annexcontrols_struct_iso27001 acs ON ac.annexcontrol_meta_id = acs.id
+         WHERE ac.organization_id = :organizationId AND ac.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]) {
         return `${baseUrl}/framework?framework=iso-27001&annex27001Id=${result[0].annex_id}&annexControl27001Id=${entityId}`;
@@ -273,10 +273,10 @@ async function buildEntityUrlAsync(
       // EU AI Act controls - need project_id via projects_frameworks join
       const result = await sequelize.query<{ project_id: number }>(
         `SELECT pf.project_id
-         FROM "${tenantId}".controls_eu c
-         JOIN "${tenantId}".projects_frameworks pf ON c.projects_frameworks_id = pf.id
-         WHERE c.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM controls_eu c
+         JOIN projects_frameworks pf ON c.projects_frameworks_id = pf.id AND pf.organization_id = c.organization_id
+         WHERE c.organization_id = :organizationId AND c.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=eu-ai-act&subtab=compliance&controlId=${entityId}`;
@@ -288,11 +288,11 @@ async function buildEntityUrlAsync(
       // EU AI Act subcontrols - need project_id via controls_eu and projects_frameworks join
       const result = await sequelize.query<{ project_id: number; control_id: number }>(
         `SELECT pf.project_id, sc.control_id
-         FROM "${tenantId}".subcontrols_eu sc
-         JOIN "${tenantId}".controls_eu c ON sc.control_id = c.id
-         JOIN "${tenantId}".projects_frameworks pf ON c.projects_frameworks_id = pf.id
-         WHERE sc.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM subcontrols_eu sc
+         JOIN controls_eu c ON sc.control_id = c.id AND c.organization_id = sc.organization_id
+         JOIN projects_frameworks pf ON c.projects_frameworks_id = pf.id AND pf.organization_id = c.organization_id
+         WHERE sc.organization_id = :organizationId AND sc.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=eu-ai-act&subtab=compliance&controlId=${result[0].control_id}&subControlId=${entityId}`;
@@ -305,13 +305,13 @@ async function buildEntityUrlAsync(
       // Frontend uses topicId to select tab and questionId to scroll to question
       const result = await sequelize.query<{ project_id: number; question_id: number; topic_id: number }>(
         `SELECT pf.project_id, ae.question_id, st.topic_id
-         FROM "${tenantId}".answers_eu ae
-         JOIN "${tenantId}".assessments a ON ae.assessment_id = a.id
-         JOIN "${tenantId}".projects_frameworks pf ON a.projects_frameworks_id = pf.id
-         JOIN public.questions_struct_eu q ON ae.question_id = q.id
-         JOIN public.subtopics_struct_eu st ON q.subtopic_id = st.id
-         WHERE ae.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM answers_eu ae
+         JOIN assessments a ON ae.assessment_id = a.id AND a.organization_id = ae.organization_id
+         JOIN projects_frameworks pf ON a.projects_frameworks_id = pf.id AND pf.organization_id = a.organization_id
+         JOIN questions_struct_eu q ON ae.question_id = q.id
+         JOIN subtopics_struct_eu st ON q.subtopic_id = st.id
+         WHERE ae.organization_id = :organizationId AND ae.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]?.project_id && result[0]?.question_id) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=eu-ai-act&subtab=assessment&topicId=${result[0].topic_id}&questionId=${result[0].question_id}`;
@@ -324,13 +324,13 @@ async function buildEntityUrlAsync(
       // Frontend uses topicId to select tab and questionId to scroll to question
       const result = await sequelize.query<{ project_id: number; question_id: number; topic_id: number }>(
         `SELECT pf.project_id, ai.question_id, st.topic_id
-         FROM "${tenantId}".answers_iso ai
-         JOIN "${tenantId}".assessments a ON ai.assessment_id = a.id
-         JOIN "${tenantId}".projects_frameworks pf ON a.projects_frameworks_id = pf.id
-         JOIN public.questions_struct_iso q ON ai.question_id = q.id
-         JOIN public.subtopics_struct_iso st ON q.subtopic_id = st.id
-         WHERE ai.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM answers_iso ai
+         JOIN assessments a ON ai.assessment_id = a.id AND a.organization_id = ai.organization_id
+         JOIN projects_frameworks pf ON a.projects_frameworks_id = pf.id AND pf.organization_id = a.organization_id
+         JOIN questions_struct_iso q ON ai.question_id = q.id
+         JOIN subtopics_struct_iso st ON q.subtopic_id = st.id
+         WHERE ai.organization_id = :organizationId AND ai.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]?.project_id && result[0]?.question_id) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=iso-42001&subtab=assessment&topicId=${result[0].topic_id}&questionId=${result[0].question_id}`;
@@ -343,13 +343,13 @@ async function buildEntityUrlAsync(
       // Frontend uses topicId to select tab and questionId to scroll to question
       const result = await sequelize.query<{ project_id: number; question_id: number; topic_id: number }>(
         `SELECT pf.project_id, ai.question_id, st.topic_id
-         FROM "${tenantId}".answers_iso27001 ai
-         JOIN "${tenantId}".assessments a ON ai.assessment_id = a.id
-         JOIN "${tenantId}".projects_frameworks pf ON a.projects_frameworks_id = pf.id
-         JOIN public.questions_struct_iso27001 q ON ai.question_id = q.id
-         JOIN public.subtopics_struct_iso27001 st ON q.subtopic_id = st.id
-         WHERE ai.id = :entityId`,
-        { replacements: { entityId }, type: QueryTypes.SELECT }
+         FROM answers_iso27001 ai
+         JOIN assessments a ON ai.assessment_id = a.id AND a.organization_id = ai.organization_id
+         JOIN projects_frameworks pf ON a.projects_frameworks_id = pf.id AND pf.organization_id = a.organization_id
+         JOIN questions_struct_iso27001 q ON ai.question_id = q.id
+         JOIN subtopics_struct_iso27001 st ON q.subtopic_id = st.id
+         WHERE ai.organization_id = :organizationId AND ai.id = :entityId`,
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
       );
       if (result[0]?.project_id && result[0]?.question_id) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=iso-27001&subtab=assessment&topicId=${result[0].topic_id}&questionId=${result[0].question_id}`;
@@ -369,7 +369,7 @@ async function buildEntityUrlAsync(
 async function buildEntityLinksHtml(
   baseUrl: string,
   entityLinks: ITaskEntityLinkForEmail[],
-  tenantId: string
+  organizationId: number
 ): Promise<string> {
   if (!entityLinks || entityLinks.length === 0) {
     return "";
@@ -382,7 +382,7 @@ async function buildEntityLinksHtml(
 
     let url: string | null = null;
     try {
-      url = await buildEntityUrlAsync(baseUrl, link.entity_type, link.entity_id, tenantId);
+      url = await buildEntityUrlAsync(baseUrl, link.entity_type, link.entity_id, organizationId);
     } catch (error) {
       console.error(`Failed to build URL for ${link.entity_type}:${link.entity_id}:`, error);
     }
@@ -401,7 +401,7 @@ async function buildEntityLinksHtml(
  * Notify task assignment
  */
 export const notifyTaskAssigned = async (
-  tenantId: string,
+  organizationId: number,
   assigneeId: number,
   task: {
     id: number;
@@ -417,10 +417,10 @@ export const notifyTaskAssigned = async (
   const assignee = await getUserById(assigneeId);
 
   // Build entity links HTML for email (async - queries DB for parent context)
-  const entityLinksHtml = await buildEntityLinksHtml(baseUrl, task.entity_links || [], tenantId);
+  const entityLinksHtml = await buildEntityLinksHtml(baseUrl, task.entity_links || [], organizationId);
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: assigneeId,
       type: NotificationType.TASK_ASSIGNED,
@@ -453,7 +453,7 @@ export const notifyTaskAssigned = async (
  * Notify task updated
  */
 export const notifyTaskUpdated = async (
-  tenantId: string,
+  organizationId: number,
   assigneeId: number,
   task: {
     id: number;
@@ -470,10 +470,10 @@ export const notifyTaskUpdated = async (
   const assignee = await getUserById(assigneeId);
 
   // Build entity links HTML for email (async - queries DB for parent context)
-  const entityLinksHtml = await buildEntityLinksHtml(baseUrl, task.entity_links || [], tenantId);
+  const entityLinksHtml = await buildEntityLinksHtml(baseUrl, task.entity_links || [], organizationId);
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: assigneeId,
       type: NotificationType.TASK_UPDATED,
@@ -507,7 +507,7 @@ export const notifyTaskUpdated = async (
  * Notify review requested
  */
 export const notifyReviewRequested = async (
-  tenantId: string,
+  organizationId: number,
   reviewerId: number,
   entity: {
     type: NotificationEntityType;
@@ -523,7 +523,7 @@ export const notifyReviewRequested = async (
   const entityTypeLabel = entity.type.replace("_", " ");
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: reviewerId,
       type: NotificationType.REVIEW_REQUESTED,
@@ -555,7 +555,7 @@ export const notifyReviewRequested = async (
  * Notify review approved
  */
 export const notifyReviewApproved = async (
-  tenantId: string,
+  organizationId: number,
   ownerId: number,
   entity: {
     type: NotificationEntityType;
@@ -571,7 +571,7 @@ export const notifyReviewApproved = async (
   const entityTypeLabel = entity.type.replace("_", " ");
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: ownerId,
       type: NotificationType.REVIEW_APPROVED,
@@ -603,7 +603,7 @@ export const notifyReviewApproved = async (
  * Notify review rejected (changes requested)
  */
 export const notifyReviewRejected = async (
-  tenantId: string,
+  organizationId: number,
   ownerId: number,
   entity: {
     type: NotificationEntityType;
@@ -619,7 +619,7 @@ export const notifyReviewRejected = async (
   const entityTypeLabel = entity.type.replace("_", " ");
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: ownerId,
       type: NotificationType.REVIEW_REJECTED,
@@ -651,7 +651,7 @@ export const notifyReviewRejected = async (
  * Notify approval requested (for use case workflows)
  */
 export const notifyApprovalRequested = async (
-  tenantId: string,
+  organizationId: number,
   approverId: number,
   useCase: {
     id: number;
@@ -666,7 +666,7 @@ export const notifyApprovalRequested = async (
   const approver = await getUserById(approverId);
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: approverId,
       type: NotificationType.APPROVAL_REQUESTED,
@@ -699,7 +699,7 @@ export const notifyApprovalRequested = async (
  * Notify approval complete
  */
 export const notifyApprovalComplete = async (
-  tenantId: string,
+  organizationId: number,
   requesterId: number,
   useCase: {
     id: number;
@@ -711,7 +711,7 @@ export const notifyApprovalComplete = async (
   const requester = await getUserById(requesterId);
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: requesterId,
       type: NotificationType.APPROVAL_COMPLETE,
@@ -740,7 +740,7 @@ export const notifyApprovalComplete = async (
  * Notify vendor review due
  */
 export const notifyVendorReviewDue = async (
-  tenantId: string,
+  organizationId: number,
   reviewerId: number,
   vendor: {
     id: number;
@@ -755,7 +755,7 @@ export const notifyVendorReviewDue = async (
   const reviewer = await getUserById(reviewerId);
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: reviewerId,
       type: NotificationType.VENDOR_REVIEW_DUE,
@@ -787,7 +787,7 @@ export const notifyVendorReviewDue = async (
  * Notify policy due soon
  */
 export const notifyPolicyDueSoon = async (
-  tenantId: string,
+  organizationId: number,
   adminId: number,
   policy: {
     id: number;
@@ -800,7 +800,7 @@ export const notifyPolicyDueSoon = async (
   const admin = await getUserById(adminId);
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: adminId,
       type: NotificationType.POLICY_DUE_SOON,
@@ -830,7 +830,7 @@ export const notifyPolicyDueSoon = async (
  * Notify training assigned
  */
 export const notifyTrainingAssigned = async (
-  tenantId: string,
+  organizationId: number,
   userId: number,
   training: {
     id: number;
@@ -845,7 +845,7 @@ export const notifyTrainingAssigned = async (
   const user = await getUserById(userId);
 
   await sendInAppNotification(
-    tenantId,
+    organizationId,
     {
       user_id: userId,
       type: NotificationType.TRAINING_ASSIGNED,
@@ -876,7 +876,7 @@ export const notifyTrainingAssigned = async (
 // Helper functions
 async function getUserById(userId: number): Promise<{ name: string; surname: string; email: string } | null> {
   const result = await sequelize.query<{ name: string; surname: string; email: string }>(
-    `SELECT name, surname, email FROM public.users WHERE id = :userId`,
+    `SELECT name, surname, email FROM users WHERE id = :userId`,
     {
       replacements: { userId },
       type: QueryTypes.SELECT,
@@ -887,7 +887,7 @@ async function getUserById(userId: number): Promise<{ name: string; surname: str
 
 async function getUserEmail(userId: number): Promise<{ email: string } | null> {
   const result = await sequelize.query<{ email: string }>(
-    `SELECT email FROM public.users WHERE id = :userId`,
+    `SELECT email FROM users WHERE id = :userId`,
     {
       replacements: { userId },
       type: QueryTypes.SELECT,
@@ -900,7 +900,7 @@ async function getUserEmails(userIds: number[]): Promise<Array<{ id: number; nam
   if (userIds.length === 0) return [];
 
   const result = await sequelize.query<{ id: number; name: string; surname: string; email: string }>(
-    `SELECT id, name, surname, email FROM public.users WHERE id IN (:userIds)`,
+    `SELECT id, name, surname, email FROM users WHERE id IN (:userIds)`,
     {
       replacements: { userIds },
       type: QueryTypes.SELECT,
@@ -1062,7 +1062,7 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
 /**
  * Notify a user when they are assigned to an entity
  *
- * @param tenantId - Tenant ID for multi-tenancy
+ * @param organizationId - Tenant ID for multi-tenancy
  * @param assigneeId - User ID being assigned
  * @param assignment - Assignment details including entity info and role
  * @param assignerName - Name of the person making the assignment
@@ -1070,7 +1070,7 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
  * @param entityContext - Optional additional context about the entity
  */
 export const notifyUserAssigned = async (
-  tenantId: string,
+  organizationId: number,
   assigneeId: number,
   assignment: {
     entityType: string;      // "vendor", "project", "model_inventory", etc.
@@ -1103,7 +1103,7 @@ export const notifyUserAssigned = async (
     const entityContextHtml = buildEntityContextHtml(entityContext);
 
     await sendInAppNotification(
-      tenantId,
+      organizationId,
       {
         user_id: assigneeId,
         type: notificationType,

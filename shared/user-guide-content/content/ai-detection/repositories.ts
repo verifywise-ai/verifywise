@@ -10,7 +10,7 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Repositories page lets you register GitHub repositories and configure automated scanning schedules. Instead of manually entering a repository URL each time, you can save repositories and have them scanned automatically on a daily, weekly, or monthly basis.',
+      text: 'The Repositories page lets you save GitHub repositories and set up automated scans. Instead of typing a URL each time, save the repo and have it scanned on a daily, weekly, or monthly schedule.',
     },
     {
       type: 'heading',
@@ -20,7 +20,7 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click **Add repository** to open the registration form. Enter the GitHub repository URL in full format (`https://github.com/owner/repo`) or shorthand (`owner/repo`). You can optionally provide a display name and specify the default branch if it differs from `main`.',
+      text: 'Click **Add repository** to open the form. Enter the GitHub URL in full format (`https://github.com/owner/repo`) or shorthand (`owner/repo`). You can optionally set a display name and pick a branch if it\'s not `main`.',
     },
     {
       type: 'bullet-list',
@@ -38,7 +38,7 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Enable the **Scheduled scans** toggle to have the repository scanned automatically. Choose a frequency and time that works for your team:',
+      text: 'Turn on the **Scheduled scans** toggle to scan the repository automatically. Pick a frequency and time:',
     },
     {
       type: 'bullet-list',
@@ -50,13 +50,13 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Scheduled scans run in the background and results appear automatically in the scan results page. The next scheduled scan time is shown in the **Next scan** column of the repositories table.',
+      text: 'Scheduled scans run in the background. Results show up in the scan results page automatically. The **Next scan** column shows when the next one will run.',
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Scheduling recommendation',
-      text: 'Schedule scans during off-peak hours to minimize impact on your GitHub API rate limits. Daily scans at 2:00 AM UTC are a good default for active repositories.',
+      text: 'Schedule scans during off-peak hours to stay within GitHub API rate limits. Daily at 2:00 AM UTC works well for active repos.',
     },
     {
       type: 'heading',
@@ -72,9 +72,9 @@ export const repositoriesContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Repository', text: 'Owner and name of the repository, or the display name if set' },
-        { bold: 'Schedule', text: 'Current schedule status — shows frequency and time, or "Disabled" if scheduling is off' },
-        { bold: 'Last scan', text: 'When the most recent scan ran and its status (completed, failed, etc.)' },
-        { bold: 'Next scan', text: 'When the next scheduled scan will run, or "—" if scheduling is disabled' },
+        { bold: 'Schedule', text: 'Frequency and time, or "Disabled" if scheduling is off' },
+        { bold: 'Last scan', text: 'When the most recent scan ran and its status' },
+        { bold: 'Next scan', text: 'When the next scheduled scan will run (blank if disabled)' },
         { bold: 'Actions', text: 'Scan now, edit, and delete buttons' },
       ],
     },
@@ -86,7 +86,7 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click the play button in the actions column to trigger an immediate scan of a repository. The button shows a loading indicator while the scan is in progress. You can also start scans from the Scan page using the repository URL.',
+      text: 'Click the play button in the actions column to start a scan right away. It shows a loading indicator while running. You can also start scans from the Scan page with the repo URL.',
     },
     {
       type: 'callout',
@@ -101,7 +101,7 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click the pencil icon to edit a repository. You can update the display name, default branch, and schedule configuration. The repository URL cannot be changed after creation — delete and re-add the repository if you need to change the URL.',
+      text: 'Click the pencil icon to edit a repository. You can change the display name, default branch, and schedule. The URL can\'t be changed after creation; delete and re-add if you need a different URL.',
     },
     {
       type: 'heading',
@@ -111,7 +111,7 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click the trash icon to delete a repository. This removes the repository from the table and disables any scheduled scans. Past scan results for this repository are preserved in the scan results page.',
+      text: 'Click the trash icon to delete a repository. This removes it from the table and stops scheduled scans. Past scan results are kept in the scan results page.',
     },
     {
       type: 'callout',

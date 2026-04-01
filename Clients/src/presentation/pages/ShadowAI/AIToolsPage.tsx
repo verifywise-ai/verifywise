@@ -28,6 +28,10 @@ import Chip from "../../components/Chip";
 import {
   ArrowLeft,
   Bot,
+  Radar,
+  Wifi,
+  ShieldAlert,
+  Tags,
 } from "lucide-react";
 import { PROVIDER_ICONS, VENDOR_ICON_MAP } from "../../components/ProviderIcons";
 import {
@@ -43,6 +47,7 @@ import {
 import singleTheme from "../../themes/v1SingleTheme";
 import { palette } from "../../themes/palette";
 import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import Select from "../../components/Inputs/Select";
 import { DashboardHeaderCard } from "../../components/Cards/DashboardHeaderCard";
@@ -452,9 +457,26 @@ export default function AIToolsPage() {
         <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
       ) : tools.length === 0 ? (
         <EmptyState
-          message="No AI tools detected yet. Connect a data source to start monitoring."
+          icon={Radar}
+          message="No AI tools detected yet. Connect a data source to monitor AI tool usage."
           showBorder
-        />
+        >
+          <EmptyStateTip
+            icon={Wifi}
+            title="Connect data sources"
+            description="Add the AI tools your organization uses or has detected. Track which tools are in use and who has access to them."
+          />
+          <EmptyStateTip
+            icon={ShieldAlert}
+            title="Identify unauthorized tools"
+            description="Discover AI tools being used without IT approval. Flag tools that may expose sensitive data or violate company policy."
+          />
+          <EmptyStateTip
+            icon={Tags}
+            title="Categorize and govern"
+            description="Classify detected tools as approved, under review, or blocked. Set policies per tool and notify users of compliance requirements."
+          />
+        </EmptyState>
       ) : (
         <TableContainer sx={singleTheme.tableStyles.primary.frame}>
           <Table>

@@ -1,3 +1,4 @@
+import { brand, background, border as borderPalette, status } from "../../../themes/palette";
 /**
  * Centralized Design Tokens (Single Source of Truth)
  * Use these constants throughout the app for consistent styling.
@@ -9,23 +10,23 @@ export const colors = {
   text: {
     primary: '#1a1a1a',
     secondary: '#374151',
-    muted: '#6b7280',
-    white: '#ffffff',
+    muted: `${status.default.text}`,
+    white: `${background.main}`,
     whiteMuted: 'rgba(255, 255, 255, 0.8)',
   },
   brand: {
-    primary: '#13715B',
+    primary: `${brand.primary}`,
     primaryDark: '#0A4A3A',
     success: '#17B26A',
     warning: '#F79009',
     error: '#F04438',
   },
   border: {
-    default: '#d0d5dd',
+    default: `${borderPalette.dark}`,
   },
   background: {
-    white: '#ffffff',
-    alt: '#f9fafb',
+    white: `${background.main}`,
+    alt: `${background.accent}`,
     code: '#1C2130',
   },
 } as const;

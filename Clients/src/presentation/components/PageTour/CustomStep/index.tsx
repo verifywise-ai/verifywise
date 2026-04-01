@@ -3,6 +3,7 @@ import { Box, Typography } from "@mui/material";
 import { X } from "lucide-react";
 import { ICustomStepProps } from "../../../../domain/interfaces/i.customs";
 import { ICustomStepWrapperProps } from "../../../types/customs.types";
+import { background } from "../../../themes/palette";
 import "./CustomStep.css";
 
 export const CustomStepWrapper: React.FC<ICustomStepWrapperProps> = ({
@@ -52,7 +53,7 @@ export const CustomStepWrapper: React.FC<ICustomStepWrapperProps> = ({
             sx={{
               fontWeight: 600,
               fontSize: "15px",
-              color: "#ffffff",
+              color: `${background.main}`,
               letterSpacing: "-0.02em",
               mb: 2,
             }}

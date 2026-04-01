@@ -49,6 +49,48 @@
       color: var(--color-text-primary);
       margin: 0;
     }
+
+    /* AI Analysis Styles */
+    .ai-analysis-box {
+      border-left: 4px solid var(--color-primary);
+      background: #f0faf7;
+      padding: 16px 20px;
+      margin: 16px 0 24px 0;
+      border-radius: 0 4px 4px 0;
+    }
+    .ai-analysis-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .ai-analysis-content {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #344054;
+      white-space: pre-wrap;
+    }
+    .ai-risk-highlights-box {
+      border-left: 4px solid #DC6803;
+      background: #fffcf5;
+      padding: 16px 20px;
+      margin: 16px 0 24px 0;
+      border-radius: 0 4px 4px 0;
+    }
+    .ai-executive-summary {
+      page-break-inside: avoid;
+    }
+    .ai-findings-list {
+      padding-left: 20px;
+      margin: 8px 0;
+    }
+    .ai-findings-list li {
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: #344054;
+    }
   </style>
 </head>
 <body>
@@ -92,6 +134,12 @@
         let sectionNum = 1;
         %>
 
+        <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.executiveSummary) { %>
+        <li class="toc-item">
+          <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Executive summary</span>
+        </li>
+        <% } %>
+
         <% if (hasRiskAnalysis) { %>
         <li class="toc-item">
           <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Risk analysis</span>
@@ -113,6 +161,47 @@
     </div>
 
     <!-- ============================================ -->
+    <!-- EXECUTIVE SUMMARY (AI-Generated) -->
+    <!-- ============================================ -->
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.executiveSummary) { %>
+    <div class="ai-executive-summary">
+      <div class="group-header">
+        <h2 class="group-title">Executive Summary</h2>
+      </div>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI-Generated Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.executiveSummary %></div>
+      </div>
+
+      <% if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) { %>
+      <div class="subsection">
+        <div class="subsection-header">
+          <h3 class="subsection-title">Key Findings</h3>
+        </div>
+        <ul class="ai-findings-list">
+          <% aiSummaries.keyFindings.forEach(function(finding) { %>
+          <li><%= finding %></li>
+          <% }); %>
+        </ul>
+      </div>
+      <% } %>
+
+      <% if (aiSummaries.recommendations && aiSummaries.recommendations.length > 0) { %>
+      <div class="subsection">
+        <div class="subsection-header">
+          <h3 class="subsection-title">Recommendations</h3>
+        </div>
+        <ul class="ai-findings-list">
+          <% aiSummaries.recommendations.forEach(function(rec) { %>
+          <li><%= rec %></li>
+          <% }); %>
+        </ul>
+      </div>
+      <% } %>
+    </div>
+    <% } %>
+
+    <!-- ============================================ -->
     <!-- RISK ANALYSIS GROUP -->
     <!-- ============================================ -->
     <% if (sections.projectRisks || sections.vendorRisks || sections.modelRisks) { %>
@@ -126,6 +215,13 @@
       <div class="subsection-header">
         <h3 class="subsection-title">Use case risks</h3>
       </div>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['projectRisks']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['projectRisks'] %></div>
+      </div>
+      <% } %>
 
       <div class="stats-row">
         <div class="stat-card">
@@ -184,6 +280,13 @@
         <h3 class="subsection-title">Vendor risks (<%= sections.vendorRisks.totalRisks %>)</h3>
       </div>
 
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['vendorRisks']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['vendorRisks'] %></div>
+      </div>
+      <% } %>
+
       <% if (sections.vendorRisks.risks.length > 0) { %>
       <table class="data-table">
         <thead>
@@ -222,6 +325,13 @@
         <h3 class="subsection-title">Model risks (<%= sections.modelRisks.totalRisks %>)</h3>
       </div>
 
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['modelRisks']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['modelRisks'] %></div>
+      </div>
+      <% } %>
+
       <% if (sections.modelRisks.risks.length > 0) { %>
       <table class="data-table">
         <thead>
@@ -252,6 +362,14 @@
     <% } %>
     <% } %>
 
+    <!-- Risk Highlights (AI-Generated) -->
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.riskHighlights) { %>
+    <div class="ai-risk-highlights-box">
+      <div class="ai-analysis-label" style="color: #DC6803;">Risk Highlights</div>
+      <div class="ai-analysis-content"><%= aiSummaries.riskHighlights %></div>
+    </div>
+    <% } %>
+
     <!-- ============================================ -->
     <!-- COMPLIANCE & GOVERNANCE GROUP -->
     <!-- ============================================ -->
@@ -266,6 +384,13 @@
       <div class="subsection-header">
         <h3 class="subsection-title">Controls</h3>
       </div>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['compliance']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['compliance'] %></div>
+      </div>
+      <% } %>
 
       <div class="stats-row">
         <div class="stat-card">
@@ -327,6 +452,13 @@
         <h3 class="subsection-title">Assessment tracker</h3>
       </div>
 
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['assessment']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['assessment'] %></div>
+      </div>
+      <% } %>
+
       <div class="stats-row">
         <div class="stat-card">
           <div class="stat-card-header">
@@ -386,6 +518,13 @@
         <h3 class="subsection-title">Clauses and annexes</h3>
       </div>
 
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['clausesAndAnnexes']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['clausesAndAnnexes'] %></div>
+      </div>
+      <% } %>
+
       <% if (sections.clausesAndAnnexes.clauses.length > 0) { %>
       <h4 class="section-subtitle">Clauses</h4>
       <table class="data-table">
@@ -438,6 +577,13 @@
       <div class="subsection-header">
         <h3 class="subsection-title">NIST AI RMF subcategories</h3>
       </div>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['nistSubcategories']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['nistSubcategories'] %></div>
+      </div>
+      <% } %>
 
       <% sections.nistSubcategories.functions.forEach(function(func) { %>
       <h4 class="section-subtitle"><%= func.name %></h4>
@@ -496,6 +642,13 @@
         <h3 class="subsection-title">AI models (<%= sections.models.totalModels %>)</h3>
       </div>
 
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['models']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['models'] %></div>
+      </div>
+      <% } %>
+
       <% if (sections.models.models.length > 0) { %>
       <table class="data-table">
         <thead>
@@ -531,6 +684,13 @@
       <div class="subsection-header">
         <h3 class="subsection-title">Vendors (<%= sections.vendors.totalVendors %>)</h3>
       </div>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['vendors']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['vendors'] %></div>
+      </div>
+      <% } %>
 
       <% if (sections.vendors.vendors.length > 0) { %>
       <table class="data-table">
@@ -570,6 +730,13 @@
         <h3 class="subsection-title">Training registry (<%= sections.trainingRegistry.totalRecords %>)</h3>
       </div>
 
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['trainingRegistry']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['trainingRegistry'] %></div>
+      </div>
+      <% } %>
+
       <% if (sections.trainingRegistry.records.length > 0) { %>
       <table class="data-table">
         <thead>
@@ -605,6 +772,13 @@
       <div class="subsection-header">
         <h3 class="subsection-title">Policy manager (<%= sections.policyManager.totalPolicies %>)</h3>
       </div>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['policyManager']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['policyManager'] %></div>
+      </div>
+      <% } %>
 
       <% if (sections.policyManager.policies.length > 0) { %>
       <table class="data-table">
@@ -643,6 +817,13 @@
       <div class="subsection-header">
         <h3 class="subsection-title">Incident management (<%= sections.incidentManagement.totalIncidents %>)</h3>
       </div>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['incidentManagement']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['incidentManagement'] %></div>
+      </div>
+      <% } %>
 
       <% if (sections.incidentManagement.incidents.length > 0) { %>
       <table class="data-table">

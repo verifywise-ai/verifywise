@@ -21,4 +21,6 @@ COPY ./EvaluationModule/data/datasets /app/datasets
 # Create uploads directory for user datasets (will be mounted as volume)
 RUN mkdir -p /app/data/uploads
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+COPY ./EvalServer/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+CMD ["/app/start.sh"]

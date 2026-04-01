@@ -67,7 +67,7 @@ export async function getConfigByProjectId(
     functionName: "getConfigByProjectId",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(projectId)) {
@@ -75,7 +75,7 @@ export async function getConfigByProjectId(
   }
 
   try {
-    const config = await getPMMConfigByProjectIdQuery(projectId, req.tenantId!);
+    const config = await getPMMConfigByProjectIdQuery(projectId, req.organizationId!);
 
     if (!config) {
       await logSuccess({
@@ -84,7 +84,7 @@ export async function getConfigByProjectId(
         functionName: "getConfigByProjectId",
         fileName: FILE_NAME,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({ message: "Config not found" }));
     }
@@ -95,7 +95,7 @@ export async function getConfigByProjectId(
       functionName: "getConfigByProjectId",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](config));
   } catch (error) {
@@ -106,7 +106,7 @@ export async function getConfigByProjectId(
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -120,7 +120,7 @@ export async function createConfig(req: Request, res: Response): Promise<any> {
     functionName: "createConfig",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -135,7 +135,7 @@ export async function createConfig(req: Request, res: Response): Promise<any> {
     // Check if config already exists
     const existingConfig = await getPMMConfigByProjectIdQuery(
       configData.project_id,
-      req.tenantId!
+      req.organizationId!
     );
     if (existingConfig) {
       await transaction.rollback();
@@ -148,15 +148,15 @@ export async function createConfig(req: Request, res: Response): Promise<any> {
     const config = await createPMMConfigQuery(
       configData,
       userId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
     // Seed default questions
     await seedDefaultQuestions(
       config.id!,
-      req.tenantId!,
-      (question, tenant) => addPMMQuestionQuery(question, tenant, transaction)
+      req.organizationId!,
+      (question, organizationId) => addPMMQuestionQuery(question, organizationId, transaction)
     );
 
     await transaction.commit();
@@ -164,7 +164,7 @@ export async function createConfig(req: Request, res: Response): Promise<any> {
     // Fetch complete config with questions count
     const completeConfig = await getPMMConfigByProjectIdQuery(
       configData.project_id,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -173,7 +173,7 @@ export async function createConfig(req: Request, res: Response): Promise<any> {
       functionName: "createConfig",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(201).json(STATUS_CODE[201](completeConfig));
   } catch (error) {
@@ -185,7 +185,7 @@ export async function createConfig(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -199,7 +199,7 @@ export async function updateConfig(req: Request, res: Response): Promise<any> {
     functionName: "updateConfig",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(configId)) {
@@ -208,7 +208,7 @@ export async function updateConfig(req: Request, res: Response): Promise<any> {
 
   try {
     const updateData = req.body as IPMMConfigUpdateRequest;
-    const config = await updatePMMConfigQuery(configId, updateData, req.tenantId!);
+    const config = await updatePMMConfigQuery(configId, updateData, req.organizationId!);
 
     if (!config) {
       await logSuccess({
@@ -217,7 +217,7 @@ export async function updateConfig(req: Request, res: Response): Promise<any> {
         functionName: "updateConfig",
         fileName: FILE_NAME,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({ message: "Config not found" }));
     }
@@ -228,7 +228,7 @@ export async function updateConfig(req: Request, res: Response): Promise<any> {
       functionName: "updateConfig",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](config));
   } catch (error) {
@@ -239,7 +239,7 @@ export async function updateConfig(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -253,7 +253,7 @@ export async function deleteConfig(req: Request, res: Response): Promise<any> {
     functionName: "deleteConfig",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(configId)) {
@@ -261,7 +261,7 @@ export async function deleteConfig(req: Request, res: Response): Promise<any> {
   }
 
   try {
-    const deleted = await deletePMMConfigQuery(configId, req.tenantId!);
+    const deleted = await deletePMMConfigQuery(configId, req.organizationId!);
 
     if (!deleted) {
       await logSuccess({
@@ -270,7 +270,7 @@ export async function deleteConfig(req: Request, res: Response): Promise<any> {
         functionName: "deleteConfig",
         fileName: FILE_NAME,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({ message: "Config not found" }));
     }
@@ -281,7 +281,7 @@ export async function deleteConfig(req: Request, res: Response): Promise<any> {
       functionName: "deleteConfig",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]({ message: "Config deleted" }));
   } catch (error) {
@@ -292,7 +292,7 @@ export async function deleteConfig(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -310,11 +310,11 @@ export async function getQuestions(req: Request, res: Response): Promise<any> {
     functionName: "getQuestions",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const questions = await getPMMQuestionsQuery(configId, req.tenantId!);
+    const questions = await getPMMQuestionsQuery(configId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -322,7 +322,7 @@ export async function getQuestions(req: Request, res: Response): Promise<any> {
       functionName: "getQuestions",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](questions));
   } catch (error) {
@@ -333,7 +333,7 @@ export async function getQuestions(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -345,7 +345,7 @@ export async function addQuestion(req: Request, res: Response): Promise<any> {
     functionName: "addQuestion",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -365,7 +365,7 @@ export async function addQuestion(req: Request, res: Response): Promise<any> {
       }));
     }
 
-    const question = await addPMMQuestionQuery(questionData, req.tenantId!);
+    const question = await addPMMQuestionQuery(questionData, req.organizationId!);
 
     await logSuccess({
       eventType: "Create",
@@ -373,7 +373,7 @@ export async function addQuestion(req: Request, res: Response): Promise<any> {
       functionName: "addQuestion",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(201).json(STATUS_CODE[201](question));
   } catch (error) {
@@ -384,7 +384,7 @@ export async function addQuestion(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -398,7 +398,7 @@ export async function updateQuestion(req: Request, res: Response): Promise<any> 
     functionName: "updateQuestion",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(questionId)) {
@@ -418,7 +418,7 @@ export async function updateQuestion(req: Request, res: Response): Promise<any> 
       }
     }
 
-    const question = await updatePMMQuestionQuery(questionId, updateData, req.tenantId!);
+    const question = await updatePMMQuestionQuery(questionId, updateData, req.organizationId!);
 
     if (!question) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Question not found" }));
@@ -430,7 +430,7 @@ export async function updateQuestion(req: Request, res: Response): Promise<any> 
       functionName: "updateQuestion",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](question));
   } catch (error) {
@@ -441,7 +441,7 @@ export async function updateQuestion(req: Request, res: Response): Promise<any> 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -455,7 +455,7 @@ export async function deleteQuestion(req: Request, res: Response): Promise<any> 
     functionName: "deleteQuestion",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(questionId)) {
@@ -463,7 +463,7 @@ export async function deleteQuestion(req: Request, res: Response): Promise<any> 
   }
 
   try {
-    const deleted = await deletePMMQuestionQuery(questionId, req.tenantId!);
+    const deleted = await deletePMMQuestionQuery(questionId, req.organizationId!);
 
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404]({
@@ -477,7 +477,7 @@ export async function deleteQuestion(req: Request, res: Response): Promise<any> 
       functionName: "deleteQuestion",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]({ message: "Question deleted" }));
   } catch (error) {
@@ -488,7 +488,7 @@ export async function deleteQuestion(req: Request, res: Response): Promise<any> 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -500,7 +500,7 @@ export async function reorderQuestions(req: Request, res: Response): Promise<any
     functionName: "reorderQuestions",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -521,7 +521,7 @@ export async function reorderQuestions(req: Request, res: Response): Promise<any
       }
     }
 
-    await reorderPMMQuestionsQuery(orders, req.tenantId!);
+    await reorderPMMQuestionsQuery(orders, req.organizationId!);
 
     await logSuccess({
       eventType: "Update",
@@ -529,7 +529,7 @@ export async function reorderQuestions(req: Request, res: Response): Promise<any
       functionName: "reorderQuestions",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]({ message: "Questions reordered" }));
   } catch (error) {
@@ -540,7 +540,7 @@ export async function reorderQuestions(req: Request, res: Response): Promise<any
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -558,7 +558,7 @@ export async function getActiveCycle(req: Request, res: Response): Promise<any> 
     functionName: "getActiveCycle",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(projectId)) {
@@ -566,7 +566,7 @@ export async function getActiveCycle(req: Request, res: Response): Promise<any> 
   }
 
   try {
-    const cycle = await getActiveCycleByProjectIdQuery(projectId, req.tenantId!);
+    const cycle = await getActiveCycleByProjectIdQuery(projectId, req.organizationId!);
 
     if (!cycle) {
       await logSuccess({
@@ -575,7 +575,7 @@ export async function getActiveCycle(req: Request, res: Response): Promise<any> 
         functionName: "getActiveCycle",
         fileName: FILE_NAME,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        tenantId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({
         message: "No active monitoring cycle",
@@ -588,7 +588,7 @@ export async function getActiveCycle(req: Request, res: Response): Promise<any> 
       functionName: "getActiveCycle",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](cycle));
   } catch (error) {
@@ -599,7 +599,7 @@ export async function getActiveCycle(req: Request, res: Response): Promise<any> 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -613,7 +613,7 @@ export async function getCycleById(req: Request, res: Response): Promise<any> {
     functionName: "getCycleById",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -621,7 +621,7 @@ export async function getCycleById(req: Request, res: Response): Promise<any> {
   }
 
   try {
-    const cycle = await getCycleByIdQuery(cycleId, req.tenantId!);
+    const cycle = await getCycleByIdQuery(cycleId, req.organizationId!);
 
     if (!cycle) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Cycle not found" }));
@@ -633,7 +633,7 @@ export async function getCycleById(req: Request, res: Response): Promise<any> {
       functionName: "getCycleById",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](cycle));
   } catch (error) {
@@ -644,7 +644,7 @@ export async function getCycleById(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -658,7 +658,7 @@ export async function getResponses(req: Request, res: Response): Promise<any> {
     functionName: "getResponses",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -667,12 +667,12 @@ export async function getResponses(req: Request, res: Response): Promise<any> {
 
   try {
     // Verify cycle exists
-    const cycle = await getCycleByIdQuery(cycleId, req.tenantId!);
+    const cycle = await getCycleByIdQuery(cycleId, req.organizationId!);
     if (!cycle) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Cycle not found" }));
     }
 
-    const responses = await getPMMResponsesQuery(cycleId, req.tenantId!);
+    const responses = await getPMMResponsesQuery(cycleId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -680,7 +680,7 @@ export async function getResponses(req: Request, res: Response): Promise<any> {
       functionName: "getResponses",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](responses));
   } catch (error) {
@@ -691,7 +691,7 @@ export async function getResponses(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -705,7 +705,7 @@ export async function saveResponses(req: Request, res: Response): Promise<any> {
     functionName: "saveResponses",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -722,7 +722,7 @@ export async function saveResponses(req: Request, res: Response): Promise<any> {
     }
 
     // Check cycle exists and is not completed
-    const cycle = await getCycleByIdQuery(cycleId, req.tenantId!);
+    const cycle = await getCycleByIdQuery(cycleId, req.organizationId!);
     if (!cycle) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Cycle not found" }));
     }
@@ -735,7 +735,7 @@ export async function saveResponses(req: Request, res: Response): Promise<any> {
     const savedResponses = await savePMMResponsesQuery(
       cycleId,
       responses,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -744,7 +744,7 @@ export async function saveResponses(req: Request, res: Response): Promise<any> {
       functionName: "saveResponses",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](savedResponses));
   } catch (error) {
@@ -755,7 +755,7 @@ export async function saveResponses(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -769,7 +769,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
     functionName: "submitCycle",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -783,7 +783,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
     const userId = req.userId!;
 
     // Check cycle exists and is not completed
-    const cycle = await getCycleByIdQuery(cycleId, req.tenantId!);
+    const cycle = await getCycleByIdQuery(cycleId, req.organizationId!);
     if (!cycle) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]({ message: "Cycle not found" }));
@@ -797,24 +797,24 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
 
     // Save responses if provided
     if (responses && responses.length > 0) {
-      await savePMMResponsesQuery(cycleId, responses, req.tenantId!, transaction);
+      await savePMMResponsesQuery(cycleId, responses, req.organizationId!, transaction);
     }
 
     // Mark cycle as completed
-    await completeCycleQuery(cycleId, userId, req.tenantId!, transaction);
+    await completeCycleQuery(cycleId, userId, req.organizationId!, transaction);
 
     // Get context snapshot
     const contextSnapshot = await getContextSnapshotQuery(
       cycle.project_id!,
-      req.tenantId!
+      req.organizationId!
     );
 
     // Get all responses for report (includes question details from JOIN)
-    const allResponses = await getPMMResponsesQuery(cycleId, req.tenantId!) as IPMMResponseWithQuestion[];
+    const allResponses = await getPMMResponsesQuery(cycleId, req.organizationId!) as IPMMResponseWithQuestion[];
 
     // Get user info for report
     const userResult = await sequelize.query(
-      `SELECT name, surname FROM public.users WHERE id = :userId`,
+      `SELECT name, surname FROM users WHERE id = :userId`,
       { replacements: { userId } }
     ) as [Array<{ name: string; surname: string }>, number];
     const userName = userResult[0][0]
@@ -823,7 +823,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
 
     // Get organization info
     const orgResult = await sequelize.query(
-      `SELECT name FROM public.organizations WHERE id = :orgId`,
+      `SELECT name FROM organizations WHERE id = :orgId`,
       { replacements: { orgId: req.organizationId } }
     ) as [Array<{ name: string }>, number];
     const orgName = orgResult[0][0]?.name || "Organization";
@@ -846,7 +846,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
       reportData,
       userId,
       cycle.project_id!,
-      req.tenantId!
+      req.organizationId!
     );
 
     // Create report record
@@ -855,7 +855,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
       contextSnapshot,
       uploadResult.success ? uploadResult.fileId! : null,
       userId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -867,7 +867,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
       functionName: "submitCycle",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200]({
@@ -884,7 +884,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -898,7 +898,7 @@ export async function flagConcern(req: Request, res: Response): Promise<any> {
     functionName: "flagConcern",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -915,7 +915,7 @@ export async function flagConcern(req: Request, res: Response): Promise<any> {
     }
 
     // Check cycle exists
-    const cycle = await getCycleByIdQuery(cycleId, req.tenantId!);
+    const cycle = await getCycleByIdQuery(cycleId, req.organizationId!);
     if (!cycle) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Cycle not found" }));
     }
@@ -924,7 +924,7 @@ export async function flagConcern(req: Request, res: Response): Promise<any> {
     await savePMMResponsesQuery(
       cycleId,
       [{ question_id, response_value, is_flagged: true }],
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -933,7 +933,7 @@ export async function flagConcern(req: Request, res: Response): Promise<any> {
       functionName: "flagConcern",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]({
       message: "Concern flagged successfully",
@@ -946,7 +946,7 @@ export async function flagConcern(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -962,7 +962,7 @@ export async function getReports(req: Request, res: Response): Promise<any> {
     functionName: "getReports",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -990,7 +990,7 @@ export async function getReports(req: Request, res: Response): Promise<any> {
         page: filters.page,
         limit: filters.limit,
       },
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -999,7 +999,7 @@ export async function getReports(req: Request, res: Response): Promise<any> {
       functionName: "getReports",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]({
       reports: result.reports,
@@ -1015,7 +1015,7 @@ export async function getReports(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1029,7 +1029,7 @@ export async function downloadReport(req: Request, res: Response): Promise<any> 
     functionName: "downloadReport",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(reportId)) {
@@ -1040,10 +1040,10 @@ export async function downloadReport(req: Request, res: Response): Promise<any> 
     // Get report with file info using parameterized query
     const reportResult = await sequelize.query(
       `SELECT r.*, f.filename, f.file_path, f.type as mime_type
-       FROM "${req.tenantId}".post_market_monitoring_reports r
-       LEFT JOIN "${req.tenantId}".files f ON r.file_id = f.id
-       WHERE r.id = :reportId`,
-      { replacements: { reportId } }
+       FROM post_market_monitoring_reports r
+       LEFT JOIN files f ON r.file_id = f.id AND f.organization_id = :organizationId
+       WHERE r.organization_id = :organizationId AND r.id = :reportId`,
+      { replacements: { reportId, organizationId: req.organizationId } }
     ) as [Array<{
       id: number;
       file_id: number | null;
@@ -1068,7 +1068,7 @@ export async function downloadReport(req: Request, res: Response): Promise<any> 
       functionName: "downloadReport",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     // Redirect to file download endpoint
@@ -1081,7 +1081,7 @@ export async function downloadReport(req: Request, res: Response): Promise<any> 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1099,7 +1099,7 @@ export async function reassignStakeholder(req: Request, res: Response): Promise<
     functionName: "reassignStakeholder",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -1116,16 +1116,16 @@ export async function reassignStakeholder(req: Request, res: Response): Promise<
     }
 
     // Check cycle exists
-    const cycle = await getCycleByIdQuery(cycleId, req.tenantId!);
+    const cycle = await getCycleByIdQuery(cycleId, req.organizationId!);
     if (!cycle) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Cycle not found" }));
     }
 
     await sequelize.query(
-      `UPDATE "${req.tenantId}".post_market_monitoring_cycles
+      `UPDATE post_market_monitoring_cycles
        SET assigned_stakeholder_id = :stakeholderId
-       WHERE id = :cycleId`,
-      { replacements: { cycleId, stakeholderId: stakeholder_id } }
+       WHERE organization_id = :organizationId AND id = :cycleId`,
+      { replacements: { cycleId, stakeholderId: stakeholder_id, organizationId: req.organizationId } }
     );
 
     await logSuccess({
@@ -1134,7 +1134,7 @@ export async function reassignStakeholder(req: Request, res: Response): Promise<
       functionName: "reassignStakeholder",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]({
       message: "Stakeholder reassigned successfully",
@@ -1147,7 +1147,7 @@ export async function reassignStakeholder(req: Request, res: Response): Promise<
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1161,7 +1161,7 @@ export async function startNewCycle(req: Request, res: Response): Promise<any> {
     functionName: "startNewCycle",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   if (isNaN(projectId)) {
@@ -1172,14 +1172,14 @@ export async function startNewCycle(req: Request, res: Response): Promise<any> {
 
   try {
     // Get config
-    const config = await getPMMConfigByProjectIdQuery(projectId, req.tenantId!);
+    const config = await getPMMConfigByProjectIdQuery(projectId, req.organizationId!);
     if (!config) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]({ message: "Config not found" }));
     }
 
     // Check for existing active cycle
-    const activeCycle = await getActiveCycleByProjectIdQuery(projectId, req.tenantId!);
+    const activeCycle = await getActiveCycleByProjectIdQuery(projectId, req.organizationId!);
     if (activeCycle) {
       await transaction.rollback();
       return res.status(409).json(STATUS_CODE[409]({
@@ -1202,10 +1202,10 @@ export async function startNewCycle(req: Request, res: Response): Promise<any> {
     }
 
     // Get next cycle number
-    const latestCycleNumber = await getLatestCycleNumberQuery(config.id!, req.tenantId!);
+    const latestCycleNumber = await getLatestCycleNumberQuery(config.id!, req.organizationId!);
 
     // Get stakeholder
-    const stakeholder = await getAssignedStakeholderQuery(projectId, req.tenantId!);
+    const stakeholder = await getAssignedStakeholderQuery(projectId, req.organizationId!);
 
     // Create cycle
     const cycle = await createPMMCycleQuery(
@@ -1213,7 +1213,7 @@ export async function startNewCycle(req: Request, res: Response): Promise<any> {
       latestCycleNumber + 1,
       dueDate,
       stakeholder?.id || null,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -1225,7 +1225,7 @@ export async function startNewCycle(req: Request, res: Response): Promise<any> {
       functionName: "startNewCycle",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(201).json(STATUS_CODE[201](cycle));
   } catch (error) {
@@ -1237,7 +1237,7 @@ export async function startNewCycle(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

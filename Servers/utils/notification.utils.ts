@@ -37,19 +37,20 @@ const toJSON = (notification: INotification): INotificationJSON => ({
  */
 export const createNotificationQuery = async (
   notification: ICreateNotification,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<INotificationJSON> => {
   const result = await sequelize.query<INotification>(
-    `INSERT INTO "${tenant}".notifications (
-      user_id, type, title, message, entity_type, entity_id,
+    `INSERT INTO notifications (
+      organization_id, user_id, type, title, message, entity_type, entity_id,
       entity_name, action_url, created_by, metadata
     ) VALUES (
-      :user_id, :type, :title, :message, :entity_type, :entity_id,
+      :organization_id, :user_id, :type, :title, :message, :entity_type, :entity_id,
       :entity_name, :action_url, :created_by, :metadata
     ) RETURNING *`,
     {
       replacements: {
+        organization_id: organizationId,
         user_id: notification.user_id,
         type: notification.type,
         title: notification.title,
@@ -74,7 +75,7 @@ export const createNotificationQuery = async (
  */
 export const createBulkNotificationsQuery = async (
   bulk: IBulkNotification,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<INotificationJSON[]> => {
   if (bulk.user_ids.length === 0) {
@@ -83,10 +84,11 @@ export const createBulkNotificationsQuery = async (
 
   // Build values for multi-row insert
   const values = bulk.user_ids
-    .map((_, i) => `(:user_id_${i}, :type, :title, :message, :entity_type, :entity_id, :entity_name, :action_url, :created_by, :metadata)`)
+    .map((_, i) => `(:organization_id, :user_id_${i}, :type, :title, :message, :entity_type, :entity_id, :entity_name, :action_url, :created_by, :metadata)`)
     .join(", ");
 
   const replacements: Record<string, any> = {
+    organization_id: organizationId,
     type: bulk.type,
     title: bulk.title,
     message: bulk.message,
@@ -103,8 +105,8 @@ export const createBulkNotificationsQuery = async (
   });
 
   const result = await sequelize.query<INotification>(
-    `INSERT INTO "${tenant}".notifications (
-      user_id, type, title, message, entity_type, entity_id,
+    `INSERT INTO notifications (
+      organization_id, user_id, type, title, message, entity_type, entity_id,
       entity_name, action_url, created_by, metadata
     ) VALUES ${values} RETURNING *`,
     {
@@ -122,11 +124,11 @@ export const createBulkNotificationsQuery = async (
  */
 export const getNotificationsQuery = async (
   userId: number,
-  tenant: string,
+  organizationId: number,
   filters: INotificationFilters = {}
 ): Promise<INotificationJSON[]> => {
-  const whereConditions: string[] = ["user_id = :userId"];
-  const replacements: Record<string, any> = { userId };
+  const whereConditions: string[] = ["organization_id = :organizationId", "user_id = :userId"];
+  const replacements: Record<string, any> = { organizationId, userId };
 
   if (filters.type) {
     if (Array.isArray(filters.type)) {
@@ -172,7 +174,7 @@ export const getNotificationsQuery = async (
   replacements.offset = offset;
 
   const result = await sequelize.query<INotification>(
-    `SELECT * FROM "${tenant}".notifications
+    `SELECT * FROM notifications
      WHERE ${whereConditions.join(" AND ")}
      ORDER BY created_at DESC
      LIMIT :limit OFFSET :offset`,
@@ -191,7 +193,7 @@ export const getNotificationsQuery = async (
  */
 export const getNotificationSummaryQuery = async (
   userId: number,
-  tenant: string
+  organizationId: number
 ): Promise<INotificationSummary> => {
   // Single query with CTE to get both counts and recent notifications atomically
   const result = await sequelize.query<
@@ -201,12 +203,12 @@ export const getNotificationSummaryQuery = async (
       SELECT
         COUNT(*) FILTER (WHERE is_read = FALSE) AS unread_count,
         COUNT(*) AS total_count
-      FROM "${tenant}".notifications
-      WHERE user_id = :userId
+      FROM notifications
+      WHERE organization_id = :organizationId AND user_id = :userId
     ),
     recent AS (
-      SELECT * FROM "${tenant}".notifications
-      WHERE user_id = :userId
+      SELECT * FROM notifications
+      WHERE organization_id = :organizationId AND user_id = :userId
       ORDER BY created_at DESC
       LIMIT 10
     )
@@ -214,7 +216,7 @@ export const getNotificationSummaryQuery = async (
     FROM recent r
     CROSS JOIN counts c`,
     {
-      replacements: { userId },
+      replacements: { organizationId, userId },
       type: QueryTypes.SELECT,
     }
   );
@@ -242,13 +244,13 @@ export const getNotificationSummaryQuery = async (
 export const getNotificationByIdQuery = async (
   notificationId: number,
   userId: number,
-  tenant: string
+  organizationId: number
 ): Promise<INotificationJSON | null> => {
   const result = await sequelize.query<INotification>(
-    `SELECT * FROM "${tenant}".notifications
-     WHERE id = :notificationId AND user_id = :userId`,
+    `SELECT * FROM notifications
+     WHERE organization_id = :organizationId AND id = :notificationId AND user_id = :userId`,
     {
-      replacements: { notificationId, userId },
+      replacements: { organizationId, notificationId, userId },
       type: QueryTypes.SELECT,
     }
   );
@@ -266,16 +268,16 @@ export const getNotificationByIdQuery = async (
 export const markNotificationAsReadQuery = async (
   notificationId: number,
   userId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<INotificationJSON | null> => {
   const result = await sequelize.query<INotification>(
-    `UPDATE "${tenant}".notifications
+    `UPDATE notifications
      SET is_read = TRUE, read_at = NOW()
-     WHERE id = :notificationId AND user_id = :userId
+     WHERE organization_id = :organizationId AND id = :notificationId AND user_id = :userId
      RETURNING *`,
     {
-      replacements: { notificationId, userId },
+      replacements: { organizationId, notificationId, userId },
       type: QueryTypes.SELECT,
       transaction,
     }
@@ -293,17 +295,17 @@ export const markNotificationAsReadQuery = async (
  */
 export const markAllNotificationsAsReadQuery = async (
   userId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<number> => {
   // Use RETURNING to count affected rows reliably across PostgreSQL
   const result = await sequelize.query<{ id: number }>(
-    `UPDATE "${tenant}".notifications
+    `UPDATE notifications
      SET is_read = TRUE, read_at = NOW()
-     WHERE user_id = :userId AND is_read = FALSE
+     WHERE organization_id = :organizationId AND user_id = :userId AND is_read = FALSE
      RETURNING id`,
     {
-      replacements: { userId },
+      replacements: { organizationId, userId },
       type: QueryTypes.SELECT,
       transaction,
     }
@@ -318,16 +320,16 @@ export const markAllNotificationsAsReadQuery = async (
 export const deleteNotificationQuery = async (
   notificationId: number,
   userId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<boolean> => {
   // Use RETURNING to check if row was deleted
   const result = await sequelize.query<{ id: number }>(
-    `DELETE FROM "${tenant}".notifications
-     WHERE id = :notificationId AND user_id = :userId
+    `DELETE FROM notifications
+     WHERE organization_id = :organizationId AND id = :notificationId AND user_id = :userId
      RETURNING id`,
     {
-      replacements: { notificationId, userId },
+      replacements: { organizationId, notificationId, userId },
       type: QueryTypes.SELECT,
       transaction,
     }
@@ -343,18 +345,19 @@ export const deleteNotificationQuery = async (
 export const deleteOldNotificationsQuery = async (
   userId: number,
   olderThan: Date,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<number> => {
   // Use RETURNING to count deleted rows
   const result = await sequelize.query<{ id: number }>(
-    `DELETE FROM "${tenant}".notifications
-     WHERE user_id = :userId
+    `DELETE FROM notifications
+     WHERE organization_id = :organizationId
+     AND user_id = :userId
      AND is_read = TRUE
      AND created_at < :olderThan
      RETURNING id`,
     {
-      replacements: { userId, olderThan },
+      replacements: { organizationId, userId, olderThan },
       type: QueryTypes.SELECT,
       transaction,
     }
@@ -368,13 +371,13 @@ export const deleteOldNotificationsQuery = async (
  */
 export const getUnreadCountQuery = async (
   userId: number,
-  tenant: string
+  organizationId: number
 ): Promise<number> => {
   const result = await sequelize.query<{ count: string }>(
-    `SELECT COUNT(*) as count FROM "${tenant}".notifications
-     WHERE user_id = :userId AND is_read = FALSE`,
+    `SELECT COUNT(*) as count FROM notifications
+     WHERE organization_id = :organizationId AND user_id = :userId AND is_read = FALSE`,
     {
-      replacements: { userId },
+      replacements: { organizationId, userId },
       type: QueryTypes.SELECT,
     }
   );
@@ -388,16 +391,16 @@ export const getUnreadCountQuery = async (
 export const deleteNotificationsByEntityQuery = async (
   entityType: NotificationEntityType,
   entityId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<number> => {
   // Use RETURNING to count deleted rows
   const result = await sequelize.query<{ id: number }>(
-    `DELETE FROM "${tenant}".notifications
-     WHERE entity_type = :entityType AND entity_id = :entityId
+    `DELETE FROM notifications
+     WHERE organization_id = :organizationId AND entity_type = :entityType AND entity_id = :entityId
      RETURNING id`,
     {
-      replacements: { entityType, entityId },
+      replacements: { organizationId, entityType, entityId },
       type: QueryTypes.SELECT,
       transaction,
     }
@@ -413,46 +416,46 @@ export const deleteNotificationsByEntityQuery = async (
 export const getEntityNotificationRecipientsQuery = async (
   entityType: NotificationEntityType,
   entityId: number,
-  tenant: string,
+  organizationId: number,
   excludeUserId?: number
 ): Promise<number[]> => {
   let query = "";
-  const replacements: Record<string, any> = { entityId };
+  const replacements: Record<string, any> = { organizationId, entityId };
 
   switch (entityType) {
     case NotificationEntityType.PROJECT:
       // Get all project members
       query = `
         SELECT DISTINCT user_id
-        FROM "${tenant}".projects_members
-        WHERE project_id = :entityId
+        FROM projects_members
+        WHERE organization_id = :organizationId AND project_id = :entityId
       `;
       break;
 
     case NotificationEntityType.TASK:
       // Get task creator and assignees
       query = `
-        SELECT creator_id as user_id FROM "${tenant}".tasks WHERE id = :entityId
+        SELECT creator_id as user_id FROM tasks WHERE organization_id = :organizationId AND id = :entityId
         UNION
-        SELECT user_id FROM "${tenant}".task_assignees WHERE task_id = :entityId
+        SELECT user_id FROM task_assignees WHERE organization_id = :organizationId AND task_id = :entityId
       `;
       break;
 
     case NotificationEntityType.POLICY:
       // Get policy owner and reviewers
       query = `
-        SELECT owner_id as user_id FROM "${tenant}".policies WHERE id = :entityId
+        SELECT owner_id as user_id FROM policy_manager WHERE organization_id = :organizationId AND id = :entityId
         UNION
-        SELECT reviewer_id as user_id FROM "${tenant}".policies WHERE id = :entityId AND reviewer_id IS NOT NULL
+        SELECT reviewer_id as user_id FROM policy_manager WHERE organization_id = :organizationId AND id = :entityId AND reviewer_id IS NOT NULL
       `;
       break;
 
     case NotificationEntityType.VENDOR:
       // Get vendor assignee and reviewers
       query = `
-        SELECT assignee as user_id FROM "${tenant}".vendors WHERE id = :entityId AND assignee IS NOT NULL
+        SELECT assignee as user_id FROM vendors WHERE organization_id = :organizationId AND id = :entityId AND assignee IS NOT NULL
         UNION
-        SELECT reviewer as user_id FROM "${tenant}".vendors WHERE id = :entityId AND reviewer IS NOT NULL
+        SELECT reviewer as user_id FROM vendors WHERE organization_id = :organizationId AND id = :entityId AND reviewer IS NOT NULL
       `;
       break;
 

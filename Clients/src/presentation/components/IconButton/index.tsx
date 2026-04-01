@@ -290,7 +290,7 @@ function IconButton({
     resource: ["edit", "make visible", "download", "remove"],
     incident: ["edit", "view", "archive"],
     integration: ["Send Test", "Activate/Deactivate", "remove"],
-    policy: ["edit", "link_objects", "download_pdf", "download_docx", "remove"],
+    policy: [], // Handled dynamically in getListOfButtons
     linkedobjectstype: ["remove"],
     risk: ["edit", "linked_policies", "remove"],
   };
@@ -317,6 +317,14 @@ function IconButton({
       if (onAssignToFolder) items.push("assign_folder");
       if (onViewHistory) items.push("version_history");
       items.push("linked_policies", "remove");
+      return items;
+    }
+
+    // Handle "policy" type dynamically to include assign_folder when available
+    if (normalizedType === "policy") {
+      const items = ["edit", "link_objects"];
+      if (onAssignToFolder) items.push("assign_folder");
+      items.push("download_pdf", "download_docx", "remove");
       return items;
     }
 

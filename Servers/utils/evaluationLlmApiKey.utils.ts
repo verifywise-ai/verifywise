@@ -89,24 +89,26 @@ function validateProvider(provider: string): void {
 /**
  * Get all API keys for an organization (returns masked keys)
  *
- * @param tenant - Tenant schema name
+ * @param organizationId - Organization ID
  * @returns Array of masked API keys
  */
 export const getAllKeysForOrganizationQuery = async (
-  tenant: string,
+  organizationId: number,
 ): Promise<IMaskedKey[]> => {
   const keys = await sequelize.query(
-    `SELECT id, provider, encrypted_api_key, created_at, updated_at
-     FROM "${tenant}".llm_evals_api_keys
+    `SELECT id, provider, api_key_encrypted, created_at, updated_at
+     FROM llm_evals_api_keys
+     WHERE organization_id = :organizationId
      ORDER BY created_at DESC`,
+    { replacements: { organizationId } }
   ) as [IEvaluationLlmApiKey[], number];
 
   // Decrypt and mask keys
   return keys[0].map(key => {
     let maskedKey = '***';
     try {
-      if (key.encrypted_api_key) {
-        const plainKey = decrypt(key.encrypted_api_key);
+      if (key.api_key_encrypted) {
+        const plainKey = decrypt(key.api_key_encrypted);
         maskedKey = maskApiKey(plainKey);
       }
     } catch (err) {
@@ -125,14 +127,14 @@ export const getAllKeysForOrganizationQuery = async (
 /**
  * Create or update an LLM API key entry (upsert)
  *
- * @param tenant - Tenant schema name
+ * @param organizationId - Organization ID
  * @param provider - LLM provider name
  * @param apiKey - Plain text API key (will be encrypted)
  * @param transaction - Optional transaction
  * @returns Created/updated key data
  */
 export const createKeyQuery = async (
-  tenant: string,
+  organizationId: number,
   provider: LLMProvider,
   apiKey: string,
   transaction: Transaction
@@ -155,9 +157,9 @@ export const createKeyQuery = async (
 
   // Check if key already exists for this provider
   const existing = await sequelize.query(
-    `SELECT id FROM "${tenant}".llm_evals_api_keys WHERE provider = :provider`,
+    `SELECT id FROM llm_evals_api_keys WHERE organization_id = :organizationId AND provider = :provider`,
     {
-      replacements: { provider },
+      replacements: { organizationId, provider },
       transaction,
     }
   ) as [IEvaluationLlmApiKey[], number];
@@ -167,14 +169,15 @@ export const createKeyQuery = async (
   if (existing[0].length > 0) {
     // Update existing key
     result = await sequelize.query(
-      `UPDATE "${tenant}".llm_evals_api_keys
-       SET encrypted_api_key = :encrypted_api_key, updated_at = NOW()
-       WHERE provider = :provider
-       RETURNING id, provider, encrypted_api_key, created_at, updated_at`,
+      `UPDATE llm_evals_api_keys
+       SET api_key_encrypted = :api_key_encrypted, updated_at = NOW()
+       WHERE organization_id = :organizationId AND provider = :provider
+       RETURNING id, provider, api_key_encrypted, created_at, updated_at`,
       {
         replacements: {
+          organizationId,
           provider,
-          encrypted_api_key: encryptedKey,
+          api_key_encrypted: encryptedKey,
         },
         transaction,
       }
@@ -182,13 +185,14 @@ export const createKeyQuery = async (
   } else {
     // Insert new key
     result = await sequelize.query(
-      `INSERT INTO "${tenant}".llm_evals_api_keys (provider, encrypted_api_key)
-       VALUES (:provider, :encrypted_api_key)
-       RETURNING id, provider, encrypted_api_key, created_at, updated_at`,
+      `INSERT INTO llm_evals_api_keys (organization_id, provider, api_key_encrypted)
+       VALUES (:organizationId, :provider, :api_key_encrypted)
+       RETURNING id, provider, api_key_encrypted, created_at, updated_at`,
       {
         replacements: {
+          organizationId,
           provider,
-          encrypted_api_key: encryptedKey,
+          api_key_encrypted: encryptedKey,
         },
         transaction,
       }
@@ -211,23 +215,23 @@ export const createKeyQuery = async (
  * This returns the actual decrypted API keys for use by the evaluation server.
  * Should only be accessible from internal services.
  *
- * @param tenant - Tenant schema name
- * @param transaction - Optional transaction
+ * @param organizationId - Organization ID
  * @returns Map of provider -> decrypted API key
  */
 export const getDecryptedKeysForOrganizationQuery = async (
-  tenant: string,
+  organizationId: number,
 ): Promise<Record<string, string>> => {
   const keys = await sequelize.query(
-    `SELECT provider, encrypted_api_key FROM "${tenant}".llm_evals_api_keys`
+    `SELECT provider, api_key_encrypted FROM llm_evals_api_keys WHERE organization_id = :organizationId`,
+    { replacements: { organizationId } }
   ) as [IEvaluationLlmApiKey[], number];
 
   // Build map of provider -> decrypted key
   const decryptedKeys: Record<string, string> = {};
   for (const key of keys[0]) {
     try {
-      if (key.encrypted_api_key) {
-        decryptedKeys[key.provider] = decrypt(key.encrypted_api_key);
+      if (key.api_key_encrypted) {
+        decryptedKeys[key.provider] = decrypt(key.api_key_encrypted);
       }
     } catch (err) {
       console.warn(`Failed to decrypt key for provider ${key.provider}:`, err);
@@ -240,23 +244,22 @@ export const getDecryptedKeysForOrganizationQuery = async (
 /**
  * Delete an LLM API key
  *
- * @param tenant - Tenant schema name
+ * @param organizationId - Organization ID
  * @param provider - LLM provider name
- * @param transaction - Optional transaction
  * @returns True if deleted, false if not found
  */
 export const deleteKeyQuery = async (
-  tenant: string,
+  organizationId: number,
   provider: LLMProvider,
 ): Promise<boolean> => {
   validateProvider(provider);
 
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".llm_evals_api_keys
-     WHERE provider = :provider
+    `DELETE FROM llm_evals_api_keys
+     WHERE organization_id = :organizationId AND provider = :provider
      RETURNING id`,
     {
-      replacements: { provider }
+      replacements: { organizationId, provider }
     }
   ) as [IEvaluationLlmApiKey[], number];
 
@@ -266,30 +269,29 @@ export const deleteKeyQuery = async (
 /**
  * Get decrypted API key for a specific provider
  *
- * @param tenant - Tenant schema name
+ * @param organizationId - Organization ID
  * @param provider - LLM provider name
- * @param transaction - Optional transaction
  * @returns Decrypted API key or null if not found
  */
 export const getDecryptedKeyForProviderQuery = async (
-  tenant: string,
+  organizationId: number,
   provider: LLMProvider,
 ): Promise<string | null> => {
   validateProvider(provider);
 
   const result = await sequelize.query(
-    `SELECT encrypted_api_key FROM "${tenant}".llm_evals_api_keys WHERE provider = :provider`,
+    `SELECT api_key_encrypted FROM llm_evals_api_keys WHERE organization_id = :organizationId AND provider = :provider`,
     {
-      replacements: { provider },
+      replacements: { organizationId, provider },
     }
   ) as [IEvaluationLlmApiKey[], number];
 
-  if (result[0].length === 0 || !result[0][0].encrypted_api_key) {
+  if (result[0].length === 0 || !result[0][0].api_key_encrypted) {
     return null;
   }
 
   try {
-    return decrypt(result[0][0].encrypted_api_key);
+    return decrypt(result[0][0].api_key_encrypted);
   } catch (err) {
     console.error("Failed to decrypt key for provider:", provider, err);
     return null;

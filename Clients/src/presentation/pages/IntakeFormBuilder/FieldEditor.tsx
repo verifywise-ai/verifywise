@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Box, Typography, Tooltip, Divider, useTheme } from "@mui/material";
-import { X, Plus, Trash2 } from "lucide-react";
+import { Box, Typography, Tooltip, Divider, CircularProgress, useTheme } from "@mui/material";
+import { X, Plus, Trash2, Sparkles } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
@@ -13,6 +13,7 @@ import {
   EntityFieldMapping,
 } from "./types";
 import { IntakeEntityType } from "../../../domain/intake/enums";
+import { getLLMFieldGuidance } from "../../../application/repository/intakeForm.repository";
 
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   text: "Short text",
@@ -132,11 +133,12 @@ interface FieldEditorProps {
   field: FormField;
   entityType: IntakeEntityType;
   usedEntityMappings?: string[];
+  llmKeyId?: number | null;
   onChange: (field: FormField) => void;
   onClose: () => void;
 }
 
-export function FieldEditor({ field, entityType, usedEntityMappings = [], onChange, onClose }: FieldEditorProps) {
+export function FieldEditor({ field, entityType, usedEntityMappings = [], llmKeyId, onChange, onClose }: FieldEditorProps) {
   const theme = useTheme();
   const [localField, setLocalField] = useState<FormField>(field);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -180,6 +182,27 @@ export function FieldEditor({ field, entityType, usedEntityMappings = [], onChan
     setLocalField(updated);
     debouncedOnChange(updated);
   };
+
+  // LLM guidance generation
+  const [guidanceLoading, setGuidanceLoading] = useState(false);
+
+  const generateGuidance = useCallback(async () => {
+    if (!llmKeyId || !localField.label) return;
+    setGuidanceLoading(true);
+    try {
+      const result = await getLLMFieldGuidance(localField.label, entityType, llmKeyId);
+      const text = result.data?.guidanceText;
+      if (text) {
+        const updated = { ...localField, guidanceText: text };
+        setLocalField(updated);
+        onChange(updated);
+      }
+    } catch {
+      // Silently fail — the field stays as is
+    } finally {
+      setGuidanceLoading(false);
+    }
+  }, [llmKeyId, localField, entityType, onChange]);
 
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const compatibleMappings = entityMappings.filter((mapping: EntityFieldMapping) =>
@@ -285,9 +308,42 @@ export function FieldEditor({ field, entityType, usedEntityMappings = [], onChan
                 rows={2}
               />
               <Box>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: "4px" }}>
+                  <Typography sx={{ fontSize: "13px", fontWeight: 500, color: theme.palette.text.secondary }}>
+                    Guidance text
+                  </Typography>
+                  {llmKeyId && (
+                    <Tooltip title={localField.label ? "Generate with AI" : "Add a label first"} placement="top">
+                      <Box
+                        onClick={!guidanceLoading && localField.label ? generateGuidance : undefined}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "3px",
+                          cursor: !guidanceLoading && localField.label ? "pointer" : "default",
+                          opacity: !localField.label ? 0.4 : 1,
+                          color: theme.palette.primary.main,
+                          borderRadius: "4px",
+                          px: "6px",
+                          py: "2px",
+                          "&:hover": localField.label ? { backgroundColor: theme.palette.background.fill } : {},
+                        }}
+                      >
+                        {guidanceLoading ? (
+                          <CircularProgress size={12} sx={{ color: theme.palette.primary.main }} />
+                        ) : (
+                          <Sparkles size={12} />
+                        )}
+                        <Typography sx={{ fontSize: "11px", fontWeight: 500 }}>
+                          {guidanceLoading ? "Generating..." : "AI"}
+                        </Typography>
+                      </Box>
+                    </Tooltip>
+                  )}
+                </Box>
                 <Field
                   id="field-guidance"
-                  label="Guidance text"
+                  label=""
                   placeholder="Explain why this field matters for governance..."
                   value={localField.guidanceText || ""}
                   onChange={(e) => handleChange("guidanceText", e.target.value)}
@@ -345,7 +401,7 @@ export function FieldEditor({ field, entityType, usedEntityMappings = [], onChan
                     id="field-minlength"
                     label="Min length"
                     type="number"
-                    value={String(localField.validation?.minLength || "")}
+                    value={String(localField.validation?.minLength ?? "")}
                     onChange={(e) => {
                       const v = e.target.value;
                       handleValidationChange("minLength", v === "" ? undefined : parseInt(v));

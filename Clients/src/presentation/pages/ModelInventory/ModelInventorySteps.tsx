@@ -1,5 +1,6 @@
 import { BarChart3, Filter, Search, PlusCircle, AlertTriangle, FileText } from "lucide-react";
 import { IPageTourStep } from "../../types/interfaces/i.tour";
+import { background } from "../../themes/palette";
 
 const ModelInventorySteps: IPageTourStep[] = [
   // Model inventory tab
@@ -8,7 +9,7 @@ const ModelInventorySteps: IPageTourStep[] = [
     content: {
       header: "Register new models",
       body: "Add new AI models to your inventory with comprehensive metadata including provider, version, capabilities, security assessment, and usage details.",
-      icon: <PlusCircle size={20} color="#ffffff" />,
+      icon: <PlusCircle size={20} color={background.main} />,
     },
     placement: "bottom-end",
   },
@@ -17,7 +18,7 @@ const ModelInventorySteps: IPageTourStep[] = [
     content: {
       header: "Model status summary",
       body: "Track your AI models by approval status at a glance: Approved, Restricted, Pending, and Blocked.",
-      icon: <BarChart3 size={20} color="#ffffff" />,
+      icon: <BarChart3 size={20} color={background.main} />,
     },
     placement: "bottom",
   },
@@ -26,7 +27,7 @@ const ModelInventorySteps: IPageTourStep[] = [
     content: {
       header: "Filter by approval status",
       body: "Focus on models that need attention by filtering by approval status. Quickly identify pending approvals or restricted models.",
-      icon: <Filter size={20} color="#ffffff" />,
+      icon: <Filter size={20} color={background.main} />,
     },
     placement: "bottom",
   },
@@ -35,7 +36,7 @@ const ModelInventorySteps: IPageTourStep[] = [
     content: {
       header: "Search models",
       body: "Search your model inventory by model name, provider, or version to quickly locate specific AI models in your registry.",
-      icon: <Search size={20} color="#ffffff" />,
+      icon: <Search size={20} color={background.main} />,
     },
     placement: "bottom",
   },
@@ -45,7 +46,7 @@ const ModelInventorySteps: IPageTourStep[] = [
     content: {
       header: "Add model risk",
       body: "Document risks specific to your AI models. Track risk severity, assign owners, and define mitigation strategies.",
-      icon: <AlertTriangle size={20} color="#ffffff" />,
+      icon: <AlertTriangle size={20} color={background.main} />,
     },
     placement: "bottom-end",
   },
@@ -55,7 +56,7 @@ const ModelInventorySteps: IPageTourStep[] = [
     content: {
       header: "Filter evidence",
       body: "Filter evidence files by type to quickly find compliance documentation, assessments, and audit artifacts.",
-      icon: <FileText size={20} color="#ffffff" />,
+      icon: <FileText size={20} color={background.main} />,
     },
     placement: "bottom",
   },

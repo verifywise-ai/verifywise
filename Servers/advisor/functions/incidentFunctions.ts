@@ -20,12 +20,12 @@ export interface FetchIncidentsParams {
 
 const fetchIncidents = async (
   params: FetchIncidentsParams,
-  tenant: string,
+  organizationId: number,
 ): Promise<Partial<AIIncidentManagementModel>[]> => {
   let incidents: AIIncidentManagementModel[] = [];
 
   try {
-    incidents = await getAllIncidentsQuery(tenant) as AIIncidentManagementModel[];
+    incidents = await getAllIncidentsQuery(organizationId) as AIIncidentManagementModel[];
 
     // Apply filters
     if (params.archived !== undefined) {
@@ -113,10 +113,10 @@ export interface IncidentAnalytics {
 
 const getIncidentAnalytics = async (
   params: { includeArchived?: boolean },
-  tenant: string,
+  organizationId: number,
 ): Promise<IncidentAnalytics> => {
   try {
-    let incidents = await getAllIncidentsQuery(tenant) as AIIncidentManagementModel[];
+    let incidents = await getAllIncidentsQuery(organizationId) as AIIncidentManagementModel[];
 
     const archivedIncidents = incidents.filter((i) => i.archived).length;
     const activeIncidents = incidents.filter((i) => !i.archived).length;
@@ -277,10 +277,10 @@ export interface IncidentExecutiveSummary {
 
 const getIncidentExecutiveSummary = async (
   params: { includeArchived?: boolean },
-  tenant: string,
+  organizationId: number,
 ): Promise<IncidentExecutiveSummary> => {
   try {
-    let incidents = await getAllIncidentsQuery(tenant) as AIIncidentManagementModel[];
+    let incidents = await getAllIncidentsQuery(organizationId) as AIIncidentManagementModel[];
 
     const activeIncidents = incidents.filter((i) => !i.archived).length;
 

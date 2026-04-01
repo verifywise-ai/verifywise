@@ -4,11 +4,12 @@ import { createNewTopicsQuery } from "./topic.utils";
 import { Transaction } from "sequelize";
 
 export const getAllAssessmentsQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<AssessmentModel[]> => {
   const assessments = await sequelize.query(
-    `SELECT * FROM "${tenant}".assessments ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM assessments WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: AssessmentModel,
     }
@@ -18,12 +19,12 @@ export const getAllAssessmentsQuery = async (
 
 export const getAssessmentByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<AssessmentModel | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".assessments WHERE id = :id`,
+    `SELECT * FROM assessments WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id: id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: AssessmentModel,
     }
@@ -33,12 +34,12 @@ export const getAssessmentByIdQuery = async (
 
 export const getAssessmentByProjectIdQuery = async (
   projectId: number,
-  tenant: string
+  organizationId: number
 ): Promise<AssessmentModel[]> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".assessments WHERE project_id = :project_id ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM assessments WHERE organization_id = :organizationId AND project_id = :project_id ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { project_id: projectId },
+      replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: AssessmentModel,
     }
@@ -49,13 +50,13 @@ export const getAssessmentByProjectIdQuery = async (
 export const createNewAssessmentQuery = async (
   assessment: AssessmentModel,
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Object> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".assessments (project_id) VALUES (:project_id) RETURNING *`,
+    `INSERT INTO assessments (organization_id, project_id) VALUES (:organizationId, :project_id) RETURNING *`,
     {
-      replacements: { project_id: assessment.project_id },
+      replacements: { organizationId, project_id: assessment.project_id },
       mapToModel: true,
       model: AssessmentModel,
       transaction,
@@ -64,7 +65,7 @@ export const createNewAssessmentQuery = async (
   const topics = await createNewTopicsQuery(
     result[0].id!,
     enable_ai_data_insertion,
-    tenant,
+    organizationId,
     transaction
   );
   return { assessment: result[0], topics };
@@ -73,13 +74,14 @@ export const createNewAssessmentQuery = async (
 export const updateAssessmentByIdQuery = async (
   id: number,
   assessment: Partial<AssessmentModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `UPDATE "${tenant}".assessments SET project_id = :project_id WHERE id = :id RETURNING *`,
+    `UPDATE assessments SET project_id = :project_id WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
       replacements: {
+        organizationId,
         project_id: assessment.project_id,
         id: id,
       },
@@ -94,13 +96,13 @@ export const updateAssessmentByIdQuery = async (
 
 export const deleteAssessmentByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".assessments WHERE id = :id RETURNING *`,
+    `DELETE FROM assessments WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
-      replacements: { id: id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: AssessmentModel,
       transaction,

@@ -16,14 +16,83 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import { PluginSlot } from "../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
 import { IDataset, DatasetSummary as DatasetSummaryType } from "../../../domain/interfaces/i.dataset";
-import { DatasetStatus } from "../../../domain/enums/dataset.enum";
+import { DatasetStatus, DatasetType, DataClassification } from "../../../domain/enums/dataset.enum";
 import { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
+import { GroupBy } from "../../components/Table/GroupBy";
+import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
+import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import DatasetSummary from "../ModelInventory/DatasetSummary";
 import DatasetTable from "../ModelInventory/DatasetTable";
 import NewDataset from "../../components/Modals/NewDataset";
 
 const Alert = React.lazy(() => import("../../components/Alert"));
+
+const DATASET_GROUP_BY_OPTIONS = [
+  { id: "status", label: "Status" },
+  { id: "type", label: "Type" },
+  { id: "classification", label: "Classification" },
+  { id: "owner", label: "Owner" },
+];
+
+const DATASET_FILTER_COLUMNS: FilterColumn[] = [
+  {
+    id: "name",
+    label: "Name",
+    type: "text" as const,
+  },
+  {
+    id: "description",
+    label: "Description",
+    type: "text" as const,
+  },
+  {
+    id: "status",
+    label: "Status",
+    type: "select" as const,
+    options: [
+      { value: DatasetStatus.DRAFT, label: "Draft" },
+      { value: DatasetStatus.ACTIVE, label: "Active" },
+      { value: DatasetStatus.DEPRECATED, label: "Deprecated" },
+      { value: DatasetStatus.ARCHIVED, label: "Archived" },
+    ],
+  },
+  {
+    id: "type",
+    label: "Type",
+    type: "select" as const,
+    options: [
+      { value: DatasetType.TRAINING, label: "Training" },
+      { value: DatasetType.VALIDATION, label: "Validation" },
+      { value: DatasetType.TESTING, label: "Testing" },
+      { value: DatasetType.PRODUCTION, label: "Production" },
+      { value: DatasetType.REFERENCE, label: "Reference" },
+    ],
+  },
+  {
+    id: "classification",
+    label: "Classification",
+    type: "select" as const,
+    options: [
+      { value: DataClassification.PUBLIC, label: "Public" },
+      { value: DataClassification.INTERNAL, label: "Internal" },
+      { value: DataClassification.CONFIDENTIAL, label: "Confidential" },
+      { value: DataClassification.RESTRICTED, label: "Restricted" },
+    ],
+  },
+  {
+    id: "owner",
+    label: "Owner",
+    type: "text" as const,
+  },
+  {
+    id: "source",
+    label: "Source",
+    type: "text" as const,
+  },
+];
 
 const Datasets: React.FC = () => {
   const [datasetData, setDatasetData] = useState<IDataset[]>([]);
@@ -40,6 +109,54 @@ const Datasets: React.FC = () => {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
   const { userRoleName } = useAuth();
+
+  // GroupBy state
+  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();;
+
+  // FilterBy - Field value getter
+  const getDatasetFieldValue = useCallback(
+    (item: IDataset, fieldId: string): string | number | Date | null | undefined => {
+      switch (fieldId) {
+        case "name":
+          return item.name;
+        case "description":
+          return item.description;
+        case "status":
+          return item.status;
+        case "type":
+          return item.type;
+        case "classification":
+          return item.classification;
+        case "owner":
+          return item.owner;
+        case "source":
+          return item.source;
+        default:
+          return null;
+      }
+    },
+    []
+  );
+
+  // FilterBy - Initialize hook
+  const { filterData: filterDatasetData, handleFilterChange: handleDatasetFilterChange } =
+    useFilterBy<IDataset>(getDatasetFieldValue);
+
+  // GroupBy - Get group key for a dataset
+  const getDatasetGroupKey = useCallback((dataset: IDataset, field: string): string => {
+    switch (field) {
+      case "status":
+        return dataset.status || "Unknown";
+      case "type":
+        return dataset.type || "Unknown";
+      case "classification":
+        return dataset.classification || "Unknown";
+      case "owner":
+        return dataset.owner || "Unassigned";
+      default:
+        return "Other";
+    }
+  }, []);
   const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
 
   // Alert state
@@ -110,9 +227,10 @@ const Datasets: React.FC = () => {
     total: datasetData.length,
   }), [datasetData]);
 
-  // Filter datasets by status card + search
+  // Filter datasets by FilterBy + status card + search
   const filteredDatasets = useMemo(() => {
-    let data = datasetData;
+    // Apply FilterBy conditions first
+    let data = filterDatasetData(datasetData);
 
     if (selectedDatasetStatus) {
       const statusMap: Record<string, string> = {
@@ -139,7 +257,15 @@ const Datasets: React.FC = () => {
     }
 
     return data;
-  }, [datasetData, selectedDatasetStatus, searchTerm]);
+  }, [filterDatasetData, datasetData, selectedDatasetStatus, searchTerm]);
+
+  // Apply grouping to filtered datasets
+  const groupedDatasets = useTableGrouping({
+    data: filteredDatasets,
+    groupByField: groupBy,
+    sortOrder: groupSortOrder,
+    getGroupKey: getDatasetGroupKey,
+  });
 
   // Handlers
   const handleNewDatasetClick = () => {
@@ -294,6 +420,14 @@ const Datasets: React.FC = () => {
           alignItems="center"
         >
           <Stack direction="row" spacing={2} alignItems="center">
+            <FilterBy
+              columns={DATASET_FILTER_COLUMNS}
+              onFilterChange={handleDatasetFilterChange}
+            />
+            <GroupBy
+              options={DATASET_GROUP_BY_OPTIONS}
+              onGroupChange={handleGroupChange}
+            />
             <SearchBox
               placeholder="Search datasets..."
               value={searchTerm}
@@ -312,7 +446,7 @@ const Datasets: React.FC = () => {
             />
             <CustomizableButton
               variant="contained"
-              sx={{ backgroundColor: "#13715B", border: "1px solid #13715B", gap: "8px" }}
+              sx={{ backgroundColor: "brand.primary", border: "1px solid brand.primary", gap: "8px" }}
               text="Add new dataset"
               icon={<AddCircleOutlineIcon size={16} />}
               onClick={handleNewDatasetClick}
@@ -323,13 +457,20 @@ const Datasets: React.FC = () => {
       </Stack>
 
       {/* Table */}
-      <DatasetTable
-        data={filteredDatasets}
-        isLoading={isLoading}
-        onEdit={handleEditDataset}
-        onDelete={handleDeleteDataset}
-        deletingId={deletingDatasetId}
-        flashRowId={flashDatasetRowId}
+      <GroupedTableView
+        groupedData={groupedDatasets}
+        ungroupedData={filteredDatasets}
+        renderTable={(data, options) => (
+          <DatasetTable
+            data={data}
+            isLoading={isLoading}
+            onEdit={handleEditDataset}
+            onDelete={handleDeleteDataset}
+            deletingId={deletingDatasetId}
+            flashRowId={flashDatasetRowId}
+            hidePagination={options?.hidePagination}
+          />
+        )}
       />
 
       {/* Plugin modals (e.g., bulk upload) */}

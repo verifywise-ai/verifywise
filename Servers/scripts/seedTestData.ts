@@ -45,8 +45,8 @@ async function seedTestData() {
     // 2. Create test user
     const hashedPassword = await bcrypt.hash("Verifywise#1", SALT_ROUNDS);
     await sequelize.query(
-      `INSERT INTO users (name, surname, email, password_hash, role_id, organization_id, created_at, updated_at)
-       VALUES ('Test', 'User', 'verifywise@email.com', :password, 1, :orgId, NOW(), NOW())
+      `INSERT INTO users (name, surname, email, password_hash, role_id, organization_id, created_at)
+       VALUES ('Test', 'User', 'verifywise@email.com', :password, 1, :orgId, NOW())
        ON CONFLICT (email) DO UPDATE SET password_hash = :password`,
       {
         replacements: { password: hashedPassword, orgId },

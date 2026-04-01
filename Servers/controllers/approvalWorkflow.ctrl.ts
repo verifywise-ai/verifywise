@@ -38,13 +38,13 @@ export async function getAllApprovalWorkflows(
   );
 
   try {
-    const { tenantId } = req;
+    const { organizationId } = req;
 
-    if (!tenantId) {
+    if (!organizationId) {
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
 
-    const workflows = await getAllApprovalWorkflowsQuery(tenantId);
+    const workflows = await getAllApprovalWorkflowsQuery(organizationId);
 
     logStructured(
       "successful",
@@ -82,10 +82,10 @@ export async function getApprovalWorkflowById(
   );
 
   try {
-    const { tenantId } = req;
+    const { organizationId } = req;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-    if (!tenantId) {
+    if (!organizationId) {
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
 
@@ -96,7 +96,7 @@ export async function getApprovalWorkflowById(
 
     const workflow = await getApprovalWorkflowByIdQuery(
       workflowId,
-      tenantId
+      organizationId
     );
 
     if (!workflow) {
@@ -141,10 +141,10 @@ export async function createApprovalWorkflow(
   );
 
   try {
-    const { userId, tenantId } = req;
+    const { userId, organizationId } = req;
     const { workflow_title, entity_type, description, steps } = req.body;
 
-    if (!userId || !tenantId) {
+    if (!userId || !organizationId) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
@@ -202,7 +202,7 @@ export async function createApprovalWorkflow(
         created_by: userId,
         steps,
       },
-      tenantId,
+      organizationId,
       transaction
     );
 
@@ -251,11 +251,11 @@ export async function updateApprovalWorkflow(
   );
 
   try {
-    const { tenantId } = req;
+    const { organizationId } = req;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { workflow_title, description, steps } = req.body;
 
-    if (!tenantId) {
+    if (!organizationId) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
@@ -297,7 +297,7 @@ export async function updateApprovalWorkflow(
     const workflow = await updateApprovalWorkflowQuery(
       workflowId,
       { workflow_title, description, steps },
-      tenantId,
+      organizationId,
       transaction
     );
 
@@ -346,10 +346,10 @@ export async function deleteApprovalWorkflow(
   );
 
   try {
-    const { tenantId } = req;
+    const { organizationId } = req;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-    if (!tenantId) {
+    if (!organizationId) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
@@ -360,7 +360,7 @@ export async function deleteApprovalWorkflow(
       return res.status(400).json(STATUS_CODE[400]("Invalid workflow ID"));
     }
 
-    await deleteApprovalWorkflowQuery(workflowId, tenantId, transaction);
+    await deleteApprovalWorkflowQuery(workflowId, organizationId, transaction);
 
     await transaction.commit();
 

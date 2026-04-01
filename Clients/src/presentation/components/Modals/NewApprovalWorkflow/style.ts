@@ -1,14 +1,15 @@
 import { Theme } from "@mui/material";
+import { text, background, border as borderPalette } from "../../../themes/palette";
 
 export const addNewStep = {
     gap: "8px",
     minWidth: "80px",
     height: "34px",
-    border: "1px solid #D0D5DD",
-    color: "#344054",
+    border: `1px solid ${borderPalette.dark}`,
+    color: `${text.secondary}`,
     "&:hover": {
-        backgroundColor: "#F9FAFB",
-        border: "1px solid #D0D5DD",
+        backgroundColor: `${background.accent}`,
+        border: `1px solid ${borderPalette.dark}`,
     },
 };
 
@@ -21,7 +22,7 @@ export const stepNumberStyle = {
     gap: "12px",
     background: "#11725B",
     borderRadius: "12px",
-    color: "#fff",
+    color: `${background.main}`,
     fontSize: "14px",
     fontWeight: 600,
     minWidth: "24px",

@@ -16,7 +16,7 @@ import { logStructured } from "../utils/logger/fileLogger";
 // Value: Connection metadata with Response object
 interface ConnectionData {
   response: Response;
-  tenantId: string;
+  organizationId: number;
   userId: number;
   connectedAt: Date;
 }
@@ -31,10 +31,10 @@ export const streamNotifications = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const { userId, tenantId } = req;
+  const { userId, organizationId, tenantId } = req;
 
-  if (!userId || !tenantId) {
-    logStructured("error", "Missing userId or tenantId for SSE connection", "streamNotifications", "notification.ctrl.ts");
+  if (!userId || !organizationId) {
+    logStructured("error", "Missing userId or organizationId for SSE connection", "streamNotifications", "notification.ctrl.ts");
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -43,7 +43,7 @@ export const streamNotifications = async (
     // Note: The authenticateToken middleware already validates:
     // 1. User belongs to the organization
     // 2. tenantId matches organizationId
-    // So we can trust req.userId and req.tenantId here
+    // So we can trust req.userId and req.organizationId here
 
     const connectionKey = `${tenantId}:${userId}`;
 
@@ -67,7 +67,7 @@ export const streamNotifications = async (
     // SECURITY: Store connection with tenant validation data
     connections.set(connectionKey, {
       response: res,
-      tenantId: tenantId,
+      organizationId: organizationId,
       userId: userId,
       connectedAt: new Date(),
     });

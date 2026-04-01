@@ -13,6 +13,7 @@ import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
 import singleTheme from "../../../themes/v1SingleTheme";
 import Field from "../../../components/Inputs/Field";
+import { text, border as borderPalette } from "../../../themes/palette";
 
 const Alert = lazy(() => import("../../../components/Alert"));
 
@@ -114,7 +115,7 @@ const ResetPassword = () => {
             justifyContent: "center",
             alignItems: "center",
             borderRadius: "12px",
-            border: "2px solid #EAECF0",
+            border: `2px solid ${borderPalette.light}`,
             gap: theme.spacing(12),
           }}
         >
@@ -124,7 +125,7 @@ const ResetPassword = () => {
           <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
             Check your email
           </Typography>
-          <Typography fontSize={13} color={"#475467"}>
+          <Typography fontSize={13} color={`${text.tertiary}`}>
             If an account exists with this email, we'll send a password reset link
           </Typography>
         </Stack>
@@ -139,7 +140,7 @@ const ResetPassword = () => {
           />
         </Stack>
         <Stack sx={{ gap: theme.spacing(12) }} onClick={resendEmail}>
-          <Typography sx={{ fontSize: 13, color: "#475467" }}>
+          <Typography sx={{ fontSize: 13, color: `${text.tertiary}` }}>
             Didn't receive the email?{" "}
             <span
               style={{

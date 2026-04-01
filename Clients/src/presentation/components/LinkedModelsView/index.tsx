@@ -11,6 +11,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { Cpu } from "lucide-react";
 import { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
 import CustomizableSkeleton from "../Skeletons";
 import singleTheme from "../../themes/v1SingleTheme";
@@ -117,7 +118,7 @@ export function LinkedModelsView({
             border: `1px solid ${theme.palette.divider}`,
           }}
         >
-          <EmptyState message={emptyMessage} />
+          <EmptyState icon={Cpu} message={emptyMessage} />
           <Typography
             sx={{
               color: theme.palette.text.tertiary,
@@ -174,10 +175,10 @@ export function LinkedModelsView({
                     ...singleTheme.tableStyles.primary.body.row,
                     "&:hover": {
                       cursor: model.id ? "pointer" : "default",
-                      backgroundColor: "#F9FAFB",
+                      backgroundColor: "background.accent",
                     },
                     "&:hover td": {
-                      backgroundColor: "#F9FAFB",
+                      backgroundColor: "background.accent",
                     },
                   }}
                 >

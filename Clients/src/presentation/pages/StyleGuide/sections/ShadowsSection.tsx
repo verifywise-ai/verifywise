@@ -315,8 +315,8 @@ const ShadowsSection: React.FC = () => {
             <SpecTable
               onCopy={handleCopy}
               specs={[
-                { property: "border.light", value: "#eaecf0" },
-                { property: "border.dark", value: "#d0d5dd" },
+                { property: "border.light", value: "borderPalette.light" },
+                { property: "border.dark", value: "borderPalette.dark" },
                 { property: "Border radius", value: "4px" },
                 { property: "Border width", value: "1px" },
               ]}

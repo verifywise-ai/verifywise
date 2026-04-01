@@ -10,7 +10,7 @@ import { ApprovalRequestStatus, ApprovalStepStatus, ApprovalResult } from "../do
  */
 export interface NotificationInfo {
   type: 'step_approvers' | 'requester_approved' | 'requester_rejected';
-  tenantId: string;
+  organizationId: number;
   requestId: number;
   requesterId?: number;
   requestName: string;
@@ -34,17 +34,18 @@ export const createApprovalRequestQuery = async (
     requested_by: number;
   },
   workflowSteps: ApprovalWorkflowStepModel[],
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<ApprovalRequestModel> => {
   // Create request
   const [request] = await sequelize.query(
-    `INSERT INTO "${tenantId}".approval_requests
-     (request_name, workflow_id, entity_id, entity_type, entity_data, status, requested_by, current_step, created_at, updated_at)
-     VALUES (:request_name, :workflow_id, :entity_id, :entity_type, :entity_data, :status, :requested_by, 1, NOW(), NOW())
+    `INSERT INTO approval_requests
+     (organization_id, request_name, workflow_id, entity_id, entity_type, entity_data, status, requested_by, current_step, created_at, updated_at)
+     VALUES (:organizationId, :request_name, :workflow_id, :entity_id, :entity_type, :entity_data, :status, :requested_by, 1, NOW(), NOW())
      RETURNING *`,
     {
       replacements: {
+        organizationId,
         request_name: requestData.request_name,
         workflow_id: requestData.workflow_id,
         entity_id: requestData.entity_id || null,
@@ -62,12 +63,13 @@ export const createApprovalRequestQuery = async (
   // Create request steps from workflow steps
   for (const workflowStep of workflowSteps) {
     const [requestStep] = await sequelize.query(
-      `INSERT INTO "${tenantId}".approval_request_steps
-       (request_id, step_number, step_name, status, date_assigned, created_at)
-       VALUES (:request_id, :step_number, :step_name, :status, NOW(), NOW())
+      `INSERT INTO approval_request_steps
+       (organization_id, request_id, step_number, step_name, status, date_assigned, created_at)
+       VALUES (:organizationId, :request_id, :step_number, :step_name, :status, NOW(), NOW())
        RETURNING *`,
       {
         replacements: {
+          organizationId,
           request_id: (request as any).id,
           step_number: workflowStep.step_number,
           step_name: workflowStep.step_name,
@@ -86,11 +88,12 @@ export const createApprovalRequestQuery = async (
     if (approvers && approvers.length > 0) {
       for (const approver of approvers) {
         await sequelize.query(
-          `INSERT INTO "${tenantId}".approval_request_step_approvals
-           (request_step_id, approver_id, approval_result, created_at)
-           VALUES (:request_step_id, :approver_id, :approval_result, NOW())`,
+          `INSERT INTO approval_request_step_approvals
+           (organization_id, request_step_id, approver_id, approval_result, created_at)
+           VALUES (:organizationId, :request_step_id, :approver_id, :approval_result, NOW())`,
           {
             replacements: {
+              organizationId,
               request_step_id: (requestStep as any).id,
               approver_id: approver.approver_id,
               approval_result: ApprovalResult.PENDING,
@@ -110,7 +113,7 @@ export const createApprovalRequestQuery = async (
  */
 export const getPendingApprovalsQuery = async (
   userId: number,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ): Promise<any[]> => {
   const requests = await sequelize.query(
@@ -125,15 +128,17 @@ export const getPendingApprovalsQuery = async (
        ar.current_step,
        ar.created_at,
        ar.updated_at
-     FROM "${tenantId}".approval_requests ar
-     JOIN "${tenantId}".approval_request_steps ars ON ar.id = ars.request_id
-     JOIN "${tenantId}".approval_request_step_approvals arsa ON ars.id = arsa.request_step_id
-     WHERE arsa.approver_id = :userId
+     FROM approval_requests ar
+     JOIN approval_request_steps ars ON ar.id = ars.request_id AND ar.organization_id = ars.organization_id
+     JOIN approval_request_step_approvals arsa ON ars.id = arsa.request_step_id AND ars.organization_id = arsa.organization_id
+     WHERE ar.organization_id = :organizationId
+       AND arsa.approver_id = :userId
        AND ars.step_number = ar.current_step
        AND ar.status = :status
      ORDER BY ar.created_at DESC`,
     {
       replacements: {
+        organizationId,
         userId,
         status: ApprovalRequestStatus.PENDING,
       },
@@ -150,15 +155,16 @@ export const getPendingApprovalsQuery = async (
  */
 export const getMyApprovalRequestsQuery = async (
   userId: number,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ): Promise<any[]> => {
   const requests = await sequelize.query(
-    `SELECT * FROM "${tenantId}".approval_requests
-     WHERE requested_by = :userId
+    `SELECT * FROM approval_requests
+     WHERE organization_id = :organizationId
+       AND requested_by = :userId
      ORDER BY created_at DESC`,
     {
-      replacements: { userId },
+      replacements: { organizationId, userId },
       mapToModel: true,
       model: ApprovalRequestModel,
       ...(transaction && { transaction }),
@@ -173,7 +179,7 @@ export const getMyApprovalRequestsQuery = async (
  */
 export const getApprovalRequestByIdQuery = async (
   requestId: number,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ): Promise<any | null> => {
   // Get approval request with project/use-case/file details and workflow info
@@ -208,16 +214,17 @@ export const getApprovalRequestByIdQuery = async (
       requester_user.surname as requester_surname,
       requester_user.email as requester_email,
       aw.workflow_title as workflow_name
-     FROM "${tenantId}".approval_requests ar
-     LEFT JOIN "${tenantId}".projects p ON ar.entity_id = p.id AND ar.entity_type = 'use_case'
-     LEFT JOIN "${tenantId}".files f ON ar.entity_id = f.id AND ar.entity_type = 'file'
-     LEFT JOIN public.users owner_user ON p.owner = owner_user.id
-     LEFT JOIN public.users file_uploader ON f.uploaded_by = file_uploader.id
-     LEFT JOIN public.users requester_user ON ar.requested_by = requester_user.id
-     LEFT JOIN "${tenantId}".approval_workflows aw ON ar.workflow_id = aw.id
-     WHERE ar.id = :requestId`,
+     FROM approval_requests ar
+     LEFT JOIN projects p ON ar.entity_id = p.id AND ar.entity_type = 'use_case' AND ar.organization_id = p.organization_id
+     LEFT JOIN files f ON ar.entity_id = f.id AND ar.entity_type = 'file' AND ar.organization_id = f.organization_id
+     LEFT JOIN users owner_user ON p.owner = owner_user.id
+     LEFT JOIN users file_uploader ON f.uploaded_by = file_uploader.id
+     LEFT JOIN users requester_user ON ar.requested_by = requester_user.id
+     LEFT JOIN approval_workflows aw ON ar.workflow_id = aw.id AND ar.organization_id = aw.organization_id
+     WHERE ar.organization_id = :organizationId
+       AND ar.id = :requestId`,
     {
-      replacements: { requestId },
+      replacements: { organizationId, requestId },
       type: "SELECT",
       ...(transaction && { transaction }),
     }
@@ -231,11 +238,12 @@ export const getApprovalRequestByIdQuery = async (
 
   // Load steps
   const steps = await sequelize.query(
-    `SELECT * FROM "${tenantId}".approval_request_steps
-     WHERE request_id = :requestId
+    `SELECT * FROM approval_request_steps
+     WHERE organization_id = :organizationId
+       AND request_id = :requestId
      ORDER BY step_number ASC`,
     {
-      replacements: { requestId },
+      replacements: { organizationId, requestId },
       mapToModel: true,
       model: ApprovalRequestStepModel,
       ...(transaction && { transaction }),
@@ -246,11 +254,12 @@ export const getApprovalRequestByIdQuery = async (
   for (const step of steps) {
     const approvals = await sequelize.query(
       `SELECT arsa.*, u.name, u.surname, u.email
-       FROM "${tenantId}".approval_request_step_approvals arsa
-       JOIN public.users u ON arsa.approver_id = u.id
-       WHERE arsa.request_step_id = :stepId`,
+       FROM approval_request_step_approvals arsa
+       JOIN users u ON arsa.approver_id = u.id
+       WHERE arsa.organization_id = :organizationId
+         AND arsa.request_step_id = :stepId`,
       {
-        replacements: { stepId: (step as any).id },
+        replacements: { organizationId, stepId: (step as any).id },
         type: "SELECT",
         ...(transaction && { transaction }),
       }
@@ -271,14 +280,14 @@ export const processApprovalQuery = async (
   userId: number,
   approvalResult: ApprovalResult,
   comments: string | undefined,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<NotificationInfo | null> => {
   // Get current request
   const [request] = await sequelize.query(
-    `SELECT * FROM "${tenantId}".approval_requests WHERE id = :requestId`,
+    `SELECT * FROM approval_requests WHERE organization_id = :organizationId AND id = :requestId`,
     {
-      replacements: { requestId },
+      replacements: { organizationId, requestId },
       mapToModel: true,
       model: ApprovalRequestModel,
       transaction,
@@ -293,10 +302,11 @@ export const processApprovalQuery = async (
 
   // Get current step
   const [requestStep] = await sequelize.query(
-    `SELECT * FROM "${tenantId}".approval_request_steps
-     WHERE request_id = :requestId AND step_number = :stepNumber`,
+    `SELECT * FROM approval_request_steps
+     WHERE organization_id = :organizationId
+       AND request_id = :requestId AND step_number = :stepNumber`,
     {
-      replacements: { requestId, stepNumber: currentStep },
+      replacements: { organizationId, requestId, stepNumber: currentStep },
       mapToModel: true,
       model: ApprovalRequestStepModel,
       transaction,
@@ -309,14 +319,16 @@ export const processApprovalQuery = async (
 
   // Update approval record
   await sequelize.query(
-    `UPDATE "${tenantId}".approval_request_step_approvals
+    `UPDATE approval_request_step_approvals
      SET approval_result = :approvalResult,
          comments = :comments,
          approved_at = NOW()
-     WHERE request_step_id = :requestStepId
+     WHERE organization_id = :organizationId
+       AND request_step_id = :requestStepId
        AND approver_id = :userId`,
     {
       replacements: {
+        organizationId,
         requestStepId: (requestStep as any).id,
         userId,
         approvalResult,
@@ -329,14 +341,16 @@ export const processApprovalQuery = async (
   // Get the workflow step to check requires_all_approvers
   const [workflowStep] = await sequelize.query(
     `SELECT aws.requires_all_approvers
-     FROM "${tenantId}".approval_workflow_steps aws
-     JOIN "${tenantId}".approval_request_steps ars ON ars.step_number = aws.step_number
-     WHERE ars.id = :requestStepId
+     FROM approval_workflow_steps aws
+     JOIN approval_request_steps ars ON ars.step_number = aws.step_number AND ars.organization_id = aws.organization_id
+     WHERE ars.organization_id = :organizationId
+       AND ars.id = :requestStepId
        AND aws.workflow_id = (
-         SELECT workflow_id FROM "${tenantId}".approval_requests WHERE id = :requestId
+         SELECT workflow_id FROM approval_requests WHERE organization_id = :organizationId AND id = :requestId
        )`,
     {
       replacements: {
+        organizationId,
         requestStepId: (requestStep as any).id,
         requestId,
       },
@@ -351,10 +365,12 @@ export const processApprovalQuery = async (
   // Query them directly instead of using COUNT to avoid transaction visibility issues
   const allApprovals = await sequelize.query(
     `SELECT approver_id, approval_result
-     FROM "${tenantId}".approval_request_step_approvals
-     WHERE request_step_id = :requestStepId`,
+     FROM approval_request_step_approvals
+     WHERE organization_id = :organizationId
+       AND request_step_id = :requestStepId`,
     {
       replacements: {
+        organizationId,
         requestStepId: (requestStep as any).id,
       },
       type: "SELECT",
@@ -377,11 +393,12 @@ export const processApprovalQuery = async (
   // If rejected, mark step and request as rejected
   if (approvalResult === ApprovalResult.REJECTED) {
     await sequelize.query(
-      `UPDATE "${tenantId}".approval_request_steps
+      `UPDATE approval_request_steps
        SET status = :status, date_completed = NOW()
-       WHERE id = :requestStepId`,
+       WHERE organization_id = :organizationId AND id = :requestStepId`,
       {
         replacements: {
+          organizationId,
           requestStepId: (requestStep as any).id,
           status: ApprovalStepStatus.REJECTED,
         },
@@ -390,11 +407,12 @@ export const processApprovalQuery = async (
     );
 
     await sequelize.query(
-      `UPDATE "${tenantId}".approval_requests
+      `UPDATE approval_requests
        SET status = :status, updated_at = NOW()
-       WHERE id = :requestId`,
+       WHERE organization_id = :organizationId AND id = :requestId`,
       {
         replacements: {
+          organizationId,
           requestId,
           status: ApprovalRequestStatus.REJECTED,
         },
@@ -409,11 +427,11 @@ export const processApprovalQuery = async (
     if (entityType === "file" && entityId) {
       // Update file review_status to 'rejected'
       await sequelize.query(
-        `UPDATE "${tenantId}".files
+        `UPDATE files
          SET review_status = 'rejected', updated_at = NOW()
-         WHERE id = :entityId`,
+         WHERE organization_id = :organizationId AND id = :entityId`,
         {
-          replacements: { entityId },
+          replacements: { organizationId, entityId },
           transaction,
         }
       );
@@ -422,7 +440,7 @@ export const processApprovalQuery = async (
     // Return notification info for requester rejection
     return {
       type: 'requester_rejected',
-      tenantId,
+      organizationId,
       requestId,
       requesterId: (request as any).requested_by,
       requestName: (request as any).request_name,
@@ -431,11 +449,12 @@ export const processApprovalQuery = async (
   // If approved and conditions met (all/any), move to next step or complete
   else if (approvalResult === ApprovalResult.APPROVED && shouldComplete) {
     await sequelize.query(
-      `UPDATE "${tenantId}".approval_request_steps
+      `UPDATE approval_request_steps
        SET status = :status, date_completed = NOW()
-       WHERE id = :requestStepId`,
+       WHERE organization_id = :organizationId AND id = :requestStepId`,
       {
         replacements: {
+          organizationId,
           requestStepId: (requestStep as any).id,
           status: ApprovalStepStatus.COMPLETED,
         },
@@ -445,9 +464,9 @@ export const processApprovalQuery = async (
 
     // Check if there are more steps
     const totalSteps = await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".approval_request_steps WHERE request_id = :requestId`,
+      `SELECT COUNT(*) as count FROM approval_request_steps WHERE organization_id = :organizationId AND request_id = :requestId`,
       {
-        replacements: { requestId },
+        replacements: { organizationId, requestId },
         type: "SELECT",
         transaction,
       }
@@ -458,11 +477,12 @@ export const processApprovalQuery = async (
     if (currentStep < stepCount) {
       // Move to next step
       await sequelize.query(
-        `UPDATE "${tenantId}".approval_requests
+        `UPDATE approval_requests
          SET current_step = :nextStep, updated_at = NOW()
-         WHERE id = :requestId`,
+         WHERE organization_id = :organizationId AND id = :requestId`,
         {
           replacements: {
+            organizationId,
             requestId,
             nextStep: currentStep + 1,
           },
@@ -473,7 +493,7 @@ export const processApprovalQuery = async (
       // Return notification info for next step approvers AND requester progress update
       return {
         type: 'step_approvers',
-        tenantId,
+        organizationId,
         requestId,
         requesterId: (request as any).requested_by,
         stepNumber: currentStep + 1,
@@ -484,11 +504,12 @@ export const processApprovalQuery = async (
     } else {
       // All steps completed - mark as approved
       await sequelize.query(
-        `UPDATE "${tenantId}".approval_requests
+        `UPDATE approval_requests
          SET status = :status, updated_at = NOW()
-         WHERE id = :requestId`,
+         WHERE organization_id = :organizationId AND id = :requestId`,
         {
           replacements: {
+            organizationId,
             requestId,
             status: ApprovalRequestStatus.APPROVED,
           },
@@ -499,7 +520,7 @@ export const processApprovalQuery = async (
       // Store notification info to be sent after transaction commits
       const notificationInfo: NotificationInfo = {
         type: 'requester_approved',
-        tenantId,
+        organizationId,
         requestId,
         requesterId: (request as any).requested_by,
         requestName: (request as any).request_name,
@@ -514,10 +535,10 @@ export const processApprovalQuery = async (
         // Get project details with pending frameworks
         const [projectData] = await sequelize.query(
           `SELECT id, pending_frameworks, enable_ai_data_insertion
-           FROM "${tenantId}".projects
-           WHERE id = :entityId`,
+           FROM projects
+           WHERE organization_id = :organizationId AND id = :entityId`,
           {
-            replacements: { entityId },
+            replacements: { organizationId, entityId },
             type: "SELECT",
             transaction,
           }
@@ -537,10 +558,11 @@ export const processApprovalQuery = async (
           for (const frameworkId of pendingFrameworks) {
             // Create project_framework record FIRST (required by framework creation functions)
             await sequelize.query(
-              `INSERT INTO "${tenantId}".projects_frameworks (project_id, framework_id, is_demo)
-               VALUES (:project_id, :framework_id, false)`,
+              `INSERT INTO projects_frameworks (organization_id, project_id, framework_id, is_demo)
+               VALUES (:organizationId, :project_id, :framework_id, false)`,
               {
                 replacements: {
+                  organizationId,
                   project_id: entityId,
                   framework_id: frameworkId,
                 },
@@ -553,28 +575,28 @@ export const processApprovalQuery = async (
               await createEUFrameworkQuery(
                 entityId,
                 enableAiDataInsertion,
-                tenantId,
+                organizationId,
                 transaction
               );
             } else if (frameworkId === 2) {
               await createISOFrameworkQuery(
                 entityId,
                 enableAiDataInsertion,
-                tenantId,
+                organizationId,
                 transaction
               );
             } else if (frameworkId === 3) {
               await createISO27001FrameworkQuery(
                 entityId,
                 enableAiDataInsertion,
-                tenantId,
+                organizationId,
                 transaction
               );
             } else if (frameworkId === 4) {
               await createNISTAI_RMFFrameworkQuery(
                 entityId,
                 enableAiDataInsertion,
-                tenantId,
+                organizationId,
                 transaction
               );
             }
@@ -582,11 +604,11 @@ export const processApprovalQuery = async (
 
           // Clear pending frameworks after creation
           await sequelize.query(
-            `UPDATE "${tenantId}".projects
+            `UPDATE projects
              SET pending_frameworks = NULL, enable_ai_data_insertion = FALSE
-             WHERE id = :entityId`,
+             WHERE organization_id = :organizationId AND id = :entityId`,
             {
-              replacements: { entityId },
+              replacements: { organizationId, entityId },
               transaction,
             }
           );
@@ -597,11 +619,11 @@ export const processApprovalQuery = async (
       if (entityType === "file" && entityId) {
         // Update file review_status to 'approved'
         await sequelize.query(
-          `UPDATE "${tenantId}".files
+          `UPDATE files
            SET review_status = 'approved', updated_at = NOW()
-           WHERE id = :entityId`,
+           WHERE organization_id = :organizationId AND id = :entityId`,
           {
-            replacements: { entityId },
+            replacements: { organizationId, entityId },
             transaction,
           }
         );
@@ -621,15 +643,16 @@ export const processApprovalQuery = async (
  */
 export const withdrawApprovalRequestQuery = async (
   requestId: number,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<void> => {
   await sequelize.query(
-    `UPDATE "${tenantId}".approval_requests
+    `UPDATE approval_requests
      SET status = :status, updated_at = NOW()
-     WHERE id = :requestId`,
+     WHERE organization_id = :organizationId AND id = :requestId`,
     {
       replacements: {
+        organizationId,
         requestId,
         status: ApprovalRequestStatus.WITHDRAWN,
       },
@@ -644,18 +667,20 @@ export const withdrawApprovalRequestQuery = async (
 export const getPendingApprovalRequestIdQuery = async (
   entityId: number,
   entityType: string,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ): Promise<number | null> => {
   const results = await sequelize.query(
     `SELECT id
-     FROM "${tenantId}".approval_requests
-     WHERE entity_id = :entityId
+     FROM approval_requests
+     WHERE organization_id = :organizationId
+       AND entity_id = :entityId
        AND entity_type = :entityType
        AND status = :status
      LIMIT 1`,
     {
       replacements: {
+        organizationId,
         entityId,
         entityType,
         status: ApprovalRequestStatus.PENDING,
@@ -677,17 +702,19 @@ export const getPendingApprovalRequestIdQuery = async (
 export const hasPendingApprovalQuery = async (
   entityId: number,
   entityType: string,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ): Promise<boolean> => {
   const results = await sequelize.query(
     `SELECT COUNT(*) as count
-     FROM "${tenantId}".approval_requests
-     WHERE entity_id = :entityId
+     FROM approval_requests
+     WHERE organization_id = :organizationId
+       AND entity_id = :entityId
        AND entity_type = :entityType
        AND status = :status`,
     {
       replacements: {
+        organizationId,
         entityId,
         entityType,
         status: ApprovalRequestStatus.PENDING,
@@ -708,19 +735,21 @@ export const hasPendingApprovalQuery = async (
 export const getApprovalStatusQuery = async (
   entityId: number,
   entityType: string,
-  tenantId: string,
+  organizationId: number,
   transaction: Transaction | null = null
 ): Promise<'pending' | 'rejected' | null> => {
   const results = await sequelize.query(
     `SELECT status
-     FROM "${tenantId}".approval_requests
-     WHERE entity_id = :entityId
+     FROM approval_requests
+     WHERE organization_id = :organizationId
+       AND entity_id = :entityId
        AND entity_type = :entityType
        AND status IN (:pendingStatus, :rejectedStatus)
      ORDER BY updated_at DESC
      LIMIT 1`,
     {
       replacements: {
+        organizationId,
         entityId,
         entityType,
         pendingStatus: ApprovalRequestStatus.PENDING,
@@ -751,7 +780,7 @@ export const getApprovalStatusQuery = async (
  */
 export const rejectApprovalRequestOnEntityDelete = async (
   approvalRequestId: number,
-  tenantId: string,
+  organizationId: number,
   reason: string = "The associated entity has been deleted."
 ): Promise<NotificationInfo | null> => {
   const transaction = await sequelize.transaction();
@@ -760,10 +789,10 @@ export const rejectApprovalRequestOnEntityDelete = async (
     // Get the approval request
     const [request] = await sequelize.query(
       `SELECT id, request_name, requested_by, status
-       FROM "${tenantId}".approval_requests
-       WHERE id = :requestId`,
+       FROM approval_requests
+       WHERE organization_id = :organizationId AND id = :requestId`,
       {
-        replacements: { requestId: approvalRequestId },
+        replacements: { organizationId, requestId: approvalRequestId },
         type: "SELECT",
         transaction,
       }
@@ -776,11 +805,12 @@ export const rejectApprovalRequestOnEntityDelete = async (
 
     // Update request status to Rejected
     await sequelize.query(
-      `UPDATE "${tenantId}".approval_requests
+      `UPDATE approval_requests
        SET status = :status, updated_at = NOW()
-       WHERE id = :requestId`,
+       WHERE organization_id = :organizationId AND id = :requestId`,
       {
         replacements: {
+          organizationId,
           status: ApprovalRequestStatus.REJECTED,
           requestId: approvalRequestId,
         },
@@ -790,11 +820,12 @@ export const rejectApprovalRequestOnEntityDelete = async (
 
     // Update all pending steps to Rejected
     await sequelize.query(
-      `UPDATE "${tenantId}".approval_request_steps
+      `UPDATE approval_request_steps
        SET status = :status, date_completed = NOW()
-       WHERE request_id = :requestId AND status = :pendingStatus`,
+       WHERE organization_id = :organizationId AND request_id = :requestId AND status = :pendingStatus`,
       {
         replacements: {
+          organizationId,
           status: ApprovalStepStatus.REJECTED,
           requestId: approvalRequestId,
           pendingStatus: ApprovalStepStatus.PENDING,
@@ -805,13 +836,15 @@ export const rejectApprovalRequestOnEntityDelete = async (
 
     // Update all pending step approvals with the rejection reason
     await sequelize.query(
-      `UPDATE "${tenantId}".approval_request_step_approvals
+      `UPDATE approval_request_step_approvals
        SET status = :status, comments = :reason, date_responded = NOW()
-       WHERE request_step_id IN (
-         SELECT id FROM "${tenantId}".approval_request_steps WHERE request_id = :requestId
-       ) AND status = :pendingStatus`,
+       WHERE organization_id = :organizationId
+         AND request_step_id IN (
+           SELECT id FROM approval_request_steps WHERE organization_id = :organizationId AND request_id = :requestId
+         ) AND status = :pendingStatus`,
       {
         replacements: {
+          organizationId,
           status: ApprovalResult.REJECTED,
           reason,
           requestId: approvalRequestId,
@@ -828,7 +861,7 @@ export const rejectApprovalRequestOnEntityDelete = async (
     // Return notification info to notify the requester
     return {
       type: 'requester_rejected',
-      tenantId,
+      organizationId,
       requestId: approvalRequestId,
       requesterId: request.requested_by,
       requestName: request.request_name,

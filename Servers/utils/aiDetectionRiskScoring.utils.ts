@@ -11,12 +11,12 @@ import { QueryTypes } from "sequelize";
 import { DimensionKey, DEFAULT_DIMENSION_WEIGHTS } from "../config/riskScoringConfig";
 
 // ============================================================================
-// Tenant ID Validation
+// Organization ID Validation
 // ============================================================================
 
-function validateTenantId(tenantId: string): void {
-  if (!tenantId || !/^[a-zA-Z0-9]{10}$/.test(tenantId)) {
-    throw new Error(`Invalid tenant identifier format: ${tenantId}`);
+function validateOrganizationId(organizationId: number): void {
+  if (!organizationId || !Number.isInteger(organizationId) || organizationId <= 0) {
+    throw new Error(`Invalid organization identifier: ${organizationId}`);
   }
 }
 
@@ -24,11 +24,34 @@ function validateTenantId(tenantId: string): void {
 // Types
 // ============================================================================
 
+export type VulnerabilityTypeKey =
+  | "prompt_injection"
+  | "pii_exposure"
+  | "excessive_agency"
+  | "jailbreak_risk"
+  | "training_data_poisoning"
+  | "model_dos"
+  | "supply_chain"
+  | "insecure_plugin"
+  | "overreliance"
+  | "model_theft";
+
 export interface RiskScoringConfig {
   id: number;
   llm_enabled: boolean;
   llm_key_id: number | null;
   dimension_weights: Record<DimensionKey, number>;
+  vulnerability_scan_enabled: boolean;
+  vulnerability_types_enabled: Record<VulnerabilityTypeKey, boolean>;
+  updated_by: number | null;
+  updated_at: string;
+}
+
+export interface VulnerabilityConfig {
+  id: number;
+  organization_id: number;
+  vulnerability_scan_enabled: boolean;
+  vulnerability_types_enabled: Record<VulnerabilityTypeKey, boolean> | null;
   updated_by: number | null;
   updated_at: string;
 }
@@ -46,91 +69,148 @@ export interface FindingForScoring {
   file_count: number;
 }
 
+function defaultVulnerabilityTypesEnabled(): Record<VulnerabilityTypeKey, boolean> {
+  return {
+    prompt_injection: true,
+    pii_exposure: true,
+    excessive_agency: true,
+    jailbreak_risk: true,
+    training_data_poisoning: true,
+    model_dos: true,
+    supply_chain: true,
+    insecure_plugin: true,
+    overreliance: true,
+    model_theft: true,
+  };
+}
+
 // ============================================================================
 // Risk Scoring Config Queries
 // ============================================================================
 
 /**
- * Get risk scoring config for a tenant. Returns null if no config exists.
+ * Get risk scoring config for an organization. Returns null if no config exists.
  */
 export async function getRiskScoringConfigQuery(
-  tenantId: string
+  organizationId: number
 ): Promise<RiskScoringConfig | null> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    SELECT * FROM "${tenantId}".ai_detection_risk_scoring_config
+    SELECT id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at
+    FROM ai_detection_risk_scoring_config
+    WHERE organization_id = :organizationId
     ORDER BY id DESC LIMIT 1;
   `;
 
   const results = await sequelize.query(query, {
+    replacements: { organizationId },
     type: QueryTypes.SELECT,
   });
 
-  return (results as RiskScoringConfig[])[0] || null;
+  const config = (results as RiskScoringConfig[])[0] || null;
+  if (!config) return null;
+
+  // Merge vulnerability config from separate table
+  const vulnConfig = await getVulnerabilityConfigQuery(organizationId);
+  config.vulnerability_scan_enabled = vulnConfig?.vulnerability_scan_enabled ?? false;
+  config.vulnerability_types_enabled = vulnConfig?.vulnerability_types_enabled ?? defaultVulnerabilityTypesEnabled();
+
+  return config;
 }
 
 /**
- * Upsert risk scoring config for a tenant.
+ * Get vulnerability scan config for an organization from the dedicated table.
+ */
+export async function getVulnerabilityConfigQuery(
+  organizationId: number
+): Promise<VulnerabilityConfig | null> {
+  validateOrganizationId(organizationId);
+  const query = `
+    SELECT id, organization_id, vulnerability_scan_enabled, vulnerability_types_enabled, updated_by, updated_at
+    FROM ai_detection_vulnerability_config
+    WHERE organization_id = :organizationId
+    LIMIT 1;
+  `;
+
+  const results = await sequelize.query(query, {
+    replacements: { organizationId },
+    type: QueryTypes.SELECT,
+  });
+
+  return (results as VulnerabilityConfig[])[0] || null;
+}
+
+/**
+ * Upsert risk scoring config for an organization.
  * If config exists, update it. Otherwise create it.
  */
 export async function upsertRiskScoringConfigQuery(
-  tenantId: string,
+  organizationId: number,
   data: {
     llm_enabled?: boolean;
     llm_key_id?: number | null;
     dimension_weights?: Record<DimensionKey, number>;
+    vulnerability_scan_enabled?: boolean;
+    vulnerability_types_enabled?: Record<VulnerabilityTypeKey, boolean>;
     updated_by: number;
   }
 ): Promise<RiskScoringConfig> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
 
-  const existing = await getRiskScoringConfigQuery(tenantId);
+  // Fetch existing config from the base risk scoring table (without merged vuln config)
+  const baseQuery = `
+    SELECT id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at
+    FROM ai_detection_risk_scoring_config
+    WHERE organization_id = :organizationId
+    ORDER BY id DESC LIMIT 1;
+  `;
+  const baseResults = await sequelize.query(baseQuery, {
+    replacements: { organizationId },
+    type: QueryTypes.SELECT,
+  });
+  const existing = (baseResults as RiskScoringConfig[])[0] || null;
+
+  let config: RiskScoringConfig;
 
   if (existing) {
-    const setClauses: string[] = ["updated_at = NOW()"];
-    const replacements: Record<string, unknown> = {
-      id: existing.id,
-      updated_by: data.updated_by,
-    };
-    setClauses.push("updated_by = :updated_by");
-
-    if (data.llm_enabled !== undefined) {
-      setClauses.push("llm_enabled = :llm_enabled");
-      replacements.llm_enabled = data.llm_enabled;
-    }
-    if (data.llm_key_id !== undefined) {
-      setClauses.push("llm_key_id = :llm_key_id");
-      replacements.llm_key_id = data.llm_key_id;
-    }
-    if (data.dimension_weights !== undefined) {
-      setClauses.push("dimension_weights = :dimension_weights");
-      replacements.dimension_weights = JSON.stringify(data.dimension_weights);
-    }
-
     const query = `
-      UPDATE "${tenantId}".ai_detection_risk_scoring_config
-      SET ${setClauses.join(", ")}
-      WHERE id = :id
-      RETURNING *;
+      UPDATE ai_detection_risk_scoring_config
+      SET
+        llm_enabled = COALESCE(:llm_enabled, llm_enabled),
+        llm_key_id = CASE WHEN :has_llm_key_id THEN :llm_key_id ELSE llm_key_id END,
+        dimension_weights = COALESCE(:dimension_weights, dimension_weights),
+        updated_by = :updated_by,
+        updated_at = NOW()
+      WHERE id = :id AND organization_id = :organizationId
+      RETURNING id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at;
     `;
 
     const results = await sequelize.query(query, {
-      replacements,
+      replacements: {
+        id: existing.id,
+        organizationId,
+        llm_enabled: data.llm_enabled ?? null,
+        has_llm_key_id: data.llm_key_id !== undefined,
+        llm_key_id: data.llm_key_id ?? null,
+        dimension_weights: data.dimension_weights ? JSON.stringify(data.dimension_weights) : null,
+        updated_by: data.updated_by,
+      },
       type: QueryTypes.SELECT,
     });
 
-    return (results as RiskScoringConfig[])[0];
+    config = (results as RiskScoringConfig[])[0];
   } else {
     const query = `
-      INSERT INTO "${tenantId}".ai_detection_risk_scoring_config
-        (llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at)
+      INSERT INTO ai_detection_risk_scoring_config
+        (organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at)
       VALUES
-        (:llm_enabled, :llm_key_id, :dimension_weights, :updated_by, NOW())
-      RETURNING *;
+        (:organizationId, :llm_enabled, :llm_key_id, :dimension_weights, :updated_by, NOW())
+      RETURNING id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at;
     `;
 
     const [results] = await sequelize.query(query, {
       replacements: {
+        organizationId,
         llm_enabled: data.llm_enabled ?? false,
         llm_key_id: data.llm_key_id ?? null,
         dimension_weights: JSON.stringify(
@@ -140,8 +220,66 @@ export async function upsertRiskScoringConfigQuery(
       },
     });
 
-    return (results as RiskScoringConfig[])[0];
+    config = (results as RiskScoringConfig[])[0];
   }
+
+  // Upsert vulnerability scan config in the dedicated table
+  if (data.vulnerability_scan_enabled !== undefined || data.vulnerability_types_enabled !== undefined) {
+    await upsertVulnerabilityConfigQuery(organizationId, {
+      vulnerability_scan_enabled: data.vulnerability_scan_enabled,
+      vulnerability_types_enabled: data.vulnerability_types_enabled,
+      updated_by: data.updated_by,
+    });
+  }
+
+  // Merge vulnerability config into the returned object
+  const vulnConfig = await getVulnerabilityConfigQuery(organizationId);
+  config.vulnerability_scan_enabled = vulnConfig?.vulnerability_scan_enabled ?? false;
+  config.vulnerability_types_enabled = vulnConfig?.vulnerability_types_enabled ?? defaultVulnerabilityTypesEnabled();
+
+  return config;
+}
+
+/**
+ * Upsert vulnerability scan config in the dedicated table.
+ */
+async function upsertVulnerabilityConfigQuery(
+  organizationId: number,
+  data: {
+    vulnerability_scan_enabled?: boolean;
+    vulnerability_types_enabled?: Record<VulnerabilityTypeKey, boolean>;
+    updated_by: number;
+  }
+): Promise<void> {
+  const insertVulnEnabled = data.vulnerability_scan_enabled ?? false;
+  const insertTypesEnabled = data.vulnerability_types_enabled
+    ? JSON.stringify(data.vulnerability_types_enabled)
+    : null;
+
+  const query = `
+    INSERT INTO ai_detection_vulnerability_config
+      (organization_id, vulnerability_scan_enabled, vulnerability_types_enabled, updated_by, updated_at)
+    VALUES
+      (:organizationId, :insert_vuln_enabled, :insert_types_enabled, :updated_by, NOW())
+    ON CONFLICT (organization_id) DO UPDATE SET
+      vulnerability_scan_enabled = COALESCE(:vulnerability_scan_enabled, ai_detection_vulnerability_config.vulnerability_scan_enabled),
+      vulnerability_types_enabled = COALESCE(:vulnerability_types_enabled, ai_detection_vulnerability_config.vulnerability_types_enabled),
+      updated_by = :updated_by,
+      updated_at = NOW();
+  `;
+
+  await sequelize.query(query, {
+    replacements: {
+      organizationId,
+      insert_vuln_enabled: insertVulnEnabled,
+      insert_types_enabled: insertTypesEnabled,
+      vulnerability_scan_enabled: data.vulnerability_scan_enabled ?? null,
+      vulnerability_types_enabled: data.vulnerability_types_enabled
+        ? JSON.stringify(data.vulnerability_types_enabled)
+        : null,
+      updated_by: data.updated_by,
+    },
+  });
 }
 
 // ============================================================================
@@ -156,18 +294,18 @@ export async function updateScanRiskScoreQuery(
   score: number,
   grade: string,
   details: Record<string, unknown>,
-  tenantId: string
+  organizationId: number
 ): Promise<void> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
-    UPDATE "${tenantId}".ai_detection_scans
+    UPDATE ai_detection_scans
     SET
       risk_score = :score,
       risk_score_grade = :grade,
       risk_score_details = :details,
       risk_score_calculated_at = NOW(),
       updated_at = NOW()
-    WHERE id = :scanId;
+    WHERE id = :scanId AND organization_id = :organizationId;
   `;
 
   await sequelize.query(query, {
@@ -176,6 +314,7 @@ export async function updateScanRiskScoreQuery(
       score,
       grade,
       details: JSON.stringify(details),
+      organizationId,
     },
     type: QueryTypes.UPDATE,
   });
@@ -190,9 +329,9 @@ export async function updateScanRiskScoreQuery(
  */
 export async function getAllFindingsForScoringQuery(
   scanId: number,
-  tenantId: string
+  organizationId: number
 ): Promise<FindingForScoring[]> {
-  validateTenantId(tenantId);
+  validateOrganizationId(organizationId);
   const query = `
     SELECT
       id,
@@ -205,8 +344,8 @@ export async function getAllFindingsForScoringQuery(
       name,
       category,
       file_count
-    FROM "${tenantId}".ai_detection_findings
-    WHERE scan_id = :scanId
+    FROM ai_detection_findings
+    WHERE scan_id = :scanId AND organization_id = :organizationId
     ORDER BY
       CASE confidence
         WHEN 'high' THEN 1
@@ -217,7 +356,7 @@ export async function getAllFindingsForScoringQuery(
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { scanId },
+    replacements: { scanId, organizationId },
     type: QueryTypes.SELECT,
   });
 

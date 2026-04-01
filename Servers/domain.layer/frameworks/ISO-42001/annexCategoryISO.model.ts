@@ -15,7 +15,7 @@ export type AnnexCategoryISO = {
   is_applicable: boolean;
   justification_for_exclusion: string;
   implementation_description: string;
-  evidence_links: Object[];
+  // NOTE: evidence_links are now stored in file_entity_links table
   status: Status;
   owner: number;
   reviewer: number;
@@ -54,10 +54,7 @@ export class AnnexCategoryISOModel extends Model<AnnexCategoryISO> {
   })
   implementation_description?: string;
 
-  @Column({
-    type: DataType.JSONB,
-  })
-  evidence_links?: Object[];
+  // NOTE: evidence_links are now stored in file_entity_links table
 
   @Column({
     type: DataType.ENUM(...STATUSES),

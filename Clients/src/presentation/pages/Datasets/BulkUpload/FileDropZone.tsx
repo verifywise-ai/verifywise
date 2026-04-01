@@ -7,6 +7,7 @@ import {
   Alert,
 } from "@mui/material";
 import { Upload, X, FileSpreadsheet } from "lucide-react";
+import { brand, text } from "../../../themes/palette";
 
 const MAX_FILES = 20;
 const MAX_SIZE = 30 * 1024 * 1024; // 30MB
@@ -110,23 +111,23 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         onClick={() => inputRef.current?.click()}
         sx={{
           border: "1.5px dashed",
-          borderColor: dragOver ? "#13715B" : "#D0D5DD",
+          borderColor: dragOver ? "brand.primary" : "border.dark",
           borderRadius: "8px",
           p: "32px",
           textAlign: "center",
           cursor: "pointer",
           backgroundColor: dragOver ? "#F2F4F7" : "#FCFCFD",
           transition: "all 0.2s",
-          "&:hover": { borderColor: "#13715B", backgroundColor: "#F2F4F7" },
+          "&:hover": { borderColor: "brand.primary", backgroundColor: "#F2F4F7" },
         }}
       >
-        <Upload size={32} color="#667085" />
+        <Upload size={32} color={text.icon} />
         <Typography
           sx={{
             mt: 1,
             fontSize: 13,
             fontWeight: 500,
-            color: "#344054",
+            color: "text.secondary",
           }}
         >
           Drag & drop files here, or click to browse
@@ -134,7 +135,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         <Typography
           sx={{
             fontSize: 12,
-            color: "#475467",
+            color: "text.tertiary",
           }}
         >
           CSV, XLSX, XLS — max {MAX_FILES} files, {formatSize(MAX_SIZE)} each
@@ -158,7 +159,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
       {/* File list */}
       {files.length > 0 && (
         <Stack spacing="8px">
-          <Typography sx={{ fontSize: 13, fontWeight: 500, color: "#344054" }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.secondary" }}>
             {files.length} file{files.length !== 1 ? "s" : ""} selected
           </Typography>
           {files.map((file, index) => (
@@ -169,18 +170,18 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
               sx={{
                 p: "8px 12px",
                 borderRadius: "6px",
-                backgroundColor: "#F9FAFB",
+                backgroundColor: "background.accent",
                 gap: "8px",
               }}
             >
-              <FileSpreadsheet size={18} color="#13715B" />
-              <Typography sx={{ flex: 1, fontSize: 13, fontWeight: 400, color: "#344054" }}>
+              <FileSpreadsheet size={18} color={brand.primary} />
+              <Typography sx={{ flex: 1, fontSize: 13, fontWeight: 400, color: "text.secondary" }}>
                 {file.name}
               </Typography>
-              <Typography sx={{ fontSize: 12, color: "#475467" }}>
+              <Typography sx={{ fontSize: 12, color: "text.tertiary" }}>
                 {formatSize(file.size)}
               </Typography>
-              <Typography sx={{ fontSize: 12, color: "#475467" }}>
+              <Typography sx={{ fontSize: 12, color: "text.tertiary" }}>
                 {getExtension(file.name).replace(".", "").toUpperCase()}
               </Typography>
               <IconButton size="small" onClick={() => handleRemove(index)}>

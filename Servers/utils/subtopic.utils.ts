@@ -5,11 +5,12 @@ import { QueryTypes, Transaction } from "sequelize";
 import { ISubtopic } from "../domain.layer/interfaces/i.subtopic";
 
 export const getAllSubtopicsQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<ISubtopic[]> => {
   const subtopics = await sequelize.query(
-    `SELECT * FROM "${tenant}".subtopics ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM subtopics WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: SubtopicModel,
     }
@@ -19,12 +20,12 @@ export const getAllSubtopicsQuery = async (
 
 export const getSubtopicByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<ISubtopic | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".subtopics WHERE id = :id`,
+    `SELECT * FROM subtopics WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: SubtopicModel,
     }
@@ -34,13 +35,13 @@ export const getSubtopicByIdQuery = async (
 
 export const createNewSubtopicQuery = async (
   subtopic: SubtopicModel,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<SubtopicModel> => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".subtopics (topic_id, title) VALUES (:topic_id, :title) RETURNING *`,
+    `INSERT INTO subtopics (organization_id, topic_id, title) VALUES (:organizationId, :topic_id, :title) RETURNING *`,
     {
-      replacements: { topic_id: subtopic.topic_id, title: subtopic.title },
+      replacements: { organizationId, topic_id: subtopic.topic_id, title: subtopic.title },
       mapToModel: true,
       model: SubtopicModel,
       // type: QueryTypes.INSERT
@@ -53,10 +54,10 @@ export const createNewSubtopicQuery = async (
 export const updateSubtopicByIdQuery = async (
   id: number,
   subtopic: Partial<SubtopicModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<SubtopicModel | null> => {
-  const updateSubTopic: Partial<Record<keyof SubtopicModel, any>> = {};
+  const updateSubTopic: Partial<Record<keyof SubtopicModel, any>> & { organizationId?: number } = {};
   const setClause = ["title"]
     .filter((f) => {
       if (
@@ -72,9 +73,10 @@ export const updateSubtopicByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE "${tenant}".subtopics SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE subtopics SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateSubTopic.id = id;
+  updateSubTopic.organizationId = organizationId;
 
   const result = await sequelize.query(query, {
     replacements: updateSubTopic,
@@ -89,13 +91,13 @@ export const updateSubtopicByIdQuery = async (
 
 export const deleteSubtopicByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".subtopics WHERE id = :id RETURNING *`,
+    `DELETE FROM subtopics WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: SubtopicModel,
       type: QueryTypes.DELETE,
@@ -107,12 +109,12 @@ export const deleteSubtopicByIdQuery = async (
 
 export const getSubTopicByTopicIdQuery = async (
   topicId: number,
-  tenant: string
+  organizationId: number
 ): Promise<ISubtopic[]> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".subtopics WHERE topic_id = :topic_id ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM subtopics WHERE organization_id = :organizationId AND topic_id = :topic_id ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { topic_id: topicId },
+      replacements: { organizationId, topic_id: topicId },
       mapToModel: true,
       model: SubtopicModel,
     }
@@ -140,14 +142,15 @@ export const createNewSubTopicsQuery = async (
     }[];
   }[],
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const createdSubTopics = [];
-  let query = `INSERT INTO "${tenant}".subtopics(topic_id, title, order_no) VALUES (:topic_id, :title, :order_no) RETURNING *;`;
+  let query = `INSERT INTO subtopics(organization_id, topic_id, title, order_no) VALUES (:organizationId, :topic_id, :title, :order_no) RETURNING *;`;
   for (let subTopicStruct of subTopics) {
     const result = await sequelize.query(query, {
       replacements: {
+        organizationId,
         topic_id: topicId,
         title: subTopicStruct.title,
         order_no: subTopicStruct.order_no,
@@ -161,7 +164,7 @@ export const createNewSubTopicsQuery = async (
       subtopic_id,
       subTopicStruct.questions,
       enable_ai_data_insertion,
-      tenant,
+      organizationId,
       transaction
     );
     createdSubTopics.push({ ...result[0].dataValues, questions });

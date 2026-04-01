@@ -9,16 +9,17 @@ import { DatasetModel } from "../domain.layer/models/dataset/dataset.model";
 export const recordDatasetCreation = async (
   datasetId: number,
   userId: number | undefined,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ) => {
   try {
     await sequelize.query(
-      `INSERT INTO "${tenant}".dataset_change_histories
-        (dataset_id, action, changed_by_user_id, changed_at)
-       VALUES (:dataset_id, 'created', :user_id, NOW())`,
+      `INSERT INTO dataset_change_histories
+        (organization_id, dataset_id, action, changed_by_user_id, changed_at)
+       VALUES (:organization_id, :dataset_id, 'created', :user_id, NOW())`,
       {
         replacements: {
+          organization_id: organizationId,
           dataset_id: datasetId,
           user_id: userId || null,
         },
@@ -37,16 +38,17 @@ export const recordDatasetCreation = async (
 export const recordDatasetDeletion = async (
   datasetId: number,
   userId: number | undefined,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ) => {
   try {
     await sequelize.query(
-      `INSERT INTO "${tenant}".dataset_change_histories
-        (dataset_id, action, changed_by_user_id, changed_at)
-       VALUES (:dataset_id, 'deleted', :user_id, NOW())`,
+      `INSERT INTO dataset_change_histories
+        (organization_id, dataset_id, action, changed_by_user_id, changed_at)
+       VALUES (:organization_id, :dataset_id, 'deleted', :user_id, NOW())`,
       {
         replacements: {
+          organization_id: organizationId,
           dataset_id: datasetId,
           user_id: userId || null,
         },
@@ -112,17 +114,18 @@ export const recordDatasetFieldChanges = async (
   datasetId: number,
   changes: { field: string; oldValue: string; newValue: string }[],
   userId: number | undefined,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ) => {
   try {
     for (const change of changes) {
       await sequelize.query(
-        `INSERT INTO "${tenant}".dataset_change_histories
-          (dataset_id, action, field_name, old_value, new_value, changed_by_user_id, changed_at)
-         VALUES (:dataset_id, 'updated', :field_name, :old_value, :new_value, :user_id, NOW())`,
+        `INSERT INTO dataset_change_histories
+          (organization_id, dataset_id, action, field_name, old_value, new_value, changed_by_user_id, changed_at)
+         VALUES (:organization_id, :dataset_id, 'updated', :field_name, :old_value, :new_value, :user_id, NOW())`,
         {
           replacements: {
+            organization_id: organizationId,
             dataset_id: datasetId,
             field_name: change.field,
             old_value: change.oldValue,
@@ -144,17 +147,17 @@ export const recordDatasetFieldChanges = async (
  */
 export const getDatasetChangeHistory = async (
   datasetId: number,
-  tenant: string
+  organizationId: number
 ) => {
   try {
     const history = await sequelize.query(
       `SELECT dch.*, u.name as changed_by_name
-       FROM "${tenant}".dataset_change_histories dch
-       LEFT JOIN public.users u ON dch.changed_by_user_id = u.id
-       WHERE dch.dataset_id = :dataset_id
+       FROM dataset_change_histories dch
+       LEFT JOIN users u ON dch.changed_by_user_id = u.id
+       WHERE dch.dataset_id = :dataset_id AND dch.organization_id = :organization_id
        ORDER BY dch.changed_at DESC`,
       {
-        replacements: { dataset_id: datasetId },
+        replacements: { dataset_id: datasetId, organization_id: organizationId },
         mapToModel: true,
         model: DatasetChangeHistoryModel,
       }

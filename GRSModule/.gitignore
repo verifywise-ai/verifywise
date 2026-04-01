@@ -6,5 +6,5 @@ build/
 # Virtual environments
 .venv/
 
-# Folders
+# Dataset versions — tracked on data/grs_scenarios_v0.1 branch only
 datasets/

@@ -123,12 +123,6 @@ const DIMENSION_CONFIGS = [
 // ============================================================================
 
 const TIER_THRESHOLDS: Record<string, Array<{ max: number; tier: string }>> = {
-  generic: [
-    { max: 25, tier: "Low" },
-    { max: 50, tier: "Medium" },
-    { max: 75, tier: "High" },
-    { max: 100, tier: "Critical" },
-  ],
   eu_ai_act: [
     { max: 25, tier: "Minimal" },
     { max: 50, tier: "Limited" },
@@ -236,14 +230,14 @@ export async function enhanceWithLLM(
   submissionData: Record<string, unknown>,
   schema: FormSchema,
   llmKeyId: number,
-  tenant: string
+  organizationId: number
 ): Promise<RiskDimension[]> {
   try {
-    const keys = await getLLMKeysWithKeyQuery(tenant);
+    const keys = await getLLMKeysWithKeyQuery(organizationId);
     const llmKey = keys.find((k: any) => k.id === llmKeyId);
 
     if (!llmKey) {
-      logger.warn(`LLM key ${llmKeyId} not found for tenant ${tenant}`);
+      logger.warn(`LLM key ${llmKeyId} not found for organization ${organizationId}`);
       return dimensions;
     }
 
@@ -338,7 +332,7 @@ For each dimension, provide a refined score adjustment (-15 to +15). Respond ONL
 // ============================================================================
 
 function getTierFromScore(score: number, tierSystem: string): string {
-  const thresholds = TIER_THRESHOLDS[tierSystem] || TIER_THRESHOLDS.generic;
+  const thresholds = TIER_THRESHOLDS[tierSystem] || TIER_THRESHOLDS.eu_ai_act;
   for (const threshold of thresholds) {
     if (score <= threshold.max) return threshold.tier;
   }
@@ -348,9 +342,9 @@ function getTierFromScore(score: number, tierSystem: string): string {
 export async function calculateSubmissionRisk(
   submissionData: Record<string, unknown>,
   schema: FormSchema,
-  tierSystem: string = "generic",
+  tierSystem: string = "eu_ai_act",
   llmKeyId?: number | null,
-  tenant?: string
+  organizationId?: number
 ): Promise<RiskResult> {
   // Step 1: Rule-based scoring
   let dimensions = scoreSubmissionRuleBased(submissionData, schema);
@@ -358,9 +352,9 @@ export async function calculateSubmissionRisk(
   let llmEnhanced = false;
 
   // Step 2: LLM enhancement (optional, non-blocking)
-  if (llmKeyId && tenant) {
+  if (llmKeyId && organizationId) {
     try {
-      dimensions = await enhanceWithLLM(dimensions, submissionData, schema, llmKeyId, tenant);
+      dimensions = await enhanceWithLLM(dimensions, submissionData, schema, llmKeyId, organizationId);
       llmEnhanced = true;
     } catch (error) {
       logger.error("LLM enhancement failed, using rule-based scores:", error);

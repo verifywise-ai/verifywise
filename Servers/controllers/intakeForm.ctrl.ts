@@ -23,6 +23,7 @@ import {
   updateSubmissionRiskQuery,
   updateSubmissionRiskOverrideQuery,
   getTenantByPublicId,
+  getSubmissionByEntityQuery,
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
@@ -48,6 +49,7 @@ import {
   generateSuggestedQuestions,
   generateFieldGuidance,
 } from "../services/intakeLLM.service";
+import { getCompanyLogoQuery } from "../utils/aiTrustCentre.utils";
 
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string =>
@@ -122,8 +124,9 @@ function validateFormData(
     const value = formData[field.id];
     const isEmpty = value === undefined || value === null || value === "";
 
-    // Required check
-    if (field.required && isEmpty) {
+    // Required check — field.required (backend interface) or field.validation.required (frontend schema)
+    const isRequired = field.required || field.validation?.required;
+    if (isRequired && isEmpty) {
       errors.push(`"${field.label}" is required`);
       continue;
     }
@@ -258,11 +261,11 @@ export async function getAllIntakeForms(req: Request, res: Response) {
     functionName: "getAllIntakeForms",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const forms = await getAllIntakeFormsQuery(req.tenantId!);
+    const forms = await getAllIntakeFormsQuery(req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](forms));
   } catch (error) {
     await logFailure({
@@ -272,7 +275,7 @@ export async function getAllIntakeForms(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -292,11 +295,11 @@ export async function getIntakeFormById(req: Request, res: Response) {
     functionName: "getIntakeFormById",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const form = await getIntakeFormByIdQuery(formId, req.tenantId!);
+    const form = await getIntakeFormByIdQuery(formId, req.organizationId!);
 
     if (!form) {
       return res.status(404).json(STATUS_CODE[404]("Intake form not found"));
@@ -311,7 +314,7 @@ export async function getIntakeFormById(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -326,7 +329,7 @@ export async function createIntakeForm(req: Request, res: Response) {
     functionName: "createIntakeForm",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
@@ -371,7 +374,7 @@ export async function createIntakeForm(req: Request, res: Response) {
         designSettings,
         createdBy: req.userId!,
       },
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -383,7 +386,7 @@ export async function createIntakeForm(req: Request, res: Response) {
       functionName: "createIntakeForm",
       fileName: "intakeForm.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](form));
@@ -396,7 +399,7 @@ export async function createIntakeForm(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -416,13 +419,13 @@ export async function updateIntakeForm(req: Request, res: Response) {
     functionName: "updateIntakeForm",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
 
   try {
-    const existingForm = await getIntakeFormByIdQuery(formId, req.tenantId!);
+    const existingForm = await getIntakeFormByIdQuery(formId, req.organizationId!);
 
     if (!existingForm) {
       await transaction.rollback();
@@ -445,11 +448,6 @@ export async function updateIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Invalid entity type"));
     }
 
-    if (riskTierSystem && !["generic", "eu_ai_act", "nist"].includes(riskTierSystem)) {
-      await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Invalid risk tier system"));
-    }
-
     const form = await updateIntakeFormQuery(
       formId,
       {
@@ -468,7 +466,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
         suggestedQuestionsEnabled,
         designSettings,
       },
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -480,7 +478,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
       functionName: "updateIntakeForm",
       fileName: "intakeForm.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](form));
@@ -493,7 +491,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -513,13 +511,13 @@ export async function deleteIntakeForm(req: Request, res: Response) {
     functionName: "deleteIntakeForm",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
 
   try {
-    const existingForm = await getIntakeFormByIdQuery(formId, req.tenantId!);
+    const existingForm = await getIntakeFormByIdQuery(formId, req.organizationId!);
 
     if (!existingForm) {
       await transaction.rollback();
@@ -531,7 +529,7 @@ export async function deleteIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Active forms cannot be deleted. Archive the form first."));
     }
 
-    await deleteIntakeFormQuery(formId, req.tenantId!, transaction);
+    await deleteIntakeFormQuery(formId, req.organizationId!, transaction);
     await transaction.commit();
 
     await logSuccess({
@@ -540,7 +538,7 @@ export async function deleteIntakeForm(req: Request, res: Response) {
       functionName: "deleteIntakeForm",
       fileName: "intakeForm.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200]({ message: "Form deleted successfully" }));
@@ -553,7 +551,7 @@ export async function deleteIntakeForm(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -573,20 +571,20 @@ export async function archiveIntakeForm(req: Request, res: Response) {
     functionName: "archiveIntakeForm",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
 
   try {
-    const existingForm = await getIntakeFormByIdQuery(formId, req.tenantId!);
+    const existingForm = await getIntakeFormByIdQuery(formId, req.organizationId!);
 
     if (!existingForm) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Intake form not found"));
     }
 
-    const form = await archiveIntakeFormQuery(formId, req.tenantId!, transaction);
+    const form = await archiveIntakeFormQuery(formId, req.organizationId!, transaction);
     await transaction.commit();
 
     await logSuccess({
@@ -595,7 +593,7 @@ export async function archiveIntakeForm(req: Request, res: Response) {
       functionName: "archiveIntakeForm",
       fileName: "intakeForm.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](form));
@@ -608,7 +606,7 @@ export async function archiveIntakeForm(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -627,11 +625,12 @@ export async function getPendingSubmissions(req: Request, res: Response) {
     functionName: "getPendingSubmissions",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const submissions = await getPendingSubmissionsQuery(req.tenantId!);
+    const status = req.query.status as IntakeSubmissionStatus | undefined;
+    const submissions = await getPendingSubmissionsQuery(req.organizationId!, status);
     return res.status(200).json(STATUS_CODE[200](submissions));
   } catch (error) {
     await logFailure({
@@ -641,7 +640,7 @@ export async function getPendingSubmissions(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -662,11 +661,11 @@ export async function getFormSubmissions(req: Request, res: Response) {
     functionName: "getFormSubmissions",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const submissions = await getSubmissionsByFormIdQuery(formId, req.tenantId!, status);
+    const submissions = await getSubmissionsByFormIdQuery(formId, req.organizationId!, status);
     return res.status(200).json(STATUS_CODE[200](submissions));
   } catch (error) {
     await logFailure({
@@ -676,7 +675,7 @@ export async function getFormSubmissions(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -696,11 +695,11 @@ export async function getSubmissionById(req: Request, res: Response) {
     functionName: "getSubmissionById",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const submission = await getSubmissionByIdQuery(submissionId, req.tenantId!);
+    const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!);
 
     if (!submission) {
       return res.status(404).json(STATUS_CODE[404]("Submission not found"));
@@ -715,7 +714,7 @@ export async function getSubmissionById(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -730,11 +729,11 @@ export async function getSubmissionStats(req: Request, res: Response) {
     functionName: "getSubmissionStats",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
-    const stats = await getSubmissionStatsQuery(req.tenantId!);
+    const stats = await getSubmissionStatsQuery(req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](stats));
   } catch (error) {
     await logFailure({
@@ -744,7 +743,7 @@ export async function getSubmissionStats(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -760,12 +759,12 @@ export async function getSubmissionPreview(req: Request, res: Response) {
   }
 
   try {
-    const submission = await getSubmissionByIdQuery(submissionId, req.tenantId!);
+    const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!);
     if (!submission) {
       return res.status(404).json(STATUS_CODE[404]("Submission not found"));
     }
 
-    const form = await getIntakeFormByIdQuery(submission.formId, req.tenantId!);
+    const form = await getIntakeFormByIdQuery(submission.formId, req.organizationId!);
     if (!form) {
       return res.status(404).json(STATUS_CODE[404]("Form not found"));
     }
@@ -797,6 +796,85 @@ export async function getSubmissionPreview(req: Request, res: Response) {
 }
 
 /**
+ * Get the original intake submission for a given entity (project/model).
+ * Returns the full submission data with form schema so the frontend
+ * can render all fields with labels, including unmapped ones.
+ * GET /intake/submissions/by-entity/:entityType/:entityId
+ */
+export async function getSubmissionByEntity(req: Request, res: Response) {
+  const entityType = paramStr(req.params.entityType);
+  const entityId = parseId(req.params.entityId);
+
+  if (!entityType || isNaN(entityId)) {
+    return res.status(400).json(STATUS_CODE[400]("Invalid entity type or ID"));
+  }
+
+  const validEntityTypes = ["use_case", "model"];
+  if (!validEntityTypes.includes(entityType)) {
+    return res.status(400).json(STATUS_CODE[400]("Unsupported entity type"));
+  }
+
+  logProcessing({
+    description: `fetching submission for ${entityType}:${entityId}`,
+    functionName: "getSubmissionByEntity",
+    fileName: "intakeForm.ctrl.ts",
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+
+  try {
+    const result = await getSubmissionByEntityQuery(
+      entityType,
+      entityId,
+      req.organizationId!
+    );
+
+    if (!result) {
+      return res.status(404).json(STATUS_CODE[404]("No intake submission found for this entity"));
+    }
+
+    const { submission, formName, formSchema } = result;
+    const submissionData = submission.data as Record<string, unknown>;
+
+    // Build a structured fields array using the form schema for labels/types
+    const schemaFields = (formSchema as any)?.fields || [];
+    const fields = schemaFields
+      .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+      .map((field: any) => ({
+        fieldId: field.id,
+        label: field.label,
+        type: field.type,
+        value: submissionData[field.id] ?? null,
+        options: field.options || null,
+        entityFieldMapping: field.entityFieldMapping || null,
+        isMapped: Boolean(field.entityFieldMapping),
+      }));
+
+    return res.status(200).json(STATUS_CODE[200]({
+      submissionId: submission.id,
+      formName,
+      submitterName: submission.submitterName,
+      submitterEmail: submission.submitterEmail,
+      submittedAt: submission.createdAt,
+      reviewedAt: submission.reviewedAt,
+      riskTier: submission.riskTier,
+      fields,
+    }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: `failed to fetch submission for ${entityType}:${entityId}`,
+      functionName: "getSubmissionByEntity",
+      fileName: "intakeForm.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
  * Override submission risk assessment
  */
 export async function overrideSubmissionRisk(req: Request, res: Response) {
@@ -812,7 +890,7 @@ export async function overrideSubmissionRisk(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Tier and justification are required"));
     }
 
-    const submission = await getSubmissionByIdQuery(submissionId, req.tenantId!);
+    const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!);
     if (!submission) {
       return res.status(404).json(STATUS_CODE[404]("Submission not found"));
     }
@@ -825,7 +903,7 @@ export async function overrideSubmissionRisk(req: Request, res: Response) {
       overriddenAt: new Date().toISOString(),
     };
 
-    await updateSubmissionRiskOverrideQuery(submissionId, override, req.tenantId!);
+    await updateSubmissionRiskOverrideQuery(submissionId, override, req.organizationId!);
 
     await logSuccess({
       eventType: "Update",
@@ -833,7 +911,7 @@ export async function overrideSubmissionRisk(req: Request, res: Response) {
       functionName: "overrideSubmissionRisk",
       fileName: "intakeForm.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200]({ message: "Risk override applied", override }));
@@ -857,13 +935,13 @@ export async function approveSubmission(req: Request, res: Response) {
     functionName: "approveSubmission",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
 
   try {
-    const submission = await getSubmissionByIdQuery(submissionId, req.tenantId!);
+    const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!, transaction, true);
 
     if (!submission) {
       await transaction.rollback();
@@ -875,7 +953,7 @@ export async function approveSubmission(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Only pending submissions can be approved"));
     }
 
-    const form = await getIntakeFormByIdQuery(submission.formId, req.tenantId!);
+    const form = await getIntakeFormByIdQuery(submission.formId, req.organizationId!);
     if (!form) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](
@@ -898,7 +976,7 @@ export async function approveSubmission(req: Request, res: Response) {
           overriddenBy: req.userId!,
           overriddenAt: new Date().toISOString(),
         },
-        req.tenantId!,
+        req.organizationId!,
         transaction
       );
     }
@@ -909,21 +987,21 @@ export async function approveSubmission(req: Request, res: Response) {
     if (submission.entityType === IntakeEntityType.MODEL) {
       const model = ModelInventoryModel.createNewModelInventory({
         provider: (entityData.provider as string) || "",
-        model: (entityData.model as string) || "",
-        version: (entityData.version as string) || "",
+        model: (entityData.name as string) || (entityData.model as string) || "",
+        version: (entityData.modelVersion as string) || (entityData.version as string) || "",
         approver: entityData.approver ? Number(entityData.approver) : undefined,
-        capabilities: (entityData.capabilities as string) || "",
+        capabilities: (entityData.capabilities as string) || (entityData.intendedUse as string) || "",
         security_assessment: (entityData.security_assessment as boolean) || false,
         reference_link: (entityData.reference_link as string) || "",
         biases: (entityData.biases as string) || "",
         limitations: (entityData.limitations as string) || "",
-        hosting_provider: (entityData.hosting_provider as string) || "",
+        hosting_provider: (entityData.hosting_provider as string) || (entityData.modelType as string) || "",
         status: ModelInventoryStatus.PENDING,
       });
 
       const createdModel = await createNewModelInventoryQuery(
         model,
-        req.tenantId!,
+        req.organizationId!,
         [],
         [],
         transaction
@@ -934,15 +1012,17 @@ export async function approveSubmission(req: Request, res: Response) {
         {
           project_title: (entityData.project_title as string) || "",
           description: (entityData.description as string) || "",
-          start_date: new Date(),
+          start_date: entityData.start_date ? new Date(entityData.start_date as string) : new Date(),
           goal: (entityData.goal as string) || (entityData.description as string) || "",
           owner: req.userId!,
           ai_risk_classification: mapToAiRiskClassification(entityData.ai_risk_classification as string) as any,
+          type_of_high_risk_role: (entityData.type_of_high_risk_role as string as any) || undefined,
+          geography: entityData.geography ? Number(entityData.geography) : 1,
           status: ProjectStatus.UNDER_REVIEW,
         },
         [],
         [],
-        req.tenantId!,
+        req.organizationId!,
         req.userId!,
         transaction
       );
@@ -956,7 +1036,7 @@ export async function approveSubmission(req: Request, res: Response) {
       submissionId,
       entityId,
       req.userId!,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -978,7 +1058,7 @@ export async function approveSubmission(req: Request, res: Response) {
       functionName: "approveSubmission",
       fileName: "intakeForm.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](updatedSubmission));
@@ -991,7 +1071,7 @@ export async function approveSubmission(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1011,7 +1091,7 @@ export async function rejectSubmission(req: Request, res: Response) {
     functionName: "rejectSubmission",
     fileName: "intakeForm.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
@@ -1024,7 +1104,7 @@ export async function rejectSubmission(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Rejection reason is required"));
     }
 
-    const submission = await getSubmissionByIdQuery(submissionId, req.tenantId!);
+    const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!, transaction, true);
 
     if (!submission) {
       await transaction.rollback();
@@ -1036,21 +1116,22 @@ export async function rejectSubmission(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Only pending submissions can be rejected"));
     }
 
-    const updatedSubmission = await rejectSubmissionQuery(
-      submissionId,
-      rejectionReason,
-      req.userId!,
-      req.tenantId!,
-      transaction
-    );
-
-    await transaction.commit();
-
-    const form = await getIntakeFormByIdQuery(submission.formId, req.tenantId!);
+    // Fetch form and tenant info before commit so email data is available atomically
+    const form = await getIntakeFormByIdQuery(submission.formId, req.organizationId!);
     const formName = form?.name || "Unknown Form";
     const formPublicId = form?.publicId;
     const tenantSlug = await getTenantSlugById(req.organizationId!);
     const formSlug = form?.slug || "";
+
+    const updatedSubmission = await rejectSubmissionQuery(
+      submissionId,
+      rejectionReason,
+      req.userId!,
+      req.organizationId!,
+      transaction
+    );
+
+    await transaction.commit();
 
     if (submission.submitterEmail) {
       // Generate HMAC-signed resubmission token
@@ -1085,7 +1166,7 @@ export async function rejectSubmission(req: Request, res: Response) {
       functionName: "rejectSubmission",
       fileName: "intakeForm.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](updatedSubmission));
@@ -1098,7 +1179,7 @@ export async function rejectSubmission(req: Request, res: Response) {
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -1123,7 +1204,7 @@ export async function getLLMSuggestedQuestions(req: Request, res: Response) {
       entityType || "use_case",
       context || "",
       llmKeyId,
-      req.tenantId!
+      req.organizationId!
     );
 
     if (!questions) {
@@ -1152,7 +1233,7 @@ export async function getFieldGuidance(req: Request, res: Response) {
       fieldLabel,
       entityType || "use_case",
       llmKeyId,
-      req.tenantId!
+      req.organizationId!
     );
 
     if (!guidanceText) {
@@ -1180,7 +1261,7 @@ export async function previewForm(req: Request, res: Response) {
   }
 
   try {
-    const form = await getIntakeFormByIdQuery(formId, req.tenantId!);
+    const form = await getIntakeFormByIdQuery(formId, req.organizationId!);
 
     if (!form) {
       return res.status(404).json(STATUS_CODE[404]("Form not found"));
@@ -1220,9 +1301,24 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404]("Form not found"));
     }
 
-    const form = await getFormByPublicIdQuery(publicId, tenantInfo.tenantHash);
+    const form = await getFormByPublicIdQuery(publicId, tenantInfo.orgId);
     if (!form) {
       return res.status(404).json(STATUS_CODE[404]("Form not found or not available"));
+    }
+
+    // Fetch org logo (non-blocking — null if missing)
+    let organizationLogo: string | null = null;
+    try {
+      const logoRow = await getCompanyLogoQuery(tenantInfo.orgId);
+      if (logoRow && (logoRow as any).content) {
+        const buf = Buffer.isBuffer((logoRow as any).content)
+          ? (logoRow as any).content
+          : Buffer.from((logoRow as any).content);
+        const mimeType = (logoRow as any).type || "image/png";
+        organizationLogo = `data:${mimeType};base64,${buf.toString("base64")}`;
+      }
+    } catch {
+      // Logo is optional — swallow errors silently
     }
 
     // Check for resubmission token
@@ -1242,7 +1338,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
         const tokenAge = Date.now() - (decoded.timestamp || 0);
         const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
         if (tokenAge <= SEVEN_DAYS_MS) {
-          const previousSubmission = await getSubmissionByIdQuery(decoded.submissionId, tenantInfo.tenantHash);
+          const previousSubmission = await getSubmissionByIdQuery(decoded.submissionId, tenantInfo.orgId);
           if (
             previousSubmission &&
             previousSubmission.status !== IntakeSubmissionStatus.APPROVED &&
@@ -1268,6 +1364,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
         publicId: form.publicId,
         designSettings: form.designSettings ?? null,
       },
+      organizationLogo,
       previousData,
       previousSubmitterName,
       previousSubmitterEmail,
@@ -1291,31 +1388,28 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
     }
 
     const clientIp = req.ip || req.headers["x-forwarded-for"]?.toString().split(",")[0] || "unknown";
-    const withinLimit = await checkRateLimitQuery(clientIp, tenantInfo.tenantHash);
+    const withinLimit = await checkRateLimitQuery(clientIp, tenantInfo.orgId);
 
     if (!withinLimit) {
       return res.status(429).json(STATUS_CODE[429]("Too many submissions. Please try again later."));
     }
 
-    const form = await getFormByPublicIdQuery(publicId, tenantInfo.tenantHash);
+    const form = await getFormByPublicIdQuery(publicId, tenantInfo.orgId);
     if (!form) {
       return res.status(404).json(STATUS_CODE[404]("Form not found or not available"));
     }
 
     const { submitterEmail, submitterName, formData, captchaToken, captchaAnswer, resubmissionToken } = req.body;
 
-    // Determine if contact info is required based on form design settings
-    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.tenantHash);
-    const collectContactInfo = (fullFormForValidation?.designSettings as any)?.collectContactInfo ?? true;
+    // Validate contact info (always required)
+    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
 
-    if (collectContactInfo) {
-      if (!submitterEmail) {
-        return res.status(400).json(STATUS_CODE[400]("Submitter email is required"));
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(submitterEmail)) {
-        return res.status(400).json(STATUS_CODE[400]("Invalid email format"));
-      }
+    if (!submitterEmail) {
+      return res.status(400).json(STATUS_CODE[400]("Submitter email is required"));
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(submitterEmail)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid email format"));
     }
 
     if (!formData) {
@@ -1356,8 +1450,8 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Incorrect CAPTCHA answer"));
     }
 
-    const resolvedEmail = collectContactInfo ? submitterEmail : null;
-    const resolvedName = collectContactInfo ? (submitterName || (submitterEmail ? submitterEmail.split("@")[0] : null)) : null;
+    const resolvedEmail = submitterEmail;
+    const resolvedName = submitterName || (submitterEmail ? submitterEmail.split("@")[0] : null);
 
     // Handle resubmission (7-day expiry on resubmission tokens)
     let originalSubmissionId: number | undefined;
@@ -1395,7 +1489,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           originalSubmissionId,
           ipAddress: clientIp,
         },
-        tenantInfo.tenantHash,
+        tenantInfo.orgId,
         transaction
       );
 
@@ -1427,7 +1521,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       }
 
       // Get full form with recipients to send notifications
-      const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.tenantHash);
+      const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
       const recipientIds = (fullForm?.recipients as number[]) || [];
 
       if (recipientIds.length > 0) {
@@ -1448,12 +1542,12 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
         calculateSubmissionRisk(
           formData,
           fullForm.schema,
-          fullForm.riskTierSystem || "generic",
+          fullForm.riskTierSystem || "eu_ai_act",
           fullForm.llmKeyId,
-          tenantInfo.tenantHash
+          tenantInfo.orgId
         )
           .then((result) =>
-            updateSubmissionRiskQuery(submission.id, result, tenantInfo.tenantHash)
+            updateSubmissionRiskQuery(submission.id, result, tenantInfo.orgId)
           )
           .catch((err) => logger.error("Risk scoring failed:", err));
       }
@@ -1490,10 +1584,25 @@ export async function getPublicForm(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404]("Organization not found"));
     }
 
-    const form = await getActivePublicFormQuery(formSlug, tenantInfo.hash);
+    const form = await getActivePublicFormQuery(formSlug, tenantInfo.id);
 
     if (!form) {
       return res.status(404).json(STATUS_CODE[404]("Form not found or not available"));
+    }
+
+    // Fetch org logo (non-blocking — null if missing)
+    let organizationLogo: string | null = null;
+    try {
+      const logoRow = await getCompanyLogoQuery(tenantInfo.id);
+      if (logoRow && (logoRow as any).content) {
+        const buf = Buffer.isBuffer((logoRow as any).content)
+          ? (logoRow as any).content
+          : Buffer.from((logoRow as any).content);
+        const mimeType = (logoRow as any).type || "image/png";
+        organizationLogo = `data:${mimeType};base64,${buf.toString("base64")}`;
+      }
+    } catch {
+      // Logo is optional — swallow errors silently
     }
 
     let previousData: Record<string, unknown> | undefined;
@@ -1512,7 +1621,7 @@ export async function getPublicForm(req: Request, res: Response) {
         const tokenAge = Date.now() - (decoded.timestamp || 0);
         const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
         if (tokenAge <= SEVEN_DAYS_MS) {
-          const previousSubmission = await getSubmissionByIdQuery(decoded.submissionId, tenantInfo.hash);
+          const previousSubmission = await getSubmissionByIdQuery(decoded.submissionId, tenantInfo.id);
           if (
             previousSubmission &&
             previousSubmission.status !== IntakeSubmissionStatus.APPROVED &&
@@ -1538,6 +1647,7 @@ export async function getPublicForm(req: Request, res: Response) {
         publicId: form.publicId,
         designSettings: form.designSettings ?? null,
       },
+      organizationLogo,
       previousData,
       previousSubmitterName,
       previousSubmitterEmail,
@@ -1563,13 +1673,13 @@ export async function submitPublicForm(req: Request, res: Response) {
     }
 
     const clientIp = req.ip || req.headers["x-forwarded-for"]?.toString().split(",")[0] || "unknown";
-    const withinLimit = await checkRateLimitQuery(clientIp, tenantInfo.hash);
+    const withinLimit = await checkRateLimitQuery(clientIp, tenantInfo.id);
 
     if (!withinLimit) {
       return res.status(429).json(STATUS_CODE[429]("Too many submissions. Please try again later."));
     }
 
-    const form = await getActivePublicFormQuery(formSlug, tenantInfo.hash);
+    const form = await getActivePublicFormQuery(formSlug, tenantInfo.id);
 
     if (!form) {
       return res.status(404).json(STATUS_CODE[404]("Form not found or not available"));
@@ -1577,18 +1687,15 @@ export async function submitPublicForm(req: Request, res: Response) {
 
     const { submitterEmail, submitterName, formData, captchaToken, captchaAnswer, resubmissionToken } = req.body;
 
-    // Determine if contact info is required based on form design settings
-    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.hash);
-    const collectContactInfo = (fullFormForValidation?.designSettings as any)?.collectContactInfo ?? true;
+    // Validate contact info (always required)
+    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.id);
 
-    if (collectContactInfo) {
-      if (!submitterEmail) {
-        return res.status(400).json(STATUS_CODE[400]("Submitter email is required"));
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(submitterEmail)) {
-        return res.status(400).json(STATUS_CODE[400]("Invalid email format"));
-      }
+    if (!submitterEmail) {
+      return res.status(400).json(STATUS_CODE[400]("Submitter email is required"));
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(submitterEmail)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid email format"));
     }
 
     if (!formData) {
@@ -1628,8 +1735,8 @@ export async function submitPublicForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400]("Incorrect CAPTCHA answer"));
     }
 
-    const resolvedEmail = collectContactInfo ? submitterEmail : null;
-    const resolvedName = collectContactInfo ? (submitterName || (submitterEmail ? submitterEmail.split("@")[0] : null)) : null;
+    const resolvedEmail = submitterEmail;
+    const resolvedName = submitterName || (submitterEmail ? submitterEmail.split("@")[0] : null);
 
     // Handle resubmission (7-day expiry on resubmission tokens)
     let originalSubmissionId: number | undefined;
@@ -1667,7 +1774,7 @@ export async function submitPublicForm(req: Request, res: Response) {
           originalSubmissionId,
           ipAddress: clientIp,
         },
-        tenantInfo.hash,
+        tenantInfo.id,
         transaction
       );
 
@@ -1704,7 +1811,7 @@ export async function submitPublicForm(req: Request, res: Response) {
       }
 
       // Use per-form recipients
-      const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.hash);
+      const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.id);
       const recipientIds = (fullForm?.recipients as number[]) || [];
 
       if (recipientIds.length > 0) {
@@ -1733,12 +1840,12 @@ export async function submitPublicForm(req: Request, res: Response) {
         calculateSubmissionRisk(
           formData,
           fullForm.schema,
-          fullForm.riskTierSystem || "generic",
+          fullForm.riskTierSystem || "eu_ai_act",
           fullForm.llmKeyId,
-          tenantInfo.hash
+          tenantInfo.id
         )
           .then((result) =>
-            updateSubmissionRiskQuery(submission.id, result, tenantInfo.hash)
+            updateSubmissionRiskQuery(submission.id, result, tenantInfo.id)
           )
           .catch((err) => logger.error("Risk scoring failed:", err));
       }

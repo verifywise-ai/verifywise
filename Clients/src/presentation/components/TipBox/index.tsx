@@ -71,7 +71,7 @@ const TipBox = ({ entityName }: TipBoxProps) => {
             position: "absolute",
             top: -8,
             right: 16,
-            backgroundColor: "#F5F5F5",
+            backgroundColor: "background.surface",
             border: "1px solid #E5E5E5",
             borderRadius: "4px",
             padding: "2px 8px",

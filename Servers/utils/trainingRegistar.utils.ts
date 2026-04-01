@@ -16,17 +16,18 @@ import {
  */
 export const createNewTrainingRegistarQuery = async (
   trainingRegistar: ITrainingRegister,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".trainingregistar (
-            training_name, duration, provider, department, status, people, description, is_demo
+    `INSERT INTO trainingregistar (
+            organization_id, training_name, duration, provider, department, status, people, description, is_demo
         ) VALUES (
-            :training_name, :duration, :provider, :department, :status, :people, :description, :is_demo
+            :organization_id, :training_name, :duration, :provider, :department, :status, :people, :description, :is_demo
         ) RETURNING *`,
     {
       replacements: {
+        organization_id: organizationId,
         training_name: trainingRegistar.training_name,
         duration: trainingRegistar.duration,
         provider: trainingRegistar.provider,
@@ -48,8 +49,8 @@ export const createNewTrainingRegistarQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_added' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -79,7 +80,7 @@ export const createNewTrainingRegistarQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -97,11 +98,12 @@ export const createNewTrainingRegistarQuery = async (
  */
 
 export const getAllTrainingRegistarQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<ITrainingRegister[]> => {
   const trainingRegistars = await sequelize.query(
-    `SELECT * FROM "${tenant}".trainingregistar ORDER BY id ASC`,
+    `SELECT * FROM trainingregistar WHERE organization_id = :organizationId ORDER BY id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: TrainingRegistarModel,
     }
@@ -117,12 +119,12 @@ export const getAllTrainingRegistarQuery = async (
  */
 export const getTrainingRegistarByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<ITrainingRegister> => {
   const trainingRegistarsById = await sequelize.query(
-    `SELECT * FROM "${tenant}".trainingregistar WHERE id = :id`,
+    `SELECT * FROM trainingregistar WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: TrainingRegistarModel,
     }
@@ -140,16 +142,16 @@ export const getTrainingRegistarByIdQuery = async (
 export const updateTrainingRegistarByIdQuery = async (
   id: number,
   trainingRegistar: Partial<TrainingRegistarModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<TrainingRegistarModel> => {
   const existingTrainingRegistar = await getTrainingRegistarByIdQuery(
     id,
-    tenant
+    organizationId
   );
   const updateTrainingRegistar: Partial<
     Record<keyof TrainingRegistarModel, any> & { people?: number }
-  > = {};
+  > & { organizationId?: number } = {};
   const setClause = [
     "training_name",
     "duration",
@@ -173,8 +175,9 @@ export const updateTrainingRegistarByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE "${tenant}".trainingregistar SET ${setClause} WHERE id = :id RETURNING *;`;
+  const query = `UPDATE trainingregistar SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
   updateTrainingRegistar.id = id;
+  updateTrainingRegistar.organizationId = organizationId;
 
   const result = await sequelize.query(query, {
     replacements: updateTrainingRegistar,
@@ -190,8 +193,8 @@ export const updateTrainingRegistarByIdQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_updated' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -224,7 +227,7 @@ export const updateTrainingRegistarByIdQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(
@@ -245,13 +248,13 @@ export const updateTrainingRegistarByIdQuery = async (
 
 export const deleteTrainingRegistarByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".trainingregistar WHERE id = :id RETURNING *`,
+    `DELETE FROM trainingregistar WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: TrainingRegistarModel,
       type: QueryTypes.DELETE,
@@ -265,8 +268,8 @@ export const deleteTrainingRegistarByIdQuery = async (
       paa.key AS action_key,
       a.id AS automation_id,
       aa.*
-    FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { transaction }
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId }, transaction }
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -294,7 +297,7 @@ export const deleteTrainingRegistarByIdQuery = async (
       // Enqueue with processed params
       await enqueueAutomationAction(automation.action_key, {
         ...processedParams,
-        tenant,
+        organizationId,
       });
     } else {
       console.warn(

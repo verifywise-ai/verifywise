@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Checkbox from "../../Inputs/Checkbox";
 import Field from "../../Inputs/Field";
+import RichTextEditor from "../../RichTextEditor";
 import { inputStyles } from "../ClauseDrawerDialog";
 import DatePicker from "../../Inputs/Datepicker";
 import Select from "../../Inputs/Select";
@@ -596,7 +597,7 @@ const VWISO42001AnnexDrawerDialog = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 600,
+          width: 850,
           margin: 0,
           "& .MuiDrawer-paper": {
             margin: 0,
@@ -607,7 +608,7 @@ const VWISO42001AnnexDrawerDialog = ({
       >
         <Stack
           sx={{
-            width: 600,
+            width: 850,
             height: "100%",
             display: "flex",
             justifyContent: "center",
@@ -628,7 +629,7 @@ const VWISO42001AnnexDrawerDialog = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 600,
+        width: 850,
         margin: 0,
         "& .MuiDrawer-paper": {
           margin: 0,
@@ -640,12 +641,12 @@ const VWISO42001AnnexDrawerDialog = ({
       <Stack
         className="vw-iso-42001-annex-drawer-dialog-content"
         sx={{
-          width: 600,
+          width: 850,
         }}
       >
         <Stack
           sx={{
-            width: 600,
+            width: 850,
             padding: "15px 20px",
             display: "flex",
             flexDirection: "row",
@@ -763,27 +764,19 @@ const VWISO42001AnnexDrawerDialog = ({
                 }}
               >
                 <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                  Implementation Description:
+                  Implementation description:
                 </Typography>
-                <Field
-                  type="description"
-                  value={formData.implementation_description}
-                  onChange={(e) =>
-                    handleFieldChange("implementation_description", e.target.value)
+                <RichTextEditor
+                  toolbar="full"
+                  initialContent={formData.implementation_description}
+                  onContentChange={(content) =>
+                    handleFieldChange("implementation_description", content)
                   }
-                  disabled={!formData.is_applicable || isEditingDisabled}
-                  sx={{
-                    cursor: !formData.is_applicable ? "not-allowed" : "text",
-                    "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
-                      {
-                        height: "73px",
-                      },
-                  }}
-                  placeholder="Describe how this requirement is implemented"
+                  placeholder="Describe how this requirement is implemented..."
+                  isEditable={formData.is_applicable && !isEditingDisabled}
+                  height="120px"
                 />
               </Stack>
-
-              <Divider sx={{ my: 2 }} />
 
               {/* Status & Assignments Section */}
               <Stack
@@ -1110,7 +1103,7 @@ const VWISO42001AnnexDrawerDialog = ({
                           <Typography sx={{ fontSize: 12, fontWeight: 500 }}>
                             {file.fileName}
                           </Typography>
-                          <Typography sx={{ fontSize: 11, color: "#6B7280" }}>
+                          <Typography sx={{ fontSize: 11, color: "status.default.text" }}>
                             {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ""}
                           </Typography>
                         </Box>
@@ -1349,7 +1342,6 @@ const VWISO42001AnnexDrawerDialog = ({
           <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
         )}
 
-        <Divider />
         <Stack
           className="vw-iso-42001-annex-drawer-dialog-footer"
           sx={{

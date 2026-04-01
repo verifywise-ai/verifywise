@@ -28,7 +28,6 @@ jest.mock("../../utils/logger/logHelper", () => ({
 
 import { EntityGraphAnnotationsService } from "../entityGraphAnnotationsService";
 import {
-  ensureAnnotationsTableExists,
   getAnnotationsByUserQuery,
   getAnnotationByEntityQuery,
   getAnnotationByIdQuery,
@@ -48,9 +47,6 @@ import {
 } from "../../domain.layer/exceptions/custom.exception";
 
 // Cast mocks
-const mockEnsureAnnotationsTableExists = ensureAnnotationsTableExists as jest.MockedFunction<
-  typeof ensureAnnotationsTableExists
->;
 const mockGetAnnotationsByUserQuery = getAnnotationsByUserQuery as jest.MockedFunction<
   typeof getAnnotationsByUserQuery
 >;
@@ -89,7 +85,6 @@ describe("EntityGraphAnnotationsService", () => {
     entityType: "model",
     entityId: "model-123",
     organizationId: 1,
-    tenantId: "tenant_1",
   };
 
   const mockAnnotation = {
@@ -116,7 +111,7 @@ describe("EntityGraphAnnotationsService", () => {
 
   describe("saveAnnotation", () => {
     beforeEach(() => {
-      mockEnsureAnnotationsTableExists.mockResolvedValue(undefined);
+
       mockCreateAnnotation.mockResolvedValue(mockAnnotation);
       mockUpsertAnnotationQuery.mockResolvedValue(mockAnnotation);
     });
@@ -127,14 +122,10 @@ describe("EntityGraphAnnotationsService", () => {
         validAnnotationData.userId,
         validAnnotationData.entityType,
         validAnnotationData.entityId,
-        validAnnotationData.organizationId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
 
       expect(result).toBe(mockAnnotation);
-      expect(mockEnsureAnnotationsTableExists).toHaveBeenCalledWith(
-        validAnnotationData.tenantId
-      );
       expect(mockCreateAnnotation).toHaveBeenCalled();
       expect(mockUpsertAnnotationQuery).toHaveBeenCalled();
     });
@@ -152,8 +143,7 @@ describe("EntityGraphAnnotationsService", () => {
           validAnnotationData.userId,
           validAnnotationData.entityType,
           validAnnotationData.entityId,
-          validAnnotationData.organizationId,
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -165,8 +155,7 @@ describe("EntityGraphAnnotationsService", () => {
           0,
           validAnnotationData.entityType,
           validAnnotationData.entityId,
-          validAnnotationData.organizationId,
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -180,8 +169,7 @@ describe("EntityGraphAnnotationsService", () => {
           validAnnotationData.userId,
           "invalid-type",
           validAnnotationData.entityId,
-          validAnnotationData.organizationId,
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -195,8 +183,7 @@ describe("EntityGraphAnnotationsService", () => {
           validAnnotationData.userId,
           validAnnotationData.entityType,
           "invalid!@#",
-          validAnnotationData.organizationId,
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -207,33 +194,29 @@ describe("EntityGraphAnnotationsService", () => {
         validAnnotationData.userId,
         validAnnotationData.entityType,
         validAnnotationData.entityId,
-        validAnnotationData.organizationId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
 
-      expect(mockEnsureAnnotationsTableExists).toHaveBeenCalled();
       expect(mockUpsertAnnotationQuery).toHaveBeenCalled();
     });
   });
 
   describe("getAnnotations", () => {
     beforeEach(() => {
-      mockEnsureAnnotationsTableExists.mockResolvedValue(undefined);
+
       mockGetAnnotationsByUserQuery.mockResolvedValue([mockAnnotation]);
     });
 
     it("should return annotations for user", async () => {
       const result = await EntityGraphAnnotationsService.getAnnotations(
         validAnnotationData.userId,
-        validAnnotationData.organizationId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
 
       expect(result).toEqual([mockAnnotation]);
       expect(mockGetAnnotationsByUserQuery).toHaveBeenCalledWith(
         validAnnotationData.userId,
-        validAnnotationData.organizationId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
     });
 
@@ -242,29 +225,28 @@ describe("EntityGraphAnnotationsService", () => {
 
       const result = await EntityGraphAnnotationsService.getAnnotations(
         validAnnotationData.userId,
-        validAnnotationData.organizationId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
 
       expect(result).toEqual([]);
     });
 
-    it("should ensure table exists before fetching", async () => {
+    it("should call getAnnotationsByUserQuery", async () => {
       await EntityGraphAnnotationsService.getAnnotations(
         validAnnotationData.userId,
-        validAnnotationData.organizationId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
 
-      expect(mockEnsureAnnotationsTableExists).toHaveBeenCalledWith(
-        validAnnotationData.tenantId
+      expect(mockGetAnnotationsByUserQuery).toHaveBeenCalledWith(
+        validAnnotationData.userId,
+        validAnnotationData.organizationId
       );
     });
   });
 
   describe("getAnnotationByEntity", () => {
     beforeEach(() => {
-      mockEnsureAnnotationsTableExists.mockResolvedValue(undefined);
+
       mockGetAnnotationByEntityQuery.mockResolvedValue(mockAnnotation);
     });
 
@@ -273,7 +255,7 @@ describe("EntityGraphAnnotationsService", () => {
         validAnnotationData.userId,
         validAnnotationData.entityType,
         validAnnotationData.entityId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
 
       expect(result).toBe(mockAnnotation);
@@ -286,7 +268,7 @@ describe("EntityGraphAnnotationsService", () => {
         validAnnotationData.userId,
         validAnnotationData.entityType,
         "nonexistent-id",
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
 
       expect(result).toBeNull();
@@ -300,7 +282,7 @@ describe("EntityGraphAnnotationsService", () => {
           validAnnotationData.userId,
           "invalid",
           validAnnotationData.entityId,
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -313,7 +295,7 @@ describe("EntityGraphAnnotationsService", () => {
           validAnnotationData.userId,
           validAnnotationData.entityType,
           "invalid!@#",
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -321,7 +303,7 @@ describe("EntityGraphAnnotationsService", () => {
 
   describe("deleteAnnotation", () => {
     beforeEach(() => {
-      mockEnsureAnnotationsTableExists.mockResolvedValue(undefined);
+
       mockGetAnnotationByIdQuery.mockResolvedValue(mockAnnotation);
       mockDeleteAnnotationByIdQuery.mockResolvedValue(1);
       mockAnnotation.isOwnedBy.mockReturnValue(true);
@@ -331,13 +313,13 @@ describe("EntityGraphAnnotationsService", () => {
       const result = await EntityGraphAnnotationsService.deleteAnnotation(
         1,
         validAnnotationData.userId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
 
       expect(result).toBe(true);
       expect(mockDeleteAnnotationByIdQuery).toHaveBeenCalledWith(
         1,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
     });
 
@@ -348,7 +330,7 @@ describe("EntityGraphAnnotationsService", () => {
         EntityGraphAnnotationsService.deleteAnnotation(
           999,
           validAnnotationData.userId,
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow("Annotation with ID 999 not found");
     });
@@ -360,7 +342,7 @@ describe("EntityGraphAnnotationsService", () => {
         EntityGraphAnnotationsService.deleteAnnotation(
           1,
           999,
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow(BusinessLogicException);
     });
@@ -372,7 +354,7 @@ describe("EntityGraphAnnotationsService", () => {
         EntityGraphAnnotationsService.deleteAnnotation(
           1,
           validAnnotationData.userId,
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow("Failed to delete annotation with ID 1");
     });
@@ -380,7 +362,7 @@ describe("EntityGraphAnnotationsService", () => {
 
   describe("deleteAnnotationByEntity", () => {
     beforeEach(() => {
-      mockEnsureAnnotationsTableExists.mockResolvedValue(undefined);
+
       mockDeleteAnnotationByEntityQuery.mockResolvedValue(1);
     });
 
@@ -389,7 +371,7 @@ describe("EntityGraphAnnotationsService", () => {
         validAnnotationData.userId,
         validAnnotationData.entityType,
         validAnnotationData.entityId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
 
       expect(result).toBe(true);
@@ -397,7 +379,7 @@ describe("EntityGraphAnnotationsService", () => {
         validAnnotationData.userId,
         validAnnotationData.entityType,
         validAnnotationData.entityId,
-        validAnnotationData.tenantId
+        validAnnotationData.organizationId
       );
     });
 
@@ -409,7 +391,7 @@ describe("EntityGraphAnnotationsService", () => {
           validAnnotationData.userId,
           "invalid",
           validAnnotationData.entityId,
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -422,7 +404,7 @@ describe("EntityGraphAnnotationsService", () => {
           validAnnotationData.userId,
           validAnnotationData.entityType,
           "invalid!@#",
-          validAnnotationData.tenantId
+          validAnnotationData.organizationId
         )
       ).rejects.toThrow(ValidationException);
     });

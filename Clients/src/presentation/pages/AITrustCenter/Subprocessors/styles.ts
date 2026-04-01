@@ -141,7 +141,7 @@ export const useStyles = (theme: Theme): StylesType => ({
     alignSelf: "flex-end",
     width: "fit-content",
     gap: 2,
-    backgroundColor: '#13715B',
+    backgroundColor: 'brand.primary',
     border: `1px solid #13715B`,
   },
 
@@ -151,7 +151,7 @@ export const useStyles = (theme: Theme): StylesType => ({
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    bgcolor: '#fff',
+    bgcolor: 'background.main',
     borderRadius: theme.shape.borderRadius,
     boxShadow: theme.shadows[4],
     p: 6,
@@ -177,15 +177,15 @@ export const useStyles = (theme: Theme): StylesType => ({
   modalButton: {
     mt: 2,
     alignSelf: 'flex-end',
-    backgroundColor: '#13715B',
-    border: '1px solid #13715B',
-    color: '#fff',
+    backgroundColor: 'brand.primary',
+    border: '1px solid brand.primary',
+    color: 'background.main',
     borderRadius: theme.shape.borderRadius,
     textTransform: 'none',
     fontWeight: 600,
     gap: 1,
     '&:hover': {
-      backgroundColor: '#13715B',
+      backgroundColor: 'brand.primary',
     },
     '&:disabled': {
       backgroundColor: theme.palette.grey[300],

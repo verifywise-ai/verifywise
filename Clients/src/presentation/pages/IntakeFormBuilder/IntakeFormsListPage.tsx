@@ -35,6 +35,8 @@ import {
   FolderTree,
   ListIcon,
   ChevronsUpDown,
+  ClipboardList,
+  Inbox,
 } from "lucide-react";
 import {
   getAllIntakeForms,
@@ -50,6 +52,7 @@ import { SubmissionPreviewModal } from "./SubmissionPreviewModal";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
 import Chip from "../../components/Chip";
+import Select from "../../components/Inputs/Select";
 import { EmptyState } from "../../components/EmptyState";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import SearchBox from "../../components/Search/SearchBox";
@@ -162,6 +165,7 @@ export function IntakeFormsListPage() {
   const [submissions, setSubmissions] = useState<IntakeSubmission[]>([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
   const [submissionsSearch, setSubmissionsSearch] = useState("");
+  const [submissionStatusFilter, setSubmissionStatusFilter] = useState<string>("all");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
 
@@ -190,22 +194,23 @@ export function IntakeFormsListPage() {
   const loadSubmissions = useCallback(async () => {
     setIsLoadingSubmissions(true);
     try {
-      const response = await getPendingSubmissions();
+      const params: { status?: string } = {};
+      if (submissionStatusFilter !== "all") {
+        params.status = submissionStatusFilter;
+      }
+      const response = await getPendingSubmissions(params);
       setSubmissions(Array.isArray(response.data) ? response.data : []);
     } catch {
       setSnackbar({ open: true, message: "Failed to load submissions", severity: "error" });
     } finally {
       setIsLoadingSubmissions(false);
     }
-  }, []);
+  }, [submissionStatusFilter]);
 
+  // Always load submissions so the tab badge count is accurate
   useEffect(() => {
-    if (mainTab === "submissions") {
-      loadSubmissions();
-      // Also load forms so we can resolve form names in submissions table
-      if (forms.length === 0) loadForms();
-    }
-  }, [mainTab, loadSubmissions]); // eslint-disable-line react-hooks/exhaustive-deps
+    loadSubmissions();
+  }, [loadSubmissions]);
 
   // Filter forms by search query
   const filteredForms = forms.filter((form) => {
@@ -364,6 +369,7 @@ export function IntakeFormsListPage() {
     <PageHeaderExtended
       title="Intake forms"
       description="Create and manage intake forms for external submissions"
+      helpArticlePath="ai-governance/intake-forms"
     >
       {/* Main tabs: Forms / Submissions */}
       <TabContext value={mainTab}>
@@ -416,7 +422,7 @@ export function IntakeFormsListPage() {
                 height: 34,
                 fontSize: "13px",
                 backgroundColor: theme.palette.primary.main,
-                "&:hover": { backgroundColor: "#0F5A47" },
+                "&:hover": { backgroundColor: "brand.primaryHover" },
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
@@ -433,6 +439,7 @@ export function IntakeFormsListPage() {
             </Box>
           ) : filteredForms.length === 0 ? (
             <EmptyState
+              icon={ClipboardList}
               message={
                 searchQuery
                   ? "No forms match your search. Try adjusting your query."
@@ -566,8 +573,21 @@ export function IntakeFormsListPage() {
       {/* ================================================================ */}
       {mainTab === "submissions" && (
         <>
-          {/* Search */}
-          <Stack direction="row" justifyContent="flex-end" alignItems="center">
+          {/* Filter + Search */}
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: "8px" }}>
+            <Select
+              id="submission-status-filter"
+              value={submissionStatusFilter}
+              onChange={(e) => setSubmissionStatusFilter(e.target.value as string)}
+              items={[
+                { _id: "all", name: "All submissions" },
+                { _id: "pending", name: "Pending" },
+                { _id: "approved", name: "Approved" },
+                { _id: "rejected", name: "Rejected" },
+                { _id: "superseded", name: "Superseded" },
+              ]}
+              sx={{ width: 180, backgroundColor: theme.palette.background.main }}
+            />
             <SearchBox
               placeholder="Search submissions..."
               value={submissionsSearch}
@@ -583,6 +603,7 @@ export function IntakeFormsListPage() {
             </Box>
           ) : filteredSubmissions.length === 0 ? (
             <EmptyState
+              icon={Inbox}
               message="Submissions will appear here when external users fill in your published forms."
               showBorder
             />
@@ -605,7 +626,16 @@ export function IntakeFormsListPage() {
                     return (
                       <TableRow
                         key={submission.id}
-                        sx={singleTheme.tableStyles.primary.body.row}
+                        onClick={() => {
+                          if (submission.status === "superseded") return;
+                          setSelectedSubmissionId(submission.id);
+                          setPreviewOpen(true);
+                        }}
+                        sx={{
+                          ...singleTheme.tableStyles.primary.body.row,
+                          cursor: submission.status === "superseded" ? "default" : "pointer",
+                          ...(submission.status === "superseded" && { opacity: 0.5 }),
+                        }}
                       >
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           <Typography
@@ -625,7 +655,12 @@ export function IntakeFormsListPage() {
                           </Typography>
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          <Chip label={submission.status} />
+                          <Stack direction="row" alignItems="center" gap="8px">
+                            <Chip label={submission.status} />
+                            {submission.resubmissionCount > 0 && submission.status !== "superseded" && (
+                              <Chip label="resubmitted" />
+                            )}
+                          </Stack>
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           <RiskTierChip submission={submission} />
@@ -636,25 +671,27 @@ export function IntakeFormsListPage() {
                           </Typography>
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          <CustomizableButton
-                            variant="outlined"
-                            onClick={() => {
-                              setSelectedSubmissionId(submission.id);
-                              setPreviewOpen(true);
-                            }}
-                            sx={{
-                              height: 28,
-                              fontSize: "12px",
-                              borderColor: theme.palette.border.dark,
-                              color: theme.palette.text.secondary,
-                              "&:hover": {
-                                borderColor: theme.palette.primary.main,
-                                backgroundColor: theme.palette.background.fill,
-                              },
-                            }}
-                          >
-                            Review
-                          </CustomizableButton>
+                          {submission.status !== "superseded" && (
+                            <CustomizableButton
+                              variant="outlined"
+                              onClick={() => {
+                                setSelectedSubmissionId(submission.id);
+                                setPreviewOpen(true);
+                              }}
+                              sx={{
+                                height: 28,
+                                fontSize: "12px",
+                                borderColor: theme.palette.border.dark,
+                                color: theme.palette.text.secondary,
+                                "&:hover": {
+                                  borderColor: theme.palette.primary.main,
+                                  backgroundColor: theme.palette.background.fill,
+                                },
+                              }}
+                            >
+                              Review
+                            </CustomizableButton>
+                          )}
                         </TableCell>
                       </TableRow>
                     );

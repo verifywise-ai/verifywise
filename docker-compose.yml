@@ -30,7 +30,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    image: ghcr.io/bluewave-labs/verifywise-backend:latest
+    image: ghcr.io/verifywise-ai/verifywise-backend:latest
     pull_policy: always
     ports:
       - $BACKEND_PORT:$BACKEND_PORT
@@ -48,10 +48,14 @@ services:
       - LLM_EVALS_URL=http://eval_server:8000
       - REDIS_URL=redis://redis:6379/0
       - ENCRYPTION_KEY=$ENCRYPTION_KEY
+      - AI_GATEWAY_URL=http://ai_gateway:8100
+      - AI_GATEWAY_INTERNAL_KEY=$AI_GATEWAY_INTERNAL_KEY
+      - SUPERADMIN_EMAIL=$SUPERADMIN_EMAIL
+      - SUPERADMIN_PASSWORD=$SUPERADMIN_PASSWORD
   frontend:
     depends_on:
       - backend
-    image: ghcr.io/bluewave-labs/verifywise-frontend:latest
+    image: ghcr.io/verifywise-ai/verifywise-frontend:latest
     pull_policy: always
   worker:
     depends_on:
@@ -59,7 +63,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    image: ghcr.io/bluewave-labs/verifywise-backend:latest
+    image: ghcr.io/verifywise-ai/verifywise-backend:latest
     pull_policy: always
     command: ["node", "dist/jobs/worker.js"]
     environment:
@@ -76,7 +80,7 @@ services:
     depends_on:
       - backend
       - redis
-    image: ghcr.io/bluewave-labs/verifywise-eval-server:latest
+    image: ghcr.io/verifywise-ai/verifywise-eval-server:latest
     expose:
       - "8000"
     volumes:
@@ -89,6 +93,24 @@ services:
       - DB_NAME=$DB_NAME
       - BACKEND_URL=http://backend:$BACKEND_PORT
       - REDIS_URL=redis://redis:6379/0
+  ai_gateway:
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    image: ghcr.io/verifywise-ai/verifywise-ai-gateway:latest
+    expose:
+      - "8100"
+    environment:
+      - DB_HOST=postgresdb
+      - DB_PORT=$DB_PORT
+      - DB_USER=$DB_USER
+      - DB_PASSWORD=$DB_PASSWORD
+      - DB_NAME=$DB_NAME
+      - AI_GATEWAY_INTERNAL_KEY=$AI_GATEWAY_INTERNAL_KEY
+      - AI_GATEWAY_PORT=8100
+    restart: unless-stopped
 
 volumes:
   db:

@@ -26,6 +26,7 @@ import {
 import {
   ReportData,
   ReportGenerationResult,
+  AISummaries,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 
 // Color constants matching VerifyWise theme
@@ -41,6 +42,10 @@ const COLORS = {
   warning: "B54708",
   error: "B42318",
   info: "026AA2",
+  // AI analysis styling
+  aiBg: "F0FAF7",
+  aiWarning: "DC6803",
+  aiWarningBg: "FFFCF5",
 };
 
 /**
@@ -240,6 +245,11 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
   );
 
   let sectionNum = 1;
+
+  // Executive Summary (only when AI summaries exist)
+  if (reportData.aiSummaries?.executiveSummary) {
+    paragraphs.push(createTocEntry(`${sectionNum++}. Executive summary`));
+  }
 
   // Risk Analysis (lowercase to match PDF)
   if (sections.projectRisks || sections.vendorRisks || sections.modelRisks) {
@@ -462,6 +472,132 @@ function createEmptyState(message: string): Paragraph {
 }
 
 /**
+ * Create an AI analysis box (green left border, light green background)
+ */
+function createAIAnalysisBox(
+  content: string,
+  label: string = "AI Analysis",
+  borderColor: string = COLORS.primary,
+  bgColor: string = COLORS.aiBg
+): Paragraph[] {
+  return [
+    new Paragraph({
+      spacing: { before: 200, after: 40 },
+      border: {
+        left: {
+          color: borderColor,
+          size: 24,
+          style: BorderStyle.SINGLE,
+          space: 8,
+        },
+      },
+      shading: {
+        fill: bgColor,
+        type: ShadingType.CLEAR,
+      },
+      children: [
+        new TextRun({
+          text: label.toUpperCase(),
+          bold: true,
+          size: 18,
+          color: borderColor,
+        }),
+      ],
+    }),
+    new Paragraph({
+      spacing: { after: 200 },
+      border: {
+        left: {
+          color: borderColor,
+          size: 24,
+          style: BorderStyle.SINGLE,
+          space: 8,
+        },
+      },
+      shading: {
+        fill: bgColor,
+        type: ShadingType.CLEAR,
+      },
+      children: [
+        new TextRun({
+          text: content,
+          size: 20,
+          color: COLORS.textPrimary,
+        }),
+      ],
+    }),
+  ];
+}
+
+/**
+ * Create the Executive Summary section from AI summaries
+ */
+function createExecutiveSummarySection(
+  aiSummaries: AISummaries
+): (Paragraph | Table)[] {
+  const elements: (Paragraph | Table)[] = [];
+
+  if (!aiSummaries.executiveSummary) {
+    return [];
+  }
+
+  elements.push(createSectionHeader("Executive Summary"));
+  elements.push(
+    ...createAIAnalysisBox(
+      aiSummaries.executiveSummary,
+      "AI-Generated Analysis"
+    )
+  );
+
+  // Key Findings
+  if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) {
+    elements.push(createSubsectionHeader("Key Findings"));
+    aiSummaries.keyFindings.forEach((finding) => {
+      elements.push(
+        new Paragraph({
+          spacing: { before: 60, after: 60 },
+          indent: { left: convertInchesToTwip(0.3) },
+          bullet: { level: 0 },
+          children: [
+            new TextRun({
+              text: finding,
+              size: 20,
+              color: COLORS.textPrimary,
+            }),
+          ],
+        })
+      );
+    });
+  }
+
+  // Recommendations
+  if (aiSummaries.recommendations && aiSummaries.recommendations.length > 0) {
+    elements.push(createSubsectionHeader("Recommendations"));
+    aiSummaries.recommendations.forEach((rec) => {
+      elements.push(
+        new Paragraph({
+          spacing: { before: 60, after: 60 },
+          indent: { left: convertInchesToTwip(0.3) },
+          bullet: { level: 0 },
+          children: [
+            new TextRun({
+              text: rec,
+              size: 20,
+              color: COLORS.textPrimary,
+            }),
+          ],
+        })
+      );
+    });
+  }
+
+  // Page break after executive summary
+  elements.push(new Paragraph({ children: [new PageBreak()] }));
+
+  return elements;
+}
+
+/**
  * Create Risk Analysis section
  */
 function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[] {
@@ -477,6 +613,11 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
   // Project/Use Case Risks
   if (sections.projectRisks) {
     elements.push(createSubsectionHeader("Use case risks"));
+
+    if (reportData.aiSummaries?.sectionSummaries?.['projectRisks']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['projectRisks']));
+    }
+
     elements.push(
       new Paragraph({
         spacing: { after: 200 },
@@ -511,6 +652,10 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
   if (sections.vendorRisks) {
     elements.push(createSubsectionHeader(`Vendor risks (${sections.vendorRisks.totalRisks})`));
 
+    if (reportData.aiSummaries?.sectionSummaries?.['vendorRisks']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['vendorRisks']));
+    }
+
     if (sections.vendorRisks.risks.length > 0) {
       const headers = ["Vendor", "Risk", "Risk Level", "Action Owner", "Action Plan"];
       const rows = sections.vendorRisks.risks.map((risk) => [
@@ -531,6 +676,10 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
   if (sections.modelRisks) {
     elements.push(createSubsectionHeader(`Model risks (${sections.modelRisks.totalRisks})`));
 
+    if (reportData.aiSummaries?.sectionSummaries?.['modelRisks']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['modelRisks']));
+    }
+
     if (sections.modelRisks.risks.length > 0) {
       const headers = ["Model", "Risk", "Risk Level", "Mitigation Status"];
       const rows = sections.modelRisks.risks.map((risk) => [
@@ -544,6 +693,18 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
     } else {
       elements.push(createEmptyState("No model risks have been identified."));
     }
+  }
+
+  // Risk Highlights (AI-generated)
+  if (reportData.aiSummaries?.riskHighlights) {
+    elements.push(
+      ...createAIAnalysisBox(
+        reportData.aiSummaries.riskHighlights,
+        "Risk Highlights",
+        COLORS.aiWarning,
+        COLORS.aiWarningBg
+      )
+    );
   }
 
   // Add page break
@@ -568,6 +729,11 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
   // Controls (EU AI Act)
   if (sections.compliance) {
     elements.push(createSubsectionHeader("Controls"));
+
+    if (reportData.aiSummaries?.sectionSummaries?.['compliance']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['compliance']));
+    }
+
     elements.push(
       new Paragraph({
         spacing: { after: 200 },
@@ -599,6 +765,11 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
   // Assessment (EU AI Act)
   if (sections.assessment) {
     elements.push(createSubsectionHeader("Assessment tracker"));
+
+    if (reportData.aiSummaries?.sectionSummaries?.['assessment']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['assessment']));
+    }
+
     elements.push(
       new Paragraph({
         spacing: { after: 200 },
@@ -645,6 +816,10 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
   // Clauses and Annexes (ISO) - matches PDF structure with sub-headers
   if (sections.clausesAndAnnexes) {
     elements.push(createSubsectionHeader("Clauses and annexes"));
+
+    if (reportData.aiSummaries?.sectionSummaries?.['clausesAndAnnexes']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['clausesAndAnnexes']));
+    }
 
     // Clauses sub-header (matching PDF section-subtitle)
     if (sections.clausesAndAnnexes.clauses.length > 0) {
@@ -708,6 +883,10 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
   // NIST Subcategories
   if (sections.nistSubcategories) {
     elements.push(createSubsectionHeader("NIST AI RMF subcategories"));
+
+    if (reportData.aiSummaries?.sectionSummaries?.['nistSubcategories']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['nistSubcategories']));
+    }
 
     sections.nistSubcategories.functions.forEach((func) => {
       // Function name as section subtitle (matching PDF)
@@ -782,6 +961,10 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
   if (sections.models) {
     elements.push(createSubsectionHeader(`AI models (${sections.models.totalModels})`));
 
+    if (reportData.aiSummaries?.sectionSummaries?.['models']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['models']));
+    }
+
     if (sections.models.models.length > 0) {
       const headers = ["Model Name", "Version", "Status", "Owner"];
       const rows = sections.models.models.map((model) => [
@@ -800,6 +983,10 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
   // Vendors (second in PDF)
   if (sections.vendors) {
     elements.push(createSubsectionHeader(`Vendors (${sections.vendors.totalVendors})`));
+
+    if (reportData.aiSummaries?.sectionSummaries?.['vendors']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['vendors']));
+    }
 
     if (sections.vendors.vendors.length > 0) {
       const headers = ["Vendor Name", "Website", "Contact", "Risk Status", "Assignee"];
@@ -821,6 +1008,10 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
   if (sections.trainingRegistry) {
     elements.push(createSubsectionHeader(`Training registry (${sections.trainingRegistry.totalRecords})`));
 
+    if (reportData.aiSummaries?.sectionSummaries?.['trainingRegistry']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['trainingRegistry']));
+    }
+
     if (sections.trainingRegistry.records.length > 0) {
       const headers = ["Training Name", "Completion Date", "Status", "Assignee"];
       const rows = sections.trainingRegistry.records.map((record) => [
@@ -839,6 +1030,10 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
   // Policy Manager
   if (sections.policyManager) {
     elements.push(createSubsectionHeader(`Policy manager (${sections.policyManager.totalPolicies})`));
+
+    if (reportData.aiSummaries?.sectionSummaries?.['policyManager']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['policyManager']));
+    }
 
     if (sections.policyManager.policies.length > 0) {
       const headers = ["Policy Name", "Version", "Status", "Review Date", "Owner"];
@@ -859,6 +1054,10 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
   // Incident Management (matches PDF table headers)
   if (sections.incidentManagement) {
     elements.push(createSubsectionHeader(`Incident management (${sections.incidentManagement.totalIncidents})`));
+
+    if (reportData.aiSummaries?.sectionSummaries?.['incidentManagement']) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['incidentManagement']));
+    }
 
     if (sections.incidentManagement.incidents.length > 0) {
       const headers = ["Incident ID", "Title", "Type", "Severity", "Status", "Reported", "Assignee"];
@@ -931,6 +1130,9 @@ export async function generateDOCX(
     // Build document sections
     const coverPage = createCoverPage(reportData);
     const toc = createTableOfContents(reportData);
+    const aiExecutiveSummary = reportData.aiSummaries
+      ? createExecutiveSummarySection(reportData.aiSummaries)
+      : [];
     const riskSection = createRiskAnalysisSection(reportData);
     const complianceSection = createComplianceSection(reportData);
     const organizationSection = createOrganizationSection(reportData);
@@ -939,6 +1141,7 @@ export async function generateDOCX(
     const allChildren = [
       ...coverPage,
       ...toc,
+      ...aiExecutiveSummary,
       ...riskSection,
       ...complianceSection,
       ...organizationSection,

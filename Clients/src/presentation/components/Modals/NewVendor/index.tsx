@@ -603,7 +603,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                       paddingRight: "9px",
                     },
                     "& .MuiAutocomplete-option.Mui-focused": {
-                      background: "#f9fafb",
+                      background: "background.accent",
                     },
                   },
                   "& .MuiAutocomplete-noOptions": {

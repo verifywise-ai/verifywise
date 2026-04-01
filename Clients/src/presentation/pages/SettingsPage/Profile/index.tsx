@@ -55,7 +55,7 @@ const ProfileForm: React.FC = () => {
   const state = store.getState();
   const userData = extractUserToken(state.auth.authToken);
   const { id } = userData || {};
-  const { userRoleName } = useAuth();
+  const { userRoleName, isSuperAdmin } = useAuth();
   const isAdmin = userRoleName === "Admin";
 
   // State management
@@ -610,7 +610,7 @@ const ProfileForm: React.FC = () => {
                 label="Name"
                 value={firstname}
                 onChange={handleFirstnameChange}
-                sx={{ mb: 5, backgroundColor: "#FFFFFF", maxWidth: "600px" }}
+                sx={{ mb: 5, backgroundColor: "background.main", maxWidth: "600px" }}
                 disabled={saving}
               />
               {firstnameError && (
@@ -624,7 +624,7 @@ const ProfileForm: React.FC = () => {
                 label="Surname"
                 value={lastname}
                 onChange={handleLastnameChange}
-                sx={{ mb: 5, backgroundColor: "#FFFFFF", maxWidth: "600px" }}
+                sx={{ mb: 5, backgroundColor: "background.main", maxWidth: "600px" }}
                 disabled={saving}
               />
               {lastnameError && (
@@ -638,7 +638,7 @@ const ProfileForm: React.FC = () => {
                 label="Email"
                 value={email}
                 onChange={handleEmailChange}
-                sx={{ mb: 5, backgroundColor: "#FFFFFF", maxWidth: "600px" }}
+                sx={{ mb: 5, backgroundColor: "background.main", maxWidth: "600px" }}
                 disabled // Email is always disabled as mentioned in the original code
               />
               {emailError && (
@@ -653,7 +653,7 @@ const ProfileForm: React.FC = () => {
                   mt: 1,
                   mb: { xs: 5, md: 0 },
                   display: "block",
-                  color: "#667085",
+                  color: "text.icon",
                 }}
               >
                 This is your current email address — it cannot be changed.
@@ -675,10 +675,10 @@ const ProfileForm: React.FC = () => {
               variant="contained"
               text={saving ? "Saving..." : "Save"}
               sx={{
-                backgroundColor: "#13715B",
+                backgroundColor: "brand.primary",
                 border: isSaveDisabled
                   ? "1px solid rgba(0, 0, 0, 0.26)"
-                  : "1px solid #13715B",
+                  : "1px solid brand.primary",
                 gap: 2,
               }}
               icon={<SaveIcon size={16} />}
@@ -688,81 +688,85 @@ const ProfileForm: React.FC = () => {
           </Stack>
         )}
 
-        <Divider sx={{ borderColor: "#C2C2C2", mt: theme.spacing(3) }} />
+        {!isSuperAdmin && (
+          <>
+            <Divider sx={{ borderColor: "#C2C2C2", mt: theme.spacing(3) }} />
 
-        {loading && (
-          <CustomizableSkeleton
-            variant="rectangular"
-            width="100%"
-            height="200px"
-            minWidth={"100%"}
-            minHeight={200}
-            sx={{ borderRadius: 2 }}
-          />
-        )}
+            {loading && (
+              <CustomizableSkeleton
+                variant="rectangular"
+                width="100%"
+                height="200px"
+                minWidth={"100%"}
+                minHeight={200}
+                sx={{ borderRadius: 2 }}
+              />
+            )}
 
-        {!loading && (
-          <Box>
-            <Stack>
-              <Typography
-                fontWeight={"600"}
-                gutterBottom
-                sx={{ mb: 2, mt: 10 }}
-              >
-                Delete account
-              </Typography>
-              <Typography
-                fontWeight={"400"}
-                variant="body2"
-                sx={{ mb: 8, mt: 4, color: "#667085" }}
-              >
-                Note that deleting your account will remove all data from our
-                system. This is permanent and non-recoverable.
-              </Typography>
-              <Stack
-                sx={{
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "flex-end",
-                  alignItems: "center",
-                }}
-              >
-                <CustomizableButton
-                  sx={{
-                    width: { xs: "100%", sm: theme.spacing(80) },
-                    mb: theme.spacing(4),
-                    backgroundColor: "#DB504A",
-                    color: "#fff",
-                    border: `1px solid ${isAdmin ? "#C2C2C2" : "#DB504A"}`,
-                    gap: 2,
-                  }}
-                  icon={<DeleteIcon size={16} />}
-                  variant="contained"
-                  onClick={handleOpenDeleteDialog}
-                  text="Delete account"
-                  isDisabled={isAdmin}
-                />
-              </Stack>
-            </Stack>
-          </Box>
-        )}
+            {!loading && (
+              <Box>
+                <Stack>
+                  <Typography
+                    fontWeight={"600"}
+                    gutterBottom
+                    sx={{ mb: 2, mt: 10 }}
+                  >
+                    Delete account
+                  </Typography>
+                  <Typography
+                    fontWeight={"400"}
+                    variant="body2"
+                    sx={{ mb: 8, mt: 4, color: "text.icon" }}
+                  >
+                    Note that deleting your account will remove all data from our
+                    system. This is permanent and non-recoverable.
+                  </Typography>
+                  <Stack
+                    sx={{
+                      display: "flex",
+                      flexDirection: "row",
+                      justifyContent: "flex-end",
+                      alignItems: "center",
+                    }}
+                  >
+                    <CustomizableButton
+                      sx={{
+                        width: { xs: "100%", sm: theme.spacing(80) },
+                        mb: theme.spacing(4),
+                        backgroundColor: "#DB504A",
+                        color: "background.main",
+                        border: `1px solid ${isAdmin ? "#C2C2C2" : "#DB504A"}`,
+                        gap: 2,
+                      }}
+                      icon={<DeleteIcon size={16} />}
+                      variant="contained"
+                      onClick={handleOpenDeleteDialog}
+                      text="Delete account"
+                      isDisabled={isAdmin}
+                    />
+                  </Stack>
+                </Stack>
+              </Box>
+            )}
 
-        {isDeleteModalOpen && (
-          <ConfirmationModal
-            title="Confirm delete"
-            body={
-              <Typography fontSize={13}>
-                Are you sure you want to delete your account? This action is
-                permanent and cannot be undone.
-              </Typography>
-            }
-            cancelText="Cancel"
-            proceedText="Delete"
-            onCancel={handleCloseDeleteDialog}
-            onProceed={handleDeleteAccount}
-            proceedButtonColor="error"
-            proceedButtonVariant="contained"
-          />
+            {isDeleteModalOpen && (
+              <ConfirmationModal
+                title="Confirm delete"
+                body={
+                  <Typography fontSize={13}>
+                    Are you sure you want to delete your account? This action is
+                    permanent and cannot be undone.
+                  </Typography>
+                }
+                cancelText="Cancel"
+                proceedText="Delete"
+                onCancel={handleCloseDeleteDialog}
+                onProceed={handleDeleteAccount}
+                proceedButtonColor="error"
+                proceedButtonVariant="contained"
+              />
+            )}
+          </>
         )}
       </Box>
       {/* Profile Image Upload Section */}
@@ -784,7 +788,7 @@ const ProfileForm: React.FC = () => {
               overflow: "hidden",
               "&:hover": {
                 borderColor: "#999",
-                backgroundColor: "#f5f5f5",
+                backgroundColor: "background.surface",
               },
             }}
           >
@@ -848,7 +852,7 @@ const ProfileForm: React.FC = () => {
             sx={{
               fontSize: 12,
               textTransform: "none",
-              color: "#13715B",
+              color: "brand.primary",
               "&:hover": {
                 backgroundColor: "transparent !important",
               },

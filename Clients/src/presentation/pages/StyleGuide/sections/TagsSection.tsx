@@ -179,7 +179,7 @@ const TagsSection: React.FC = () => {
                 { property: "Text transform", value: "uppercase" },
                 { property: "White space", value: "nowrap" },
                 { property: "Display", value: "inline-block" },
-                { property: "Default bg", value: "#F5F5F5" },
+                { property: "Default bg", value: "background.surface" },
                 { property: "Default color", value: "#616161" },
               ]}
             />
@@ -203,7 +203,7 @@ const TagsSection: React.FC = () => {
           }}
         >
           {[
-            { tag: "AI Ethics", bg: "#E6F4EA", color: "#138A5E" },
+            { tag: "AI Ethics", bg: "#E6F4EA", color: "status.success.text" },
             { tag: "Fairness", bg: "#E8F5E9", color: "#2E7D32" },
             { tag: "Bias Mitigation", bg: "#F1F8E9", color: "#558B2F" },
             { tag: "Transparency", bg: "#E3F2FD", color: "#1565C0" },
@@ -218,7 +218,7 @@ const TagsSection: React.FC = () => {
             { tag: "ISO 42001", bg: "#FFF3E0", color: "#EF6C00" },
             { tag: "NIST RMF", bg: "#FFECB3", color: "#F9A825" },
             { tag: "LLM", bg: "#E0F7FA", color: "#00838F" },
-            { tag: "Default", bg: "#F5F5F5", color: "#616161" },
+            { tag: "Default", bg: "background.surface", color: "#616161" },
           ].map((item) => (
             <Box
               key={item.tag}
@@ -286,7 +286,7 @@ const TagsSection: React.FC = () => {
           {[
             "Import TagChip from components/Tags",
             "Tags are case-insensitive (matched via toLowerCase())",
-            "Unknown tags use default gray style (#F5F5F5 bg, #616161 text)",
+            "Unknown tags use default gray style (background.surface bg, #616161 text)",
             "Tags are displayed in uppercase automatically",
             "Use flex wrap when displaying multiple tags",
             "Gap of 8px between tags is recommended",

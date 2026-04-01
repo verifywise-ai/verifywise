@@ -1,3 +1,5 @@
+import React from "react";
+
 /**
  * Chip component variant types
  */
@@ -45,6 +47,8 @@ export interface IChipProps {
   backgroundColor?: string;
   /** Custom text color (overrides variant) */
   textColor?: string;
+  /** Optional icon to display before the label */
+  icon?: React.ReactNode;
 }
 
 /**

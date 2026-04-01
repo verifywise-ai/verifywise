@@ -6,7 +6,7 @@ A Policy in VerifyWise is a rich-text governance document for establishing AI go
 
 ## Key Features
 
-- Rich text editing with Plate.js (Slate-based)
+- Rich text editing with TipTap (ProseMirror-based)
 - Status lifecycle (Draft → Published → Archived)
 - 19 predefined governance tags
 - PDF and DOCX export
@@ -163,9 +163,9 @@ POST /policies/
 
 ## Rich Text Editor
 
-### Plate.js Integration
+### TipTap Integration
 
-The policy editor uses Plate.js (Slate-based) with these plugins:
+The policy editor uses TipTap (ProseMirror-based) with these extensions:
 
 **Text Formatting:**
 - Bold, Italic, Underline, Strikethrough
@@ -188,10 +188,11 @@ The policy editor uses Plate.js (Slate-based) with these plugins:
 
 Content is sanitized with DOMPurify:
 
-**Allowed Tags (26):**
+**Allowed Tags:**
 ```
-p, br, div, span, h1-h6, strong, em, u, s, blockquote,
-ul, ol, li, a, img, table, thead, tbody, tr, th, td
+p, br, strong, b, em, i, u, h1-h6, blockquote, code, pre,
+ul, ol, li, a, img, span, div, mark, s,
+table, thead, tbody, tr, th, td
 ```
 
 **Forbidden:**
@@ -287,11 +288,10 @@ POST /policy-linked/:policyId/linked-objects
 |-----------|---------|
 | `PolicyManager` | Main page with CRUD |
 | `PolicyTable` | Sortable policy list |
-| `PolicyDetailsModal` | Edit modal with editor |
+| `PolicyDetailsModal` | Edit modal with TipTap editor |
 | `PolicyForm` | Metadata form |
 | `LinkedPolicyModal` | Link objects modal |
 | `PolicyStatusCard` | Dashboard stats |
-| `PlateEditor` | Rich text editor |
 
 ### Features
 
@@ -346,9 +346,8 @@ Slack notifications sent 7 days before `next_review_date` to:
 |------|---------|
 | `pages/PolicyDashboard/PolicyManager.tsx` | Main page |
 | `components/Policies/PolicyTable.tsx` | Table |
-| `components/Policies/PolicyDetailsModal.tsx` | Editor modal |
+| `components/Policies/PolicyDetailsModal.tsx` | Editor modal (TipTap) |
 | `components/Policies/PolicyForm.tsx` | Form |
-| `components/PlateEditor.tsx` | Editor component |
 | `repository/policy.repository.ts` | API calls |
 
 ## Related Documentation

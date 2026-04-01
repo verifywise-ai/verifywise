@@ -2,6 +2,7 @@ import { Box, Paper, Typography, Stack, Button } from "@mui/material";
 import CustomTextField from "../Components/CustomTextField/CustomTextField";
 import { CheckCircle as CheckCircleOutlineIcon } from 'lucide-react';
 import { downloadResource } from "../../../../application/tools/downloadResource";
+import { brand } from "../../../themes/palette";
 
 const Overview = ({
   data,
@@ -75,7 +76,7 @@ const Overview = ({
         <Paper elevation={0} sx={{ background: "none", boxShadow: "none" }}>
           <Typography
             variant="subtitle2"
-            color="#13715B"
+            color={brand.primary}
             gutterBottom
             sx={{ fontWeight: 600, mb: 2 }}
           >
@@ -128,7 +129,7 @@ const Overview = ({
         <Box sx={{ width: "100%", maxWidth: 500, mb: 2 }}>
           <Typography
             variant="subtitle2"
-            color="#13715B"
+            color={brand.primary}
             sx={{ fontWeight: 600, mb: 1 }}
           >
             Resources
@@ -136,7 +137,7 @@ const Overview = ({
           <Paper
             elevation={0}
             sx={{
-              background: "#fff",
+              background: "background.main",
               borderRadius: 1,
               border: "1px solid #E0E0E0",
               p: 3,
@@ -165,9 +166,9 @@ const Overview = ({
                     onClick={() => handleDownload(resource.id)}
                     sx={{
                       minWidth: 100,
-                      backgroundColor: "#fff",
-                      color: "#344054",
-                      border: "1px solid #D0D5DD",
+                      backgroundColor: "background.main",
+                      color: "text.secondary",
+                      border: "1px solid #d0d5dd",
                       borderRadius: 1,
                     }}
                   >

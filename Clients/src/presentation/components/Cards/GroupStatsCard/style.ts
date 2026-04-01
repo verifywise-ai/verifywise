@@ -1,3 +1,4 @@
+import { border as borderPalette } from "../../../themes/palette";
 export const GroupStatsCardFrame = {
     display: "flex",
     flexDirection: "row",
@@ -9,7 +10,7 @@ export const GroupStatsCardFrame = {
     gap: "40px",
     backgroundColor: "white",
     padding: "10px 25px",
-    border: "1px solid #d0d5dd",
+    border: `1px solid ${borderPalette.dark}`,
     borderRadius: "4px",
     boxShadow: "none",
   };

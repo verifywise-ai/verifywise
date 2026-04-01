@@ -48,7 +48,7 @@ VerifyWise implements a JWT-based authentication system with refresh token rotat
 │     ├── Payload structure (id, roleName)                                    │
 │     ├── Organization membership                                             │
 │     ├── Role consistency (matches database)                                 │
-│     └── Tenant hash validity                                                │
+│     └── Attach organizationId to request                                    │
 │         │                                                                   │
 │         ▼                                                                   │
 │  3. Attach context to request:                                              │
@@ -99,8 +99,8 @@ interface AccessTokenPayload {
   name: string;            // First name
   surname: string;         // Last name
   roleName: string;        // Role (Admin, Editor, Reviewer, Auditor)
-  tenantId: string;        // Tenant hash (10 chars)
-  organizationId: number;  // Organization ID
+  organizationId: number;  // Organization ID (used for data isolation)
+  tenantId: string;        // Legacy field (backward compat)
   expire: number;          // Expiration timestamp
 }
 
@@ -119,8 +119,8 @@ interface RefreshTokenPayload {
   name: string;
   surname: string;
   roleName: string;
-  tenantId: string;
   organizationId: number;
+  tenantId: string;        // Legacy field
   expire: number;
 }
 
@@ -166,15 +166,12 @@ export const generateRefreshToken = (data: TokenPayload): string => {
 
 // Combined generation for login
 export const generateUserTokens = (user: UserModel, res: Response) => {
-  const tenantId = getTenantHash(user.organization_id!);
-
   const payload = {
     id: user.id!,
     email: user.email,
     name: user.name,
     surname: user.surname,
     roleName: user.roleName!,
-    tenantId,
     organizationId: user.organization_id!,
   };
 
@@ -244,18 +241,9 @@ export const authenticateJWT = async (
       });
     }
 
-    // 7. Validate tenant hash
-    if (!isValidTenantHash(decoded.tenantId)) {
-      return res.status(400).json({ message: "Invalid tenant format" });
-    }
-    if (decoded.tenantId !== getTenantHash(decoded.organizationId)) {
-      return res.status(400).json({ message: "Invalid token" });
-    }
-
-    // 8. Attach context to request
+    // 7. Attach context to request
     req.userId = decoded.id;
     req.role = decoded.roleName;
-    req.tenantId = decoded.tenantId;
     req.organizationId = decoded.organizationId;
 
     next();
@@ -536,7 +524,6 @@ export const refreshToken = async (req: Request, res: Response) => {
       name: decoded.name,
       surname: decoded.surname,
       roleName: decoded.roleName,
-      tenantId: decoded.tenantId,
       organizationId: decoded.organizationId,
     });
 
@@ -758,7 +745,7 @@ api.interceptors.response.use(
 | **HTTPS Enforcement** | secure cookie flag (production) |
 | **CSRF Protection** | SameSite cookie attribute |
 | **Rate Limiting** | 5 login attempts/minute |
-| **Multi-tenant Isolation** | Tenant hash validation |
+| **Multi-tenant Isolation** | organization_id in queries |
 | **Role Verification** | Real-time DB check |
 
 ## Key Files

@@ -174,12 +174,12 @@ import { containerStyle } from "./styles";
  * Retrieves a task by its ID with full details.
  *
  * @param id - The unique task identifier
- * @param tenant - The tenant schema name
+ * @param organizationId - The organization ID for data isolation
  * @returns The task with assignees and creator info, or null if not found
  * @throws {ValidationException} If ID is invalid
  *
  * @example
- * const task = await getTaskByIdQuery(123, "tenant_abc");
+ * const task = await getTaskByIdQuery(123, organizationId);
  */
 export async function getTaskByIdQuery(
   id: number,

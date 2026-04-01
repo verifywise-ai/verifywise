@@ -30,6 +30,7 @@ export interface IIntakeFormField {
   guidanceText?: string; // Tooltip text explaining why this field matters
   options?: Array<{ value: string; label: string }>; // For select/multiselect
   validation?: {
+    required?: boolean;
     minLength?: number;
     maxLength?: number;
     min?: number;

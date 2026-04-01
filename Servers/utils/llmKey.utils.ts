@@ -13,9 +13,10 @@ export const maskApiKey = (key: string): string => {
   return `****...${key.slice(-4)}`;
 };
 
-export const getLLMKeysQuery = async (tenant: string) => {
+export const getLLMKeysQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
-    `SELECT id, name, url, model, custom_headers, created_at FROM "${tenant}".llm_keys ORDER BY created_at DESC;`,
+    `SELECT id, name, url, model, custom_headers, created_at FROM llm_keys WHERE organization_id = :organizationId ORDER BY created_at DESC;`,
+    { replacements: { organizationId } },
   )) as [LLMKeyModel[], number];
   return result[0];
 };
@@ -24,18 +25,19 @@ export const getLLMKeysQuery = async (tenant: string) => {
  * Gets LLM keys including the actual API key (for internal use only, e.g., advisor)
  * WARNING: This returns sensitive data - do not expose to API responses
  */
-export const getLLMKeysWithKeyQuery = async (tenant: string) => {
+export const getLLMKeysWithKeyQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
-    `SELECT id, name, url, model, key, custom_headers, created_at FROM "${tenant}".llm_keys ORDER BY created_at DESC;`,
+    `SELECT id, name, url, model, key, custom_headers, created_at FROM llm_keys WHERE organization_id = :organizationId ORDER BY created_at DESC;`,
+    { replacements: { organizationId } },
   )) as [LLMKeyModel[], number];
   return result[0];
 };
 
-export const getLLMKeyQuery = async (tenant: string, name: string) => {
+export const getLLMKeyQuery = async (organizationId: number, name: string) => {
   const result = (await sequelize.query(
-    `SELECT id, name, url, model, custom_headers, created_at FROM "${tenant}".llm_keys WHERE name = :name;`,
+    `SELECT id, name, url, model, custom_headers, created_at FROM llm_keys WHERE organization_id = :organizationId AND name = :name;`,
     {
-      replacements: { name },
+      replacements: { organizationId, name },
     },
   )) as [LLMKeyModel[], number];
   return result[0];
@@ -43,14 +45,15 @@ export const getLLMKeyQuery = async (tenant: string, name: string) => {
 
 export const createLLMKeyQuery = async (
   data: ILLMKey,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
 ) => {
   // Exclude 'key' from RETURNING to prevent exposing API key in response
   const result = (await sequelize.query(
-    `INSERT INTO "${tenant}".llm_keys (key, name, url, model, custom_headers) VALUES (:key, :name, :url, :model, :custom_headers) RETURNING id, name, url, model, custom_headers, created_at;`,
+    `INSERT INTO llm_keys (organization_id, key, name, url, model, custom_headers) VALUES (:organization_id, :key, :name, :url, :model, :custom_headers) RETURNING id, name, url, model, custom_headers, created_at;`,
     {
       replacements: {
+        organization_id: organizationId,
         key: data.key,
         name: data.name,
         url: data.url,
@@ -66,10 +69,10 @@ export const createLLMKeyQuery = async (
 export const updateLLMKeyByIdQuery = async (
   id: number,
   data: Partial<LLMKeyModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
 ): Promise<LLMKeyModel | null> => {
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, any> = { organization_id: organizationId };
   const fields = ["name", "key", "url", "model", "custom_headers"];
   const setClause = fields
     .filter((f) => {
@@ -91,7 +94,7 @@ export const updateLLMKeyByIdQuery = async (
   if (!setClause) return null;
 
   // Exclude 'key' from RETURNING to prevent exposing API key in response
-  const query = `UPDATE "${tenant}".llm_keys SET ${setClause} WHERE id = :id RETURNING id, name, url, model, custom_headers, created_at;`;
+  const query = `UPDATE llm_keys SET ${setClause} WHERE organization_id = :organization_id AND id = :id RETURNING id, name, url, model, custom_headers, created_at;`;
 
   updateData.id = id;
 
@@ -105,11 +108,11 @@ export const updateLLMKeyByIdQuery = async (
   return result[0];
 };
 
-export const deleteLLMKeyQuery = async (id: number, tenant: string) => {
+export const deleteLLMKeyQuery = async (id: number, organizationId: number) => {
   const result = await sequelize.query(
-    `DELETE FROM "${tenant}".llm_keys WHERE id = :id RETURNING *;`,
+    `DELETE FROM llm_keys WHERE organization_id = :organizationId AND id = :id RETURNING *;`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: LLMKeyModel,
       type: QueryTypes.DELETE,

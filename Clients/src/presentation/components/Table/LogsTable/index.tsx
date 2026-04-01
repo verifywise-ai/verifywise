@@ -20,6 +20,7 @@ import {
   getPaginationRowCount,
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
+import { text, status } from "../../../themes/palette";
 
 const LOGS_TABLE_SORTING_KEY = "verifywise_logs_table_sorting";
 
@@ -99,10 +100,10 @@ const parseLogLine = (line: string, index: number): ParsedLogEntry | null => {
 
 const StateBadge: React.FC<{ state: string }> = ({ state }) => {
   const stateStyles: Record<string, { bg: string; color: string }> = {
-    successful: { bg: "#E6F4EA", color: "#138A5E" },
-    success: { bg: "#E6F4EA", color: "#138A5E" },
+    successful: { bg: "#E6F4EA", color: `${status.success.text}` },
+    success: { bg: "#E6F4EA", color: `${status.success.text}` },
     processing: { bg: "#FFF8E1", color: "#795000" },
-    error: { bg: "#FFD6D6", color: "#D32F2F" },
+    error: { bg: "#FFD6D6", color: `${status.error.text}` },
     info: { bg: "#DCEFFF", color: "#1976D2" },
     warn: { bg: "#FFE5D0", color: "#E64A19" },
     warning: { bg: "#FFE5D0", color: "#E64A19" },
@@ -316,7 +317,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     display: "flex",
                     alignItems: "center",
                     color:
-                      sortConfig.key === column.label ? "primary.main" : "#9CA3AF",
+                      sortConfig.key === column.label ? "primary.main" : `${text.disabled}`,
                   }}
                 >
                   {sortConfig.key === column.label &&
@@ -347,7 +348,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                 key={`${log.id}-${index}`}
                 sx={{
                   ...singleTheme.tableStyles.primary.body.row,
-                  "&:hover": { backgroundColor: "#f5f5f5" },
+                  "&:hover": { backgroundColor: "background.surface" },
                 }}
               >
                 <TableCell
@@ -376,7 +377,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     backgroundColor:
                       sortConfig.key &&
                       sortConfig.key.toLowerCase().includes("timestamp")
-                        ? "#f5f5f5"
+                        ? "background.surface"
                         : "inherit",
                   }}
                 >
@@ -390,7 +391,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     backgroundColor:
                       sortConfig.key &&
                       sortConfig.key.toLowerCase().includes("state")
-                        ? "#f5f5f5"
+                        ? "background.surface"
                         : "inherit",
                   }}
                 >
@@ -404,7 +405,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     backgroundColor:
                       sortConfig.key &&
                       sortConfig.key.toLowerCase().includes("description")
-                        ? "#f5f5f5"
+                        ? "background.surface"
                         : "inherit",
                   }}
                 >
@@ -421,7 +422,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     backgroundColor:
                       sortConfig.key &&
                       sortConfig.key.toLowerCase().includes("function")
-                        ? "#f5f5f5"
+                        ? "background.surface"
                         : "inherit",
                   }}
                 >
@@ -438,7 +439,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     backgroundColor:
                       sortConfig.key &&
                       sortConfig.key.toLowerCase().includes("file")
-                        ? "#f5f5f5"
+                        ? "background.surface"
                         : "inherit",
                   }}
                 >
@@ -494,7 +495,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
         }}
       >
         <img src={Placeholder} alt="Placeholder" />
-        <Typography sx={{ fontSize: "13px", color: "#475467" }}>
+        <Typography sx={{ fontSize: "13px", color: "text.tertiary" }}>
           There are currently no logs available.
         </Typography>
       </Stack>

@@ -14,7 +14,6 @@ express.log
 fastapi.log
 react.log
 .idea/
-.claude
 # CLAUDE.md
 .kombai
 .vscode
@@ -41,3 +40,4 @@ EvaluationModule/data/uploads/*
 !EvaluationModule/data/uploads/.gitkeep
 nul
 agent-plan.md
+pdf-templates/

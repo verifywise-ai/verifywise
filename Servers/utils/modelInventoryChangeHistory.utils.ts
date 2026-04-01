@@ -40,7 +40,7 @@ export const recordModelInventoryChange = async (
   modelInventoryId: number,
   action: "created" | "updated" | "deleted",
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
@@ -51,7 +51,7 @@ export const recordModelInventoryChange = async (
     modelInventoryId,
     action,
     changedByUserId,
-    tenant,
+    organizationId,
     fieldName,
     oldValue,
     newValue,
@@ -66,7 +66,7 @@ export const recordModelInventoryChange = async (
 export const recordMultipleFieldChanges = async (
   modelInventoryId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -74,7 +74,7 @@ export const recordMultipleFieldChanges = async (
     "model_inventory",
     modelInventoryId,
     changedByUserId,
-    tenant,
+    organizationId,
     changes,
     transaction
   );
@@ -86,14 +86,14 @@ export const recordMultipleFieldChanges = async (
  */
 export const getModelInventoryChangeHistory = async (
   modelInventoryId: number,
-  tenant: string,
+  organizationId: number,
   limit: number = 100,
   offset: number = 0
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
   return getEntityChangeHistory(
     "model_inventory",
     modelInventoryId,
-    tenant,
+    organizationId,
     limit,
     offset
   );
@@ -117,7 +117,7 @@ export const trackModelInventoryChanges = async (
 export const recordModelInventoryCreation = async (
   modelInventoryId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   modelData: Partial<ModelInventoryModel>,
   transaction?: Transaction
 ): Promise<void> => {
@@ -125,7 +125,7 @@ export const recordModelInventoryCreation = async (
     "model_inventory",
     modelInventoryId,
     changedByUserId,
-    tenant,
+    organizationId,
     modelData,
     transaction
   );
@@ -138,14 +138,14 @@ export const recordModelInventoryCreation = async (
 export const recordModelInventoryDeletion = async (
   modelInventoryId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   transaction?: Transaction
 ): Promise<void> => {
   return recordEntityDeletion(
     "model_inventory",
     modelInventoryId,
     changedByUserId,
-    tenant,
+    organizationId,
     transaction
   );
 };
@@ -157,7 +157,7 @@ export const recordModelInventoryDeletion = async (
 export const recordEvidenceAddedToModel = async (
   modelInventoryId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   evidenceName: string,
   evidenceType: string,
   transaction?: Transaction
@@ -166,7 +166,7 @@ export const recordEvidenceAddedToModel = async (
     "model_inventory",
     modelInventoryId,
     changedByUserId,
-    tenant,
+    organizationId,
     evidenceName,
     evidenceType,
     transaction
@@ -180,7 +180,7 @@ export const recordEvidenceAddedToModel = async (
 export const recordEvidenceRemovedFromModel = async (
   modelInventoryId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   evidenceName: string,
   evidenceType: string,
   transaction?: Transaction
@@ -189,7 +189,7 @@ export const recordEvidenceRemovedFromModel = async (
     "model_inventory",
     modelInventoryId,
     changedByUserId,
-    tenant,
+    organizationId,
     evidenceName,
     evidenceType,
     transaction
@@ -203,7 +203,7 @@ export const recordEvidenceRemovedFromModel = async (
 export const recordEvidenceFieldChangeForModel = async (
   modelInventoryId: number,
   changedByUserId: number,
-  tenant: string,
+  organizationId: number,
   evidenceName: string,
   fieldName: string,
   oldValue: string,
@@ -214,7 +214,7 @@ export const recordEvidenceFieldChangeForModel = async (
     "model_inventory",
     modelInventoryId,
     changedByUserId,
-    tenant,
+    organizationId,
     evidenceName,
     fieldName,
     oldValue,

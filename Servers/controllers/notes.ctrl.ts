@@ -48,14 +48,13 @@ export async function createNote(req: Request, res: Response): Promise<any> {
     functionName: "createNote",
     fileName: "notes.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { content, attached_to, attached_to_id } = req.body;
     const author_id = req.userId!;
     const organization_id = req.organizationId!;
-    const tenant_id = req.tenantId!;
 
     // Validate required fields
     if (!content || content.trim().length === 0) {
@@ -88,8 +87,7 @@ export async function createNote(req: Request, res: Response): Promise<any> {
       author_id,
       attached_to as NotesAttachedToEnum,
       attached_to_id,
-      organization_id,
-      tenant_id
+      organization_id
     );
 
     return res.status(201).json(STATUS_CODE[201](savedNote.toJSON()));
@@ -101,7 +99,7 @@ export async function createNote(req: Request, res: Response): Promise<any> {
       fileName: "notes.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     let statusCode = 500;
@@ -136,14 +134,13 @@ export async function getNotes(req: Request, res: Response): Promise<any> {
     functionName: "getNotes",
     fileName: "notes.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const attachedTo = Array.isArray(req.query.attachedTo) ? req.query.attachedTo[0] : req.query.attachedTo;
     const attachedToId = Array.isArray(req.query.attachedToId) ? req.query.attachedToId[0] : req.query.attachedToId;
     const organization_id = req.organizationId!;
-    const tenant_id = req.tenantId!;
 
     // Validate required query parameters
     if (!attachedTo) {
@@ -167,7 +164,6 @@ export async function getNotes(req: Request, res: Response): Promise<any> {
       attachedTo as NotesAttachedToEnum,
       attachedToId as string,
       organization_id,
-      tenant_id,
       req.userId!
     );
 
@@ -182,7 +178,7 @@ export async function getNotes(req: Request, res: Response): Promise<any> {
       fileName: "notes.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {
@@ -214,14 +210,14 @@ export async function updateNote(req: Request, res: Response): Promise<any> {
   const { content } = req.body;
   const userId = req.userId!;
   const userRole = req.role!;
-  const tenant_id = req.tenantId!;
+  const organization_id = req.organizationId!;
 
   logProcessing({
     description: `Starting updateNote for ID ${noteId}`,
     functionName: "updateNote",
     fileName: "notes.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -249,7 +245,7 @@ export async function updateNote(req: Request, res: Response): Promise<any> {
       content,
       userId,
       userRole,
-      tenant_id
+      organization_id
     );
 
     return res.status(200).json(STATUS_CODE[200](updatedNote.toJSON()));
@@ -261,7 +257,7 @@ export async function updateNote(req: Request, res: Response): Promise<any> {
       fileName: "notes.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {
@@ -289,14 +285,14 @@ export async function deleteNote(req: Request, res: Response): Promise<any> {
   const noteId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const userId = req.userId!;
   const userRole = req.role!;
-  const tenant_id = req.tenantId!;
+  const organization_id = req.organizationId!;
 
   logProcessing({
     description: `Starting deleteNote for ID ${noteId}`,
     functionName: "deleteNote",
     fileName: "notes.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -310,7 +306,7 @@ export async function deleteNote(req: Request, res: Response): Promise<any> {
     }
 
     // Use service for business logic (includes permission checks)
-    await NotesService.deleteNote(noteId, userId, userRole, tenant_id);
+    await NotesService.deleteNote(noteId, userId, userRole, organization_id);
 
     return res.status(200).json(STATUS_CODE[200]("Note deleted successfully"));
   } catch (error) {
@@ -321,7 +317,7 @@ export async function deleteNote(req: Request, res: Response): Promise<any> {
       fileName: "notes.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     if (error instanceof BusinessLogicException) {

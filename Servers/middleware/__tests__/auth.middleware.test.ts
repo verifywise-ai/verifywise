@@ -86,6 +86,7 @@ describe("authenticateJWT middleware", () => {
       expect(roleMap.get(2)).toBe("Reviewer");
       expect(roleMap.get(3)).toBe("Editor");
       expect(roleMap.get(4)).toBe("Auditor");
+      expect(roleMap.get(5)).toBe("SuperAdmin");
     });
   });
 
@@ -184,6 +185,7 @@ describe("authenticateJWT middleware", () => {
   describe("organization membership", () => {
     it("should return 403 when user does not belong to organization", async () => {
       mockGetTokenPayload.mockReturnValue(validPayload as any);
+      mockGetUserById.mockResolvedValue({ role_id: 1 } as any);
       mockBelongsToOrg.mockResolvedValue({ belongs: false } as any);
       const req = createReq("Bearer valid-token");
       const res = createRes();
@@ -215,39 +217,6 @@ describe("authenticateJWT middleware", () => {
     });
   });
 
-  describe("tenant hash validation", () => {
-    it("should return 400 when tenant hash format is invalid", async () => {
-      mockGetTokenPayload.mockReturnValue(validPayload as any);
-      mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
-      mockGetUserById.mockResolvedValue({ role_id: 1 } as any);
-      mockIsValidTenantHash.mockReturnValue(false);
-      const req = createReq("Bearer bad-tenant");
-      const res = createRes();
-
-      await authenticateJWT(req as Request, res as Response, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        message: "Invalid tenant format",
-      });
-    });
-
-    it("should return 400 when tenant hash doesn't match org", async () => {
-      mockGetTokenPayload.mockReturnValue(validPayload as any);
-      mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
-      mockGetUserById.mockResolvedValue({ role_id: 1 } as any);
-      mockIsValidTenantHash.mockReturnValue(true);
-      mockGetTenantHash.mockReturnValue("DIFFERENT10"); // Doesn't match token's tenantId
-      const req = createReq("Bearer wrong-tenant");
-      const res = createRes();
-
-      await authenticateJWT(req as Request, res as Response, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ message: "Invalid token" });
-    });
-  });
-
   describe("successful authentication", () => {
     it("should attach user context to req and call next()", async () => {
       setupValidMocks();
@@ -258,7 +227,7 @@ describe("authenticateJWT middleware", () => {
 
       expect(req.userId).toBe(1);
       expect(req.role).toBe("Admin");
-      expect(req.tenantId).toBe("a1b2c3d4e5");
+      expect(req.tenantId).toBe(10);
       expect(req.organizationId).toBe(10);
       expect(next).toHaveBeenCalled();
     });

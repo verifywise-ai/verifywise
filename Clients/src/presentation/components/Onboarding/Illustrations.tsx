@@ -1,6 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
 import { IllustrationType } from "../../../domain/enums/onboarding.enum";
+import { brand, background } from "../../themes/palette";
 
 interface IllustrationProps {
   type: IllustrationType;
@@ -22,7 +23,7 @@ const GradientCircles: React.FC = () => (
         width: "150px",
         height: "150px",
         borderRadius: "50%",
-        background: "linear-gradient(135deg, #13715B 0%, #0F5A47 100%)",
+        background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.primaryHover} 100%)`,
         top: "-30px",
         left: "-30px",
         opacity: 0.8,
@@ -34,7 +35,7 @@ const GradientCircles: React.FC = () => (
         width: "120px",
         height: "120px",
         borderRadius: "50%",
-        background: "linear-gradient(135deg, #0F5A47 0%, #13715B 100%)",
+        background: `linear-gradient(135deg, ${brand.primaryHover} 0%, ${brand.primary} 100%)`,
         bottom: "-20px",
         right: "20px",
         opacity: 0.6,
@@ -46,7 +47,7 @@ const GradientCircles: React.FC = () => (
         width: "100px",
         height: "100px",
         borderRadius: "50%",
-        background: "linear-gradient(135deg, #13715B 0%, #2D9B7F 100%)",
+        background: `linear-gradient(135deg, ${brand.primary} 0%, #2D9B7F 100%)`,
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
@@ -64,7 +65,7 @@ const GeometricShapes: React.FC = () => (
       position: "relative",
       overflow: "hidden",
       borderRadius: "8px",
-      backgroundColor: "#F9FAFB",
+      backgroundColor: `${background.accent}`,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -74,7 +75,7 @@ const GeometricShapes: React.FC = () => (
       sx={{
         width: "100px",
         height: "100px",
-        background: "linear-gradient(135deg, #13715B 0%, #0F5A47 100%)",
+        background: `linear-gradient(135deg, ${brand.primary} 0%, ${brand.primaryHover} 100%)`,
         transform: "rotate(45deg)",
         opacity: 0.8,
       }}
@@ -98,7 +99,7 @@ const GeometricShapes: React.FC = () => (
         width: "80px",
         height: "80px",
         borderRadius: "50%",
-        backgroundColor: "#13715B",
+        backgroundColor: `${brand.primary}`,
         bottom: "30px",
         left: "30px",
         opacity: 0.3,
@@ -115,7 +116,7 @@ const AbstractWaves: React.FC = () => (
       position: "relative",
       overflow: "hidden",
       borderRadius: "8px",
-      background: "linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 100%)",
+      background: `linear-gradient(180deg, ${background.accent} 0%, ${background.main} 100%)`,
     }}
   >
     <svg
@@ -142,16 +143,16 @@ const AbstractWaves: React.FC = () => (
       />
       <defs>
         <linearGradient id="wave-gradient1" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#13715B" />
-          <stop offset="100%" stopColor="#0F5A47" />
+          <stop offset="0%" stopColor={brand.primary} />
+          <stop offset="100%" stopColor={brand.primaryHover} />
         </linearGradient>
         <linearGradient id="wave-gradient2" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#0F5A47" />
-          <stop offset="100%" stopColor="#13715B" />
+          <stop offset="0%" stopColor={brand.primaryHover} />
+          <stop offset="100%" stopColor={brand.primary} />
         </linearGradient>
         <linearGradient id="wave-gradient3" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#2D9B7F" />
-          <stop offset="100%" stopColor="#13715B" />
+          <stop offset="100%" stopColor={brand.primary} />
         </linearGradient>
       </defs>
     </svg>
@@ -167,7 +168,7 @@ const IconGrid: React.FC = () => (
       gridTemplateColumns: "repeat(3, 1fr)",
       gap: 2,
       padding: 3,
-      backgroundColor: "#F9FAFB",
+      backgroundColor: `${background.accent}`,
       borderRadius: "8px",
     }}
   >
@@ -208,7 +209,7 @@ const FlowDiagram: React.FC = () => (
       justifyContent: "center",
       gap: 2,
       padding: 3,
-      backgroundColor: "#F9FAFB",
+      backgroundColor: "background.accent",
       borderRadius: "8px",
     }}
   >
@@ -236,7 +237,7 @@ const FlowDiagram: React.FC = () => (
             sx={{
               width: "30px",
               height: "2px",
-              backgroundColor: "#13715B",
+              backgroundColor: "brand.primary",
               position: "relative",
               "&::after": {
                 content: '""',
@@ -245,7 +246,7 @@ const FlowDiagram: React.FC = () => (
                 top: "-4px",
                 width: "0",
                 height: "0",
-                borderLeft: "6px solid #13715B",
+                borderLeft: "6px solid brand.primary",
                 borderTop: "5px solid transparent",
                 borderBottom: "5px solid transparent",
               },

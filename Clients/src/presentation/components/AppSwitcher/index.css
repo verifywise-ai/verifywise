@@ -11,6 +11,20 @@
   --app-switcher-disabled-opacity: 0.4;
 }
 
+/* Dark mode: neutral grays that invert cleanly (no hue shift on grays).
+   invert(1) flips #e0e0e0 → #1f1f1f, #e8e8e8 → #171717, #d0d0d0 → #2f2f2f
+   hue-rotate(180deg) has no effect on neutral grays (R=G=B). */
+html.dark-mode {
+  --app-switcher-bg-start: #e0e0e0;
+  --app-switcher-bg-end: #e8e8e8;
+  --app-switcher-border: #d0d0d0;
+  --app-switcher-icon-color: rgba(0, 0, 0, 0.6);
+  --app-switcher-icon-hover-color: rgba(0, 0, 0, 0.9);
+  --app-switcher-icon-hover-bg: rgba(0, 0, 0, 0.1);
+  --app-switcher-active-bg: #ec8ea4;
+  --app-switcher-active-color: #000000;
+}
+
 .app-switcher {
   width: 40px;
   min-width: 40px;

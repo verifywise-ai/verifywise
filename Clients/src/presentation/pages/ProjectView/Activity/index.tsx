@@ -25,6 +25,7 @@ import {
 } from "../../../../config/changeHistory.config";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { brand } from "../../../themes/palette";
 
 dayjs.extend(relativeTime);
 
@@ -443,7 +444,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           padding: "0 24px",
         }}
       >
-        <Clock size={48} strokeWidth={1.5} color="#13715B" opacity={0.6} />
+        <Clock size={48} strokeWidth={1.5} color={brand.primary} opacity={0.6} />
         <Typography
           sx={{
             fontSize: 16,

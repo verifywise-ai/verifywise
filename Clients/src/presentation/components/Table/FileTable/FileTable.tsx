@@ -4,6 +4,7 @@ import { Stack } from "@mui/material";
 import {
   ArrowUp as AscendingIcon,
   ArrowDown as DescendingIcon,
+  FileText,
 } from "lucide-react";
 import { EmptyState } from "../../EmptyState";
 import { FileModel } from "../../../../domain/models/Common/file/file.model";
@@ -94,6 +95,7 @@ const FileTable: React.FC<IFileTableProps> = ({
 
   return files.length === 0 ? (
     <EmptyState
+      icon={FileText}
       message="There are currently no pieces of evidence or other documents uploaded."
       imageAlt="No files available"
     />

@@ -18,7 +18,7 @@ export async function getAllNISTAIRMFCategoriesByfunctionId(
   try {
     const categories = await getAllNISTAIRMFCategoriesBytitleQuery(
       Array.isArray(req.params.title) ? req.params.title[0] : req.params.title,
-      req.tenantId!
+      req.organizationId!
     );
     if (categories && categories.length > 0) {
       logStructured(
@@ -41,7 +41,7 @@ export async function getAllNISTAIRMFCategoriesByfunctionId(
       "Error",
       `Failed to retrieve NIST AI RMF categories by function ID: ${(error as Error).message}`,
       req.userId!,
-      req.tenantId!
+      req.organizationId!
     );
     logger.error("❌ Error in getAllNISTAIRMFCategoriesByfunctionId:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

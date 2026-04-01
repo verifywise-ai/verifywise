@@ -21,7 +21,7 @@ const Reporting = () => {
       tipBoxEntity="reporting"
     >
       <div data-joyride-id="reports-list">
-        <Suspense fallback={"loading..."}>
+        <Suspense fallback={null}>
           <ReportLists
             refreshKey={refreshKey}
             generateReportButton={

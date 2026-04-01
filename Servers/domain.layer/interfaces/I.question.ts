@@ -9,13 +9,18 @@ export interface IQuestion {
   evidence_required: boolean; // gets assigned from the structure
   is_required: boolean; // gets assigned from the structure
   dropdown_options?: any[]; // gets assigned from the structure
+  /**
+   * Evidence files - now managed via file_entity_links table
+   * This property is populated dynamically by the utils layer
+   */
   evidence_files?: {
-    id: string;
-    fileName: string;
-    project_id: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[]; // gets assigned from the structure
+    id: string | number;
+    fileName?: string;
+    filename?: string;
+    project_id?: number;
+    uploaded_by?: number;
+    uploaded_time?: Date;
+  }[];
   answer?: string; // won't get any values, will be filled by user
   subtopic_id: number; // when subtopic is created, its id will be stored and assign here as FK
   is_demo?: boolean;

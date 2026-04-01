@@ -93,6 +93,18 @@ spec:
               name: verifywise-config
               key: NODE_ENV
 
+        # AI Gateway
+        - name: AI_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: AI_GATEWAY_URL
+        - name: AI_GATEWAY_INTERNAL_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: AI_GATEWAY_INTERNAL_KEY
+
         resources:
           requests:
             memory: "256Mi"

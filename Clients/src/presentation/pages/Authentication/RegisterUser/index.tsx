@@ -19,6 +19,7 @@ import CustomizableToast from "../../../components/Toast";
 import { extractUserToken } from "../../../../application/tools/extractToken";
 import { useSearchParams } from "react-router-dom";
 import { handleAlert } from "../../../../application/tools/alertUtils";
+import { background } from "../../../themes/palette";
 const Alert = lazy(() => import("../../../components/Alert"));
 
 export interface AlertType {
@@ -135,7 +136,7 @@ const RegisterUser: React.FC = () => {
   // Styles for input fields
   const fieldStyles = {
     width: 360,
-    backgroundColor: "#fff",
+    backgroundColor: `${background.main}`,
   };
 
   const checkValidInvitation = (expDate: any) => {

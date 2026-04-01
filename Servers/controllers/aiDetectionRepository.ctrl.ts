@@ -23,6 +23,7 @@ import { getScansListQuery, getActiveScanForRepoQuery } from "../utils/aiDetecti
 import { startScan } from "../services/aiDetection.service";
 import { IServiceContext } from "../domain.layer/interfaces/i.aiDetection";
 import { ScheduleFrequency } from "../domain.layer/interfaces/i.aiDetectionRepository";
+import { generateWebhookSecret } from "../services/webhook.service";
 
 /**
  * Parse GitHub URL to extract owner and repo name
@@ -43,14 +44,14 @@ export async function listRepositories(req: Request, res: Response): Promise<any
     functionName: "listRepositories",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
     const page = Math.max(parseInt(req.query.page as string) || 1, 1);
     const limit = Math.min(100, Math.max(parseInt(req.query.limit as string) || 20, 1));
 
-    const result = await getRepositoriesListQuery(req.tenantId!, page, limit);
+    const result = await getRepositoriesListQuery(req.organizationId!, page, limit);
 
     return res.status(200).json(
       STATUS_CODE[200]({
@@ -71,7 +72,7 @@ export async function listRepositories(req: Request, res: Response): Promise<any
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -87,7 +88,7 @@ export async function getRepository(req: Request, res: Response): Promise<any> {
     functionName: "getRepository",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -96,7 +97,7 @@ export async function getRepository(req: Request, res: Response): Promise<any> {
       return res.status(400).json(STATUS_CODE[400]({ message: "Invalid repository ID" }));
     }
 
-    const repository = await getRepositoryByIdQuery(id, req.tenantId!);
+    const repository = await getRepositoryByIdQuery(id, req.organizationId!);
     if (!repository) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Repository not found" }));
     }
@@ -110,7 +111,7 @@ export async function getRepository(req: Request, res: Response): Promise<any> {
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -126,7 +127,7 @@ export async function createRepository(req: Request, res: Response): Promise<any
     functionName: "createRepository",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -144,7 +145,7 @@ export async function createRepository(req: Request, res: Response): Promise<any
     }
 
     // Check for duplicates
-    const existing = await getRepositoryByOwnerNameQuery(parsed.owner, parsed.name, req.tenantId!);
+    const existing = await getRepositoryByOwnerNameQuery(parsed.owner, parsed.name, req.organizationId!);
     if (existing) {
       return res.status(409).json(
         STATUS_CODE[409]({ message: `Repository ${parsed.owner}/${parsed.name} is already registered` })
@@ -198,7 +199,7 @@ export async function createRepository(req: Request, res: Response): Promise<any
         schedule_minute: schedule_minute ?? 0,
         created_by: req.userId!,
       },
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -207,7 +208,7 @@ export async function createRepository(req: Request, res: Response): Promise<any
       functionName: "createRepository",
       fileName: "aiDetectionRepository.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](repository));
@@ -219,7 +220,7 @@ export async function createRepository(req: Request, res: Response): Promise<any
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -235,7 +236,7 @@ export async function updateRepository(req: Request, res: Response): Promise<any
     functionName: "updateRepository",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -244,14 +245,15 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       return res.status(400).json(STATUS_CODE[400]({ message: "Invalid repository ID" }));
     }
 
-    const existing = await getRepositoryByIdQuery(id, req.tenantId!);
+    const existing = await getRepositoryByIdQuery(id, req.organizationId!);
     if (!existing) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Repository not found" }));
     }
 
     const { display_name, default_branch, github_token_id,
       schedule_enabled, schedule_frequency, schedule_day_of_week,
-      schedule_day_of_month, schedule_hour, schedule_minute, is_enabled } = req.body;
+      schedule_day_of_month, schedule_hour, schedule_minute, is_enabled,
+      ci_enabled, ci_min_score, ci_max_critical, ci_post_comments, ci_status_checks } = req.body;
 
     // Validate schedule fields if enabling
     const willBeEnabled = schedule_enabled !== undefined ? schedule_enabled : existing.schedule_enabled;
@@ -277,9 +279,14 @@ export async function updateRepository(req: Request, res: Response): Promise<any
         schedule_day_of_month,
         schedule_hour,
         schedule_minute,
+        ci_enabled,
+        ci_min_score,
+        ci_max_critical,
+        ci_post_comments,
+        ci_status_checks,
         is_enabled,
       },
-      req.tenantId!
+      req.organizationId!
     );
 
     if (!updated) {
@@ -296,10 +303,10 @@ export async function updateRepository(req: Request, res: Response): Promise<any
         updated.schedule_hour,
         updated.schedule_minute
       );
-      await updateRepositoryNextScanAtQuery(id, nextScanAt, req.tenantId!);
+      await updateRepositoryNextScanAtQuery(id, nextScanAt, req.organizationId!);
       updated.next_scan_at = nextScanAt;
     } else if (!finalEnabled) {
-      await updateRepositoryNextScanAtQuery(id, null, req.tenantId!);
+      await updateRepositoryNextScanAtQuery(id, null, req.organizationId!);
       updated.next_scan_at = null;
     }
 
@@ -309,7 +316,7 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       functionName: "updateRepository",
       fileName: "aiDetectionRepository.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](updated));
@@ -321,7 +328,7 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -337,7 +344,7 @@ export async function deleteRepository(req: Request, res: Response): Promise<any
     functionName: "deleteRepository",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -346,7 +353,7 @@ export async function deleteRepository(req: Request, res: Response): Promise<any
       return res.status(400).json(STATUS_CODE[400]({ message: "Invalid repository ID" }));
     }
 
-    const existing = await getRepositoryByIdQuery(id, req.tenantId!);
+    const existing = await getRepositoryByIdQuery(id, req.organizationId!);
     if (!existing) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Repository not found" }));
     }
@@ -355,7 +362,7 @@ export async function deleteRepository(req: Request, res: Response): Promise<any
     const activeScan = await getActiveScanForRepoQuery(
       existing.repository_owner,
       existing.repository_name,
-      req.tenantId!
+      req.organizationId!
     );
     if (activeScan) {
       return res.status(409).json(
@@ -365,7 +372,7 @@ export async function deleteRepository(req: Request, res: Response): Promise<any
       );
     }
 
-    await deleteRepositoryQuery(id, req.tenantId!);
+    await deleteRepositoryQuery(id, req.organizationId!);
 
     await logSuccess({
       eventType: "Delete",
@@ -373,7 +380,7 @@ export async function deleteRepository(req: Request, res: Response): Promise<any
       functionName: "deleteRepository",
       fileName: "aiDetectionRepository.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200]({ message: "Repository deleted successfully" }));
@@ -385,7 +392,7 @@ export async function deleteRepository(req: Request, res: Response): Promise<any
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -401,7 +408,7 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
     functionName: "triggerRepositoryScan",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -410,7 +417,7 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
       return res.status(400).json(STATUS_CODE[400]({ message: "Invalid repository ID" }));
     }
 
-    const repository = await getRepositoryByIdQuery(id, req.tenantId!);
+    const repository = await getRepositoryByIdQuery(id, req.organizationId!);
     if (!repository) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Repository not found" }));
     }
@@ -419,7 +426,7 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
     const activeScan = await getActiveScanForRepoQuery(
       repository.repository_owner,
       repository.repository_name,
-      req.tenantId!
+      req.organizationId!
     );
     if (activeScan) {
       return res.status(409).json(
@@ -432,7 +439,8 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
     const ctx: IServiceContext = {
       userId: req.userId!,
       role: req.role!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
+      tenantId: req.tenantHash!,
     };
 
     const scan = await startScan(repository.repository_url, ctx, {
@@ -446,7 +454,7 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
       functionName: "triggerRepositoryScan",
       fileName: "aiDetectionRepository.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](scan));
@@ -458,7 +466,7 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
     });
 
     const statusCode =
@@ -484,7 +492,7 @@ export async function getRepositoryScans(req: Request, res: Response): Promise<a
     functionName: "getRepositoryScans",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -493,7 +501,7 @@ export async function getRepositoryScans(req: Request, res: Response): Promise<a
       return res.status(400).json(STATUS_CODE[400]({ message: "Invalid repository ID" }));
     }
 
-    const repository = await getRepositoryByIdQuery(id, req.tenantId!);
+    const repository = await getRepositoryByIdQuery(id, req.organizationId!);
     if (!repository) {
       return res.status(404).json(STATUS_CODE[404]({ message: "Repository not found" }));
     }
@@ -502,7 +510,7 @@ export async function getRepositoryScans(req: Request, res: Response): Promise<a
     const limit = Math.min(100, Math.max(parseInt(req.query.limit as string) || 20, 1));
 
     const result = await getScansListQuery(
-      req.tenantId!,
+      req.organizationId!,
       page,
       limit,
       undefined,
@@ -542,7 +550,63 @@ export async function getRepositoryScans(req: Request, res: Response): Promise<a
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+// ============================================================================
+// Generate Webhook Secret
+// ============================================================================
+
+export async function generateWebhookSecretController(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "generating webhook secret",
+    functionName: "generateWebhookSecretController",
+    fileName: "aiDetectionRepository.ctrl.ts",
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+
+  try {
+    const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json(STATUS_CODE[400]({ message: "Invalid repository ID" }));
+    }
+
+    const existing = await getRepositoryByIdQuery(id, req.organizationId!);
+    if (!existing) {
+      return res.status(404).json(STATUS_CODE[404]({ message: "Repository not found" }));
+    }
+
+    const secret = generateWebhookSecret();
+
+    await updateRepositoryQuery(
+      id,
+      { webhook_secret: secret } as any,
+      req.organizationId!
+    );
+
+    await logSuccess({
+      eventType: "Update",
+      description: `Generated webhook secret for repository ${existing.repository_owner}/${existing.repository_name}`,
+      functionName: "generateWebhookSecretController",
+      fileName: "aiDetectionRepository.ctrl.ts",
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200]({ webhook_secret: secret }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: "Failed to generate webhook secret",
+      functionName: "generateWebhookSecretController",
+      fileName: "aiDetectionRepository.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

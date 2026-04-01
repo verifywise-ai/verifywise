@@ -4,28 +4,29 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 
 /**
- * Get all model risks for a tenant
+ * Get all model risks for an organization
  */
 export async function getAllModelRisksQuery(
-  tenant: string,
+  organizationId: number,
   filter: "active" | "deleted" | "all" = "active"
 ): Promise<ModelRiskModel[]> {
-  let whereClause = "";
+  let whereClause = "WHERE organization_id = :organizationId";
   switch (filter) {
     case "active":
-      whereClause = "WHERE is_deleted = false";
+      whereClause += " AND is_deleted = false";
       break;
     case "deleted":
-      whereClause = "WHERE is_deleted = true";
+      whereClause += " AND is_deleted = true";
       break;
     case "all":
-      whereClause = "";
+      // No additional filter
       break;
   }
 
   const modelRisks = await sequelize.query(
-    `SELECT * FROM "${tenant}".model_risks ${whereClause} ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM model_risks ${whereClause} ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: ModelRiskModel,
     }
@@ -38,16 +39,16 @@ export async function getAllModelRisksQuery(
  */
 export async function getModelRiskByIdQuery(
   id: number,
-  tenant: string,
+  organizationId: number,
   includeDeleted: boolean = false
 ): Promise<ModelRiskModel | null> {
   const whereClause = includeDeleted
-    ? "WHERE id = :id"
-    : "WHERE id = :id AND is_deleted = false";
+    ? "WHERE organization_id = :organizationId AND id = :id"
+    : "WHERE organization_id = :organizationId AND id = :id AND is_deleted = false";
   const modelRisk = await sequelize.query(
-    `SELECT * FROM "${tenant}".model_risks ${whereClause}`,
+    `SELECT * FROM model_risks ${whereClause}`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: ModelRiskModel,
     }
@@ -63,15 +64,16 @@ export async function getModelRiskByIdQuery(
  */
 export async function createNewModelRiskQuery(
   data: Partial<IModelRisk>,
-  tenant: string,
+  organizationId: number,
   transaction?: import("sequelize").Transaction
 ): Promise<ModelRiskModel> {
   const created_at = new Date();
   const result = await sequelize.query(
-    `INSERT INTO "${tenant}".model_risks (risk_name, risk_category, risk_level, status, owner, target_date, description, mitigation_plan, impact, likelihood, key_metrics, current_values, threshold, model_id, created_at, updated_at, is_demo)
-        VALUES (:risk_name, :risk_category, :risk_level, :status, :owner, :target_date, :description, :mitigation_plan, :impact, :likelihood, :key_metrics, :current_values, :threshold, :model_id, :created_at, :updated_at, :is_demo) RETURNING *`,
+    `INSERT INTO model_risks (organization_id, risk_name, risk_category, risk_level, status, owner, target_date, description, mitigation_plan, impact, likelihood, key_metrics, current_values, threshold, model_id, created_at, updated_at, is_demo)
+        VALUES (:organization_id, :risk_name, :risk_category, :risk_level, :status, :owner, :target_date, :description, :mitigation_plan, :impact, :likelihood, :key_metrics, :current_values, :threshold, :model_id, :created_at, :updated_at, :is_demo) RETURNING *`,
     {
       replacements: {
+        organization_id: organizationId,
         risk_name: data.risk_name || "",
         risk_category: data.risk_category,
         risk_level: data.risk_level,
@@ -105,11 +107,11 @@ export async function createNewModelRiskQuery(
 export async function updateModelRiskByIdQuery(
   id: number,
   updatedModelRisk: Partial<IModelRisk>,
-  tenant: string,
+  organizationId: number,
   transaction?: import("sequelize").Transaction
 ): Promise<ModelRiskModel | null> {
   const updated_at = new Date();
-  const updateModelRisk: Partial<IModelRisk> = { updated_at };
+  const updateModelRisk: Partial<IModelRisk> & { organization_id?: number } = { updated_at };
   const setClause = [
     "risk_name",
     "risk_category",
@@ -138,12 +140,13 @@ export async function updateModelRiskByIdQuery(
     .join(", ");
 
   if (!setClause) {
-    return getModelRiskByIdQuery(id, tenant); // No fields to update, return current state
+    return getModelRiskByIdQuery(id, organizationId); // No fields to update, return current state
   }
 
   updateModelRisk.id = id;
+  updateModelRisk.organization_id = organizationId;
 
-  const query = `UPDATE "${tenant}".model_risks SET ${setClause} WHERE id = :id RETURNING *`;
+  const query = `UPDATE model_risks SET ${setClause} WHERE organization_id = :organization_id AND id = :id RETURNING *`;
 
   const result = await sequelize.query(query, {
     replacements: updateModelRisk,
@@ -159,12 +162,12 @@ export async function updateModelRiskByIdQuery(
  */
 export async function deleteModelRiskByIdQuery(
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<boolean> {
   const result = await sequelize.query(
-    `UPDATE "${tenant}".model_risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND is_deleted = false RETURNING *`,
+    `UPDATE model_risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: ModelRiskModel,
       type: QueryTypes.UPDATE,

@@ -31,11 +31,11 @@ export async function getAllAssessments(
     functionName: "getAllAssessments",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!
+    tenantId: req.organizationId!
   });
 
   try {
-    const assessments = await getAllAssessmentsQuery(req.tenantId!);
+    const assessments = await getAllAssessmentsQuery(req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -43,7 +43,7 @@ export async function getAllAssessments(
       functionName: "getAllAssessments",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res
@@ -57,7 +57,7 @@ export async function getAllAssessments(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -75,13 +75,13 @@ export async function getAssessmentById(
     functionName: "getAssessmentById",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!
+    tenantId: req.organizationId!
   });
 
   try {
     const assessment = await getAssessmentByIdQuery(
       assessmentId,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -90,7 +90,7 @@ export async function getAssessmentById(
       functionName: "getAssessmentById",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res
@@ -104,7 +104,7 @@ export async function getAssessmentById(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -121,7 +121,7 @@ export async function createAssessment(
     functionName: "createAssessment",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!
+    tenantId: req.organizationId!
   });
 
   try {
@@ -149,7 +149,7 @@ export async function createAssessment(
         functionName: "createAssessment",
         fileName: "assessment.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!
+        tenantId: req.organizationId!
       });
 
       return res.status(201).json(
@@ -168,7 +168,7 @@ export async function createAssessment(
       functionName: "createAssessment",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res.status(503).json(
@@ -186,7 +186,7 @@ export async function createAssessment(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     if (error instanceof ValidationException) {
@@ -208,7 +208,7 @@ export async function updateAssessmentById(
     functionName: "updateAssessmentById",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!
+    tenantId: req.organizationId!
   });
 
   try {
@@ -235,7 +235,7 @@ export async function updateAssessmentById(
         functionName: "updateAssessmentById",
         fileName: "assessment.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!
+        tenantId: req.organizationId!
       });
 
       return res.status(202).json(
@@ -254,7 +254,7 @@ export async function updateAssessmentById(
       functionName: "updateAssessmentById",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res.status(404).json(
@@ -273,7 +273,7 @@ export async function updateAssessmentById(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     if (error instanceof ValidationException) {
@@ -295,13 +295,13 @@ export async function deleteAssessmentById(
     functionName: "deleteAssessmentById",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!
+    tenantId: req.organizationId!
   });
 
   try {
     const deletedAssessment = await deleteAssessmentByIdQuery(
       assessmentId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -314,7 +314,7 @@ export async function deleteAssessmentById(
         functionName: "deleteAssessmentById",
         fileName: "assessment.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!
+        tenantId: req.organizationId!
       });
 
       return res.status(202).json(STATUS_CODE[202](deletedAssessment));
@@ -326,7 +326,7 @@ export async function deleteAssessmentById(
       functionName: "deleteAssessmentById",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -340,7 +340,7 @@ export async function deleteAssessmentById(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -355,29 +355,29 @@ export async function getAnswers(req: Request, res: Response): Promise<any> {
     functionName: "getAnswers",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!
+    tenantId: req.organizationId!
   });
 
   try {
     const assessment = (await getAssessmentByIdQuery(
       assessmentId,
-      req.tenantId!
+      req.organizationId!
     )) as AssessmentModel;
     const topics = (await getTopicByAssessmentIdQuery(
       assessment.id!,
-      req.tenantId!
+      req.organizationId!
     )) as TopicModel[];
 
     for (let topic of topics) {
       const subTopics = (await getSubTopicByTopicIdQuery(
         topic.id!,
-        req.tenantId!
+        req.organizationId!
       )) as SubtopicModel[];
 
       for (let subTopic of subTopics) {
         const questions = await getQuestionBySubTopicIdQuery(
           subTopic.id!,
-          req.tenantId!
+          req.organizationId!
         );
         (subTopic.dataValues as any)["questions"] = questions;
       }
@@ -391,7 +391,7 @@ export async function getAnswers(req: Request, res: Response): Promise<any> {
       functionName: "getAnswers",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res.status(200).json(STATUS_CODE[200]({ message: assessment }));
@@ -403,7 +403,7 @@ export async function getAnswers(req: Request, res: Response): Promise<any> {
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -421,13 +421,13 @@ export async function getAssessmentByProjectId(
     functionName: "getAssessmentByProjectId",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!
+    tenantId: req.organizationId!
   });
 
   try {
     const assessments = await getAssessmentByProjectIdQuery(
       projectId,
-      req.tenantId!
+      req.organizationId!
     );
 
     await logSuccess({
@@ -436,7 +436,7 @@ export async function getAssessmentByProjectId(
       functionName: "getAssessmentByProjectId",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res
@@ -454,7 +454,7 @@ export async function getAssessmentByProjectId(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!
+      tenantId: req.organizationId!
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

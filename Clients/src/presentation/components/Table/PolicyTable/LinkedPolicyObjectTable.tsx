@@ -16,7 +16,7 @@ import {
     Chip,
 } from "@mui/material";
 
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, Link2 } from "lucide-react";
 import { singleTheme } from "../../../../../src/presentation/themes";
 import {
     paginationMenuProps,
@@ -31,6 +31,7 @@ import { EmptyState } from "../../EmptyState";
 import TablePaginationActions from "../../TablePagination";
 import { paginationStyle } from "../styles";
 import { useUserMap } from "../../../../../src/presentation/hooks/userMap";
+import { text } from "../../../themes/palette";
 
 interface LinkedPolicyObjectsTableProps {
     policies: any[];
@@ -133,7 +134,7 @@ const SortableTableHead = ({
                                         color:
                                             sortConfig.key === column.id
                                                 ? "primary.main"
-                                                : "#9CA3AF",
+                                                : `${text.disabled}`,
                                     }}
                                 >
                                     {sortConfig.key === column.id &&
@@ -314,7 +315,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                         ...cellStyle,
                         backgroundColor:
                           sortConfig?.key?.toLowerCase().includes("status")
-                            ? "#f5f5f5"
+                            ? "background.surface"
                             : "inherit",
                       }}
                     >
@@ -327,7 +328,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                         ...cellStyle,
                         backgroundColor:
                           sortConfig?.key?.toLowerCase().includes("tags")
-                            ? "#f5f5f5"
+                            ? "background.surface"
                             : "inherit",
                       }}
                     >
@@ -340,7 +341,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                         ...cellStyle,
                         backgroundColor:
                           sortConfig?.key?.toLowerCase().includes("author")
-                            ? "#f5f5f5"
+                            ? "background.surface"
                             : "inherit",
                       }}
                     >
@@ -358,7 +359,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                           (sortConfig.key.toLowerCase().includes("last") ||
                             sortConfig.key.toLowerCase().includes("updated")) &&
                           !sortConfig.key.toLowerCase().includes("by")
-                            ? "#f5f5f5"
+                            ? "background.surface"
                             : "inherit",
                       }}
                     >
@@ -375,7 +376,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                           sortConfig?.key
                             ?.toLowerCase()
                             .includes("updated by")
-                            ? "#f5f5f5"
+                            ? "background.surface"
                             : "inherit",
                       }}
                     >
@@ -417,7 +418,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                   colSpan={TABLE_COLUMNS.length}
                   align="center"
                 >
-                  <EmptyState message="No linked items found." />
+                  <EmptyState icon={Link2} message="No linked items found." />
                 </TableCell>
               </TableRow>
             )}

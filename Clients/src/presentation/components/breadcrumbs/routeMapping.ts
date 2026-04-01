@@ -36,12 +36,18 @@ import {
   Bot,
   Database,
   FileSearch,
+  FolderGit2,
   Search,
   History,
   Eye,
   ShieldAlert,
   ClipboardList,
   Inbox,
+  Router,
+  MessageSquare,
+  ShieldCheck,
+  KeyRound,
+  BookOpen,
 } from "lucide-react";
 
 /**
@@ -119,7 +125,30 @@ export const routeMapping: Record<string, string> = {
   "/ai-detection/scan": "Scan repository",
   "/ai-detection/history": "Scan history",
   "/ai-detection/scans": "Scan history",
+  "/ai-detection/repositories": "Repositories",
   "/ai-detection/settings": "Settings",
+
+  // AI Gateway
+  "/ai-gateway": "AI gateway",
+  "/ai-gateway/dashboard": "Dashboard",
+  "/ai-gateway/endpoints": "Endpoints",
+  "/ai-gateway/playground": "Playground",
+  "/ai-gateway/guardrails": "Guardrails",
+  "/ai-gateway/guardrails/pii": "PII detection",
+  "/ai-gateway/guardrails/content-filter": "Content filter",
+  "/ai-gateway/models": "Models",
+  "/ai-gateway/models/catalog": "All models",
+  "/ai-gateway/models/calculator": "Cost calculator",
+  "/ai-gateway/models/compare": "Feature comparison",
+  "/ai-gateway/logs": "Logs",
+  "/ai-gateway/prompts": "Prompts",
+  "/ai-gateway/virtual-keys": "Virtual keys",
+  "/ai-gateway/settings": "Settings",
+  "/ai-gateway/settings/api-keys": "API keys",
+  "/ai-gateway/settings/budget": "Budget",
+  "/ai-gateway/settings/virtual-keys": "Virtual keys",
+  "/ai-gateway/settings/guardrails": "Guardrail settings",
+  "/ai-gateway/settings/risks": "Suggested risks",
 
   // Shadow AI
   "/shadow-ai": "Shadow AI",
@@ -135,6 +164,13 @@ export const routeMapping: Record<string, string> = {
   // Intake forms
   "/intake-forms": "Intake forms",
   "/intake-forms/submissions": "Submissions",
+
+  // Policies
+  "/policies": "Policies",
+
+  // Super Admin
+  "/super-admin": "Super Admin",
+  "/super-admin/users": "Users",
 
   // Authentication
   "/login": "Sign in",
@@ -211,6 +247,7 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
 
   // Policy Manager
   "/policies": () => React.createElement(Shield, { size: 14, strokeWidth: 1.5 }),
+  "/policies/new": () => React.createElement(Shield, { size: 14, strokeWidth: 1.5 }),
 
   // Automations
   "/automations": () => React.createElement(Zap, { size: 14, strokeWidth: 1.5 }),
@@ -235,11 +272,38 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/ai-detection/scan": () => React.createElement(Search, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/history": () => React.createElement(History, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/scans": () => React.createElement(History, { size: 14, strokeWidth: 1.5 }),
+  "/ai-detection/repositories": () => React.createElement(FolderGit2, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
 
   // Intake forms
   "/intake-forms": () => React.createElement(ClipboardList, { size: 14, strokeWidth: 1.5 }),
   "/intake-forms/submissions": () => React.createElement(Inbox, { size: 14, strokeWidth: 1.5 }),
+
+  // AI Gateway
+  "/ai-gateway": () => React.createElement(Router, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/dashboard": () => React.createElement(BarChart3, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/endpoints": () => React.createElement(Router, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/playground": () => React.createElement(MessageSquare, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/guardrails": () => React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/guardrails/pii": () => React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/guardrails/content-filter": () => React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/models": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/models/catalog": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/models/calculator": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/models/compare": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/logs": () => React.createElement(FileSearch, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/prompts": () => React.createElement(BookOpen, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/virtual-keys": () => React.createElement(KeyRound, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings/api-keys": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings/budget": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings/virtual-keys": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings/guardrails": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings/risks": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+
+  // Super Admin
+  "/super-admin": () => React.createElement(Shield, { size: 14, strokeWidth: 1.5 }),
+  "/super-admin/users": () => React.createElement(Users, { size: 14, strokeWidth: 1.5 }),
 
   // Shadow AI
   "/shadow-ai": () => React.createElement(Eye, { size: 14, strokeWidth: 1.5 }),
@@ -295,16 +359,40 @@ export const dynamicRoutePatterns = [
     icon: () => React.createElement(FileSearch, { size: 14, strokeWidth: 1.5 }),
   },
   {
+    pattern: /\/ai-gateway\/prompts\/\d+/,
+    label: "Prompt editor",
+    description: "Edit a specific prompt",
+    icon: () => React.createElement(BookOpen, { size: 14, strokeWidth: 1.5 }),
+  },
+  {
     pattern: /\/shadow-ai\/tools\/\d+/,
     label: "Tool details",
     description: "Detailed view of specific AI tool",
     icon: () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
   },
   {
+    pattern: /\/super-admin\/organizations\/\d+\/users/,
+    label: "Organization users",
+    description: "Users in a specific organization",
+    icon: () => React.createElement(Users, { size: 14, strokeWidth: 1.5 }),
+  },
+  {
     pattern: /\/intake-forms\/\w+\/edit/,
     label: "Form builder",
     description: "Edit intake form",
     icon: () => React.createElement(ClipboardList, { size: 14, strokeWidth: 1.5 }),
+  },
+  {
+    pattern: /\/policies\/\d+\/edit/,
+    label: "Edit policy",
+    description: "Edit an existing policy",
+    icon: () => React.createElement(Shield, { size: 14, strokeWidth: 1.5 }),
+  },
+  {
+    pattern: /\/policies\/new/,
+    label: "New policy",
+    description: "Create a new policy",
+    icon: () => React.createElement(Shield, { size: 14, strokeWidth: 1.5 }),
   },
 ];
 

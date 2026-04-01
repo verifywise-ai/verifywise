@@ -3,22 +3,44 @@ import { QueryTypes } from "sequelize";
 import * as fs from "fs";
 import * as path from "path";
 
-export const getEventsQuery = async (tenantId: string) => {
+/**
+ * Get event logs for an organization
+ *
+ * @param {number} organizationId - Organization ID for tenant isolation
+ * @returns {Promise<any[]>} Array of event logs
+ */
+export const getEventsQuery = async (organizationId: number) => {
   const events = await sequelize.query(
-    `SELECT * FROM "${tenantId}".event_logs ORDER BY timestamp DESC`,
+    `SELECT * FROM event_logs
+     WHERE organization_id = :organization_id
+     ORDER BY timestamp DESC`,
     {
+      replacements: { organization_id: organizationId },
       type: QueryTypes.SELECT,
     }
   );
   return events;
 };
 
-export const getLogsQuery = async (tenantId: string) => {
+/**
+ * Get file-based logs for an organization
+ *
+ * @param {number} organizationId - Organization ID (used for log directory)
+ * @returns {Promise<object>} Log file contents or error
+ */
+export const getLogsQuery = async (organizationId: number) => {
   try {
     // Get current date in YYYY-MM-DD format (UTC to match the logger)
     const currentDate = new Date().toISOString().split("T")[0];
     const logFileName = `app-${currentDate}.log`;
-    const logFilePath = path.join(__dirname, "..", "..", "logs", tenantId, logFileName);
+    const logFilePath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "logs",
+      String(organizationId),
+      logFileName
+    );
 
     // Check if the log file exists
     if (!fs.existsSync(logFilePath)) {

@@ -72,15 +72,17 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
   })
   dropdown_options?: any[];
 
-  @Column({
-    type: DataType.JSONB,
-  })
+  /**
+   * Evidence files - now managed via file_entity_links table
+   * This property is populated dynamically by the utils layer, not stored in database
+   */
   evidence_files?: {
-    id: string;
-    fileName: string;
-    project_id: number;
-    uploaded_by: number;
-    uploaded_time: Date;
+    id: string | number;
+    fileName?: string;
+    filename?: string;
+    project_id?: number;
+    uploaded_by?: number;
+    uploaded_time?: Date;
   }[];
 
   @Column({

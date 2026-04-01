@@ -22,6 +22,7 @@ import {
   Eye as ViewIcon,
 } from "lucide-react";
 import Field from "../../Inputs/Field";
+import RichTextEditor from "../../RichTextEditor";
 import { FileData } from "../../../../domain/types/File";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
@@ -29,6 +30,7 @@ import { Dayjs } from "dayjs";
 import { useState, useEffect, Suspense, lazy, useRef } from "react";
 import { CustomizableButton } from "../../button/customizable-button";
 import TabBar from "../../TabBar";
+import { text } from "../../../themes/palette";
 const NotesTab = lazy(() => import("../../Notes/NotesTab"));
 const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -76,7 +78,7 @@ interface ISO27001SubClauseData {
 interface ISO27001ClauseRef {
   id?: number;
   title?: string;
-  arrangement?: number;
+  order_no?: number;
   clause_no?: number;
 }
 
@@ -762,7 +764,7 @@ const VWISO27001ClauseDrawerDialog = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 600,
+          width: 850,
           margin: 0,
           "& .MuiDrawer-paper": {
             margin: 0,
@@ -773,7 +775,7 @@ const VWISO27001ClauseDrawerDialog = ({
       >
         <Stack
           sx={{
-            width: 600,
+            width: 850,
             height: "100%",
             display: "flex",
             justifyContent: "center",
@@ -794,10 +796,10 @@ const VWISO27001ClauseDrawerDialog = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 600,
+          width: 850,
           margin: 0,
           "& .MuiDrawer-paper": {
-            width: 600,
+            width: 850,
             margin: 0,
             borderRadius: 0,
             overflowX: "hidden",
@@ -808,12 +810,12 @@ const VWISO27001ClauseDrawerDialog = ({
         <Stack
           className="vw-iso-27001-clause-drawer-dialog-content"
           sx={{
-            width: 600,
+            width: 850,
           }}
         >
           <Stack
             sx={{
-              width: 600,
+              width: 850,
               padding: "15px 20px",
               display: "flex",
               flexDirection: "row",
@@ -822,7 +824,7 @@ const VWISO27001ClauseDrawerDialog = ({
             }}
           >
             <Typography fontSize={15} fontWeight={700}>
-              {clause?.arrangement + "." + (index + 1)} {displayData?.title}
+              {clause?.order_no + "." + (index + 1)} {displayData?.title}
             </Typography>
             <CloseIcon
               size={20}
@@ -935,31 +937,23 @@ const VWISO27001ClauseDrawerDialog = ({
                 {/* Implementation Description */}
                 <Stack>
                   <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Implementation Description:
+                    Implementation description:
                   </Typography>
-                  <Field
-                    type="description"
-                    value={formData.implementation_description}
-                    onChange={(e) =>
+                  <RichTextEditor
+                    toolbar="full"
+                    initialContent={formData.implementation_description}
+                    onContentChange={(content) =>
                       handleFieldChange(
                         "implementation_description",
-                        e.target.value
+                        content
                       )
                     }
-                    sx={{
-                      cursor: "text",
-                      "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
-                        {
-                          height: "73px",
-                        },
-                    }}
-                    placeholder="Describe how this requirement is implemented"
-                    disabled={isEditingDisabled}
+                    placeholder="Describe how this requirement is implemented..."
+                    isEditable={!isEditingDisabled}
+                    height="120px"
                   />
                 </Stack>
               </Stack>
-
-              <Divider sx={{ my: 2 }} />
 
               <Stack gap={"24px"}>
                 <Select
@@ -1107,12 +1101,12 @@ const VWISO27001ClauseDrawerDialog = ({
                           minWidth: 155,
                           height: 25,
                           fontSize: 11,
-                          border: "1px solid #D0D5DD",
+                          border: "1px solid #d0d5dd",
                           backgroundColor: "white",
-                          color: "#344054",
+                          color: "text.secondary",
                           "&:hover": {
-                            backgroundColor: "#F9FAFB",
-                            border: "1px solid #D0D5DD",
+                            backgroundColor: "background.accent",
+                            border: "1px solid #d0d5dd",
                           },
                         }}
                         disableRipple={
@@ -1218,7 +1212,7 @@ const VWISO27001ClauseDrawerDialog = ({
                                 {file.fileName}
                               </Typography>
                               <Typography
-                                sx={{ fontSize: 11, color: "#6B7280" }}
+                                sx={{ fontSize: 11, color: "status.default.text" }}
                               >
                                 {file.size ? `${((file.size || 0) / 1024).toFixed(1)} KB` : ""}
                                 {file.size && file.source ? " • " : ""}
@@ -1397,7 +1391,7 @@ const VWISO27001ClauseDrawerDialog = ({
                             sx={{
                               color: "#4C7BF4",
                               "&:hover": {
-                                color: "#D32F2F",
+                                color: "status.error.text",
                                 backgroundColor: "rgba(211, 47, 47, 0.08)",
                               },
                             }}
@@ -1425,7 +1419,7 @@ const VWISO27001ClauseDrawerDialog = ({
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       No evidence files uploaded yet
                     </Typography>
-                    <Typography variant="caption" color="#9CA3AF">
+                    <Typography variant="caption" color={text.disabled}>
                       Click "Add evidence files" to upload documentation for
                       this requirement
                     </Typography>
@@ -1624,7 +1618,6 @@ const VWISO27001ClauseDrawerDialog = ({
               </Suspense>
             </TabPanel>
           </TabContext>
-          <Divider />
           <Stack
             className="vw-iso-27001-clause-drawer-dialog-footer"
             sx={{

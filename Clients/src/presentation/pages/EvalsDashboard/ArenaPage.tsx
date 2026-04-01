@@ -759,7 +759,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                 onProviderChange={(provider) => setNewComparison({ ...newComparison, judgeProvider: provider, judgeModel: "" })}
                 onModelChange={(model) => setNewComparison({ ...newComparison, judgeModel: model })}
                 configuredProviders={configuredProviders}
-                onNavigateToSettings={() => navigate("/evals#settings")}
+                onNavigateToSettings={() => navigate("/evals/settings")}
                 label="Judge model"
               />
               <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: 1 }}>
@@ -1008,7 +1008,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                           onProviderChange={(newProvider) => updateContestant(index, "provider", newProvider)}
                           onModelChange={(newModel) => updateContestant(index, "model", newModel)}
                           configuredProviders={configuredProviders}
-                          onNavigateToSettings={() => navigate("/evals#settings")}
+                          onNavigateToSettings={() => navigate("/evals/settings")}
                           label=""
                         />
                       </Box>

@@ -16,7 +16,7 @@ export type AnswerEU = {
   created_at?: Date;
   assessment_id: number;
   dropdown_options?: any[]; // gets assigned from the structure
-  evidence_files?: Object[]; // gets assigned from the structure
+  // NOTE: evidence_files are now stored in file_entity_links table
   status?: StatusAnswers;
 };
 
@@ -53,16 +53,7 @@ export class AnswerEUModel extends Model<AnswerEU> {
   })
   dropdown_options?: any[];
 
-  @Column({
-    type: DataType.JSONB,
-  })
-  evidence_files?: {
-    id: string;
-    fileName: string;
-    project_id: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[];
+  // NOTE: evidence_files are now stored in file_entity_links table
 
   @Column({
     type: DataType.ENUM(...STATUSES_ANSWERS),

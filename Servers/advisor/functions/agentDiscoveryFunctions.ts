@@ -14,7 +14,7 @@ export interface FetchAgentPrimitivesParams {
 
 const fetchAgentPrimitives = async (
   params: FetchAgentPrimitivesParams,
-  tenant: string
+  organizationId: number
 ): Promise<any[]> => {
   try {
     // Pass filters directly to the query (it supports them natively)
@@ -24,7 +24,7 @@ const fetchAgentPrimitives = async (
     if (params.review_status) filters.review_status = params.review_status;
     if (params.is_stale !== undefined) filters.is_stale = params.is_stale;
 
-    let agents = await getAllAgentPrimitivesQuery(tenant, filters);
+    let agents = await getAllAgentPrimitivesQuery(organizationId, filters);
 
     // Limit results
     if (params.limit && params.limit > 0) {
@@ -55,12 +55,12 @@ const fetchAgentPrimitives = async (
 
 const getAgentDiscoveryAnalytics = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
     const [agents, stats] = await Promise.all([
-      getAllAgentPrimitivesQuery(tenant),
-      getAgentStatsQuery(tenant),
+      getAllAgentPrimitivesQuery(organizationId),
+      getAgentStatsQuery(organizationId),
     ]);
 
     // Source system distribution
@@ -101,10 +101,10 @@ const getAgentDiscoveryAnalytics = async (
 
 const getAgentDiscoveryExecutiveSummary = async (
   _params: Record<string, unknown>,
-  tenant: string
+  organizationId: number
 ): Promise<any> => {
   try {
-    const stats = await getAgentStatsQuery(tenant);
+    const stats = await getAgentStatsQuery(organizationId);
 
     const reviewRate =
       stats.total > 0

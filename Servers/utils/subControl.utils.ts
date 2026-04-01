@@ -5,47 +5,138 @@ import { uploadFile } from "./fileUpload.utils";
 import { QueryTypes, Transaction } from "sequelize";
 import { FileType } from "../domain.layer/models/file/file.model";
 import { ISubcontrol } from "../domain.layer/interfaces/i.subcontrol";
+import {
+  getEvidenceFilesForEntity,
+  getEvidenceFilesForEntities,
+  createFileEntityLink,
+  deleteFileEntityLink,
+} from "./files/evidenceFiles.utils";
+
+// Framework type for generic compliance subcontrols
+const FRAMEWORK_TYPE = "generic_compliance";
+const ENTITY_TYPE = "subcontrol";
 
 export const getAllSubcontrolsQuery = async (
-  tenant: string
+  organizationId: number
 ): Promise<ISubcontrol[]> => {
   const subcontrols = await sequelize.query(
-    `SELECT * FROM "${tenant}".subcontrols ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM subcontrols WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: SubcontrolModel,
     }
   );
+
+  // Batch fetch evidence and feedback files from file_entity_links
+  const subcontrolIds = subcontrols.map((s) => s.id!);
+  let evidenceFilesMap = new Map<number, any[]>();
+  let feedbackFilesMap = new Map<number, any[]>();
+
+  if (subcontrolIds.length > 0) {
+    evidenceFilesMap = await getEvidenceFilesForEntities(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      subcontrolIds,
+      "evidence"
+    );
+    feedbackFilesMap = await getEvidenceFilesForEntities(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      subcontrolIds,
+      "feedback"
+    );
+  }
+
+  // Attach files to each subcontrol for backward compatibility
+  for (const subcontrol of subcontrols) {
+    (subcontrol as any).evidence_files = evidenceFilesMap.get(subcontrol.id!) || [];
+    (subcontrol as any).feedback_files = feedbackFilesMap.get(subcontrol.id!) || [];
+  }
+
   return subcontrols;
 };
 
 export const getAllSubcontrolsByControlIdQuery = async (
   controlId: number,
-  tenant: string
+  organizationId: number
 ): Promise<ISubcontrol[]> => {
   const subcontrols = await sequelize.query(
-    `SELECT * FROM "${tenant}".subcontrols WHERE control_id = :id ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM subcontrols WHERE organization_id = :organizationId AND control_id = :id ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { id: controlId },
+      replacements: { organizationId, id: controlId },
       mapToModel: true,
       model: SubcontrolModel,
     }
   );
+
+  // Batch fetch evidence and feedback files from file_entity_links
+  const subcontrolIds = subcontrols.map((s) => s.id!);
+  let evidenceFilesMap = new Map<number, any[]>();
+  let feedbackFilesMap = new Map<number, any[]>();
+
+  if (subcontrolIds.length > 0) {
+    evidenceFilesMap = await getEvidenceFilesForEntities(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      subcontrolIds,
+      "evidence"
+    );
+    feedbackFilesMap = await getEvidenceFilesForEntities(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      subcontrolIds,
+      "feedback"
+    );
+  }
+
+  // Attach files to each subcontrol for backward compatibility
+  for (const subcontrol of subcontrols) {
+    (subcontrol as any).evidence_files = evidenceFilesMap.get(subcontrol.id!) || [];
+    (subcontrol as any).feedback_files = feedbackFilesMap.get(subcontrol.id!) || [];
+  }
+
   return subcontrols;
 };
 
 export const getSubcontrolByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ): Promise<ISubcontrol | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM "${tenant}".subcontrols WHERE id = :id`,
+    `SELECT * FROM subcontrols WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: SubcontrolModel,
     }
   );
+
+  if (!result.length) return null;
+
+  // Fetch evidence and feedback files from file_entity_links
+  const evidenceFiles = await getEvidenceFilesForEntity(
+    organizationId,
+    FRAMEWORK_TYPE,
+    ENTITY_TYPE,
+    id,
+    "evidence"
+  );
+  const feedbackFiles = await getEvidenceFilesForEntity(
+    organizationId,
+    FRAMEWORK_TYPE,
+    ENTITY_TYPE,
+    id,
+    "feedback"
+  );
+
+  (result[0] as any).evidence_files = evidenceFiles;
+  (result[0] as any).feedback_files = feedbackFiles;
+
   return result[0];
 };
 
@@ -54,71 +145,77 @@ export const createNewSubcontrolQuery = async (
   subcontrol: Partial<SubcontrolModel>,
   project_id: number,
   user_id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
   evidenceFiles?: UploadedFile[],
   feedbackFiles?: UploadedFile[]
 ): Promise<SubcontrolModel> => {
+  // Upload evidence files
   let uploadedEvidenceFiles: FileType[] = [];
-  await Promise.all(
-    evidenceFiles!.map(async (file) => {
-      const uploadedFile = await uploadFile(
-        file,
-        user_id,
-        project_id,
-        "Compliance tracker group",
-        tenant,
-        transaction
-      );
-      uploadedEvidenceFiles.push({
-        id: uploadedFile.id!.toString(),
-        fileName: uploadedFile.filename,
-        project_id: uploadedFile.project_id,
-        uploaded_by: uploadedFile.uploaded_by,
-        uploaded_time: uploadedFile.uploaded_time,
-        type: uploadedFile.type,
-        source: uploadedFile.source,
-      });
-    })
-  );
+  if (evidenceFiles && evidenceFiles.length > 0) {
+    await Promise.all(
+      evidenceFiles.map(async (file) => {
+        const uploadedFile = await uploadFile(
+          file,
+          user_id,
+          project_id,
+          "Compliance tracker group",
+          organizationId,
+          transaction
+        );
+        uploadedEvidenceFiles.push({
+          id: uploadedFile.id!.toString(),
+          fileName: uploadedFile.filename,
+          project_id: uploadedFile.project_id,
+          uploaded_by: uploadedFile.uploaded_by,
+          uploaded_time: uploadedFile.uploaded_time,
+          type: uploadedFile.type,
+          source: uploadedFile.source,
+        });
+      })
+    );
+  }
 
+  // Upload feedback files
   let uploadedFeedbackFiles: FileType[] = [];
-  await Promise.all(
-    feedbackFiles!.map(async (file) => {
-      const uploadedFile = await uploadFile(
-        file,
-        user_id,
-        project_id,
-        "Compliance tracker group",
-        tenant,
-        transaction
-      );
-      uploadedFeedbackFiles.push({
-        id: uploadedFile.id!.toString(),
-        fileName: uploadedFile.filename,
-        project_id: uploadedFile.project_id,
-        uploaded_by: uploadedFile.uploaded_by,
-        uploaded_time: uploadedFile.uploaded_time,
-        type: uploadedFile.type,
-        source: uploadedFile.source,
-      });
-    })
-  );
+  if (feedbackFiles && feedbackFiles.length > 0) {
+    await Promise.all(
+      feedbackFiles.map(async (file) => {
+        const uploadedFile = await uploadFile(
+          file,
+          user_id,
+          project_id,
+          "Compliance tracker group",
+          organizationId,
+          transaction
+        );
+        uploadedFeedbackFiles.push({
+          id: uploadedFile.id!.toString(),
+          fileName: uploadedFile.filename,
+          project_id: uploadedFile.project_id,
+          uploaded_by: uploadedFile.uploaded_by,
+          uploaded_time: uploadedFile.uploaded_time,
+          type: uploadedFile.type,
+          source: uploadedFile.source,
+        });
+      })
+    );
+  }
 
+  // Insert without JSONB file columns (now managed via file_entity_links)
   const result = await sequelize.query(
     `INSERT INTO subcontrols (
-      control_id, title, description, order_no, status,
+      organization_id, control_id, title, description, order_no, status,
       approver, risk_review, owner, reviewer, due_date,
-      implementation_details, evidence_description, 
-      feedback_description, evidence_files, feedback_files
+      implementation_details, evidence_description, feedback_description
     ) VALUES (
-      :control_id, :title, :description, :order_no, :status,
+      :organizationId, :control_id, :title, :description, :order_no, :status,
       :approver, :risk_review, :owner, :reviewer, :due_date,
-      :implementation_details, :evidence_description,
-      :feedback_description, :evidence_files, :feedback_files
+      :implementation_details, :evidence_description, :feedback_description
     ) RETURNING *`,
     {
       replacements: {
+        organizationId,
         control_id: controlId,
         title: subcontrol.title,
         description: subcontrol.description,
@@ -132,22 +229,56 @@ export const createNewSubcontrolQuery = async (
         implementation_details: subcontrol.implementation_details,
         evidence_description: subcontrol.evidence_description,
         feedback_description: subcontrol.feedback_description,
-        evidence_files: uploadedEvidenceFiles,
-        feedback_files: uploadedFeedbackFiles,
       },
       mapToModel: true,
       model: SubcontrolModel,
-      // type: QueryTypes.INSERT
       transaction,
     }
   );
-  return result[0];
+
+  const createdSubcontrol = result[0];
+
+  // Create file entity links for evidence files
+  for (const file of uploadedEvidenceFiles) {
+    const fileId = typeof file.id === "string" ? parseInt(file.id) : file.id;
+    await createFileEntityLink(
+      organizationId,
+      fileId as number,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      createdSubcontrol.id!,
+      "evidence",
+      project_id,
+      transaction
+    );
+  }
+
+  // Create file entity links for feedback files
+  for (const file of uploadedFeedbackFiles) {
+    const fileId = typeof file.id === "string" ? parseInt(file.id) : file.id;
+    await createFileEntityLink(
+      organizationId,
+      fileId as number,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      createdSubcontrol.id!,
+      "feedback",
+      project_id,
+      transaction
+    );
+  }
+
+  // Attach files for response (backward compatibility)
+  (createdSubcontrol as any).evidence_files = uploadedEvidenceFiles;
+  (createdSubcontrol as any).feedback_files = uploadedFeedbackFiles;
+
+  return createdSubcontrol;
 };
 
 export const updateSubcontrolByIdQuery = async (
   id: number,
   subcontrol: Partial<SubcontrolModel>,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction,
   evidenceUploadedFiles: {
     id: string;
@@ -165,47 +296,53 @@ export const updateSubcontrolByIdQuery = async (
   }[] = [],
   deletedFiles: number[] = []
 ): Promise<SubcontrolModel | null> => {
-  const files = await sequelize.query(
-    `SELECT evidence_files, feedback_files FROM "${tenant}".subcontrols WHERE id = :id`,
-    {
-      replacements: { id },
-      mapToModel: true,
-      model: SubcontrolModel,
-      transaction,
-    }
-  );
+  // Delete file entity links for deleted files
+  for (const fileId of deletedFiles) {
+    // Delete from both evidence and feedback (we don't know which type the deleted file was)
+    await deleteFileEntityLink(
+      organizationId,
+      fileId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      id,
+      transaction
+    );
+  }
 
-  let currentEvidenceFiles = (
-    files[0].evidence_files ? files[0].evidence_files : []
-  ) as {
-    id: string;
-    fileName: string;
-    project_id?: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[];
-  let currentFeedbackFiles = (
-    files[0].feedback_files ? files[0].feedback_files : []
-  ) as {
-    id: string;
-    fileName: string;
-    project_id?: number;
-    uploaded_by: number;
-    uploaded_time: Date;
-  }[];
+  // Create file entity links for new evidence files
+  for (const file of evidenceUploadedFiles) {
+    const fileId = typeof file.id === "string" ? parseInt(file.id) : file.id;
+    await createFileEntityLink(
+      organizationId,
+      fileId as number,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      id,
+      "evidence",
+      file.project_id,
+      transaction
+    );
+  }
 
-  currentEvidenceFiles = currentEvidenceFiles.filter(
-    (f) => !deletedFiles.includes(parseInt(f.id))
-  );
-  currentEvidenceFiles = currentEvidenceFiles.concat(evidenceUploadedFiles);
-  console.log(currentEvidenceFiles, evidenceUploadedFiles);
+  // Create file entity links for new feedback files
+  for (const file of feedbackUploadedFiles) {
+    const fileId = typeof file.id === "string" ? parseInt(file.id) : file.id;
+    await createFileEntityLink(
+      organizationId,
+      fileId as number,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      id,
+      "feedback",
+      file.project_id,
+      transaction
+    );
+  }
 
-  currentFeedbackFiles = currentFeedbackFiles.filter(
-    (f) => !deletedFiles.includes(parseInt(f.id))
-  );
-  currentFeedbackFiles = currentFeedbackFiles.concat(feedbackUploadedFiles);
-
-  const updateSubControl: Partial<Record<keyof SubcontrolModel, any>> = {};
+  // Build dynamic update clause (without JSONB file columns)
+  const updateSubControl: Partial<Record<keyof SubcontrolModel, any>> & {
+    organizationId?: number;
+  } = {};
   const setClause = [
     "title",
     "description",
@@ -218,20 +355,8 @@ export const updateSubcontrolByIdQuery = async (
     "implementation_details",
     "evidence_description",
     "feedback_description",
-    "evidence_files",
-    "feedback_files",
   ]
     .filter((f) => {
-      if (f == "evidence_files" && currentEvidenceFiles.length > 0) {
-        updateSubControl["evidence_files"] =
-          JSON.stringify(currentEvidenceFiles);
-        return true;
-      }
-      if (f == "feedback_files" && currentFeedbackFiles.length > 0) {
-        updateSubControl["feedback_files"] =
-          JSON.stringify(currentFeedbackFiles);
-        return true;
-      }
       if (
         subcontrol[f as keyof SubcontrolModel] !== undefined &&
         subcontrol[f as keyof SubcontrolModel]
@@ -247,30 +372,105 @@ export const updateSubcontrolByIdQuery = async (
     })
     .join(", ");
 
-  const query = `UPDATE "${tenant}".subcontrols SET ${setClause} WHERE id = :id RETURNING *;`;
+  if (!setClause) {
+    // No fields to update, just fetch current state
+    const result = await sequelize.query(
+      `SELECT * FROM subcontrols WHERE organization_id = :organizationId AND id = :id`,
+      {
+        replacements: { organizationId, id },
+        mapToModel: true,
+        model: SubcontrolModel,
+        transaction,
+      }
+    );
+
+    if (!result.length) return null;
+
+    // Fetch files for response
+    const evidenceFiles = await getEvidenceFilesForEntity(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      id,
+      "evidence"
+    );
+    const feedbackFiles = await getEvidenceFilesForEntity(
+      organizationId,
+      FRAMEWORK_TYPE,
+      ENTITY_TYPE,
+      id,
+      "feedback"
+    );
+
+    (result[0] as any).evidence_files = evidenceFiles;
+    (result[0] as any).feedback_files = feedbackFiles;
+
+    return result[0];
+  }
+
+  const query = `UPDATE subcontrols SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateSubControl.id = id;
+  updateSubControl.organizationId = organizationId;
 
   const result = await sequelize.query(query, {
     replacements: updateSubControl,
     mapToModel: true,
     model: SubcontrolModel,
-    // type: QueryTypes.UPDATE,
     transaction,
   });
+
+  if (!result.length) return null;
+
+  // Fetch files for response (backward compatibility)
+  const evidenceFiles = await getEvidenceFilesForEntity(
+    organizationId,
+    FRAMEWORK_TYPE,
+    ENTITY_TYPE,
+    id,
+    "evidence"
+  );
+  const feedbackFiles = await getEvidenceFilesForEntity(
+    organizationId,
+    FRAMEWORK_TYPE,
+    ENTITY_TYPE,
+    id,
+    "feedback"
+  );
+
+  (result[0] as any).evidence_files = evidenceFiles;
+  (result[0] as any).feedback_files = feedbackFiles;
 
   return result[0];
 };
 
 export const deleteSubcontrolByIdQuery = async (
   id: number,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ): Promise<Boolean> => {
-  const result = await sequelize.query(
-    `DELETE FROM "${tenant}".subcontrols WHERE id = :id RETURNING *`,
+  // Clean up file_entity_links first (both evidence and feedback)
+  await sequelize.query(
+    `DELETE FROM file_entity_links
+     WHERE organization_id = :organizationId
+       AND framework_type = :frameworkType
+       AND entity_type = :entityType
+       AND entity_id = :entityId`,
     {
-      replacements: { id },
+      replacements: {
+        organizationId,
+        frameworkType: FRAMEWORK_TYPE,
+        entityType: ENTITY_TYPE,
+        entityId: id,
+      },
+      transaction,
+    }
+  );
+
+  const result = await sequelize.query(
+    `DELETE FROM subcontrols WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+    {
+      replacements: { organizationId, id },
       mapToModel: true,
       model: SubcontrolModel,
       type: QueryTypes.DELETE,
@@ -291,20 +491,21 @@ export const createNewSubControlsQuery = async (
     feedback_description?: string;
   }[],
   enable_ai_data_insertion: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
-  let query = `INSERT INTO "${tenant}".subcontrols(
-      title, description, control_id, order_no, implementation_details,
+  let query = `INSERT INTO subcontrols(
+      organization_id, title, description, control_id, order_no, implementation_details,
       evidence_description, feedback_description, status
     ) VALUES (
-      :title, :description, :control_id, :order_no, :implementation_details,
+      :organizationId, :title, :description, :control_id, :order_no, :implementation_details,
       :evidence_description, :feedback_description, :status
     ) RETURNING *`;
   let createdSubControls: SubcontrolModel[] = [];
   for (let subControl of subControls) {
     const result = await sequelize.query(query, {
       replacements: {
+        organizationId,
         title: subControl.title,
         description: subControl.description,
         control_id: controlId,
@@ -324,9 +525,13 @@ export const createNewSubControlsQuery = async (
       },
       mapToModel: true,
       model: SubcontrolModel,
-      // type: QueryTypes.INSERT
       transaction,
     });
+
+    // Attach empty arrays for backward compatibility
+    (result[0] as any).evidence_files = [];
+    (result[0] as any).feedback_files = [];
+
     createdSubControls = createdSubControls.concat(result);
   }
   return createdSubControls;

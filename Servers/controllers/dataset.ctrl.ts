@@ -38,7 +38,7 @@ export async function getAllDatasets(req: Request, res: Response) {
 
   try {
     const datasets = (await getAllDatasetsQuery(
-      req.tenantId!
+      req.organizationId!
     )) as unknown as DatasetModel[];
 
     if (datasets && datasets.length > 0) {
@@ -105,7 +105,7 @@ export async function getDatasetById(req: Request, res: Response) {
   try {
     const dataset = (await getDatasetByIdQuery(
       datasetId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as DatasetModel;
 
     if (dataset) {
@@ -155,7 +155,7 @@ export async function getDatasetsByModelId(req: Request, res: Response) {
   try {
     const datasets = (await getDatasetsByModelIdQuery(
       modelId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as DatasetModel[];
 
     logStructured(
@@ -199,7 +199,7 @@ export async function getDatasetsByProjectId(req: Request, res: Response) {
   try {
     const datasets = (await getDatasetsByProjectIdQuery(
       projectId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as DatasetModel[];
 
     logStructured(
@@ -311,7 +311,7 @@ export async function createNewDataset(req: Request, res: Response) {
 
     const savedDataset = await createNewDatasetQuery(
       dataset,
-      req.tenantId!,
+      req.organizationId!,
       models || [],
       projects || [],
       transaction
@@ -321,7 +321,7 @@ export async function createNewDataset(req: Request, res: Response) {
     await recordDatasetCreation(
       savedDataset.id!,
       req.userId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -416,7 +416,7 @@ export async function updateDatasetById(req: Request, res: Response) {
     // Get existing dataset
     const currentDataset = (await getDatasetByIdQuery(
       datasetId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as DatasetModel;
 
     if (!currentDataset) {
@@ -508,7 +508,7 @@ export async function updateDatasetById(req: Request, res: Response) {
       projects || [],
       deleteModels || false,
       deleteProjects || false,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
@@ -518,7 +518,7 @@ export async function updateDatasetById(req: Request, res: Response) {
         datasetId,
         changes,
         req.userId,
-        req.tenantId!,
+        req.organizationId!,
         transaction
       );
     }
@@ -587,7 +587,7 @@ export async function deleteDatasetById(req: Request, res: Response) {
     // Check if dataset exists
     const existingDataset = (await getDatasetByIdQuery(
       datasetId,
-      req.tenantId!
+      req.organizationId!
     )) as unknown as DatasetModel;
 
     if (!existingDataset) {
@@ -607,11 +607,11 @@ export async function deleteDatasetById(req: Request, res: Response) {
     await recordDatasetDeletion(
       datasetId,
       req.userId,
-      req.tenantId!,
+      req.organizationId!,
       transaction
     );
 
-    await deleteDatasetByIdQuery(datasetId, req.tenantId!, transaction);
+    await deleteDatasetByIdQuery(datasetId, req.organizationId!, transaction);
 
     await transaction.commit();
 
@@ -674,7 +674,7 @@ export async function getDatasetHistory(req: Request, res: Response) {
   logger.debug(`Looking up dataset history with id: ${datasetId}`);
 
   try {
-    const history = await getDatasetChangeHistory(datasetId, req.tenantId!);
+    const history = await getDatasetChangeHistory(datasetId, req.organizationId!);
 
     logStructured(
       "successful",

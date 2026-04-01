@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
 import random
+import string
 
 from models.obligation import Obligation
 from render.load_catalogs import RenderInputs
+from render.models import CONTEXT_SLOTS
 
 
 @dataclass(frozen=True)
@@ -14,24 +16,51 @@ class RenderConfig:
     per_obligation: int = 2  # how many base scenarios to create per obligation
 
 
-def _pick(rng: random.Random, items: List[Any]) -> Any:
+def _pick(rng: random.Random, items: list[Any]) -> Any:
     return items[rng.randrange(0, len(items))]
 
 
 def _infer_domain(blob: str, inputs: RenderInputs) -> str:
-    """Return the first domain whose keywords appear in blob; default to ai_governance."""
+    """Return the first domain whose keywords appear in blob; fallback to the domain marked default:true."""
     for dom in inputs.domains.domains:
         if any(kw in blob for kw in dom.keywords):
             return dom.domain_id
-    return "ai_governance"
+    default = next((d.domain_id for d in inputs.domains.domains if d.default), None)
+    if default is None:
+        raise ValueError(
+            "No domain marked default:true in domains.yaml — "
+            "add 'default: true' to exactly one domain entry"
+        )
+    return default
+
+
+def _build_render_vars(
+    template_str: str,
+    domain: str,
+    rv: RenderVarsCatalog,
+    rng: random.Random,
+    verb: str,
+) -> dict[str, Any]:
+    """Introspect template slots and fill each from the domain's render_vars pool."""
+    domain_vars = rv.get_domain_vars(domain)
+    slots = {
+        fname
+        for _, fname, _, _ in string.Formatter().parse(template_str)
+        if fname and fname not in CONTEXT_SLOTS
+    }
+    result: dict[str, Any] = {"verb": verb}
+    for slot in slots:
+        if slot in domain_vars:
+            result[slot] = _pick(rng, domain_vars[slot])
+    return result
 
 
 def render_base_scenarios(
     *,
-    obligations: List[Obligation],
+    obligations: list[Obligation],
     inputs: RenderInputs,
     cfg: RenderConfig,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     rng = random.Random(cfg.seed)
 
     roles = inputs.roles.roles
@@ -39,12 +68,12 @@ def render_base_scenarios(
     activities_by_id = {a.activity_id: a for a in inputs.activities.activities}
 
     templates = inputs.templates.templates
-    templates_by_domain: Dict[str, list] = {}
+    templates_by_domain: dict[str, list] = {}
     for t in templates:
         templates_by_domain.setdefault(t.domain, []).append(t)
 
     rv = inputs.render_vars
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     base_id = 0
 
     for obl in obligations:
@@ -68,24 +97,7 @@ def render_base_scenarios(
             if t.activity_id in activities_by_id:
                 verb = _pick(rng, activities_by_id[t.activity_id].verbs)
 
-            if t.domain == "ai_governance":
-                render_vars: Dict[str, Any] = {
-                    "verb": verb,
-                    "model_name": _pick(rng, rv.ai_governance.model_names),
-                    "change_type": _pick(rng, rv.ai_governance.change_types),
-                    "approval_role": _pick(rng, rv.ai_governance.approval_roles),
-                    "log_artifact": _pick(rng, rv.ai_governance.log_artifacts),
-                }
-            elif t.domain == "content_integrity":
-                render_vars = {
-                    "verb": verb,
-                    "vendor_type": _pick(rng, rv.content_integrity.vendor_types),
-                    "content_type": _pick(rng, rv.content_integrity.content_types),
-                    "data_subject": _pick(rng, rv.content_integrity.data_subjects),
-                    "disclosure": _pick(rng, rv.content_integrity.disclosures),
-                }
-            else:
-                render_vars = {"verb": verb}
+            render_vars = _build_render_vars(t.template, t.domain, rv, rng, verb)
 
             base_id += 1
             scenario = {

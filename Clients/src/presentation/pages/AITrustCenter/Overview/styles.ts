@@ -64,9 +64,9 @@ export const styles = {
 
   checkbox: {
     "& .MuiCheckbox-root": {
-      color: '#13715B',
+      color: 'brand.primary',
       '&.Mui-checked': {
-        color: '#13715B',
+        color: 'brand.primary',
       },
       '&:hover': {
         backgroundColor: 'rgba(19, 113, 91, 0.04)',
@@ -132,7 +132,7 @@ export const styles = {
       },
     },
     '& .MuiInputBase-root.Mui-disabled': {
-      backgroundColor: '#f5f5f5',
+      backgroundColor: 'background.surface',
       '& .MuiInputBase-input': {
         color: '#666',
         cursor: 'not-allowed',

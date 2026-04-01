@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import EmptyStateTip from "../../../../components/EmptyState/EmptyStateTip";
 import {
   Box,
   Typography,
@@ -15,13 +16,14 @@ import {
   useTheme,
   TableFooter,
 } from '@mui/material';
-import { ChevronDown, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Timer, ArrowRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Timer, ArrowRight, History, Play, AlertTriangle, RotateCcw } from 'lucide-react';
 import Chip from '../../../../components/Chip';
 import { getAutomationHistory, getAutomationStats, type AutomationExecutionLog } from '../../../../../application/repository/automations.repository';
 import TablePaginationActions from '../../../../components/TablePagination';
 import { EmptyState } from '../../../../components/EmptyState';
 import singleTheme from '../../../../themes/v1SingleTheme';
 import { ChevronsUpDown } from 'lucide-react';
+import { status, background } from "../../../../themes/palette";
 
 interface AutomationHistoryProps {
   automationId: string;
@@ -163,7 +165,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
             sx={{
               border: "1px solid #eaecf0",
               borderRadius: 2,
-              background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+              background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
               minWidth: 228,
               flex: 1,
               padding: "8px 14px 14px 14px",
@@ -196,7 +198,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                 sx={{
                   width: '100%',
                   height: 6,
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'status.default.border',
                   borderRadius: 1,
                   overflow: 'hidden',
                 }}
@@ -219,7 +221,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
             sx={{
               border: "1px solid #eaecf0",
               borderRadius: 2,
-              background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+              background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
               minWidth: 228,
               flex: 1,
               padding: "8px 14px 14px 14px",
@@ -252,7 +254,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
             sx={{
               border: "1px solid #eaecf0",
               borderRadius: 2,
-              background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+              background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
               minWidth: 228,
               flex: 1,
               padding: "8px 14px 14px 14px",
@@ -286,7 +288,23 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
 
       {/* Execution History Table */}
       {logs.length === 0 ? (
-        <EmptyState message="No execution history yet" />
+        <EmptyState message="No execution history yet." icon={History}>
+          <EmptyStateTip
+            icon={Play}
+            title="How automations run"
+            description="When an automation triggers (on schedule, via webhook, or manually), its execution is recorded here with status and duration."
+          />
+          <EmptyStateTip
+            icon={AlertTriangle}
+            title="Track failures"
+            description="Failed executions show error details. Use this to diagnose issues with automation steps, API connections, or data formatting."
+          />
+          <EmptyStateTip
+            icon={RotateCcw}
+            title="Re-run past executions"
+            description="Click on any past execution to view its details. You can re-trigger automations manually from the automation settings."
+          />
+        </EmptyState>
       ) : (
         <Stack spacing={0}>
           <TableContainer sx={{ overflowX: 'auto' }}>
@@ -485,9 +503,9 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                           }}
                                         >
                                           {isSuccess ? (
-                                            <CheckCircle size={16} color="#138A5E" />
+                                            <CheckCircle size={16} color={status.success.text} />
                                           ) : (
-                                            <XCircle size={16} color="#D32F2F" />
+                                            <XCircle size={16} color={status.error.text} />
                                           )}
                                         </Box>
 
@@ -537,7 +555,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                                   mt: 1,
                                                 }}
                                               >
-                                                <Typography sx={{ fontSize: 12, color: '#D32F2F', fontWeight: 500 }}>
+                                                <Typography sx={{ fontSize: 12, color: 'status.error.text', fontWeight: 500 }}>
                                                   Error: {action.error_message}
                                                 </Typography>
                                               </Box>
@@ -577,14 +595,14 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                 >
                                   <Stack direction="row" alignItems="center" spacing={2}>
                                     {log.status === 'success' ? (
-                                      <CheckCircle size={20} color="#138A5E" />
+                                      <CheckCircle size={20} color={status.success.text} />
                                     ) : log.status === 'failure' ? (
-                                      <XCircle size={20} color="#D32F2F" />
+                                      <XCircle size={20} color={status.error.text} />
                                     ) : (
                                       <AlertCircle size={20} color="#795000" />
                                     )}
                                     <Box>
-                                      <Typography sx={{ fontSize: 13, fontWeight: 600, color: log.status === 'success' ? '#138A5E' : log.status === 'failure' ? '#D32F2F' : '#795000' }}>
+                                      <Typography sx={{ fontSize: 13, fontWeight: 600, color: log.status === 'success' ? 'status.success.text' : log.status === 'failure' ? 'status.error.text' : '#795000' }}>
                                         Overall Result: {log.status === 'partial_success' ? 'Partial Success' : log.status.charAt(0).toUpperCase() + log.status.slice(1)}
                                       </Typography>
                                       {log.status === 'partial_success' && (

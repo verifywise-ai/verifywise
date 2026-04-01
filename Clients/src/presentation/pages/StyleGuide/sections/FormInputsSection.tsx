@@ -5,6 +5,7 @@ import Select from "../../../components/Inputs/Select";
 import Field from "../../../components/Inputs/Field";
 import { SearchBox } from "../../../components/Search";
 import CodeBlock from "../components/CodeBlock";
+import { brand, text, background, border as borderPalette, status } from "../../../themes/palette";
 
 // Code snippets for each component example
 const fieldCodeSnippets = {
@@ -197,14 +198,14 @@ const FormInputsSection: React.FC = () => {
           <SpecCard title="Font size" value="13px" note="Input text and labels" onCopy={handleCopy} />
           <SpecCard title="Border radius" value="2px" note="theme.shape.borderRadius" onCopy={handleCopy} />
           <SpecCard title="Label gap" value="4px" note="Space between label and input" onCopy={handleCopy} />
-          <SpecCard title="Border color" value="#d0d5dd" note="Default border" onCopy={handleCopy} />
+          <SpecCard title="Border color" value={borderPalette.dark} note="Default border" onCopy={handleCopy} />
           <SpecCard title="Hover border" value="#5FA896" note="On mouse hover" onCopy={handleCopy} />
-          <SpecCard title="Focus border" value="#13715B" note="Primary color" onCopy={handleCopy} />
+          <SpecCard title="Focus border" value={brand.primary} note="Primary color" onCopy={handleCopy} />
           <SpecCard title="Focus ring" value="0 0 0 3px rgba(19,113,91,0.1)" note="Box shadow on focus" onCopy={handleCopy} />
           <SpecCard title="Error border" value="#FDA29B" note="Error state" onCopy={handleCopy} />
-          <SpecCard title="Background" value="#FFFFFF" note="Default background" onCopy={handleCopy} />
-          <SpecCard title="Disabled bg" value="#F9FAFB" note="Disabled state" onCopy={handleCopy} />
-          <SpecCard title="Label color" value="#344054" note="text.secondary" onCopy={handleCopy} />
+          <SpecCard title="Background" value={background.main} note="Default background" onCopy={handleCopy} />
+          <SpecCard title="Disabled bg" value={background.accent} note="Disabled state" onCopy={handleCopy} />
+          <SpecCard title="Label color" value={text.secondary} note="text.secondary" onCopy={handleCopy} />
         </SpecGrid>
       </SpecSection>
 
@@ -448,13 +449,13 @@ const FormInputsSection: React.FC = () => {
                 { property: "Font size", value: "13px" },
                 { property: "Icon size", value: "16px" },
                 { property: "Icon position", value: "right: 12px" },
-                { property: "Icon color", value: "#475467" },
+                { property: "Icon color", value: "text.tertiary" },
                 { property: "Menu margin-top", value: "4px" },
                 { property: "Menu item padding", value: "4px 6px" },
                 { property: "Menu item margin", value: "2px" },
                 { property: "Menu item min-width", value: "100px" },
-                { property: "Menu hover bg", value: "#f9fafb" },
-                { property: "Menu hover color", value: "#13715B" },
+                { property: "Menu hover bg", value: "background.accent" },
+                { property: "Menu hover color", value: "brand.primary" },
                 { property: "Filter applied bg", value: "#F4F4F4" },
                 { property: "Email size", value: "11px" },
                 { property: "Menu z-index", value: "10001" },
@@ -530,10 +531,10 @@ const FormInputsSection: React.FC = () => {
               specs={[
                 { property: "Height", value: "34px" },
                 { property: "Padding horizontal", value: "10px" },
-                { property: "Background", value: "#fff" },
+                { property: "Background", value: "background.main" },
                 { property: "Font size", value: "13px" },
                 { property: "Icon size", value: "16px" },
-                { property: "Icon color", value: "#6b7280" },
+                { property: "Icon color", value: "status.default.text" },
                 { property: "Icon margin-right", value: "8px" },
                 { property: "Border", value: "1px solid #d0d5dd" },
                 { property: "Border radius", value: "2px" },
@@ -558,7 +559,7 @@ const FormInputsSection: React.FC = () => {
         <SpecGrid columns={2}>
           <StateCard
             title="Default"
-            borderColor="#d0d5dd"
+            borderColor={borderPalette.dark}
             description="Standard resting state"
             onCopy={handleCopy}
           />
@@ -570,7 +571,7 @@ const FormInputsSection: React.FC = () => {
           />
           <StateCard
             title="Focus"
-            borderColor="#13715B"
+            borderColor={brand.primary}
             borderWidth={2}
             boxShadow="0 0 0 3px rgba(19,113,91,0.1)"
             description="Input is focused"
@@ -592,8 +593,8 @@ const FormInputsSection: React.FC = () => {
           />
           <StateCard
             title="Disabled"
-            borderColor="#E5E7EB"
-            backgroundColor="#F9FAFB"
+            borderColor={status.default.border}
+            backgroundColor={background.accent}
             description="Input is disabled"
             onCopy={handleCopy}
           />
@@ -862,7 +863,7 @@ const StateCard: React.FC<{
   borderColor,
   borderWidth = 1,
   boxShadow,
-  backgroundColor = "#FFFFFF",
+  backgroundColor = "background.main",
   description,
   onCopy,
 }) => {

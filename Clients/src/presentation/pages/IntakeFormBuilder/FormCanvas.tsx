@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Box, Typography, IconButton, Tooltip, useTheme } from "@mui/material";
-import { Plus, Check, X, User, Mail } from "lucide-react";
+import { Check, X, User, Mail, LayoutTemplate } from "lucide-react";
 import { FormField } from "./types";
 import { FieldCard } from "./FieldCard";
 
@@ -31,7 +31,7 @@ function EmptyState() {
           mb: 2,
         }}
       >
-        <Plus size={32} color={theme.palette.text.accent} />
+        <LayoutTemplate size={32} color={theme.palette.text.accent} />
       </Box>
       <Typography sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: "15px" }}>
         Start building your form
@@ -117,7 +117,7 @@ function EditableFormTitle({
               color: theme.palette.background.main,
               backgroundColor: theme.palette.primary.main,
               borderRadius: "4px",
-              "&:hover": { backgroundColor: "#0F5A47" },
+              "&:hover": { backgroundColor: "brand.primaryHover" },
             }}
           >
             <Check size={14} />
@@ -252,7 +252,7 @@ function EditableFormDescription({
               color: theme.palette.background.main,
               backgroundColor: theme.palette.primary.main,
               borderRadius: "4px",
-              "&:hover": { backgroundColor: "#0F5A47" },
+              "&:hover": { backgroundColor: "brand.primaryHover" },
             }}
           >
             <Check size={14} />
@@ -331,7 +331,7 @@ function ContactInfoPreview() {
           mb: "10px",
         }}
       >
-        Contact information
+        Contact information (always shown)
       </Typography>
       {[
         { icon: <User size={14} />, label: "Full name" },
@@ -385,7 +385,11 @@ interface FormCanvasProps {
   collectContactInfo?: boolean;
 }
 
-export function FormCanvas({
+export interface FormCanvasHandle {
+  scrollToBottom: () => void;
+}
+
+export const FormCanvas = forwardRef<FormCanvasHandle, FormCanvasProps>(function FormCanvas({
   fields,
   selectedFieldId,
   onSelectField,
@@ -398,8 +402,20 @@ export function FormCanvas({
   onNameChange,
   onDescriptionChange,
   collectContactInfo,
-}: FormCanvasProps) {
+}, ref) {
   const theme = useTheme();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    scrollToBottom() {
+      const el = scrollRef.current;
+      if (!el) return;
+      setTimeout(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      }, 50);
+    },
+  }));
+
   const handleCanvasClick = () => {
     onSelectField(null);
   };
@@ -416,6 +432,7 @@ export function FormCanvas({
     >
       {/* Canvas content */}
       <Box
+        ref={scrollRef}
         onClick={handleCanvasClick}
         sx={{ flex: 1, overflowY: "auto", p: 3, minWidth: 0 }}
       >
@@ -493,6 +510,6 @@ export function FormCanvas({
       </Box>
     </Box>
   );
-}
+});
 
 export default FormCanvas;

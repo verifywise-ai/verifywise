@@ -3,7 +3,6 @@ import { getTokenPayload } from "../utils/jwt.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { roleMap } from "./auth.middleware";
 import { checkPendingInvitationQuery } from "../utils/invitation.utils";
-import { getTenantHash } from "../tools/getTenantHash";
 
 const registerJWT = async (
   req: Request,
@@ -56,8 +55,7 @@ const registerJWT = async (
     }
 
     // Check if invitation is still pending (not revoked)
-    const tenantHash = getTenantHash(Number(decoded.organizationId));
-    const hasPendingInvitation = await checkPendingInvitationQuery(tenantHash, decoded.email);
+    const hasPendingInvitation = await checkPendingInvitationQuery(Number(decoded.organizationId), decoded.email);
 
     if (!hasPendingInvitation) {
       console.error("❌ Registration rejected: invitation was revoked or doesn't exist");

@@ -203,7 +203,7 @@ const VWProjectView = () => {
             </Typography>
             <Typography sx={projectViewHeaderDesc}>
               This use case includes all the governance process status of{" "}
-              <Typography component="span" sx={{ color: "#13715B", fontSize: "inherit" }}>
+              <Typography component="span" sx={{ color: "brand.primary", fontSize: "inherit" }}>
                 {project.project_title}
               </Typography>
             </Typography>

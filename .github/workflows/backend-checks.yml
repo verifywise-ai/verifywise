@@ -41,7 +41,7 @@ jobs:
         run: npm audit --json > ../audit-results.json || true
 
       - name: Upload audit results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: backend-npm-audit-results
           path: audit-results.json

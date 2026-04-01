@@ -114,8 +114,9 @@ Some entities filtered by `organization_id`:
 ## Query Implementation
 
 ```sql
-SELECT DISTINCT * FROM "{tenantId}".{tableName}
-WHERE (
+SELECT DISTINCT * FROM {tableName}
+WHERE organization_id = :organizationId
+AND (
   column1::text ILIKE :pattern
   OR column2::text ILIKE :pattern
   OR ...
@@ -175,8 +176,8 @@ Global search UI using `cmdk` library:
 
 ### Multi-Tenant Isolation
 
-- All queries scoped to tenant schema: `"{tenantId}".{tableName}`
-- Tenant ID validated with regex: `/^[a-zA-Z0-9_-]+$/`
+- All queries include `WHERE organization_id = :organizationId`
+- Organization ID comes from JWT middleware (`req.organizationId`)
 
 ## Key Files
 

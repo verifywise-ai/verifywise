@@ -773,7 +773,14 @@ export default function CreateScorerModal({
       topP: 1,
     },
     messages: initialConfig?.messages || [
-      { role: "system", content: "You are a helpful assistant" },
+      {
+        role: "system",
+        content: "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
+      },
+      {
+        role: "user",
+        content: "Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {\"verdict\": \"PASS\", \"reason\": \"brief explanation\"}",
+      },
     ],
     useChainOfThought: initialConfig?.useChainOfThought ?? true,
     choiceScores: initialConfig?.choiceScores || [{ label: "", score: 0 }],
@@ -809,7 +816,14 @@ export default function CreateScorerModal({
           topP: 1,
         },
         messages: initialConfig.messages || [
-          { role: "system", content: "You are a helpful assistant" },
+          {
+            role: "system",
+            content: "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
+          },
+          {
+            role: "user",
+            content: "Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {\"verdict\": \"PASS\", \"reason\": \"brief explanation\"}",
+          },
         ],
         useChainOfThought: initialConfig.useChainOfThought ?? true,
         choiceScores: initialConfig.choiceScores || [{ label: "", score: 0 }],
@@ -832,7 +846,14 @@ export default function CreateScorerModal({
           topP: 1,
         },
         messages: [
-          { role: "system", content: "You are a helpful assistant" },
+          {
+            role: "system",
+            content: "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
+          },
+          {
+            role: "user",
+            content: "Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {\"verdict\": \"PASS\", \"reason\": \"brief explanation\"}",
+          },
         ],
         useChainOfThought: true,
         choiceScores: [{ label: "", score: 0 }],
@@ -1052,6 +1073,7 @@ export default function CreateScorerModal({
                   </Box>
                   <Box
                     component="button"
+                    type="button"
                     ref={paramsButtonRef}
                     onClick={() => setParamsPopoverOpen(!paramsPopoverOpen)}
                     sx={{
@@ -1220,6 +1242,15 @@ export default function CreateScorerModal({
           >
             Prompt
           </Typography>
+          <Typography
+            sx={{
+              fontSize: "12px",
+              color: theme.palette.text.tertiary,
+              mb: 1,
+            }}
+          >
+            Available variables: {"{{input}}"}, {"{{output}}"}, {"{{expected}}"}
+          </Typography>
           <Stack spacing={2}>
             {config.messages.map((msg, index) => (
               <Box
@@ -1278,7 +1309,7 @@ export default function CreateScorerModal({
                   placeholder={
                     msg.role === "system"
                       ? "You are a helpful assistant that evaluates..."
-                      : "Enter message content..."
+                      : "Use {{input}}, {{output}}, {{expected}} to reference test case data"
                   }
                   value={msg.content}
                   onChange={(e) =>

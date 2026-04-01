@@ -1,6 +1,6 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Box, Typography } from "@mui/material";
-import { Check, Edit, Hash, Clock } from "lucide-react";
+import { Edit, Hash, Clock } from "lucide-react";
 import { useEffect } from "react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 
@@ -62,22 +62,13 @@ export function SubmissionSuccess() {
         {/* Ticket top */}
         <Box
           sx={{
-            backgroundColor: "#fff",
+            backgroundColor: "background.main",
             borderRadius: "16px 16px 0 0",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             p: 4,
             textAlign: "center",
           }}
         >
-          <Box sx={{
-            width: 56, height: 56, borderRadius: "14px",
-            background: "linear-gradient(135deg, #6b7280, #9ca3af)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            mx: "auto", mb: 3,
-          }}>
-            <Check size={32} color="#fff" strokeWidth={3} />
-          </Box>
-
           <Typography sx={{ fontSize: "22px", fontWeight: 700, color: "#1e293b", mb: 1 }}>
             Submission received
           </Typography>
@@ -105,7 +96,7 @@ export function SubmissionSuccess() {
         {/* Ticket bottom */}
         <Box
           sx={{
-            backgroundColor: "#fff",
+            backgroundColor: "background.main",
             borderRadius: "0 0 16px 16px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             p: 4,
@@ -115,7 +106,7 @@ export function SubmissionSuccess() {
           {/* Details rows */}
           {(() => {
             const rows = [
-              { label: "Reference", value: `#${state.submissionId}`, icon: <Hash size={13} color="#94a3b8" /> },
+              { label: "Reference", value: `${state.submissionId}`, icon: <Hash size={13} color="#94a3b8" /> },
               ...(state.submitterEmail ? [{ label: "Email", value: state.submitterEmail }] : []),
               { label: "Status", value: "Pending review", color: "#f59e0b", icon: <Clock size={13} color="#f59e0b" /> },
             ];
@@ -153,10 +144,10 @@ export function SubmissionSuccess() {
                 startIcon={<Edit size={15} />}
                 text="Edit and resubmit"
                 sx={{
-                  width: "100%", height: 44, backgroundColor: "#13715B",
+                  width: "100%", height: 44, backgroundColor: "brand.primary",
                   fontSize: "13px", fontWeight: 600, borderRadius: "8px", textTransform: "none",
                   boxShadow: "none",
-                  "&:hover": { backgroundColor: "#0F5A47" },
+                  "&:hover": { backgroundColor: "brand.primaryHover" },
                 }}
               />
             </Box>

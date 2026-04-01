@@ -11,10 +11,11 @@ import {
 import { IModelInventoryProjectFramework } from "../domain.layer/interfaces/i.modelInventoryProjectFramework";
 import { recordSnapshotIfChanged } from "./history/modelInventoryHistory.utils";
 
-export const getAllModelInventoriesQuery = async (tenant: string) => {
+export const getAllModelInventoriesQuery = async (organizationId: number) => {
   const modelInventories = await sequelize.query(
-    `SELECT * FROM "${tenant}".model_inventories ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM model_inventories WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: ModelInventoryModel,
     }
@@ -23,9 +24,9 @@ export const getAllModelInventoriesQuery = async (tenant: string) => {
     (model.dataValues as any).projects = [];
     (model.dataValues as any).frameworks = [];
     const projectFrameworks = (await sequelize.query(
-      `SELECT project_id, framework_id FROM "${tenant}".model_inventories_projects_frameworks WHERE model_inventory_id = :model_inventory_id`,
+      `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :model_inventory_id`,
       {
-        replacements: { model_inventory_id: model.id },
+        replacements: { organizationId, model_inventory_id: model.id },
       }
     )) as [IModelInventoryProjectFramework[], number];
     for (const pf of projectFrameworks[0]) {
@@ -39,10 +40,11 @@ export const getAllModelInventoriesQuery = async (tenant: string) => {
   return modelInventories;
 };
 
-export const getModelByTenantIdQuery = async (tenant: string) => {
+export const getModelsByOrganizationIdQuery = async (organizationId: number) => {
   const modelInventory = await sequelize.query(
-    `SELECT * FROM "${tenant}".model_inventories`,
+    `SELECT * FROM model_inventories WHERE organization_id = :organizationId`,
     {
+      replacements: { organizationId },
       mapToModel: true,
       model: ModelInventoryModel,
     }
@@ -51,9 +53,9 @@ export const getModelByTenantIdQuery = async (tenant: string) => {
     (model.dataValues as any).projects = [];
     (model.dataValues as any).frameworks = [];
     const projectFrameworks = (await sequelize.query(
-      `SELECT project_id, framework_id FROM "${tenant}".model_inventories_projects_frameworks WHERE model_inventory_id = :model_inventory_id`,
+      `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :model_inventory_id`,
       {
-        replacements: { model_inventory_id: model.id },
+        replacements: { organizationId, model_inventory_id: model.id },
       }
     )) as [IModelInventoryProjectFramework[], number];
     for (const pf of projectFrameworks[0]) {
@@ -69,12 +71,12 @@ export const getModelByTenantIdQuery = async (tenant: string) => {
 
 export const getModelInventoryByIdQuery = async (
   id: number,
-  tenant: string
+  organizationId: number
 ) => {
   const modelInventory = await sequelize.query(
-    `SELECT * FROM "${tenant}".model_inventories WHERE id = :id`,
+    `SELECT * FROM model_inventories WHERE organization_id = :organizationId AND id = :id`,
     {
-      replacements: { id },
+      replacements: { organizationId, id },
       mapToModel: true,
       model: ModelInventoryModel,
     }
@@ -85,9 +87,9 @@ export const getModelInventoryByIdQuery = async (
   (model.dataValues as any).projects = [];
   (model.dataValues as any).frameworks = [];
   const projectFrameworks = (await sequelize.query(
-    `SELECT project_id, framework_id FROM "${tenant}".model_inventories_projects_frameworks WHERE model_inventory_id = :model_inventory_id`,
+    `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :model_inventory_id`,
     {
-      replacements: { model_inventory_id: model.id },
+      replacements: { organizationId, model_inventory_id: model.id },
     }
   )) as [IModelInventoryProjectFramework[], number];
   for (const pf of projectFrameworks[0]) {
@@ -103,15 +105,15 @@ export const getModelInventoryByIdQuery = async (
 
 export const getModelByProjectIdQuery = async (
   projectId: number,
-  tenant: string
+  organizationId: number
 ) => {
   const modelInventories = await sequelize.query(
-    `SELECT mi.* FROM "${tenant}".model_inventories mi
-      JOIN "${tenant}".model_inventories_projects_frameworks mipf
-      ON mi.id = mipf.model_inventory_id
-      WHERE mipf.project_id = :project_id AND mipf.framework_id IS NULL`,
+    `SELECT mi.* FROM model_inventories mi
+      JOIN model_inventories_projects_frameworks mipf
+      ON mi.id = mipf.model_inventory_id AND mi.organization_id = mipf.organization_id
+      WHERE mi.organization_id = :organizationId AND mipf.project_id = :project_id AND mipf.framework_id IS NULL`,
     {
-      replacements: { project_id: projectId },
+      replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: ModelInventoryModel,
     }
@@ -121,15 +123,15 @@ export const getModelByProjectIdQuery = async (
 
 export const getModelByFrameworkIdQuery = async (
   frameworkId: number,
-  tenant: string
+  organizationId: number
 ) => {
   const modelInventories = await sequelize.query(
-    `SELECT mi.* FROM "${tenant}".model_inventories mi
-      JOIN "${tenant}".model_inventories_projects_frameworks mipf
-      ON mi.id = mipf.model_inventory_id
-      WHERE mipf.framework_id = :framework_id`,
+    `SELECT mi.* FROM model_inventories mi
+      JOIN model_inventories_projects_frameworks mipf
+      ON mi.id = mipf.model_inventory_id AND mi.organization_id = mipf.organization_id
+      WHERE mi.organization_id = :organizationId AND mipf.framework_id = :framework_id`,
     {
-      replacements: { framework_id: frameworkId },
+      replacements: { organizationId, framework_id: frameworkId },
       mapToModel: true,
       model: ModelInventoryModel,
     }
@@ -139,7 +141,7 @@ export const getModelByFrameworkIdQuery = async (
 
 export const createNewModelInventoryQuery = async (
   modelInventory: ModelInventoryModel,
-  tenant: string,
+  organizationId: number,
   projects: number[],
   frameworks: number[],
   transaction: Transaction
@@ -148,10 +150,11 @@ export const createNewModelInventoryQuery = async (
 
   try {
     const result = await sequelize.query(
-      `INSERT INTO "${tenant}".model_inventories (provider_model, provider, model, version, approver, capabilities, security_assessment, status, status_date, reference_link, biases, limitations, hosting_provider, security_assessment_data, is_demo, created_at, updated_at)       
-      VALUES (:provider_model, :provider, :model, :version, :approver, :capabilities, :security_assessment, :status, :status_date, :reference_link, :biases, :limitations, :hosting_provider, :security_assessment_data, :is_demo, :created_at, :updated_at) RETURNING *`,
+      `INSERT INTO model_inventories (organization_id, provider_model, provider, model, version, approver, capabilities, security_assessment, status, status_date, reference_link, biases, limitations, hosting_provider, security_assessment_data, is_demo, created_at, updated_at)
+      VALUES (:organization_id, :provider_model, :provider, :model, :version, :approver, :capabilities, :security_assessment, :status, :status_date, :reference_link, :biases, :limitations, :hosting_provider, :security_assessment_data, :is_demo, :created_at, :updated_at) RETURNING *`,
       {
         replacements: {
+          organization_id: organizationId,
           provider_model: modelInventory.provider_model || "",
           provider: modelInventory.provider,
           model: modelInventory.model,
@@ -186,10 +189,11 @@ export const createNewModelInventoryQuery = async (
 
     for (const projectId of projects) {
       const result = (await sequelize.query(
-        `INSERT INTO "${tenant}".model_inventories_projects_frameworks (model_inventory_id, project_id)
-         VALUES (:model_inventory_id, :project_id);`,
+        `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id)
+         VALUES (:organization_id, :model_inventory_id, :project_id);`,
         {
           replacements: {
+            organization_id: organizationId,
             model_inventory_id: createdModel.id,
             project_id: projectId,
           },
@@ -203,17 +207,18 @@ export const createNewModelInventoryQuery = async (
 
     for (const frameworkId of frameworks) {
       const [[{ project_id }]] = (await sequelize.query(
-        `SELECT project_id FROM "${tenant}".projects_frameworks WHERE framework_id = :framework_id LIMIT 1;`,
+        `SELECT project_id FROM projects_frameworks WHERE organization_id = :organization_id AND framework_id = :framework_id LIMIT 1;`,
         {
-          replacements: { framework_id: frameworkId },
+          replacements: { organization_id: organizationId, framework_id: frameworkId },
           transaction,
         }
       )) as [{ project_id: number }[], number];
       const result = (await sequelize.query(
-        `INSERT INTO "${tenant}".model_inventories_projects_frameworks (model_inventory_id, project_id, framework_id)
-         VALUES (:model_inventory_id, :project_id, :framework_id);`,
+        `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id, framework_id)
+         VALUES (:organization_id, :model_inventory_id, :project_id, :framework_id);`,
         {
           replacements: {
+            organization_id: organizationId,
             model_inventory_id: createdModel.id,
             project_id: project_id,
             framework_id: frameworkId,
@@ -232,8 +237,8 @@ export const createNewModelInventoryQuery = async (
         paa.key AS action_key,
         a.id AS automation_id,
         aa.*
-      FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'model_added' AND a.is_active ORDER BY aa."order" ASC;`,
-      { transaction }
+      FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id JOIN automation_actions_data aa ON a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE a.organization_id = :organization_id AND pat.key = 'model_added' AND a.is_active ORDER BY aa."order" ASC;`,
+      { replacements: { organization_id: organizationId }, transaction }
     )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
@@ -261,7 +266,7 @@ export const createNewModelInventoryQuery = async (
         // Enqueue with processed params
         await enqueueAutomationAction(automation.action_key, {
           ...processedParams,
-          tenant,
+          organizationId,
         });
       } else {
         console.warn(
@@ -272,7 +277,7 @@ export const createNewModelInventoryQuery = async (
 
     // Record history snapshot for status changes
     try {
-      await recordSnapshotIfChanged("status", tenant, undefined, transaction);
+      await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
     } catch (historyError) {
       console.error("Error recording history snapshot:", historyError);
       // Don't throw - history recording failure shouldn't block model creation
@@ -292,18 +297,19 @@ export const updateModelInventoryByIdQuery = async (
   frameworks: number[],
   deleteProjects: boolean,
   deleteFrameworks: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   const updated_at = new Date();
-  const oldModel = await getModelInventoryByIdQuery(id, tenant);
+  const oldModel = await getModelInventoryByIdQuery(id, organizationId);
 
   try {
     // First update the record
     await sequelize.query(
-      `UPDATE "${tenant}".model_inventories SET provider_model = :provider_model, provider = :provider, model = :model, version = :version, approver = :approver, capabilities = :capabilities, security_assessment = :security_assessment, status = :status, status_date = :status_date, reference_link = :reference_link, biases = :biases, limitations = :limitations,  hosting_provider = :hosting_provider, security_assessment_data = :security_assessment_data, is_demo = :is_demo, updated_at = :updated_at WHERE id = :id`,
+      `UPDATE model_inventories SET provider_model = :provider_model, provider = :provider, model = :model, version = :version, approver = :approver, capabilities = :capabilities, security_assessment = :security_assessment, status = :status, status_date = :status_date, reference_link = :reference_link, biases = :biases, limitations = :limitations,  hosting_provider = :hosting_provider, security_assessment_data = :security_assessment_data, is_demo = :is_demo, updated_at = :updated_at WHERE organization_id = :organization_id AND id = :id`,
       {
         replacements: {
+          organization_id: organizationId,
           id,
           provider_model: modelInventory.provider_model || "",
           provider: modelInventory.provider,
@@ -332,9 +338,9 @@ export const updateModelInventoryByIdQuery = async (
 
     // Then fetch the updated record
     const result = await sequelize.query(
-      `SELECT * FROM "${tenant}".model_inventories WHERE id = :id`,
+      `SELECT * FROM model_inventories WHERE organization_id = :organization_id AND id = :id`,
       {
-        replacements: { id },
+        replacements: { organization_id: organizationId, id },
         mapToModel: true,
         model: ModelInventoryModel,
         transaction,
@@ -347,9 +353,9 @@ export const updateModelInventoryByIdQuery = async (
     if ((projects && projects.length > 0) || deleteProjects) {
       // First, delete existing associations
       await sequelize.query(
-        `DELETE FROM "${tenant}".model_inventories_projects_frameworks WHERE model_inventory_id = :model_inventory_id AND project_id IS NOT NULL`,
+        `DELETE FROM model_inventories_projects_frameworks WHERE organization_id = :organization_id AND model_inventory_id = :model_inventory_id AND project_id IS NOT NULL`,
         {
-          replacements: { model_inventory_id: id },
+          replacements: { organization_id: organizationId, model_inventory_id: id },
           transaction,
         }
       );
@@ -357,10 +363,11 @@ export const updateModelInventoryByIdQuery = async (
       // Then, insert new associations
       for (const projectId of projects) {
         const result = (await sequelize.query(
-          `INSERT INTO "${tenant}".model_inventories_projects_frameworks (model_inventory_id, project_id)
-            VALUES (:model_inventory_id, :project_id);`,
+          `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id)
+            VALUES (:organization_id, :model_inventory_id, :project_id);`,
           {
             replacements: {
+              organization_id: organizationId,
               model_inventory_id: id,
               project_id: projectId,
             },
@@ -376,9 +383,9 @@ export const updateModelInventoryByIdQuery = async (
     if ((frameworks && frameworks.length > 0) || deleteFrameworks) {
       // First, delete existing associations
       await sequelize.query(
-        `DELETE FROM "${tenant}".model_inventories_projects_frameworks WHERE model_inventory_id = :model_inventory_id AND framework_id IS NOT NULL`,
+        `DELETE FROM model_inventories_projects_frameworks WHERE organization_id = :organization_id AND model_inventory_id = :model_inventory_id AND framework_id IS NOT NULL`,
         {
-          replacements: { model_inventory_id: id },
+          replacements: { organization_id: organizationId, model_inventory_id: id },
           transaction,
         }
       );
@@ -386,18 +393,19 @@ export const updateModelInventoryByIdQuery = async (
       // Then, insert new associations
       for (const frameworkId of frameworks) {
         const [[{ project_id }]] = (await sequelize.query(
-          `SELECT project_id FROM "${tenant}".projects_frameworks WHERE framework_id = :framework_id LIMIT 1;`,
+          `SELECT project_id FROM projects_frameworks WHERE organization_id = :organization_id AND framework_id = :framework_id LIMIT 1;`,
           {
-            replacements: { framework_id: frameworkId },
+            replacements: { organization_id: organizationId, framework_id: frameworkId },
             transaction,
           }
         )) as [{ project_id: number }[], number];
 
         const result = (await sequelize.query(
-          `INSERT INTO "${tenant}".model_inventories_projects_frameworks (model_inventory_id, project_id, framework_id)
-            VALUES (:model_inventory_id, :project_id, :framework_id);`,
+          `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id, framework_id)
+            VALUES (:organization_id, :model_inventory_id, :project_id, :framework_id);`,
           {
             replacements: {
+              organization_id: organizationId,
               model_inventory_id: id,
               project_id: project_id,
               framework_id: frameworkId,
@@ -417,8 +425,8 @@ export const updateModelInventoryByIdQuery = async (
         paa.key AS action_key,
         a.id AS automation_id,
         aa.*
-      FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'model_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-      { transaction }
+      FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id JOIN automation_actions_data aa ON a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE a.organization_id = :organization_id AND pat.key = 'model_updated' AND a.is_active ORDER BY aa."order" ASC;`,
+      { replacements: { organization_id: organizationId }, transaction }
     )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
@@ -449,7 +457,7 @@ export const updateModelInventoryByIdQuery = async (
         // Enqueue with processed params
         await enqueueAutomationAction(automation.action_key, {
           ...processedParams,
-          tenant,
+          organizationId,
         });
       } else {
         console.warn(
@@ -461,7 +469,7 @@ export const updateModelInventoryByIdQuery = async (
     // Record history snapshot if status changed
     try {
       if (oldModel && oldModel.status !== updatedModel.status) {
-        await recordSnapshotIfChanged("status", tenant, undefined, transaction);
+        await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
       }
     } catch (historyError) {
       console.error("Error recording history snapshot:", historyError);
@@ -478,25 +486,25 @@ export const updateModelInventoryByIdQuery = async (
 export const deleteModelInventoryByIdQuery = async (
   id: number,
   deleteRisks: boolean,
-  tenant: string,
+  organizationId: number,
   transaction: Transaction
 ) => {
   try {
     if (deleteRisks) {
       // Delete associated model risks first
       await sequelize.query(
-        `DELETE FROM "${tenant}".model_risks WHERE model_id = :id`,
+        `DELETE FROM model_risks WHERE organization_id = :organization_id AND model_id = :id`,
         {
-          replacements: { id },
+          replacements: { organization_id: organizationId, id },
           transaction,
         }
       );
     }
 
     const result = (await sequelize.query(
-      `DELETE FROM "${tenant}".model_inventories WHERE id = :id RETURNING *`,
+      `DELETE FROM model_inventories WHERE organization_id = :organization_id AND id = :id RETURNING *`,
       {
-        replacements: { id },
+        replacements: { organization_id: organizationId, id },
         transaction,
       }
     )) as [ModelInventoryModel[], number];
@@ -507,8 +515,8 @@ export const deleteModelInventoryByIdQuery = async (
         paa.key AS action_key,
         a.id AS automation_id,
         aa.*
-      FROM public.automation_triggers pat JOIN "${tenant}".automations a ON a.trigger_id = pat.id JOIN "${tenant}".automation_actions aa ON a.id = aa.automation_id JOIN public.automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'model_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-      { transaction }
+      FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id JOIN automation_actions_data aa ON a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE a.organization_id = :organization_id AND pat.key = 'model_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
+      { replacements: { organization_id: organizationId }, transaction }
     )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
@@ -536,7 +544,7 @@ export const deleteModelInventoryByIdQuery = async (
         // Enqueue with processed params
         await enqueueAutomationAction(automation.action_key, {
           ...processedParams,
-          tenant,
+          organizationId,
         });
       } else {
         console.warn(
@@ -547,7 +555,7 @@ export const deleteModelInventoryByIdQuery = async (
 
     // Record history snapshot after deletion
     try {
-      await recordSnapshotIfChanged("status", tenant, undefined, transaction);
+      await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
     } catch (historyError) {
       console.error("Error recording history snapshot:", historyError);
       // Don't throw - history recording failure shouldn't block model deletion

@@ -1,4 +1,5 @@
 import { SxProps, Theme } from "@mui/material";
+import { brand, text, background, border as borderPalette } from "../../themes/palette";
 
 // Category sidebar styles - matching main app sidebar design
 export const categorySidebar: SxProps<Theme> = {
@@ -25,11 +26,11 @@ export const categoryMenuItem = (isSelected: boolean): SxProps<Theme> => ({
       : "#FAFAFA",
     border: isSelected ? "1px solid #E8E8E8" : "1px solid transparent",
     "& svg": {
-      color: "#13715B !important",
-      stroke: "#13715B !important",
+      color: `${brand.primary} !important`,
+      stroke: `${brand.primary} !important`,
     },
     "& svg path": {
-      stroke: "#13715B !important",
+      stroke: `${brand.primary} !important`,
     },
   },
   transition: "all 0.2s ease",
@@ -38,13 +39,13 @@ export const categoryMenuItem = (isSelected: boolean): SxProps<Theme> => ({
 export const categoryMenuText = (isSelected: boolean): SxProps<Theme> => ({
   fontSize: "13px",
   fontWeight: isSelected ? 600 : 400,
-  color: isSelected ? "#101828" : "#667085",
+  color: isSelected ? "#101828" : `${text.icon}`,
 });
 
 export const categoryHeader: SxProps<Theme> = {
   padding: "16px 20px",
-  backgroundColor: "#f9fafb",
-  border: "1px solid #d0d5dd",
+  backgroundColor: `${background.accent}`,
+  border: `1px solid ${borderPalette.dark}`,
   borderRadius: "4px",
 };
 
@@ -56,7 +57,7 @@ export const categoryHeaderTitle: SxProps<Theme> = {
 
 export const categoryHeaderDescription: SxProps<Theme> = {
   fontSize: "13px",
-  color: "#667085",
+  color: `${text.icon}`,
   lineHeight: 1.5,
 };
 
@@ -93,7 +94,7 @@ export const emptyStateContainer: SxProps<Theme> = {
 };
 
 export const emptyStateText: SxProps<Theme> = {
-  color: "#667085",
+  color: `${text.icon}`,
   fontSize: "14px",
 };
 
@@ -144,7 +145,7 @@ export const regionNameStyle = (theme: Theme): SxProps<Theme> => ({
 
 export const regionCountStyle = (theme: Theme): SxProps<Theme> => ({
   fontSize: "13px",
-  color: theme.palette.text.tertiary || "#98A2B3",
+  color: theme.palette.text.tertiary || text.muted,
   fontWeight: 500,
 });
 
