@@ -15,13 +15,19 @@ import {
   TextField,
   useTheme,
 } from "@mui/material";
-import { Trash2, Users as UsersIcon, Mail, Building, ArrowUp, ArrowDown } from "lucide-react";
+import { UserPlus, Users as UsersIcon, ArrowUp, ArrowDown } from "lucide-react";
 import {
   getAllUsers,
   removeUser,
+  updateUser,
+  getOrganizations,
+  inviteUserToOrg,
   GlobalUser,
+  Organization,
 } from "../../../../application/repository/superAdmin.repository";
+import { ROLE_OPTIONS, ROLE_COLORS } from "../../../../application/constants/roles";
 import StandardModal from "../../../components/Modals/StandardModal";
+import Field from "../../../components/Inputs/Field";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import SearchBox from "../../../components/Search/SearchBox";
 import { EmptyState } from "../../../components/EmptyState";
@@ -73,6 +79,269 @@ const DeleteUserModal = ({
   );
 };
 
+const EditUserModal = ({
+  target,
+  onClose,
+  onUpdated,
+}: {
+  target: GlobalUser | null;
+  onClose: () => void;
+  onUpdated: () => void;
+}) => {
+  const [name, setName] = useState("");
+  const [surname, setSurname] = useState("");
+  const [email, setEmail] = useState("");
+  const [roleId, setRoleId] = useState(3);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (target) {
+      setName(target.name);
+      setSurname(target.surname || "");
+      setEmail(target.email);
+      setRoleId(target.role_id);
+      setError("");
+    }
+  }, [target]);
+
+  const handleSubmit = async () => {
+    if (!target) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await updateUser(target.id, {
+        name: name.trim(),
+        surname: surname.trim(),
+        email: email.trim(),
+        roleId,
+      });
+      onClose();
+      onUpdated();
+    } catch (err: any) {
+      setError(err?.message || "Failed to update user");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const roleSelectItems = ROLE_OPTIONS.map((r) => ({ _id: r.value, name: r.label }));
+
+  return (
+    <StandardModal
+      isOpen={!!target}
+      onClose={onClose}
+      title="Edit user"
+      description={`Edit details for ${target?.name || "user"}`}
+      submitButtonText="Save changes"
+      onSubmit={handleSubmit}
+      isSubmitting={submitting}
+      maxWidth="480px"
+    >
+      <Stack spacing={2}>
+        <Field
+          label="First name"
+          isRequired
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          sx={{ width: "100%" }}
+        />
+        <Field
+          label="Last name"
+          value={surname}
+          onChange={(e) => setSurname(e.target.value)}
+          sx={{ width: "100%" }}
+        />
+        <Field
+          label="Email"
+          isRequired
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          sx={{ width: "100%" }}
+        />
+        <Stack spacing={0.5}>
+          <Typography variant="body2" fontWeight={500}>
+            Organization
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+            {target?.organization_name || "—"}
+          </Typography>
+        </Stack>
+        <Select
+          id="edit-role"
+          label="Role"
+          value={roleId}
+          items={roleSelectItems}
+          onChange={(e: SelectChangeEvent<string | number>) => setRoleId(Number(e.target.value))}
+          getOptionValue={(item: { _id: string | number }) => item._id}
+          sx={{ width: "100%" }}
+        />
+        <Stack spacing={0.5}>
+          <Typography variant="body2" fontWeight={500}>
+            Joined
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+            {target ? new Date(target.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }) : "—"}
+          </Typography>
+        </Stack>
+        <Stack spacing={0.5}>
+          <Typography variant="body2" fontWeight={500}>
+            Last login
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+            {target?.last_login
+              ? new Date(target.last_login).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+              : "Never"}
+          </Typography>
+        </Stack>
+        {error && (
+          <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>
+            {error}
+          </Typography>
+        )}
+      </Stack>
+    </StandardModal>
+  );
+};
+
+const InviteUserModal = ({
+  isOpen,
+  onClose,
+  onInvited,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onInvited: () => void;
+}) => {
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [surname, setSurname] = useState("");
+  const [roleId, setRoleId] = useState(3);
+  const [orgId, setOrgId] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      getOrganizations()
+        .then((response) => {
+          const serverData = response.data as any;
+          setOrganizations(serverData?.data || []);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
+  const resetForm = () => {
+    setEmail("");
+    setName("");
+    setSurname("");
+    setRoleId(3);
+    setOrgId("");
+    setError("");
+  };
+
+  const handleSubmit = async () => {
+    if (!orgId || !email.trim() || !name.trim()) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await inviteUserToOrg(parseInt(orgId), {
+        email: email.trim(),
+        name: name.trim(),
+        surname: surname.trim() || undefined,
+        roleId,
+      });
+      resetForm();
+      onClose();
+      onInvited();
+    } catch (err: any) {
+      setError(err?.message || "Failed to invite user");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const orgSelectItems = [
+    { _id: "" as string | number, name: "Select organization" },
+    ...organizations.map((o) => ({ _id: String(o.id) as string | number, name: o.name })),
+  ];
+  const roleSelectItems = ROLE_OPTIONS.map((r) => ({ _id: r.value, name: r.label }));
+
+  return (
+    <StandardModal
+      isOpen={isOpen}
+      onClose={() => { resetForm(); onClose(); }}
+      title="Invite user"
+      description="Send an invitation to a new user"
+      submitButtonText="Send invite"
+      onSubmit={handleSubmit}
+      isSubmitting={submitting}
+      maxWidth="480px"
+    >
+      <Stack spacing={2}>
+        <Select
+          id="invite-org"
+          label="Organization"
+          value={orgId}
+          items={orgSelectItems}
+          onChange={(e: SelectChangeEvent<string | number>) => setOrgId(String(e.target.value))}
+          getOptionValue={(item: { _id: string | number }) => item._id}
+          sx={{ width: "100%" }}
+        />
+        <Field
+          label="Email"
+          isRequired
+          placeholder="user@example.com"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          sx={{ width: "100%" }}
+        />
+        <Field
+          label="First name"
+          isRequired
+          placeholder="First name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          sx={{ width: "100%" }}
+        />
+        <Field
+          label="Last name"
+          placeholder="Last name"
+          value={surname}
+          onChange={(e) => setSurname(e.target.value)}
+          sx={{ width: "100%" }}
+        />
+        <Select
+          id="invite-role"
+          label="Role"
+          value={roleId}
+          items={roleSelectItems}
+          onChange={(e: SelectChangeEvent<string | number>) => setRoleId(Number(e.target.value))}
+          getOptionValue={(item: { _id: string | number }) => item._id}
+          sx={{ width: "100%" }}
+        />
+        {error && (
+          <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>
+            {error}
+          </Typography>
+        )}
+      </Stack>
+    </StandardModal>
+  );
+};
+
 type SortField = "name" | "email" | "organization_name" | "role_name" | "created_at";
 
 const AllUsers = () => {
@@ -85,6 +354,8 @@ const AllUsers = () => {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [deleteTarget, setDeleteTarget] = useState<GlobalUser | null>(null);
+  const [editTarget, setEditTarget] = useState<GlobalUser | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -119,7 +390,7 @@ const AllUsers = () => {
     ];
   }, [users]);
 
-  const roleOptions = useMemo(() => {
+  const roleFilterOptions = useMemo(() => {
     const roles = [...new Set(users.map((u) => u.role_name).filter(Boolean))].sort();
     return [
       { _id: "all", name: "All Roles" },
@@ -166,13 +437,6 @@ const AllUsers = () => {
     });
   }, [users, searchTerm, filterOrg, filterRole, sortField, sortDirection]);
 
-  const roleColors: Record<string, { bg: string; text: string }> = {
-    Admin: { bg: "#eff6ff", text: "#2563eb" },
-    Reviewer: { bg: "#faf5ff", text: "#9333ea" },
-    Editor: { bg: "#f0fdf4", text: "#16a34a" },
-    Auditor: { bg: "#fefce8", text: "#ca8a04" },
-  };
-
   const tableStyles = singleTheme.tableStyles.primary;
 
   const columns: { field: SortField; label: string }[] = [
@@ -187,8 +451,24 @@ const AllUsers = () => {
     <PageHeaderExtended
       title="Users"
       description="View and manage all users across all organizations."
+      actionButton={
+        <Button
+          variant="contained"
+          disableElevation
+          startIcon={<UserPlus size={14} />}
+          onClick={() => setInviteOpen(true)}
+          sx={{
+            textTransform: "none",
+            height: 34,
+            fontSize: "13px",
+            borderRadius: "4px",
+          }}
+        >
+          Invite user
+        </Button>
+      }
     >
-      <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap">
+      <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
         <SearchBox
           placeholder="Search users..."
           value={searchTerm}
@@ -243,17 +523,12 @@ const AllUsers = () => {
         <Select
           id="filter-role"
           value={filterRole}
-          items={roleOptions}
+          items={roleFilterOptions}
           onChange={(e: SelectChangeEvent<string | number>) => setFilterRole(String(e.target.value))}
           getOptionValue={(item: { _id: string | number }) => item._id}
           isFilterApplied={filterRole !== "all"}
           sx={{ width: 150 }}
         />
-        <Typography
-          sx={{ fontSize: "13px", color: "text.secondary", whiteSpace: "nowrap" }}
-        >
-          {filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""}
-        </Typography>
       </Stack>
 
       {loading ? (
@@ -305,9 +580,13 @@ const AllUsers = () => {
             </TableHead>
             <TableBody>
               {filteredUsers.map((user) => {
-                const colors = roleColors[user.role_name] || { bg: "#f3f4f6", text: "#6b7280" };
+                const colors = ROLE_COLORS[user.role_name] || { bg: "#f3f4f6", text: "#6b7280" };
                 return (
-                  <TableRow key={user.id} sx={tableStyles.body.row}>
+                  <TableRow
+                    key={user.id}
+                    sx={{ ...tableStyles.body.row, cursor: "pointer" }}
+                    onClick={() => setEditTarget(user)}
+                  >
                     <TableCell sx={tableStyles.body.cell}>
                       <Stack direction="row" alignItems="center" gap={1}>
                         <Box
@@ -333,18 +612,12 @@ const AllUsers = () => {
                       </Stack>
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
-                      <Stack direction="row" alignItems="center" gap={0.5}>
-                        <Mail size={13} color="#6b7280" />
-                        <Typography sx={{ fontSize: 13 }}>{user.email}</Typography>
-                      </Stack>
+                      <Typography sx={{ fontSize: 13 }}>{user.email}</Typography>
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
-                      <Stack direction="row" alignItems="center" gap={0.5}>
-                        <Building size={13} color="#6b7280" />
-                        <Typography sx={{ fontSize: 13 }}>
-                          {user.organization_name ? `${user.organization_name} (org:${user.organization_id})` : "—"}
-                        </Typography>
-                      </Stack>
+                      <Typography sx={{ fontSize: 13 }}>
+                        {user.organization_name ? `${user.organization_name} (org:${user.organization_id})` : "—"}
+                      </Typography>
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
                       <Box
@@ -374,8 +647,7 @@ const AllUsers = () => {
                       <Button
                         size="small"
                         variant="outlined"
-                        startIcon={<Trash2 size={13} />}
-                        onClick={() => setDeleteTarget(user)}
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(user); }}
                         sx={{
                           ...tableStyles.body.button,
                           color: "#dc2626",
@@ -402,6 +674,16 @@ const AllUsers = () => {
         target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onDeleted={fetchUsers}
+      />
+      <EditUserModal
+        target={editTarget}
+        onClose={() => setEditTarget(null)}
+        onUpdated={fetchUsers}
+      />
+      <InviteUserModal
+        isOpen={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onInvited={fetchUsers}
       />
     </PageHeaderExtended>
   );

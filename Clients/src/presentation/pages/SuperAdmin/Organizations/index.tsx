@@ -11,7 +11,7 @@ import {
   TableRow,
   Box,
 } from "@mui/material";
-import { Building, Plus, Trash2, Users, ArrowUp, ArrowDown } from "lucide-react";
+import { Building, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import {
   getOrganizations,
   createOrganization,
@@ -280,34 +280,14 @@ const Organizations = () => {
               {filteredOrganizations.map((org) => (
                 <TableRow key={org.id} sx={tableStyles.body.row}>
                   <TableCell sx={tableStyles.body.cell}>
-                    <Stack direction="row" alignItems="center" gap={1}>
-                      <Box
-                        sx={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: "6px",
-                          backgroundColor: "#f0fdf4",
-                          border: "1px solid #bbf7d0",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Building size={14} color="#16a34a" />
-                      </Box>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                        {org.name} (org:{org.id})
-                      </Typography>
-                    </Stack>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                      {org.name} (org:{org.id})
+                    </Typography>
                   </TableCell>
                   <TableCell sx={tableStyles.body.cell}>
-                    <Stack direction="row" alignItems="center" gap={0.5}>
-                      <Users size={13} color="#6b7280" />
-                      <Typography sx={{ fontSize: 13 }}>
-                        {org.user_count ?? 0}
-                      </Typography>
-                    </Stack>
+                    <Typography sx={{ fontSize: 13 }}>
+                      {org.user_count ?? 0}
+                    </Typography>
                   </TableCell>
                   <TableCell sx={tableStyles.body.cell}>
                     {new Date(org.created_at).toLocaleDateString("en-US", {
@@ -317,22 +297,20 @@ const Organizations = () => {
                     })}
                   </TableCell>
                   <TableCell sx={{ ...tableStyles.body.cell, textAlign: "right" }}>
-                    <Stack direction="row" justifyContent="flex-end" gap={0.5}>
+                    <Stack direction="row" justifyContent="flex-end" gap="8px">
                       <Button
                         size="small"
                         variant="outlined"
-                        startIcon={<Users size={13} />}
                         onClick={() =>
                           navigate(`/super-admin/organizations/${org.id}/users`)
                         }
                         sx={tableStyles.body.button}
                       >
-                        Users
+                        View users
                       </Button>
                       <Button
                         size="small"
                         variant="outlined"
-                        startIcon={<Trash2 size={13} />}
                         onClick={() => setDeleteTarget(org)}
                         sx={{
                           ...tableStyles.body.button,

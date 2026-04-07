@@ -77,7 +77,7 @@ export const collections: Collection[] = [
     title: 'AI governance',
     description: 'Manage your AI models, track their lifecycle, and maintain comprehensive documentation.',
     icon: 'Brain',
-    articleCount: 10,
+    articleCount: 16,
     articles: [
       {
         id: 'use-cases',
@@ -139,6 +139,42 @@ export const collections: Collection[] = [
         description: 'Public transparency portal for sharing your AI governance practices.',
         keywords: ['trust', 'center', 'transparency', 'public', 'stakeholders', 'disclosure'],
       },
+      {
+        id: 'datasets',
+        title: 'Datasets',
+        description: 'Register and track datasets used by your AI systems, with PII detection and bulk upload.',
+        keywords: ['dataset', 'data', 'pii', 'bulk upload', 'classification', 'training data', 'bias', 'governance'],
+      },
+      {
+        id: 'agent-discovery',
+        title: 'Agent discovery',
+        description: 'Discover and manage service accounts, technical users, and system identities across connected source systems.',
+        keywords: ['agent', 'discovery', 'service account', 'identity', 'technical user', 'non-human', 'permissions'],
+      },
+      {
+        id: 'project-overview',
+        title: 'Project overview',
+        description: 'View compliance progress, risk summary, and key metadata for a use case.',
+        keywords: ['project', 'overview', 'progress', 'compliance', 'risk summary', 'tab'],
+      },
+      {
+        id: 'linked-models',
+        title: 'Linked models',
+        description: 'View which AI models from the inventory are connected to a project.',
+        keywords: ['linked', 'models', 'project', 'model inventory', 'association'],
+      },
+      {
+        id: 'approval-workflows',
+        title: 'Approval workflows',
+        description: 'Set up multi-approver sign-off workflows for use cases, policies, and models.',
+        keywords: ['approval', 'workflow', 'approve', 'reject', 'sign-off', 'request', 'pending'],
+      },
+      {
+        id: 'share-links',
+        title: 'Share links',
+        description: 'Share read-only views of resources with external stakeholders via expiring links.',
+        keywords: ['share', 'link', 'external', 'read-only', 'token', 'expiration', 'public'],
+      },
     ],
   },
   {
@@ -146,7 +182,7 @@ export const collections: Collection[] = [
     title: 'LLM Evals',
     description: 'Evaluate and benchmark your LLM applications for quality, safety, and performance.',
     icon: 'FlaskConical',
-    articleCount: 7,
+    articleCount: 8,
     articles: [
       {
         id: 'llm-evals-overview',
@@ -189,6 +225,12 @@ export const collections: Collection[] = [
         title: 'LLM Arena',
         description: 'Compare two models side by side on the same prompt.',
         keywords: ['arena', 'compare', 'side by side', 'model comparison', 'battle', 'head to head'],
+      },
+      {
+        id: 'ci-cd-integration',
+        title: 'CI/CD integration',
+        description: 'Run LLM evaluations automatically in GitHub Actions or any CI pipeline and block merges when quality drops.',
+        keywords: ['ci', 'cd', 'github actions', 'pipeline', 'automation', 'quality gate', 'pull request', 'ci/cd', 'continuous'],
       },
     ],
   },
@@ -275,7 +317,7 @@ export const collections: Collection[] = [
     title: 'Compliance frameworks',
     description: 'Stay compliant with AI regulations including EU AI Act, ISO 42001, and more.',
     icon: 'Shield',
-    articleCount: 5,
+    articleCount: 8,
     articles: [
       {
         id: 'assessments',
@@ -306,6 +348,24 @@ export const collections: Collection[] = [
         title: 'NIST AI RMF',
         description: 'Implement the NIST AI Risk Management Framework.',
         keywords: ['nist', 'rmf', 'framework', 'risk', 'management'],
+      },
+      {
+        id: 'fria',
+        title: 'Fundamental Rights Impact Assessment',
+        description: 'Assess the impact of high-risk AI systems on fundamental rights as required by EU AI Act Article 27.',
+        keywords: ['fria', 'fundamental rights', 'impact assessment', 'article 27', 'eu ai act', 'charter', 'rights matrix', 'deployer'],
+      },
+      {
+        id: 'ce-marking',
+        title: 'CE Marking',
+        description: 'Manage the EU conformity assessment process for high-risk AI systems, from classification through registration.',
+        keywords: ['ce marking', 'conformity', 'declaration', 'registration', 'annex iii', 'high risk', 'notified body', 'eu database'],
+      },
+      {
+        id: 'post-market-monitoring',
+        title: 'Post-market monitoring',
+        description: 'Set up recurring monitoring cycles for deployed AI systems with automated reminders and PDF reports.',
+        keywords: ['post-market', 'monitoring', 'cycle', 'article 72', 'report', 'pdf', 'escalation', 'reminder', 'pmm'],
       },
     ],
   },
@@ -377,7 +437,7 @@ export const collections: Collection[] = [
     title: 'Integrations',
     description: 'Connect VerifyWise with your existing tools and workflows.',
     icon: 'Plug',
-    articleCount: 3,
+    articleCount: 5,
     articles: [
       {
         id: 'integration-overview',
@@ -396,6 +456,18 @@ export const collections: Collection[] = [
         title: 'API access',
         description: 'Create and manage API keys for programmatic access.',
         keywords: ['api', 'access', 'keys', 'token', 'developer', 'integration', 'programmatic'],
+      },
+      {
+        id: 'automations',
+        title: 'Automations',
+        description: 'Set up trigger-condition-action rules to automate repetitive governance tasks.',
+        keywords: ['automation', 'trigger', 'action', 'condition', 'rule', 'automatic', 'workflow'],
+      },
+      {
+        id: 'plugins',
+        title: 'Plugins & marketplace',
+        description: 'Browse, install, and manage plugins that extend VerifyWise with new frameworks and integrations.',
+        keywords: ['plugin', 'marketplace', 'install', 'framework', 'soc 2', 'gdpr', 'hipaa', 'extension'],
       },
     ],
   },
@@ -512,7 +584,7 @@ export const collections: Collection[] = [
     title: 'Settings & configuration',
     description: 'Configure VerifyWise to match your organization\'s needs.',
     icon: 'Settings',
-    articleCount: 4,
+    articleCount: 5,
     articles: [
       {
         id: 'organization-settings',
@@ -537,6 +609,12 @@ export const collections: Collection[] = [
         title: 'Notification settings',
         description: 'Configure how you receive governance notifications.',
         keywords: ['notification', 'slack', 'alerts', 'configure', 'settings'],
+      },
+      {
+        id: 'super-admin',
+        title: 'Super admin panel',
+        description: 'Manage all organizations and users across the entire VerifyWise installation (super admin only).',
+        keywords: ['super admin', 'organizations', 'users', 'invite', 'global', 'system admin'],
       },
     ],
   },

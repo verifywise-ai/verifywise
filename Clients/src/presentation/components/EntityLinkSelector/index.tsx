@@ -362,24 +362,24 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
             const nistData = nistResponse?.data || nistResponse;
             const functions = nistData?.functions || [];
             functions.forEach((func: any) => {
-              const funcData = func.dataValues || func;
-              const funcType = funcData.type?.toUpperCase() || "FUNCTION";
-              const categories = funcData.categories || [];
+              const funcType = (func.function || "FUNCTION").toUpperCase();
+              const categories = func.categories || [];
               categories.forEach((cat: any, catIndex: number) => {
-                const catData = cat.dataValues || cat;
-                const subcategories = catData.subcategories || [];
+                const subcategories = cat.subcategories || [];
                 // Always use function type + category index for unique category label
                 const categoryLabel = `${funcType} ${catIndex + 1}`;
                 subcategories.forEach((sub: any, subIndex: number) => {
-                  const subData = sub.dataValues || sub;
-                  const subTitle = subData.title || "";
-                  // Format: "GOVERN 1.1: Description..." or just "GOVERN 1.1" if no title
+                  // Skip subcategories that have no implementation record yet —
+                  // the backend returns id: 0 for those, which would collide.
+                  if (!sub.id) return;
+                  const subTitle = sub.description || "";
+                  // Format: "GOVERN 1.1: Description..." or just "GOVERN 1.1" if no description
                   const subLabel = subTitle
                     ? `${categoryLabel}.${subIndex + 1}: ${subTitle.substring(0, 60)}${subTitle.length > 60 ? "..." : ""}`
                     : `${categoryLabel}.${subIndex + 1}`;
                   subEntityList.push({
-                    _id: `nist_subcategory_${subData.id}`,
-                    entity_id: subData.id,
+                    _id: `nist_subcategory_${sub.id}`,
+                    entity_id: sub.id,
                     name: subLabel,
                     type: "nist_subcategory",
                   });

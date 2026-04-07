@@ -1,11 +1,27 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Building, Users } from "lucide-react";
 import SidebarShell, { SidebarMenuItem } from "../Sidebar/SidebarShell";
+import { getUserCount } from "../../../application/repository/superAdmin.repository";
 
 const SuperAdminSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [userCount, setUserCount] = useState<number>(0);
+
+  const fetchUserCount = useCallback(async () => {
+    try {
+      const response = await getUserCount();
+      const serverData = response.data as any;
+      setUserCount(serverData?.data?.count ?? 0);
+    } catch {
+      // Silently fail — count will show 0
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserCount();
+  }, [fetchUserCount]);
 
   const topItems: SidebarMenuItem[] = [
     {
@@ -19,6 +35,7 @@ const SuperAdminSidebar: React.FC = () => {
       label: "Users",
       icon: <Users size={16} strokeWidth={1.5} />,
       path: "/super-admin/users",
+      count: userCount,
     },
   ];
 

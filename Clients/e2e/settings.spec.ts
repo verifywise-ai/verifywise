@@ -54,9 +54,7 @@ test.describe("Settings", () => {
     authedPage: page,
   }) => {
     await page.goto("/settings");
-    const passwordTab = page
-      .getByRole("tab", { name: /password/i })
-      .or(page.getByText(/password/i));
+    const passwordTab = page.getByRole("tab").filter({ hasText: /^password$/i });
     await expect(passwordTab.first()).toBeVisible({ timeout: 10_000 });
     await passwordTab.first().click();
     await expect(page).toHaveURL(/\/settings\/password/, { timeout: 10_000 });
@@ -66,9 +64,9 @@ test.describe("Settings", () => {
     authedPage: page,
   }) => {
     await page.goto("/settings");
-    const orgTab = page.getByRole("tab", { name: /organization/i });
-    await expect(orgTab).toBeVisible({ timeout: 10_000 });
-    await orgTab.click();
+    const orgTab = page.getByRole("tab").filter({ hasText: /^organization$/i });
+    await expect(orgTab.first()).toBeVisible({ timeout: 10_000 });
+    await orgTab.first().click();
     await expect(page).toHaveURL(/\/settings\/organization/, {
       timeout: 10_000,
     });
@@ -78,11 +76,11 @@ test.describe("Settings", () => {
     authedPage: page,
   }) => {
     await page.goto("/settings/password");
-    const profileTab = page.getByRole("tab", { name: /profile/i });
-    await expect(profileTab).toBeVisible({ timeout: 10_000 });
-    await profileTab.click();
+    const profileTab = page.getByRole("tab").filter({ hasText: /^profile$/i });
+    await expect(profileTab.first()).toBeVisible({ timeout: 10_000 });
+    await profileTab.first().click();
     // Should be back on /settings (profile is default)
-    await expect(page).toHaveURL(/\/settings/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/settings(\/?|$)/, { timeout: 10_000 });
   });
 
   // --- Tier 3: Password form fields ---

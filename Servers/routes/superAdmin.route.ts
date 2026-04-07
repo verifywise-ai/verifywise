@@ -6,9 +6,11 @@ import {
   createOrg,
   deleteOrg,
   updateOrg,
+  getUserCount,
   listAllUsers,
   listOrgUsers,
   inviteUserToOrg,
+  updateUser,
   removeUser,
 } from "../controllers/superAdmin.ctrl";
 
@@ -21,9 +23,11 @@ router.get("/organizations", listOrganizations);
 router.post("/organizations", createOrg);
 router.delete("/organizations/:id", deleteOrg);
 router.patch("/organizations/:id", updateOrg);
+router.get("/users/count", getUserCount);
 router.get("/users", listAllUsers);
 router.get("/organizations/:id/users", listOrgUsers);
 router.post("/organizations/:id/invite", inviteUserToOrg);
+router.patch("/users/:id", updateUser);
 router.delete("/users/:id", removeUser);
 
 export default router;

@@ -68,6 +68,12 @@ import AIGatewaySettingsPage from "../../presentation/pages/AIGateway/Settings";
 import AIGatewayVirtualKeysPage from "../../presentation/pages/AIGateway/VirtualKeys";
 import AIGatewayPromptsPage from "../../presentation/pages/AIGateway/Prompts";
 import AIGatewayPromptEditorPage from "../../presentation/pages/AIGateway/Prompts/PromptEditor";
+import MCPAgentKeysPage from "../../presentation/pages/AIGateway/MCPAgentKeys";
+import MCPServersPage from "../../presentation/pages/AIGateway/MCPServers";
+import MCPToolCatalogPage from "../../presentation/pages/AIGateway/MCPToolCatalog";
+import MCPAuditLogPage from "../../presentation/pages/AIGateway/MCPAuditLog";
+import MCPApprovalsPage from "../../presentation/pages/AIGateway/MCPApprovals";
+import MCPGuardrailsPage from "../../presentation/pages/AIGateway/MCPGuardrails";
 import MonitoringForm from "../../presentation/pages/PostMarketMonitoring/MonitoringForm";
 import ReportsArchive from "../../presentation/pages/PostMarketMonitoring/ReportsArchive";
 import IntakeFormsListPage from "../../presentation/pages/IntakeFormBuilder/IntakeFormsListPage";
@@ -174,6 +180,13 @@ export const createRoutes = (
     <Route path="/ai-gateway/virtual-keys" element={<AIGatewayVirtualKeysPage />} />
     <Route path="/ai-gateway/settings" element={<Navigate to="/ai-gateway/settings/api-keys" replace />} />
     <Route path="/ai-gateway/settings/:tab" element={<AIGatewaySettingsPage />} />
+    <Route path="/ai-gateway/mcp" element={<Navigate to="/ai-gateway/mcp/agent-keys" replace />} />
+    <Route path="/ai-gateway/mcp/agent-keys" element={<MCPAgentKeysPage />} />
+    <Route path="/ai-gateway/mcp/servers" element={<MCPServersPage />} />
+    <Route path="/ai-gateway/mcp/tools" element={<MCPToolCatalogPage />} />
+    <Route path="/ai-gateway/mcp/audit" element={<MCPAuditLogPage />} />
+    <Route path="/ai-gateway/mcp/approvals" element={<MCPApprovalsPage />} />
+    <Route path="/ai-gateway/mcp/guardrails" element={<MCPGuardrailsPage />} />
     <Route path="/monitoring/cycle/:cycleId" element={<MonitoringForm />} />
     <Route path="/monitoring/reports" element={<ReportsArchive />} />
     <Route path="/intake-forms" element={<IntakeFormsListPage />}>

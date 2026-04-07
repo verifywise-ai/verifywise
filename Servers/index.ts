@@ -88,6 +88,7 @@ import intakeFormRoutes from "./routes/intakeForm.route";
 import versionRoutes from "./routes/version.route";
 import auditLedgerRoutes from "./routes/auditLedger.route";
 import featureSettingsRoutes from "./routes/featureSettings.route";
+import friaRoutes from "./routes/fria.route";
 import riskBenchmarkRoutes from "./routes/riskBenchmark.route";
 import quantitativeRiskRoutes from "./routes/quantitativeRisk.route";
 import aiGatewayRoutes from "./routes/aiGateway.route";
@@ -302,6 +303,7 @@ try {
   app.use("/api/version", versionRoutes);
   app.use("/api/audit-ledger", auditLedgerRoutes);
   app.use("/api/feature-settings", featureSettingsRoutes);
+  app.use("/api/fria", friaRoutes);
   app.use("/api/risk-benchmarks", riskBenchmarkRoutes);
   app.use("/api/quantitative-risks", quantitativeRiskRoutes);
   app.use("/api/ai-gateway", aiGatewayRoutes());

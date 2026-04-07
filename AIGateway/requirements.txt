@@ -14,7 +14,7 @@ asyncpg>=0.30.0
 
 # LiteLLM SDK (MIT licensed)
 # Pinned to a specific version — updated per VerifyWise release
-litellm==1.82.2
+litellm==1.83.0
 
 # Database migrations (Alembic)
 sqlalchemy[asyncio]>=2.0.0
@@ -26,3 +26,6 @@ presidio-analyzer>=2.2.0
 presidio-anonymizer>=2.2.0
 # spaCy model: python -m spacy download en_core_web_md
 spacy>=3.7.0
+
+# MCP Gateway — Model Context Protocol SDK
+mcp>=1.0.0

@@ -187,6 +187,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Share links | `docs/technical/domains/share-links.md` |
 | Dashboard | `docs/technical/domains/dashboard.md` |
 | Post-market monitoring | `docs/technical/domains/post-market-monitoring.md` |
+| FRIA (Fundamental Rights Impact Assessment) | `docs/technical/domains/fria.md` |
 | Compliance frameworks | `docs/technical/domains/compliance-frameworks.md` |
 | Docker & deployment | `docs/deployment/PRODUCTION_DEPLOYMENT_GUIDE.md` |
 | Database schema | `docs/technical/architecture/database-schema.md` |

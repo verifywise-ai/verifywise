@@ -175,21 +175,18 @@ const Login: React.FC = () => {
             localStorage.setItem("root_version", __APP_VERSION__);
             logEngine({ type: "info", message: "Super-admin login successful." });
 
-            // Auto-select the first organization so super-admin sees the normal UI
+            // Auto-select the first organization so super-admin can view org data
             try {
               const orgsResponse = await getOrganizations();
               const orgsData = (orgsResponse.data as any)?.data || [];
               if (orgsData.length > 0) {
                 dispatch(setActiveOrganizationId(orgsData[0].id));
-                setIsSubmitting(false);
-                navigate("/");
-                return;
               }
             } catch (err) {
               console.error("Failed to fetch organizations for auto-select:", err);
             }
 
-            // No orgs available — go to super-admin panel to create one
+            // Always go to super-admin panel
             setIsSubmitting(false);
             navigate("/super-admin");
             return;

@@ -13,7 +13,6 @@ import time
 from datetime import datetime, timezone
 from typing import Optional
 
-import redis.asyncio as aioredis
 from fastapi import HTTPException
 from sqlalchemy import text
 
@@ -21,19 +20,10 @@ from config import settings
 from database.db import get_db
 from services.guardrail_service import scan_text
 from utils.encryption import decrypt as decrypt_api_key  # noqa: F401 — re-export
+from utils.redis import get_redis as _get_redis
+from utils.rate_limit import check_rate_limit
 
 logger = logging.getLogger("uvicorn")
-
-# ─── Redis connection ────────────────────────────────────────────────────────
-
-_redis: Optional[aioredis.Redis] = None
-
-
-async def _get_redis() -> aioredis.Redis:
-    global _redis
-    if _redis is None:
-        _redis = aioredis.from_url(settings.redis_url, decode_responses=True)
-    return _redis
 
 
 # ─── Virtual Key Authentication ──────────────────────────────────────────────
@@ -224,32 +214,6 @@ async def reconcile_budget(organization_id: int, estimated_cost: float, actual_c
 
 
 # ─── Rate Limiting ───────────────────────────────────────────────────────────
-
-RATE_LIMIT_WINDOW = 60  # seconds
-
-
-async def check_rate_limit(key: str, rpm: int) -> bool:
-    """Check RPM rate limit using Redis sorted set. Returns True if allowed. Fail-open on Redis error."""
-    if rpm <= 0:
-        return True
-    try:
-        r = await _get_redis()
-        redis_key = f"gw:rate:{key}"
-        now = time.time()
-        window_start = now - RATE_LIMIT_WINDOW
-
-        pipe = r.pipeline()
-        pipe.zremrangebyscore(redis_key, 0, window_start)
-        pipe.zcard(redis_key)
-        pipe.zadd(redis_key, {str(now): now})
-        pipe.expire(redis_key, RATE_LIMIT_WINDOW + 10)
-        results = await pipe.execute()
-
-        count = results[1]  # zcard result before zadd
-        return count < rpm
-    except Exception as e:
-        logger.warning(f"Rate limit check failed (fail-open): {e}")
-        return True
 
 
 async def enforce_rate_limits(endpoint: dict, vk: dict):

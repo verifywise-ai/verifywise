@@ -32,6 +32,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
   setFormData,
   tags,
   errors,
+  clearFieldError,
 }) => {
   const theme = useTheme();
   const { users } = useUsers();
@@ -43,8 +44,9 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
           ...prevValues,
           [prop]: newValue,
         }));
+        clearFieldError(prop);
       },
-    []
+    [clearFieldError]
   );
 
   const handleDateChange = useCallback((newDate: Dayjs | null) => {
@@ -53,8 +55,9 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
         ...prevValues,
         nextReviewDate: newDate ? newDate.toISOString() : "",
       }));
+      clearFieldError("nextReviewDate");
     }
-  }, []);
+  }, [clearFieldError]);
 
   const autocompleteSlotProps = {
     paper: {
@@ -88,9 +91,10 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
           label="Policy title"
           width="100%"
           value={formData.title ?? ""}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, title: e.target.value }))
-          }
+          onChange={(e) => {
+            setFormData((prev) => ({ ...prev, title: e.target.value }));
+            clearFieldError("title");
+          }}
           error={errors.title}
           sx={{
             backgroundColor: `${background.main}`,
@@ -306,6 +310,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
             const statusValue = e.target.value;
             if (typeof statusValue === "string") {
               setFormData((prev) => ({ ...prev, status: statusValue }));
+              clearFieldError("status");
             }
           }}
           items={statuses.map((s) => ({ _id: s, name: s }))}

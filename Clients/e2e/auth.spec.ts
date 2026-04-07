@@ -55,10 +55,10 @@ test.describe("Authentication", () => {
     await expect(page).toHaveURL(/\/forgot-password/);
   });
 
-  test("register link navigates correctly", async ({ page }) => {
-    await page.goto("/login");
-    await page.getByText("Register here").click();
-    await expect(page).toHaveURL(/\/register/);
+  test("register route redirects to login", async ({ page }) => {
+    // /register now redirects to /login in single-tenant mode
+    await page.goto("/register");
+    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
   });
 
   test("login page has no accessibility violations", async ({ page }) => {
@@ -95,12 +95,14 @@ test.describe("Authentication", () => {
     }
 
     // The sidebar footer has a MoreVertical icon button (no accessible name)
-    // next to the user name/role. Navigate from "Admin" text up to the
-    // user footer container and find the button sibling.
+    // next to the user name/role. Find the IconButton sibling of the
+    // user-info stack containing the "Admin" role label.
     const adminLabel = page.getByText("Admin", { exact: true });
     await expect(adminLabel.first()).toBeVisible({ timeout: 10_000 });
-    // Admin text → parent (name+role container) → grandparent (user footer) → button
-    const moreBtn = adminLabel.first().locator("xpath=../../button");
+    // Walk up to the sidebar footer row and find the sibling button.
+    const moreBtn = adminLabel
+      .first()
+      .locator("xpath=ancestor::*[.//button][1]//button");
     await expect(moreBtn.first()).toBeVisible({ timeout: 5_000 });
     await moreBtn.first().click();
     await page.waitForTimeout(1000);
@@ -117,7 +119,8 @@ test.describe("Authentication", () => {
   // --- Registration form ---
 
   test("registration page renders form fields", async ({ page }) => {
-    await page.goto("/register");
+    // /register redirects to /login; the user registration form lives at /user-reg
+    await page.goto("/user-reg");
     await page.waitForLoadState("domcontentloaded");
 
     // Verify registration form fields are present
@@ -137,7 +140,7 @@ test.describe("Authentication", () => {
   test("registration form shows validation on empty submit", async ({
     page,
   }) => {
-    await page.goto("/register");
+    await page.goto("/user-reg");
     await page.waitForLoadState("domcontentloaded");
 
     // The "Get started" button should be present

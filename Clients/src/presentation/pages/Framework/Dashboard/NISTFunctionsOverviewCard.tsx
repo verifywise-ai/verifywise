@@ -24,20 +24,21 @@ interface NISTFunctionsOverviewCardProps {
 
 interface SubcategoryData {
   id: number;
-  title: string;
+  subcategory_id: number;
+  description: string;
   status: string;
   owner: number | null;
 }
 
 interface CategoryData {
   id: number;
-  title: string;
+  category_id: number;
+  description: string;
   subcategories: SubcategoryData[];
 }
 
 interface FunctionData {
-  id: number;
-  type: string;
+  function: string;
   title: string;
   icon: LucideIcon;
   categories: CategoryData[];
@@ -81,10 +82,9 @@ const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctions
 
         if (overviewResponse?.data?.functions) {
           const functions = overviewResponse.data.functions.map((func: any) => ({
-            id: func.id,
-            type: func.type,
+            function: func.function,
             title: func.title,
-            icon: NIST_FUNCTION_ICONS[func.type?.toLowerCase()] || Shield,
+            icon: NIST_FUNCTION_ICONS[func.function?.toLowerCase()] || Shield,
             categories: func.categories || [],
           }));
           setFunctionsData(functions);
@@ -187,7 +187,7 @@ const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctions
 
     const handleCardClick = () => {
       if (onNavigate) {
-        onNavigate("NIST AI RMF", func.type.toLowerCase());
+        onNavigate("NIST AI RMF", func.function.toLowerCase());
       }
     };
 
@@ -223,7 +223,7 @@ const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctions
                 textTransform: "capitalize",
               }}
             >
-              {func.type}
+              {func.title}
             </Typography>
           </Box>
           {onNavigate && (
@@ -313,10 +313,10 @@ const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctions
   };
 
   // Get functions by type for 2x2 grid layout
-  const governFunc = functionsData.find(f => f.type.toLowerCase() === "govern");
-  const mapFunc = functionsData.find(f => f.type.toLowerCase() === "map");
-  const measureFunc = functionsData.find(f => f.type.toLowerCase() === "measure");
-  const manageFunc = functionsData.find(f => f.type.toLowerCase() === "manage");
+  const governFunc = functionsData.find(f => f.function?.toLowerCase() === "govern");
+  const mapFunc = functionsData.find(f => f.function?.toLowerCase() === "map");
+  const measureFunc = functionsData.find(f => f.function?.toLowerCase() === "measure");
+  const manageFunc = functionsData.find(f => f.function?.toLowerCase() === "manage");
 
   return (
     <Stack spacing={0}>

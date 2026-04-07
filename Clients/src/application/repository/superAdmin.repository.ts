@@ -47,6 +47,10 @@ export async function updateOrganization(id: number, data: { name?: string; logo
   return apiServices.patch(`/super-admin/organizations/${id}`, data);
 }
 
+export async function getUserCount() {
+  return apiServices.get<ServerResponse<{ count: number }>>("/super-admin/users/count");
+}
+
 export async function getAllUsers() {
   return apiServices.get<ServerResponse<GlobalUser[]>>("/super-admin/users");
 }
@@ -57,6 +61,10 @@ export async function getOrgUsers(orgId: number) {
 
 export async function inviteUserToOrg(orgId: number, data: { email: string; name: string; surname?: string; roleId: number }) {
   return apiServices.post(`/super-admin/organizations/${orgId}/invite`, data);
+}
+
+export async function updateUser(userId: number, data: { name?: string; surname?: string; email?: string; roleId?: number }) {
+  return apiServices.patch(`/super-admin/users/${userId}`, data);
 }
 
 export async function removeUser(userId: number) {

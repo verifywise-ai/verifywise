@@ -8,7 +8,7 @@ export interface PageHeaderExtendedProps {
     tipBoxEntity?: string;
     summaryCards?: ReactNode;
     summaryCardsJoyrideId?: string;
-    children: ReactNode;
+    children?: ReactNode;
     alert?: ReactNode;
     loadingToast?: ReactNode;
     titleFontFamily?: string;

@@ -1,4 +1,4 @@
-.PHONY: seeds render perturb all export-parquet publish-dataset generate
+.PHONY: seeds render perturb validate all backfill-base export-parquet publish-dataset generate
 
 seeds:
 	uv run grs-scenarios generate --stage seeds
@@ -11,6 +11,10 @@ perturb:
 
 validate:
 	uv run grs-scenarios generate --stage validate
+
+backfill-base:
+	@if [ -z "$(VERSION)" ]; then echo "Error: VERSION is required. Usage: make backfill-base VERSION=grs_scenarios_v0.3"; exit 1; fi
+	uv run grs-scenarios generate --stage backfill-base --dataset-version $(VERSION)
 
 infer-mock-client:
 	uv run grs-scenarios generate --stage infer --model-id mock-v0 --limit 3
@@ -43,7 +47,8 @@ generate:
 publish-dataset: export-parquet
 	@if [ -z "$(VERSION)" ]; then echo "Error: VERSION is required. Usage: make publish-dataset VERSION=grs_scenarios_v0.1"; exit 1; fi
 	@echo "Snapshotting configs/ → datasets/$(VERSION)/configs_snapshot/ ..."
-	cp -r configs/ datasets/$(VERSION)/configs_snapshot/
+	mkdir -p datasets/$(VERSION)/configs_snapshot/
+	cp -r configs/. datasets/$(VERSION)/configs_snapshot/
 	@echo "Publishing datasets/ to data/grs_scenarios branch via git worktree..."
 	git -C .. worktree remove --force /tmp/grs-data 2>/dev/null || true
 	git -C .. show-ref --verify --quiet refs/heads/data/grs_scenarios \

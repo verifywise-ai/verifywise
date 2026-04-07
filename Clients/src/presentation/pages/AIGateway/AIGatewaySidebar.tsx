@@ -5,9 +5,10 @@
  * Follows the SidebarShell pattern established by ShadowAISidebar.
  */
 
-import { Router, BarChart3, MessageSquare, ShieldCheck, FileText, Settings, BookOpen, Layers } from "lucide-react";
+import { Router, BarChart3, MessageSquare, ShieldCheck, FileText, Settings, BookOpen, Layers, KeyRound, Server, Wrench, ClipboardList, CheckCircle, Shield } from "lucide-react";
 import SidebarShell, {
   SidebarMenuItem,
+  SidebarMenuGroup,
 } from "../../components/Sidebar/SidebarShell";
 
 interface AIGatewaySidebarProps {
@@ -77,6 +78,52 @@ export default function AIGatewaySidebar({
     },
   ];
 
+  const mcpGroups: SidebarMenuGroup[] = [
+    {
+      name: "MCP Gateway",
+      collapsible: true,
+      defaultCollapsed: true,
+      items: [
+        {
+          id: "mcp-agent-keys",
+          label: "Agent Keys",
+          value: "mcp/agent-keys",
+          icon: <KeyRound size={16} strokeWidth={1.5} />,
+        },
+        {
+          id: "mcp-servers",
+          label: "Servers",
+          value: "mcp/servers",
+          icon: <Server size={16} strokeWidth={1.5} />,
+        },
+        {
+          id: "mcp-tools",
+          label: "Tools",
+          value: "mcp/tools",
+          icon: <Wrench size={16} strokeWidth={1.5} />,
+        },
+        {
+          id: "mcp-audit",
+          label: "Audit Log",
+          value: "mcp/audit",
+          icon: <ClipboardList size={16} strokeWidth={1.5} />,
+        },
+        {
+          id: "mcp-approvals",
+          label: "Approvals",
+          value: "mcp/approvals",
+          icon: <CheckCircle size={16} strokeWidth={1.5} />,
+        },
+        {
+          id: "mcp-guardrails",
+          label: "Guardrails",
+          value: "mcp/guardrails",
+          icon: <Shield size={16} strokeWidth={1.5} />,
+        },
+      ],
+    },
+  ];
+
   const isItemActive = (item: SidebarMenuItem): boolean => {
     return item.value === activeTab;
   };
@@ -90,6 +137,7 @@ export default function AIGatewaySidebar({
   return (
     <SidebarShell
       flatItems={flatItems}
+      menuGroups={mcpGroups}
       recentSections={[]}
       isItemActive={isItemActive}
       onItemClick={handleItemClick}

@@ -1,5 +1,5 @@
 aiohappyeyeballs==2.6.1
-aiohttp==3.13.3
+aiohttp==3.13.4
 aiosignal==1.4.0
 alembic==1.17.1
 annotated-doc==0.0.3

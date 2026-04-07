@@ -6,9 +6,10 @@ test.describe("Plugins", () => {
     await page.goto("/plugins");
     await expect(page).toHaveURL(/\/plugins/);
 
-    // Page should show plugin-related content
+    // Page should show plugin-related content — tighten to the page heading
+    // to avoid strict-mode matches across nav links, tooltips, etc.
     await expect(
-      page.getByText(/plugin/i).first()
+      page.getByRole("heading", { name: /^plugins$/i }).first()
     ).toBeVisible({ timeout: 10_000 });
   });
 

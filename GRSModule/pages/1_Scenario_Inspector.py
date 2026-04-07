@@ -691,8 +691,29 @@ def main() -> None:
         else:
             scenario_ids = sorted(scenarios.keys())
 
+            # Build scenario_id → template_id mapping via base_scenarios
+            scenario_to_template: dict[str, str] = {}
+            for sid, sc in scenarios.items():
+                base_id_tmp = sc.get("mutation_trace", {}).get("base_scenario_id", "")
+                base_tmp = base_scenarios.get(base_id_tmp, {})
+                scenario_to_template[sid] = base_tmp.get("template_id", "—")
+
+            all_template_ids = sorted({t for t in scenario_to_template.values() if t != "—"})
+
             with st.sidebar:
-                selected_id = st.selectbox("Scenario ID", scenario_ids)
+                selected_template = st.selectbox(
+                    "Filter by Template ID",
+                    ["All"] + all_template_ids,
+                )
+                filtered_scenario_ids = (
+                    scenario_ids
+                    if selected_template == "All"
+                    else [sid for sid in scenario_ids if scenario_to_template.get(sid) == selected_template]
+                )
+                if not filtered_scenario_ids:
+                    st.warning("No scenarios match the selected template.")
+                    st.stop()
+                selected_id = st.selectbox("Scenario ID", filtered_scenario_ids)
 
             scenario = scenarios.get(selected_id, {})
             response = responses.get(selected_id)

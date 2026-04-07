@@ -104,6 +104,8 @@ const ReadOnlyBanner = () => {
         value={activeOrganizationId}
         onChange={handleOrgChange}
         displayEmpty
+        aria-label="Select organization"
+        inputProps={{ "aria-label": "Select organization" }}
         IconComponent={() => (
           <ChevronDown
             size={16}

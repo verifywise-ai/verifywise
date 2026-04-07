@@ -47,14 +47,10 @@ export const test = base.extend<{
       await page.waitForTimeout(500);
     }
 
-    // Fill project title — the input is an unlabeled textbox under "Use case title*"
-    // Use the text label to locate the adjacent input
-    const titleInput = page
-      .getByText(/use case title/i)
-      .locator("..")
-      .getByRole("textbox");
-    await expect(titleInput.first()).toBeVisible({ timeout: 10_000 });
-    await titleInput.first().fill(projectName);
+    // Fill project title using the stable id from CreateProjectForm
+    const titleInput = page.locator("#project-title-input");
+    await expect(titleInput).toBeVisible({ timeout: 10_000 });
+    await titleInput.fill(projectName);
 
     // Fill Goal field (required) — unlabeled textbox under "Goal*"
     const goalInput = page

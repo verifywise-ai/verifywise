@@ -48,7 +48,7 @@ export interface PolicyFormProps {
   setFormData: React.Dispatch<React.SetStateAction<import("../../../domain/interfaces/i.policy").PolicyFormData>>;
   tags: string[];
   errors: import("../../../domain/interfaces/i.policy").PolicyFormErrors;
-  setErrors: React.Dispatch<React.SetStateAction<import("../../../domain/interfaces/i.policy").PolicyFormErrors>>;
+  clearFieldError: (field: keyof import("../../../domain/interfaces/i.policy").PolicyFormData) => void;
 }
 
 /**

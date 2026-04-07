@@ -11,7 +11,7 @@ import {
   TableRow,
   Box,
 } from "@mui/material";
-import { Trash2, UserPlus, Users as UsersIcon, Mail } from "lucide-react";
+import { UserPlus, Users as UsersIcon } from "lucide-react";
 import {
   getOrgUsers,
   inviteUserToOrg,
@@ -24,6 +24,7 @@ import Field from "../../../components/Inputs/Field";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import SearchBox from "../../../components/Search/SearchBox";
 import { EmptyState } from "../../../components/EmptyState";
+import { ROLE_OPTIONS, ROLE_COLORS } from "../../../../application/constants/roles";
 import singleTheme from "../../../themes/v1SingleTheme";
 
 const Users = () => {
@@ -114,20 +115,6 @@ const Users = () => {
     }
   };
 
-  const roleOptions = [
-    { value: 1, label: "Admin" },
-    { value: 2, label: "Reviewer" },
-    { value: 3, label: "Editor" },
-    { value: 4, label: "Auditor" },
-  ];
-
-  const roleColors: Record<string, { bg: string; text: string }> = {
-    Admin: { bg: "#eff6ff", text: "#2563eb" },
-    Reviewer: { bg: "#faf5ff", text: "#9333ea" },
-    Editor: { bg: "#f0fdf4", text: "#16a34a" },
-    Auditor: { bg: "#fefce8", text: "#ca8a04" },
-  };
-
   const tableStyles = singleTheme.tableStyles.primary;
 
   return (
@@ -204,7 +191,7 @@ const Users = () => {
             </TableHead>
             <TableBody>
               {filteredUsers.map((user) => {
-                const colors = roleColors[user.role_name] || {
+                const colors = ROLE_COLORS[user.role_name] || {
                   bg: "#f3f4f6",
                   text: "#6b7280",
                 };
@@ -235,10 +222,7 @@ const Users = () => {
                       </Stack>
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
-                      <Stack direction="row" alignItems="center" gap={0.5}>
-                        <Mail size={13} color="#6b7280" />
-                        <Typography sx={{ fontSize: 13 }}>{user.email}</Typography>
-                      </Stack>
+                      <Typography sx={{ fontSize: 13 }}>{user.email}</Typography>
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
                       <Box
@@ -277,7 +261,6 @@ const Users = () => {
                       <Button
                         size="small"
                         variant="outlined"
-                        startIcon={<Trash2 size={13} />}
                         onClick={() => {
                           setDeleteTarget(user);
                           setDeleteOpen(true);
@@ -355,7 +338,7 @@ const Users = () => {
                 fontSize: 13,
               }}
             >
-              {roleOptions.map((opt) => (
+              {ROLE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>

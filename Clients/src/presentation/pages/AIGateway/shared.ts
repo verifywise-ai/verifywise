@@ -11,6 +11,20 @@ export const GUARDRAIL_ACTION_COLORS = { blocked: "#DC2626", masked: "#D97706" }
 /** Format entity_type from DB snake_case to human-readable */
 export const formatEntityType = (t?: string | null) => (t || "Unknown").replace(/_/g, " ");
 
+/** MCP status chip colors — reused across Audit Log, Approvals, and other MCP pages */
+export const MCP_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  success: { bg: "#ECFDF5", text: "#065F46" },
+  approved: { bg: "#ECFDF5", text: "#065F46" },
+  error: { bg: "#FEF2F2", text: "#991B1B" },
+  denied: { bg: "#FEF2F2", text: "#991B1B" },
+  blocked: { bg: "#FFF7ED", text: "#9A3412" },
+  pending: { bg: "#FFFBEB", text: "#92400E" },
+  rate_limited: { bg: "#FFFBEB", text: "#92400E" },
+  approval_required: { bg: "#F5F3FF", text: "#5B21B6" },
+} as const;
+
+export const MCP_STATUS_FALLBACK = { bg: "#F3F4F6", text: "#374151" } as const;
+
 export function useCardSx() {
   const theme = useTheme();
   return {

@@ -112,6 +112,7 @@ import { User } from "../../../domain/types/User";
 import { PolicyFormData, PolicyFormErrors } from "../../types/interfaces/i.policy";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { checkStringValidation } from "../../../application/validations/stringValidation";
+import { useFormValidation } from "../../../application/hooks/useFormValidation";
 import { store } from "../../../application/redux/store";
 import policyTemplates from "../../../application/data/PolicyTemplates.json";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
@@ -452,7 +453,7 @@ export default function PolicyEditorPage() {
   const docxInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [errors, setErrors] = useState<PolicyFormErrors>({});
+  const [serverErrors, setServerErrors] = useState<PolicyFormErrors>({});
   const [toolbarState, setToolbarState] = useState(defaultToolbarState);
   const [currentBlockType, setCurrentBlockType] = useState<string>("p");
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -468,6 +469,41 @@ export default function PolicyEditorPage() {
   const [searchText, setSearchText] = useState("");
   const [replaceText, setReplaceText] = useState("");
   const [searchMatchCount, setSearchMatchCount] = useState(0);
+
+  const validators = useMemo(
+    () => ({
+      title: (v: unknown) => {
+        const r = checkStringValidation("Policy title", v as string, 1, 64);
+        return r.accepted ? "" : r.message;
+      },
+      status: (v: unknown) => (!v ? "Status is required." : ""),
+      tags: (v: unknown) => {
+        const t = v as string[];
+        return t.filter((tag) => tag.trim() !== "").length === 0
+          ? "At least one tag is required."
+          : "";
+      },
+      nextReviewDate: (v: unknown) => {
+        const r = checkStringValidation("Next review date", (v as string) || "", 1);
+        return r.accepted ? "" : r.message;
+      },
+      assignedReviewers: (v: unknown) => {
+        const reviewers = v as PolicyFormData["assignedReviewers"];
+        return reviewers.filter((u) => u.id !== undefined).length === 0
+          ? "At least one reviewer is required."
+          : "";
+      },
+    }),
+    []
+  );
+
+  const { errors: validationErrors, validateAll, resetErrors, clearFieldError } =
+    useFormValidation<PolicyFormData>(validators);
+
+  const displayErrors = useMemo(
+    () => ({ ...validationErrors, ...serverErrors }),
+    [validationErrors, serverErrors]
+  );
 
   const [formData, setFormData] = useState<PolicyFormData>({
     title: "",
@@ -1170,39 +1206,15 @@ export default function PolicyEditorPage() {
     },
   ];
 
-  // ── Validation ────────────────────────────────────────────────────
-  const validateForm = (): boolean => {
-    const newErrors: PolicyFormErrors = {};
-
-    const titleCheck = checkStringValidation("Policy title", formData.title, 1, 64);
-    if (!titleCheck.accepted) newErrors.title = titleCheck.message;
-    if (!formData.status) newErrors.status = "Status is required";
-
-    if (formData.tags.filter((t) => t.trim() !== "").length === 0)
-      newErrors.tags = "At least one tag is required";
-
-    const dateCheck = checkStringValidation(
-      "Next review date",
-      formData.nextReviewDate || "",
-      1
-    );
-    if (!dateCheck.accepted) newErrors.nextReviewDate = dateCheck.message;
-
-    if (formData.assignedReviewers.filter((u) => u.id !== undefined).length === 0)
-      newErrors.assignedReviewers = "At least one reviewer is required";
-
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      setValidationSnackbar(true);
-      return false;
-    }
-    return true;
-  };
-
   // ── Save ──────────────────────────────────────────────────────────
   const save = async () => {
-    if (!validateForm()) return;
+    setServerErrors({});
+    resetErrors();
+    if (!validateAll(formData)) {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setValidationSnackbar(true);
+      return;
+    }
     setIsSaving(true);
 
     const html = editor?.getHTML() || "";
@@ -1241,19 +1253,19 @@ export default function PolicyEditorPage() {
         err?.originalError?.response || err?.response?.data || err?.response;
 
       if (errorData?.errors) {
-        const serverErrors: PolicyFormErrors = {};
+        const apiErrors: PolicyFormErrors = {};
         errorData.errors.forEach((error: any) => {
-          if (error.field === "title") serverErrors.title = error.message;
-          else if (error.field === "status") serverErrors.status = error.message;
-          else if (error.field === "tags") serverErrors.tags = error.message;
+          if (error.field === "title") apiErrors.title = error.message;
+          else if (error.field === "status") apiErrors.status = error.message;
+          else if (error.field === "tags") apiErrors.tags = error.message;
           else if (error.field === "content_html")
-            serverErrors.content = error.message;
+            apiErrors.content = error.message;
           else if (error.field === "next_review_date")
-            serverErrors.nextReviewDate = error.message;
+            apiErrors.nextReviewDate = error.message;
           else if (error.field === "assigned_reviewer_ids")
-            serverErrors.assignedReviewers = error.message;
+            apiErrors.assignedReviewers = error.message;
         });
-        setErrors(serverErrors);
+        setServerErrors(apiErrors);
       }
     }
   };
@@ -1727,8 +1739,8 @@ export default function PolicyEditorPage() {
             formData={formData}
             setFormData={setFormData}
             tags={tags}
-            errors={errors}
-            setErrors={setErrors}
+            errors={displayErrors}
+            clearFieldError={clearFieldError}
           />
         </Box>
 
@@ -2263,13 +2275,13 @@ export default function PolicyEditorPage() {
             `}</style>
           </Box>
 
-          {errors.content && (
+          {displayErrors.content && (
             <Typography
               component="span"
               color={theme.palette.status?.error?.text || theme.palette.error.main}
               sx={{ opacity: 0.8, fontSize: 11, mt: 1 }}
             >
-              {errors.content}
+              {displayErrors.content}
             </Typography>
           )}
 

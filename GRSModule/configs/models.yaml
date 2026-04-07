@@ -1,10 +1,18 @@
 version: models_v0.1
 models:
-#  - provider: openrouter
-#    model_id: openai/gpt-4o-mini
-
-#  - provider: openrouter
-#    model_id: x-ai/grok-3-mini
-
   - provider: openrouter
     model_id: google/gemini-2.5-pro
+
+  # AWS Bedrock models — requires AWS credentials in ~/.aws/credentials
+  # Use base model IDs or cross-region inference profile IDs (prefixed with region group, e.g. us.)
+#  - provider: bedrock
+#    model_id: anthropic.claude-3-5-sonnet-20241022-v2:0
+#    region: us-east-1
+
+#  - provider: bedrock
+#    model_id: us.meta.llama3-3-70b-instruct-v1:0
+#    region: us-east-1
+
+#  - provider: bedrock
+#    model_id: mistral.mistral-large-2402-v1:0
+#    region: eu-west-1

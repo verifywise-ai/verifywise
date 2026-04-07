@@ -124,6 +124,21 @@ export async function updateOrg(req: Request, res: Response) {
 }
 
 /**
+ * Get total user count (excludes super-admins)
+ */
+export async function getUserCount(_req: Request, res: Response) {
+  try {
+    const [result]: any[] = await sequelize.query(
+      `SELECT COUNT(*) AS count FROM users WHERE role_id != 5`,
+      { type: 'SELECT' as any }
+    );
+    return res.status(200).json(STATUS_CODE[200]({ count: parseInt(result.count, 10) }));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
  * List all users across all organizations
  */
 export async function listAllUsers(_req: Request, res: Response) {
@@ -200,6 +215,76 @@ export async function inviteUserToOrg(req: Request, res: Response) {
     roleId,
     organizationId: orgId,
   });
+}
+
+/**
+ * Update a user's details (name, surname, email, role)
+ */
+export async function updateUser(req: Request, res: Response) {
+  try {
+    const userId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+    const { name, surname, email, roleId } = req.body;
+
+    // Prevent updating to super-admin role
+    if (roleId === 5) {
+      return res.status(403).json(STATUS_CODE[403]("Cannot assign SuperAdmin role"));
+    }
+
+    const rows: any[] = await sequelize.query(
+      `SELECT id, role_id FROM users WHERE id = :userId`,
+      { replacements: { userId }, type: 'SELECT' as any }
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json(STATUS_CODE[404]("User not found"));
+    }
+
+    if (rows[0].role_id === 5) {
+      return res.status(403).json(STATUS_CODE[403]("Super-admin user cannot be modified"));
+    }
+
+    const updates: string[] = [];
+    const replacements: any = { userId };
+
+    if (name !== undefined) {
+      updates.push('name = :name');
+      replacements.name = name;
+    }
+    if (surname !== undefined) {
+      updates.push('surname = :surname');
+      replacements.surname = surname;
+    }
+    if (email !== undefined) {
+      updates.push('email = :email');
+      replacements.email = email;
+    }
+    if (roleId !== undefined) {
+      updates.push('role_id = :roleId');
+      replacements.roleId = roleId;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json(STATUS_CODE[400]({ message: "No fields to update" }));
+    }
+
+    const [updated] = await sequelize.query(
+      `WITH updated AS (
+        UPDATE users SET ${updates.join(', ')}, updated_at = NOW() WHERE id = :userId
+        RETURNING *
+      )
+      SELECT u.id, u.name, u.surname, u.email, u.role_id, r.name as role_name,
+             u.organization_id, o.name as organization_name,
+             u.created_at, u.last_login
+      FROM updated u
+      LEFT JOIN roles r ON u.role_id = r.id
+      LEFT JOIN organizations o ON u.organization_id = o.id`,
+      { replacements, type: 'SELECT' as any }
+    );
+
+    return res.status(200).json(STATUS_CODE[200](updated));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
 }
 
 /**

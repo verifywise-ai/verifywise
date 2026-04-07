@@ -17,7 +17,7 @@ services:
 
   frontend:
     ports:
-      - $FRONTEND_PORT:80
+      - "127.0.0.1:${FRONTEND_PORT}:80"
     env_file:
       - ./.env.prod
   

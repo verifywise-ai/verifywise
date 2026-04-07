@@ -21,6 +21,13 @@ from routers.virtual_keys import router as virtual_keys_router
 from routers.prompts import router as prompts_router
 from routers.risk import router as risk_router
 from routers.cache import router as cache_router
+from routers.mcp_agent_keys import router as mcp_agent_keys_router
+from routers.mcp_servers import router as mcp_servers_router
+from routers.mcp_approvals import router as mcp_approvals_router
+from routers.mcp_audit import router as mcp_audit_router
+from routers.mcp_guardrails import router as mcp_guardrails_router
+from routers.mcp_tools import router as mcp_tools_router
+from routers.mcp_proxy import router as mcp_proxy_router
 from routers.tenant_chat import router as tenant_chat_router
 
 # Disable LiteLLM verbose logging to prevent key leakage
@@ -75,6 +82,14 @@ app.include_router(prompts_router, prefix="/internal", tags=["CRUD"])
 app.include_router(risk_router, prefix="/internal", tags=["CRUD"])
 app.include_router(cache_router, prefix="/internal", tags=["CRUD"])
 
+# MCP Gateway CRUD routes (internal)
+app.include_router(mcp_agent_keys_router, prefix="/internal", tags=["MCP CRUD"])
+app.include_router(mcp_servers_router, prefix="/internal", tags=["MCP CRUD"])
+app.include_router(mcp_approvals_router, prefix="/internal", tags=["MCP CRUD"])
+app.include_router(mcp_audit_router, prefix="/internal", tags=["MCP CRUD"])
+app.include_router(mcp_guardrails_router, prefix="/internal", tags=["MCP CRUD"])
+app.include_router(mcp_tools_router, prefix="/internal", tags=["MCP CRUD"])
+
 # Tenant proxy routes (Express proxy → Gateway, JWT-authenticated via headers)
 # Chat, streaming, embeddings, providers, model catalog
 app.include_router(tenant_chat_router, prefix="/internal", tags=["Tenant Proxy"])
@@ -82,6 +97,10 @@ app.include_router(tenant_chat_router, prefix="/internal", tags=["Tenant Proxy"]
 # Public routes (Employee SDK → Gateway, authenticated via virtual key)
 # OpenAI-compatible: /v1/chat/completions, /v1/embeddings, /v1/models
 app.include_router(proxy_router, tags=["Proxy"])
+
+# MCP Gateway public routes (Agent SDK → Gateway, authenticated via agent key)
+# Streamable HTTP: POST /v1/mcp, GET /v1/mcp
+app.include_router(mcp_proxy_router, tags=["MCP Proxy"])
 
 
 @app.get("/health")

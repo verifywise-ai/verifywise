@@ -41,3 +41,8 @@ EvaluationModule/data/uploads/*
 nul
 agent-plan.md
 pdf-templates/
+
+# WebReel generated videos and screenshots
+videos/
+screenshots/
+.webreel/

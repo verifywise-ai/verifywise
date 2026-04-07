@@ -1,0 +1,3914 @@
+openapi: 3.0.0
+info:
+  title: VerifyWise API
+  description: |
+    ## Overview
+    The VerifyWise API enables programmatic access to AI compliance management features including project management, risk assessments, vendor management, and compliance framework implementations (EU AI Act, ISO 42001, ISO 27001).
+
+    ## Getting Started
+    
+    ### 1. Authentication
+    Most endpoints require JWT authentication. Follow these steps:
+    
+    1. **Register a new user** (if needed):
+       ```
+       POST {baseUrl}/api/users/register
+       {
+         "name": "John",
+         "surname": "Doe", 
+         "email": "user@example.com",
+         "password": "SecurePassword123!"
+       }
+       ```
+    
+    2. **Login to receive tokens**:
+       ```
+       POST {baseUrl}/api/users/login
+       {
+         "email": "user@example.com",
+         "password": "SecurePassword123!"
+       }
+       ```
+       
+       Response includes:
+       ```json
+       {
+         "message": "ok",
+         "data": {
+           "user": {...},
+           "token": "eyJhbGciOiJIUzI1NiIs..."
+         }
+       }
+       ```
+    
+    3. **Use the access token** in subsequent requests:
+       ```
+       Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+       ```
+    
+    4. **Refresh tokens** when access token expires:
+       ```
+       POST {baseUrl}/api/users/refresh-token
+       ```
+
+    ### 2. Multi-Tenancy
+    The API supports multi-tenant architecture. User's organization context is automatically determined from JWT token.
+
+    ### 3. Response Format
+    All responses follow a consistent structure:
+    
+    **Success Response:**
+    ```json
+    {
+      "message": "ok",
+      "data": {...}
+    }
+    ```
+    
+    **Error Response:**
+    ```json
+    {
+      "message": "Error type",
+      "data": "Error details"
+    }
+    ```
+
+  version: 2.0.0
+
+servers:
+  - url: "http://localhost:3000/api"
+    description: Development server
+
+paths:
+  # Authentication & User Management
+  /users/register:
+    post:
+      summary: Register a new user
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, surname, email, password]
+              properties:
+                name:
+                  type: string
+                  example: "John"
+                surname:
+                  type: string
+                  example: "Doe"
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  example: "SecurePassword123!"
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/login:
+    post:
+      summary: User login
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "ok"
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+
+  /users/refresh-token:
+    post:
+      summary: Refresh authentication token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+
+  /users/check/exists:
+    get:
+      summary: Check if any user exists in the system
+      tags: [Authentication]
+      responses:
+        '200':
+          description: User existence status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/{userId}:
+    get:
+      summary: Get user by ID
+      tags: [Users]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/User'
+
+    patch:
+      summary: Update user by ID
+      tags: [Users]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete user by ID
+      tags: [Users]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/chng-pass/{userId}:
+    patch:
+      summary: Change user password
+      tags: [Users]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, currentPassword, newPassword]
+              properties:
+                id:
+                  type: integer
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Organizations
+  /organizations/{id}:
+    get:
+      summary: Get organization by ID
+      tags: [Organizations]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Organization ID
+      responses:
+        '200':
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      summary: Create organization
+      tags: [Organizations]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Organization'
+      responses:
+        '201':
+          description: Organization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    patch:
+      summary: Update organization
+      tags: [Organizations]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Organization'
+      responses:
+        '200':
+          description: Organization updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Projects
+  /projects:
+    get:
+      summary: Get all projects
+      tags: [Projects]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+
+    post:
+      summary: Create a new project
+      tags: [Projects]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /projects/{id}:
+    get:
+      summary: Get project by ID
+      tags: [Projects]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Project'
+
+    patch:
+      summary: Update project
+      tags: [Projects]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete project
+      tags: [Projects]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Project Risks
+  /projectRisks:
+    post:
+      summary: Create project risk
+      tags: [Project Risks]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectRisk'
+      responses:
+        '201':
+          description: Project risk created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /projectRisks/{id}:
+    get:
+      summary: Get project risk by ID
+      tags: [Project Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project risk details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      summary: Update project risk
+      tags: [Project Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectRisk'
+      responses:
+        '200':
+          description: Project risk updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete project risk
+      tags: [Project Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project risk deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /projectRisks/by-projid/{projectId}:
+    get:
+      summary: Get project risks by project ID
+      tags: [Project Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project risks for the specified project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectRisk'
+
+  /projectRisks/by-projid/non-mitigated/{projectId}:
+    get:
+      summary: Get non-mitigated project risks
+      tags: [Project Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Non-mitigated project risks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Project Scopes
+  /projectScopes:
+    get:
+      summary: Get all project scopes
+      tags: [Project Scopes]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of project scopes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      summary: Create project scope
+      tags: [Project Scopes]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectScope'
+      responses:
+        '201':
+          description: Project scope created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /projectScopes/{id}:
+    get:
+      summary: Get project scope by ID
+      tags: [Project Scopes]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project scope details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      summary: Update project scope
+      tags: [Project Scopes]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectScope'
+      responses:
+        '200':
+          description: Project scope updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete project scope
+      tags: [Project Scopes]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project scope deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Vendors
+  /vendors:
+    get:
+      summary: Get all vendors
+      tags: [Vendors]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of vendors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vendor'
+
+    post:
+      summary: Create a new vendor
+      tags: [Vendors]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorCreate'
+      responses:
+        '201':
+          description: Vendor created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /vendors/{id}:
+    get:
+      summary: Get vendor by ID
+      tags: [Vendors]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vendor details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Vendor'
+
+    patch:
+      summary: Update vendor
+      tags: [Vendors]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorUpdate'
+      responses:
+        '200':
+          description: Vendor updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete vendor
+      tags: [Vendors]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vendor deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /vendors/project-id/{projectId}:
+    get:
+      summary: Get vendors by project ID
+      tags: [Vendors]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vendors for the specified project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vendor'
+
+  # Vendor Risks
+  /vendorRisks/all:
+    get:
+      summary: Get all vendor risks
+      tags: [Vendor Risks]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of all vendor risks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VendorRisk'
+
+  /vendorRisks:
+    post:
+      summary: Create vendor risk
+      tags: [Vendor Risks]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorRisk'
+      responses:
+        '201':
+          description: Vendor risk created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /vendorRisks/{id}:
+    get:
+      summary: Get vendor risk by ID
+      tags: [Vendor Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vendor risk details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    patch:
+      summary: Update vendor risk
+      tags: [Vendor Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorRisk'
+      responses:
+        '200':
+          description: Vendor risk updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete vendor risk
+      tags: [Vendor Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vendor risk deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /vendorRisks/by-projid/{projectId}:
+    get:
+      summary: Get vendor risks by project ID
+      tags: [Vendor Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vendor risks for the specified project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VendorRisk'
+
+  # Assessments
+  /assessments:
+    post:
+      summary: Create assessment
+      tags: [Assessments]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assessment'
+      responses:
+        '201':
+          description: Assessment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /assessments/{id}:
+    patch:
+      summary: Update assessment
+      tags: [Assessments]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assessment'
+      responses:
+        '200':
+          description: Assessment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete assessment
+      tags: [Assessments]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assessment deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /assessments/project/byid/{id}:
+    get:
+      summary: Get assessment by ID
+      tags: [Assessments]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assessment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /assessments/getAnswaers/{assessmentId}:
+    get:
+      summary: Get assessment answers
+      tags: [Assessments]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: assessmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assessment answers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Questions
+  /questions/{id}:
+    get:
+      summary: Get question by ID
+      tags: [Questions]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Question details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    patch:
+      summary: Update question
+      tags: [Questions]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Question'
+      responses:
+        '200':
+          description: Question updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete question
+      tags: [Questions]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Question deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /questions:
+    post:
+      summary: Create question
+      tags: [Questions]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Question'
+      responses:
+        '201':
+          description: Question created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Subtopics
+  /subtopics/{id}:
+    get:
+      summary: Get subtopic by ID
+      tags: [Subtopics]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subtopic details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    patch:
+      summary: Update subtopic
+      tags: [Subtopics]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Subtopic'
+      responses:
+        '200':
+          description: Subtopic updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete subtopic
+      tags: [Subtopics]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subtopic deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /subtopics:
+    post:
+      summary: Create subtopic
+      tags: [Subtopics]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Subtopic'
+      responses:
+        '201':
+          description: Subtopic created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Subcontrols
+  /subcontrols/{id}:
+    get:
+      summary: Get subcontrol by ID
+      tags: [Subcontrols]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subcontrol details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    patch:
+      summary: Update subcontrol
+      tags: [Subcontrols]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Subcontrol'
+      responses:
+        '200':
+          description: Subcontrol updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete subcontrol
+      tags: [Subcontrols]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subcontrol deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /subcontrols:
+    post:
+      summary: Create subcontrol
+      tags: [Subcontrols]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Subcontrol'
+      responses:
+        '201':
+          description: Subcontrol created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Roles
+  /roles:
+    get:
+      summary: Get all roles
+      tags: [Roles]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      summary: Create role
+      tags: [Roles]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Role'
+      responses:
+        '201':
+          description: Role created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /roles/{id}:
+    get:
+      summary: Get role by ID
+      tags: [Roles]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Role details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      summary: Update role
+      tags: [Roles]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Role'
+      responses:
+        '200':
+          description: Role updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete role
+      tags: [Roles]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Role deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Files
+  /files:
+    get:
+      summary: Get user files metadata
+      tags: [Files]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of files
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /files/{id}:
+    get:
+      summary: Get file by ID
+      tags: [Files]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: File details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Policies
+  /policies:
+    get:
+      summary: Get all policies
+      tags: [Policies]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of policies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Policy'
+
+    post:
+      summary: Create policy
+      tags: [Policies]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyInput'
+      responses:
+        '201':
+          description: Policy created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Policy'
+
+  /policies/{id}:
+    put:
+      summary: Update policy
+      tags: [Policies]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyInput'
+      responses:
+        '200':
+          description: Policy updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete policy
+      tags: [Policies]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Policy deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /policies/tags:
+    get:
+      summary: Get all policy tags
+      tags: [Policies]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of policy tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: string
+
+  # Control Categories
+  /controlCategory:
+    get:
+      summary: Get all control categories
+      tags: [Control Categories]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of control categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      summary: Create control category
+      tags: [Control Categories]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ControlCategory'
+      responses:
+        '201':
+          description: Control category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /controlCategory/{id}:
+    get:
+      summary: Get control category by ID
+      tags: [Control Categories]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Control category details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    patch:
+      summary: Update control category
+      tags: [Control Categories]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ControlCategory'
+      responses:
+        '200':
+          description: Control category updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete control category
+      tags: [Control Categories]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Control category deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /controlCategory/byprojectid/{projectId}:
+    get:
+      summary: Get control categories by project ID
+      tags: [Control Categories]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Control categories for the specified project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Controls
+  /controls/{id}:
+    get:
+      summary: Get control by ID
+      tags: [Controls]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Control details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete control
+      tags: [Controls]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Control deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /controls:
+    post:
+      summary: Create control
+      tags: [Controls]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Control'
+      responses:
+        '201':
+          description: Control created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Model Risks
+  /modelRisks:
+    get:
+      summary: Get all model risks
+      tags: [Model Risks]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of model risks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelRisk'
+        '204':
+          description: No model risks found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      summary: Create model risk
+      tags: [Model Risks]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelRiskInput'
+      responses:
+        '201':
+          description: Model risk created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/ModelRisk'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /modelRisks/{id}:
+    get:
+      summary: Get model risk by ID
+      tags: [Model Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Model risk ID
+      responses:
+        '200':
+          description: Model risk found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/ModelRisk'
+        '404':
+          description: Model risk not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      summary: Update model risk
+      tags: [Model Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Model risk ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelRiskInput'
+      responses:
+        '200':
+          description: Model risk updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/ModelRisk'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Model risk not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    patch:
+      summary: Update model risk (partial)
+      tags: [Model Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Model risk ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelRiskInput'
+      responses:
+        '200':
+          description: Model risk updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/ModelRisk'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Model risk not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete model risk
+      tags: [Model Risks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Model risk ID
+      responses:
+        '200':
+          description: Model risk deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Model risk not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Model Inventory
+  /modelInventory:
+    get:
+      summary: Get all model inventory entries
+      tags: [Model Inventory]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of model inventory entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelInventory'
+        '204':
+          description: No model inventory entries found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      summary: Create model inventory entry
+      tags: [Model Inventory]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelInventory'
+      responses:
+        '201':
+          description: Model inventory entry created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /modelInventory/{id}:
+    get:
+      summary: Get model inventory entry by ID
+      tags: [Model Inventory]
+      security:
+        - JWTAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Model inventory entry ID
+      responses:
+        '200':
+          description: Model inventory entry found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/ModelInventory'
+        '204':
+          description: Model inventory entry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    patch:
+      summary: Update model inventory entry
+      tags: [Model Inventory]
+      security:
+        - JWTAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Model inventory entry ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelInventory'
+      responses:
+        '200':
+          description: Model inventory entry updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Model inventory entry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      summary: Delete model inventory entry
+      tags: [Model Inventory]
+      security:
+        - JWTAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Model inventory entry ID
+      responses:
+        '200':
+          description: Model inventory entry deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Model inventory entry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Training
+  /training:
+    get:
+      summary: Get all training records
+      tags: [Training]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of training records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Training'
+        '204':
+          description: No training records found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      summary: Create training registry entry
+      tags: [Training]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingInput'
+      responses:
+        '201':
+          description: Training registry entry created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /training/training-id/{id}:
+    get:
+      summary: Get training record by ID
+      tags: [Training]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Training record ID
+      responses:
+        '200':
+          description: Training record details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Training'
+        '404':
+          description: Training record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /training/{id}:
+    patch:
+      summary: Update training record
+      tags: [Training]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Training record ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingUpdate'
+      responses:
+        '202':
+          description: Training record updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Training record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete training record
+      tags: [Training]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Training record ID
+      responses:
+        '202':
+          description: Training record deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Training record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Frameworks
+  /frameworks:
+    get:
+      summary: Get all frameworks
+      tags: [Frameworks]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of frameworks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /frameworks/toProject:
+    post:
+      summary: Assign framework to project
+      tags: [Frameworks]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: frameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Framework assigned to project successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # EU AI Act Endpoints
+  /eu-ai-act/topics:
+    get:
+      summary: Get all assessment topics
+      tags: [EU AI Act]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of assessment topics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /eu-ai-act/topicById:
+    get:
+      summary: Get assessment topic by ID
+      tags: [EU AI Act]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: topicId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assessment topic details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /eu-ai-act/assessments/progress/{projectFrameworkId}:
+    get:
+      summary: Get assessment progress
+      tags: [EU AI Act]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: projectFrameworkId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assessment progress details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /eu-ai-act/controlById:
+    get:
+      summary: Get control by ID and project
+      tags: [EU AI Act]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: controlId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Control details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /eu-ai-act/controlCategories:
+    get:
+      summary: Get control categories by project
+      tags: [EU AI Act]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Control categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /eu-ai-act/compliances/progress/{projectFrameworkId}:
+    get:
+      summary: Get compliance progress
+      tags: [EU AI Act]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: projectFrameworkId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Compliance progress details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /eu-ai-act/controls/byControlCategoryId/{controlCategoryId}:
+    get:
+      summary: Get controls by category ID
+      tags: [EU AI Act]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: controlCategoryId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Controls for the specified category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /eu-ai-act/saveAnswer/{answerId}:
+    patch:
+      summary: Update EU AI Act answer
+      tags: [EU AI Act]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Answer'
+      responses:
+        '200':
+          description: Answer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /eu-ai-act/saveControls/{controlId}:
+    patch:
+      summary: Update control
+      tags: [EU AI Act]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: controlId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Control'
+      responses:
+        '200':
+          description: Control updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ISO 27001 Endpoints
+  /iso-27001/clauses/struct/byProjectId/{projectId}:
+    get:
+      summary: Get ISO 27001 clause structure by project ID
+      tags: [ISO 27001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ISO 27001 clause structure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /iso-27001/subClauses/byClauseId/{clauseId}:
+    get:
+      summary: Get sub-clauses by clause ID
+      tags: [ISO 27001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: clauseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sub-clauses for the specified clause
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /iso-27001/subClause/byId/{id}:
+    get:
+      summary: Get sub-clause by ID
+      tags: [ISO 27001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sub-clause details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /iso-27001/annexControl/byId/{id}:
+    get:
+      summary: Get annex control by ID
+      tags: [ISO 27001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Annex control details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /iso-27001/saveClauses/{id}:
+    post:
+      summary: Save/update ISO 27001 clauses
+      tags: [ISO 27001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ISO27001Clause'
+      responses:
+        '200':
+          description: ISO 27001 clauses saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /iso-27001/saveAnnexes/{id}:
+    post:
+      summary: Save/update ISO 27001 annexes
+      tags: [ISO 27001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ISO27001Annex'
+      responses:
+        '200':
+          description: ISO 27001 annexes saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ISO 42001 Endpoints
+  /iso-42001/subClause/byId/{id}:
+    get:
+      summary: Get ISO 42001 sub-clause by ID
+      tags: [ISO 42001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ISO 42001 sub-clause details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /iso-42001/annexCategory/byId/{id}:
+    get:
+      summary: Get ISO 42001 annex category by ID
+      tags: [ISO 42001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ISO 42001 annex category details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /iso-42001/saveClauses/{id}:
+    post:
+      summary: Save/update ISO 42001 clauses
+      tags: [ISO 42001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ISO42001Clause'
+      responses:
+        '200':
+          description: ISO 42001 clauses saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /iso-42001/saveAnnexes/{id}:
+    post:
+      summary: Save/update ISO 42001 annexes
+      tags: [ISO 42001]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ISO42001Annex'
+      responses:
+        '200':
+          description: ISO 42001 annexes saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # AI Trust Centre
+  /aiTrustCentre/overview:
+    get:
+      summary: Get AI Trust Centre overview
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: AI Trust Centre overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      summary: Update AI Trust Centre overview
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AITrustCentreOverview'
+      responses:
+        '200':
+          description: AI Trust Centre overview updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /aiTrustCentre/logo:
+    post:
+      summary: Upload AI Trust Centre logo
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Logo uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete AI Trust Centre logo
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: Logo deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /aiTrustCentre/resources:
+    get:
+      summary: Get AI Trust Centre resources
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of AI Trust Centre resources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      summary: Create AI Trust Centre resource
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Resource created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /aiTrustCentre/resources/{resourceId}:
+    put:
+      summary: Update AI Trust Centre resource
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Resource updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete AI Trust Centre resource
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Resource deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /aiTrustCentre/subprocessors:
+    get:
+      summary: Get AI Trust Centre subprocessors
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of subprocessors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      summary: Create AI Trust Centre subprocessor
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AITrustCentreSubprocessor'
+      responses:
+        '201':
+          description: Subprocessor created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /aiTrustCentre/subprocessors/{subprocessorId}:
+    put:
+      summary: Update AI Trust Centre subprocessor
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: subprocessorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AITrustCentreSubprocessor'
+      responses:
+        '200':
+          description: Subprocessor updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: Delete AI Trust Centre subprocessor
+      tags: [AI Trust Centre]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: subprocessorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subprocessor deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Bias and Fairness
+  /bias_and_fairness/upload:
+    post:
+      summary: Upload model and dataset for fairness analysis
+      tags: [Bias and Fairness]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [model, data, target_column, sensitive_column]
+              properties:
+                model:
+                  type: string
+                  format: binary
+                  description: Model file (compressed with gzip)
+                data:
+                  type: string
+                  format: binary
+                  description: Dataset file (compressed with gzip)
+                target_column:
+                  type: string
+                  description: Name of the target column in the dataset
+                sensitive_column:
+                  type: string
+                  description: Name of the sensitive attribute column
+      responses:
+        '200':
+          description: Upload initiated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  job_id:
+                    type: string
+                  model_filename:
+                    type: string
+                  data_filename:
+                    type: string
+
+  /bias_and_fairness/upload/status/{jobId}:
+    get:
+      summary: Get fairness upload status
+      tags: [Bias and Fairness]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Upload status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [In Progress, Completed, Failed]
+                  model_filename:
+                    type: string
+                  data_filename:
+                    type: string
+                  metrics_id:
+                    type: string
+
+  /bias_and_fairness/metrics/all:
+    get:
+      summary: Get all fairness metrics metadata
+      tags: [Bias and Fairness]
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: List of fairness metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FairnessMetric'
+
+  /bias_and_fairness/metrics/{id}:
+    get:
+      summary: Get fairness metrics by ID
+      tags: [Bias and Fairness]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Fairness metrics details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FairnessMetric'
+
+    delete:
+      summary: Delete fairness check
+      tags: [Bias and Fairness]
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Fairness check deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Email Services
+  /mail/invite:
+    post:
+      summary: Send user invitation email
+      tags: [Email Services]
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                invitationMessage:
+                  type: string
+      responses:
+        '200':
+          description: Invitation email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /mail/reset-password:
+    post:
+      summary: Send password reset email
+      tags: [Email Services]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Password reset email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Demo Data
+  /autoDrivers:
+    post:
+      summary: Create demo data
+      tags: [Demo Data]
+      security:
+        - JWTAuth: []
+      responses:
+        '201':
+          description: Demo data created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+components:
+  securitySchemes:
+    JWTAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "not found"
+              data:
+                type: string
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "internal error"
+              data:
+                type: string
+
+    ServiceUnavailable:
+      description: Service unavailable
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "service unavailable"
+              data:
+                type: string
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Response status message
+        data:
+          description: Response data (varies by endpoint)
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        surname:
+          type: string
+        email:
+          type: string
+          format: email
+        role_id:
+          type: integer
+        organization_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        surname:
+          type: string
+        email:
+          type: string
+          format: email
+        role_id:
+          type: integer
+
+    Organization:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProjectCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+
+    ProjectRisk:
+      type: object
+      properties:
+        id:
+          type: integer
+        project_id:
+          type: integer
+        risk_name:
+          type: string
+        likelihood:
+          type: string
+          enum: [very_low, low, medium, high, very_high]
+        severity:
+          type: string
+          enum: [very_low, low, medium, high, very_high]
+        risk_level:
+          type: string
+        mitigation_status:
+          type: string
+
+    ProjectScope:
+      type: object
+      properties:
+        id:
+          type: integer
+        project_id:
+          type: integer
+        scope_description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Vendor:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        website:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    VendorCreate:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        website:
+          type: string
+
+    VendorUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        website:
+          type: string
+        status:
+          type: string
+
+    VendorRisk:
+      type: object
+      properties:
+        id:
+          type: integer
+        vendor_id:
+          type: integer
+        project_id:
+          type: integer
+        risk_description:
+          type: string
+        likelihood:
+          type: string
+          enum: [very_low, low, medium, high, very_high]
+        severity:
+          type: string
+          enum: [very_low, low, medium, high, very_high]
+        risk_level:
+          type: string
+
+    Assessment:
+      type: object
+      properties:
+        id:
+          type: integer
+        project_id:
+          type: integer
+        assessment_type:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+        question_text:
+          type: string
+        question_type:
+          type: string
+        framework_id:
+          type: integer
+
+    Subtopic:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        topic_id:
+          type: integer
+
+    Subcontrol:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        control_id:
+          type: integer
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+
+    Policy:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        status:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    PolicyInput:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        status:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    ControlCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        framework_id:
+          type: integer
+
+    Control:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        control_category_id:
+          type: integer
+        implementation_status:
+          type: string
+
+    ModelInventory:
+      type: object
+      properties:
+        id:
+          type: integer
+        provider_model:
+          type: string
+          description: Combined provider and model name (for backward compatibility)
+        provider:
+          type: string
+          description: Model provider organization
+        model:
+          type: string
+          description: Model name
+        version:
+          type: string
+          description: Model version
+        approver:
+          type: integer
+          nullable: true
+          description: User ID of the person who approved the model (optional)
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: List of model capabilities
+        security_assessment:
+          type: boolean
+          description: Whether security assessment has been completed
+        status:
+          type: string
+          enum: ["Approved", "Restricted", "Pending", "Blocked"]
+          description: Model approval status
+        status_date:
+          type: string
+          format: date-time
+          description: Date when status was last updated
+        is_demo:
+          type: boolean
+          description: Whether this is a demo entry
+        created_at:
+          type: string
+          format: date-time
+          description: Entry creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Entry last update timestamp
+
+    Training:
+      type: object
+      properties:
+        id:
+          type: integer
+        training_name:
+          type: string
+        duration:
+          type: string
+          description: Duration of the training (e.g., "2 days", "8 hours")
+        provider:
+          type: string
+          description: Training provider organization
+        department:
+          type: string
+          description: Target department for the training
+        status:
+          type: string
+          enum: ["Planned", "In Progress", "Completed"]
+        people:
+          type: integer
+          description: Number of participants
+        description:
+          type: string
+          description: Detailed description of the training
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TrainingInput:
+      type: object
+      required: [training_name, duration, provider, department, status, numberOfPeople]
+      properties:
+        training_name:
+          type: string
+          minLength: 1
+        duration:
+          type: string
+          minLength: 1
+        provider:
+          type: string
+          minLength: 1
+        department:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum: ["Planned", "In Progress", "Completed"]
+        numberOfPeople:
+          type: integer
+          minimum: 1
+          description: Number of participants (mapped to 'people' in database)
+        description:
+          type: string
+
+    TrainingUpdate:
+      type: object
+      required: [training_name, duration, provider, department, status, numberOfPeople]
+      properties:
+        training_name:
+          type: string
+          minLength: 1
+        duration:
+          type: string
+          minLength: 1
+        provider:
+          type: string
+          minLength: 1
+        department:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum: ["Planned", "In Progress", "Completed"]
+        numberOfPeople:
+          type: integer
+          minimum: 1
+          description: Number of participants (mapped to 'people' in database)
+        description:
+          type: string
+
+    Answer:
+      type: object
+      properties:
+        answer_text:
+          type: string
+        evidence:
+          type: string
+
+    ISO27001Clause:
+      type: object
+      properties:
+        clause_text:
+          type: string
+        implementation_guidance:
+          type: string
+        evidence:
+          type: string
+        status:
+          type: string
+
+    ISO27001Annex:
+      type: object
+      properties:
+        control_objective:
+          type: string
+        implementation_guidance:
+          type: string
+        evidence:
+          type: string
+        status:
+          type: string
+
+    ISO42001Clause:
+      type: object
+      properties:
+        clause_text:
+          type: string
+        implementation_guidance:
+          type: string
+        evidence:
+          type: string
+        status:
+          type: string
+
+    ISO42001Annex:
+      type: object
+      properties:
+        annex_text:
+          type: string
+        implementation_guidance:
+          type: string
+        evidence:
+          type: string
+        status:
+          type: string
+
+    AITrustCentreOverview:
+      type: object
+      properties:
+        company_name:
+          type: string
+        description:
+          type: string
+        introduction:
+          type: string
+
+    AITrustCentreSubprocessor:
+      type: object
+      properties:
+        name:
+          type: string
+        purpose:
+          type: string
+        location:
+          type: string
+        processing_activities:
+          type: string
+
+    FairnessMetric:
+      type: object
+      properties:
+        id:
+          type: string
+        model_filename:
+          type: string
+        data_filename:
+          type: string
+        metrics:
+          type: object
+          description: Fairness metrics results
+        status:
+          type: string
+          enum: [In Progress, Completed, Failed]
+
+    ModelRisk:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the model risk
+        riskName:
+          type: string
+          description: Name of the model risk
+        riskCategory:
+          $ref: '#/components/schemas/ModelRiskCategory'
+        riskLevel:
+          $ref: '#/components/schemas/ModelRiskLevel'
+        status:
+          $ref: '#/components/schemas/ModelRiskStatus'
+        owner:
+          type: string
+          description: Person responsible for managing the risk
+        targetDate:
+          type: string
+          format: date
+          description: Target date for risk resolution
+        description:
+          type: string
+          description: Detailed description of the risk
+        mitigationPlan:
+          type: string
+          description: Plan to mitigate or manage the risk
+        impact:
+          type: string
+          description: Potential impact of the risk
+        likelihood:
+          type: string
+          description: Likelihood of the risk occurring
+        keyMetrics:
+          type: string
+          description: Key performance metrics related to the risk
+        currentValues:
+          type: string
+          description: Current values of the key metrics
+        threshold:
+          type: string
+          description: Threshold values that trigger risk alerts
+        modelId:
+          type: integer
+          description: Associated model inventory ID (optional)
+        modelName:
+          type: string
+          description: Name of the associated model (optional)
+        createdDate:
+          type: string
+          format: date-time
+          description: Date when the risk was created
+        lastUpdated:
+          type: string
+          format: date-time
+          description: Date when the risk was last updated
+        created_at:
+          type: string
+          format: date-time
+          description: Database creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Database update timestamp
+
+    ModelRiskInput:
+      type: object
+      required: [riskName, riskCategory, riskLevel, status, owner, targetDate]
+      properties:
+        riskName:
+          type: string
+          minLength: 1
+          description: Name of the model risk
+          example: "Model accuracy decline"
+        riskCategory:
+          $ref: '#/components/schemas/ModelRiskCategory'
+        riskLevel:
+          $ref: '#/components/schemas/ModelRiskLevel'
+        status:
+          $ref: '#/components/schemas/ModelRiskStatus'
+        owner:
+          type: string
+          minLength: 1
+          description: Person responsible for managing the risk
+          example: "John Doe"
+        targetDate:
+          type: string
+          format: date
+          description: Target date for risk resolution
+          example: "2024-12-31"
+        description:
+          type: string
+          description: Detailed description of the risk
+          example: "The model's accuracy has been declining over the past month"
+        mitigationPlan:
+          type: string
+          description: Plan to mitigate or manage the risk
+          example: "Retrain the model with recent data and implement monitoring"
+        impact:
+          type: string
+          description: Potential impact of the risk
+          example: "Reduced prediction accuracy may affect business decisions"
+        likelihood:
+          type: string
+          description: Likelihood of the risk occurring
+          example: "High"
+        keyMetrics:
+          type: string
+          description: Key performance metrics related to the risk
+          example: "Model accuracy, precision, recall"
+        currentValues:
+          type: string
+          description: Current values of the key metrics
+          example: "Accuracy: 85%, Precision: 80%, Recall: 78%"
+        threshold:
+          type: string
+          description: Threshold values that trigger risk alerts
+          example: "Accuracy below 90%"
+        modelId:
+          type: integer
+          description: Associated model inventory ID (optional)
+          example: 123
+        modelName:
+          type: string
+          description: Name of the associated model (optional)
+          example: "Customer Segmentation Model v2.1"
+
+    ModelRiskCategory:
+      type: string
+      enum:
+        - "Performance"
+        - "Bias & Fairness"
+        - "Security"
+        - "Data Quality"
+        - "Compliance"
+      description: Category classification for model risks
+      example: "Performance"
+
+    ModelRiskLevel:
+      type: string
+      enum:
+        - "Low"
+        - "Medium"
+        - "High"
+        - "Critical"
+      description: Severity level of the model risk
+      example: "Medium"
+
+    ModelRiskStatus:
+      type: string
+      enum:
+        - "Open"
+        - "In Progress"
+        - "Resolved"
+        - "Accepted"
+      description: Current status of the model risk
+      example: "Open"

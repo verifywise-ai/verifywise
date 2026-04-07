@@ -13,6 +13,7 @@ import { QueryTypes } from "sequelize";
  * for backward compatibility with frontend
  */
 export interface EvidenceFile {
+  link_id?: number;
   id: string;
   fileName: string;
   project_id?: number;
@@ -33,6 +34,7 @@ export async function getEvidenceFilesForEntity(
 ): Promise<EvidenceFile[]> {
   const result = await sequelize.query(
     `SELECT
+      fel.id AS link_id,
       f.id::text AS id,
       f.filename AS "fileName",
       f.project_id,
@@ -162,6 +164,88 @@ export async function deleteFileEntityLink(
       ...(transaction && { transaction }),
     }
   );
+}
+
+/**
+ * Get evidence files for a single entity across multiple entity types.
+ * Returns a map of entityType -> EvidenceFile[]
+ */
+export async function getEvidenceFilesForEntityTypes(
+  organizationId: number,
+  frameworkType: string,
+  entityTypes: string[],
+  entityId: number,
+  linkType: string = "evidence"
+): Promise<Record<string, EvidenceFile[]>> {
+  if (entityTypes.length === 0) {
+    return {};
+  }
+
+  const result = await sequelize.query(
+    `SELECT
+      fel.entity_type,
+      fel.id AS link_id,
+      f.id::text AS id,
+      f.filename AS "fileName",
+      f.project_id,
+      f.uploaded_by,
+      f.uploaded_time::text AS uploaded_time,
+      COALESCE(f.source, 'File Manager') AS source
+    FROM file_entity_links fel
+    JOIN files f ON f.id = fel.file_id AND f.organization_id = fel.organization_id
+    WHERE fel.organization_id = :organizationId
+      AND fel.framework_type = :frameworkType
+      AND fel.entity_type IN (:entityTypes)
+      AND fel.entity_id = :entityId
+      AND fel.link_type = :linkType
+    ORDER BY fel.entity_type, fel.created_at DESC`,
+    {
+      replacements: { organizationId, frameworkType, entityTypes, entityId, linkType },
+      type: QueryTypes.SELECT,
+    }
+  );
+
+  const map: Record<string, EvidenceFile[]> = {};
+  for (const row of result as (EvidenceFile & { entity_type: string; link_id: number })[]) {
+    const entityType = row.entity_type;
+    if (!map[entityType]) {
+      map[entityType] = [];
+    }
+    map[entityType].push({
+      link_id: row.link_id,
+      id: row.id,
+      fileName: row.fileName,
+      project_id: row.project_id,
+      uploaded_by: row.uploaded_by,
+      uploaded_time: row.uploaded_time,
+      source: row.source,
+    });
+  }
+
+  return map;
+}
+
+/**
+ * Delete a file entity link by its primary key ID
+ */
+export async function deleteFileEntityLinkById(
+  linkId: number,
+  organizationId: number,
+  transaction?: any
+): Promise<boolean> {
+  const result = await sequelize.query(
+    `DELETE FROM file_entity_links
+     WHERE id = :linkId
+       AND organization_id = :organizationId
+     RETURNING id`,
+    {
+      replacements: { linkId, organizationId },
+      type: QueryTypes.DELETE,
+      ...(transaction && { transaction }),
+    }
+  );
+
+  return Array.isArray(result) && result.length > 0;
 }
 
 /**

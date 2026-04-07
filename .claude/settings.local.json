@@ -11,7 +11,9 @@
       "Bash(find /Users/harsh/Data/vw/verifywise/Clients -type f \\\\\\(-name *.yaml -o -name *.yml -o -name docker-compose* \\\\\\))",
       "Bash(find /Users/harsh/Data/vw/verifywise -type f \\\\\\(-name *.yaml -o -name *.yml -o -name docker-compose* \\\\\\) -not -path */node_modules/*)",
       "Bash(grep -r \"superadmin\\\\|super.admin\\\\|SuperAdmin\" /Users/harsh/Data/vw/verifywise/Servers/src --include=*.ts -i)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git log:*)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }
