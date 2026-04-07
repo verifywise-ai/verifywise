@@ -227,6 +227,7 @@ const Framework = () => {
 
     // Filter frameworks to only include those assigned to the project and exclude EU AI Act
     const filtered = allFrameworks.filter((framework) => {
+      if (!framework.name) return false;
       const frameworkId = Number(framework.id);
       const isAssignedToProject = projectFrameworkIds.includes(frameworkId);
       const isNotEuAiAct = !framework.name.toLowerCase().includes("eu ai act");
@@ -586,7 +587,7 @@ const Framework = () => {
     }
 
     const framework = filteredFrameworks[selectedFramework];
-    if (!framework) return null;
+    if (!framework || !framework.name) return null;
 
     // Check if the selected framework is ISO 27001, ISO 42001, or NIST AI RMF
     const isISO27001 = framework.name.toLowerCase().includes("iso 27001");
@@ -1202,6 +1203,7 @@ const Framework = () => {
           onClose={() => setIsFrameworkModalOpen(false)}
           frameworks={allFrameworks
             .filter((framework) => {
+              if (!framework.name) return false;
               // Only show organizational frameworks (ISO 27001, ISO 42001, and NIST AI RMF) for organizational projects
               const isNotEuAiAct = !framework.name
                 .toLowerCase()

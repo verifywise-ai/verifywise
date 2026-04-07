@@ -81,6 +81,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
 
   // Get available frameworks for organizational projects (ISO 27001, ISO 42001, and NIST AI RMF)
   const availableFrameworks = allFrameworks.filter((framework) => {
+    if (!framework.name) return false;
     const isNotEuAiAct = !framework.name.toLowerCase().includes("eu ai act");
     const isComplianceFramework =
       framework.name.toLowerCase().includes("iso 27001") ||

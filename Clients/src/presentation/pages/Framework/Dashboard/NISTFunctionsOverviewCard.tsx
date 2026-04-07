@@ -187,7 +187,7 @@ const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctions
 
     const handleCardClick = () => {
       if (onNavigate) {
-        onNavigate("NIST AI RMF", func.type.toLowerCase());
+        onNavigate("NIST AI RMF", func.type?.toLowerCase() ?? "");
       }
     };
 
@@ -313,10 +313,10 @@ const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctions
   };
 
   // Get functions by type for 2x2 grid layout
-  const governFunc = functionsData.find(f => f.type.toLowerCase() === "govern");
-  const mapFunc = functionsData.find(f => f.type.toLowerCase() === "map");
-  const measureFunc = functionsData.find(f => f.type.toLowerCase() === "measure");
-  const manageFunc = functionsData.find(f => f.type.toLowerCase() === "manage");
+  const governFunc = functionsData.find(f => f.type?.toLowerCase() === "govern");
+  const mapFunc = functionsData.find(f => f.type?.toLowerCase() === "map");
+  const measureFunc = functionsData.find(f => f.type?.toLowerCase() === "measure");
+  const manageFunc = functionsData.find(f => f.type?.toLowerCase() === "manage");
 
   return (
     <Stack spacing={0}>
