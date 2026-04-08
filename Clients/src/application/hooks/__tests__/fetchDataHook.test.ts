@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fetchData } from "../fetchDataHook";
 
-vi.mock("../../repository/entity.repository", () => ({
-  getAllEntities: vi.fn(),
-}));
+const mockGetAllEntities = vi.fn();
 
-import { getAllEntities } from "../../repository/entity.repository";
+vi.mock("../../repository/entity.repository", () => ({
+  getAllEntities: (...args: unknown[]) => mockGetAllEntities(...args),
+}));
 
 describe("fetchData", () => {
   beforeEach(() => {
@@ -16,14 +16,14 @@ describe("fetchData", () => {
     const setData = vi.fn();
     const routeUrl = "/api/entities";
 
-    (getAllEntities as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    mockGetAllEntities.mockResolvedValue({
       data: [{ id: 1 }, { id: 2 }],
     });
 
     await fetchData(routeUrl, setData);
 
-    expect(getAllEntities).toHaveBeenCalledTimes(1);
-    expect(getAllEntities).toHaveBeenCalledWith({ routeUrl });
+    expect(mockGetAllEntities).toHaveBeenCalledTimes(1);
+    expect(mockGetAllEntities).toHaveBeenCalledWith({ routeUrl });
 
     expect(setData).toHaveBeenCalledTimes(1);
     expect(setData).toHaveBeenCalledWith([{ id: 1 }, { id: 2 }]);
@@ -34,7 +34,7 @@ describe("fetchData", () => {
     const routeUrl = "/api/entities";
     const err = new Error("boom");
 
-    (getAllEntities as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(err);
+    mockGetAllEntities.mockRejectedValue(err);
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 

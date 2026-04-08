@@ -12,7 +12,7 @@ vi.mock("react-redux", () => ({
   useSelector: vi.fn(),
 }));
 
-vi.mock("../../redux/ui/uiSlice", () => ({
+vi.mock("../../../redux/ui/uiSlice", () => ({
   AppModule: {},
   setActiveModule: (module: string) => ({
     type: "ui/setActiveModule",

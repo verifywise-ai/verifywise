@@ -3,14 +3,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { useDashboard } from "../useDashboard";
 
-// Mock the entity repository
+const mockGetAllEntities = vi.fn();
+
 vi.mock("../../repository/entity.repository", () => ({
-  getAllEntities: vi.fn(),
+  getAllEntities: (...args: unknown[]) => mockGetAllEntities(...args),
 }));
-
-import { getAllEntities } from "../../repository/entity.repository";
-
-const mockGetAllEntities = vi.mocked(getAllEntities);
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -28,7 +25,7 @@ describe("useDashboard", () => {
   });
 
   it("should return null dashboard while loading", () => {
-    mockGetAllEntities.mockImplementation(() => new Promise(() => {})); // never resolves
+    mockGetAllEntities.mockImplementation(() => new Promise(() => {}));
     const { result } = renderHook(() => useDashboard(), {
       wrapper: createWrapper(),
     });
@@ -86,7 +83,6 @@ describe("useDashboard", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Dashboard stays null on error
     expect(result.current.dashboard).toBeNull();
   });
 });

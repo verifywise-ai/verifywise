@@ -71,6 +71,7 @@ export default defineConfig({
         "vite.config.ts",
         "**/node_modules/**",
         "src/**/**/tests/**",
+        "src/**/**/__tests__/**",
       ],
       thresholds: {
         global: {

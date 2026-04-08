@@ -7,11 +7,6 @@ import fileReducer from "../../redux/file/fileSlice";
 import { useAuth } from "../useAuth";
 import React from "react";
 
-/**
- * Creates a minimal JWT-like token with the given payload.
- * This does NOT produce a cryptographically valid JWT — it's for
- * client-side decoding tests only (extractUserToken uses atob, not verification).
- */
 function fakeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const body = btoa(JSON.stringify(payload));
@@ -85,8 +80,7 @@ describe("useAuth", () => {
       wrapper: createWrapper("not.a.valid-base64"),
     });
 
-    // extractUserToken returns null for malformed tokens
-    expect(result.current.isAuthenticated).toBe(true); // token string is truthy
+    expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.userToken).toBeNull();
     expect(result.current.userId).toBeNull();
     expect(result.current.userRoleName).toBe("");
@@ -102,6 +96,6 @@ describe("useAuth", () => {
       wrapper: createWrapper(token),
     });
 
-    expect(result.current.userId).toBeNaN(); // parseInt("not-a-number") is NaN
+    expect(result.current.userId).toBeNaN();
   });
 });
