@@ -26,6 +26,7 @@ from services.proxy_service import (
     authenticate_virtual_key,
     resolve_endpoint_for_key,
     resolve_endpoint_by_id,
+    enforce_model_provider_acls,
     check_org_budget,
     reconcile_budget,
     enforce_rate_limits,
@@ -89,6 +90,12 @@ async def proxy_chat(request: Request, body: ProxyChatRequest):
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+    # Model/provider access control
+    try:
+        enforce_model_provider_acls(vk, endpoint)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
     # Rate limit: per-endpoint + per-key
     await enforce_rate_limits(endpoint, vk)
@@ -325,6 +332,12 @@ async def proxy_embeddings(request: Request, body: ProxyEmbeddingRequest):
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+    # Model/provider access control
+    try:
+        enforce_model_provider_acls(vk, endpoint)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
     # Rate limit
     await enforce_rate_limits(endpoint, vk)

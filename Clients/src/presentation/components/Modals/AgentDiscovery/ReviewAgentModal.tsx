@@ -6,11 +6,8 @@ import {
   Typography,
   Divider,
   IconButton,
-  Chip as MuiChip,
   useTheme,
-  Tab,
 } from "@mui/material";
-import { TabContext, TabList, TabPanel } from "@mui/lab";
 import { X, Link as LinkIcon, Unlink } from "lucide-react";
 import VWChip from "../../Chip";
 import { CustomizableButton } from "../../button/customizable-button";
@@ -35,7 +32,6 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   const theme = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
-  const [permissionsTab, setPermissionsTab] = useState("categories");
   const [usersMap, setUsersMap] = useState<Record<string, string>>({});
 
   const fetchUsers = useCallback(async () => {
@@ -61,6 +57,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   if (!agent) return null;
 
   const ownerName = agent.owner_id ? usersMap[agent.owner_id] || agent.owner_id : "—";
+  const reviewedByName = agent.reviewed_by ? usersMap[String(agent.reviewed_by)] || `User #${agent.reviewed_by}` : null;
 
   const handleReview = async (status: "confirmed" | "rejected") => {
     setIsSubmitting(true);
@@ -135,21 +132,31 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
           <DetailRow label="Owner" value={ownerName} />
           <DetailRow label="Last activity" value={formatDate(agent.last_activity)} />
           <DetailRow label="Created" value={formatDate(agent.created_at)} />
+
+          {/* Review status with audit info */}
           <Box>
-            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb={0.5}>
+            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
               Review status
             </Typography>
-            <VWChip
-              label={agent.review_status}
-              variant={
-                agent.review_status === "confirmed"
-                  ? "success"
-                  : agent.review_status === "rejected"
-                  ? "error"
-                  : "warning"
-              }
-            />
+            <Stack direction="row" alignItems="center" gap="8px">
+              <VWChip
+                label={agent.review_status}
+                variant={
+                  agent.review_status === "confirmed"
+                    ? "success"
+                    : agent.review_status === "rejected"
+                    ? "error"
+                    : "warning"
+                }
+              />
+              {reviewedByName && (
+                <Typography fontSize={12} color="text.secondary">
+                  by {reviewedByName} on {formatDate(agent.reviewed_at)}
+                </Typography>
+              )}
+            </Stack>
           </Box>
+
           {agent.is_stale && (
             <DetailRow label="Stale" value="This agent has been inactive for 30+ days" />
           )}
@@ -157,69 +164,53 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
             <DetailRow label="Entry type" value="Manually added" />
           )}
 
-          {/* Permissions with toggle */}
+          {/* Permissions - Categories */}
           <Box>
-            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb={1}>
-              Permissions
+            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
+              Categories
             </Typography>
-            <TabContext value={permissionsTab}>
-              <TabList
-                onChange={(_, v) => setPermissionsTab(v)}
-                sx={{
-                  minHeight: 28,
-                  "& .MuiTab-root": { minHeight: 28, fontSize: 12, py: 0, textTransform: "none" },
-                  "& .MuiTabs-indicator": { backgroundColor: "brand.primary" },
-                }}
-              >
-                <Tab label="Categories" value="categories" />
-                <Tab label="Raw" value="raw" />
-              </TabList>
-              <TabPanel value="categories" sx={{ p: "8px 0 0 0" }}>
-                <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                  {(agent.permission_categories || []).length > 0 ? (
-                    agent.permission_categories.map((cat: string) => (
-                      <MuiChip
-                        key={cat}
-                        label={cat}
-                        size="small"
-                        sx={{ fontSize: 11, height: 22 }}
-                      />
-                    ))
-                  ) : (
-                    <Typography fontSize={13} color="text.secondary">
-                      None
-                    </Typography>
-                  )}
-                </Stack>
-              </TabPanel>
-              <TabPanel value="raw" sx={{ p: "8px 0 0 0" }}>
-                <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                  {(agent.permissions || []).length > 0 ? (
-                    agent.permissions.map((perm: any, idx: number) => (
-                      <MuiChip
-                        key={idx}
-                        label={typeof perm === "string" ? perm : JSON.stringify(perm)}
-                        size="small"
-                        sx={{ fontSize: 11, height: 22 }}
-                      />
-                    ))
-                  ) : (
-                    <Typography fontSize={13} color="text.secondary">
-                      None
-                    </Typography>
-                  )}
-                </Stack>
-              </TabPanel>
-            </TabContext>
+            <Stack direction="row" flexWrap="wrap" gap="4px">
+              {(agent.permission_categories || []).length > 0 ? (
+                agent.permission_categories.map((cat: string) => (
+                  <VWChip key={cat} label={cat} variant="info" size="small" />
+                ))
+              ) : (
+                <Typography fontSize={13} color="text.secondary">
+                  None
+                </Typography>
+              )}
+            </Stack>
+          </Box>
+
+          {/* Permissions - Raw */}
+          <Box>
+            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
+              Raw permissions
+            </Typography>
+            <Stack direction="row" flexWrap="wrap" gap="4px">
+              {(agent.permissions || []).length > 0 ? (
+                agent.permissions.map((perm: any, idx: number) => (
+                  <VWChip
+                    key={idx}
+                    label={typeof perm === "string" ? perm : JSON.stringify(perm)}
+                    size="small"
+                  />
+                ))
+              ) : (
+                <Typography fontSize={13} color="text.secondary">
+                  None
+                </Typography>
+              )}
+            </Stack>
           </Box>
 
           {/* Model link */}
           <Box>
-            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb={1}>
+            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">
               Linked model
             </Typography>
             {agent.linked_model_inventory_id ? (
-              <Stack direction="row" alignItems="center" gap={1}>
+              <Stack direction="row" alignItems="center" gap="8px">
                 <Typography fontSize={13}>
                   Model #{agent.linked_model_inventory_id}
                 </Typography>
@@ -241,7 +232,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
           {/* Metadata */}
           {Object.keys(agent.metadata || {}).length > 0 && (
             <Box>
-              <Typography fontSize={12} fontWeight={600} color="text.secondary" mb={1}>
+              <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">
                 Metadata
               </Typography>
               <Box
@@ -266,7 +257,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
         {/* Footer */}
         <Divider />
-        <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ p: "16px 24px" }}>
+        <Stack direction="row" justifyContent="flex-end" gap="8px" sx={{ p: "16px 24px" }}>
           <CustomizableButton
             variant="outlined"
             sx={{ border: "1px solid #d0d5dd" }}
@@ -277,7 +268,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
           {agent.review_status !== "rejected" && (
             <CustomizableButton
               variant="outlined"
-              sx={{ border: "1px solid status.error.text", color: "status.error.text" }}
+              sx={{ border: "1px solid #d32f2f", color: "#d32f2f" }}
               onClick={() => handleReview("rejected")}
               isDisabled={isSubmitting}
             >
@@ -287,7 +278,6 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
           {agent.review_status !== "confirmed" && (
             <CustomizableButton
               variant="contained"
-              sx={{ backgroundColor: "brand.primary", border: "1px solid brand.primary" }}
               onClick={() => handleReview("confirmed")}
               isDisabled={isSubmitting}
             >
@@ -312,7 +302,7 @@ const DetailRow: React.FC<{
   value: string;
 }> = ({ label, value }) => (
   <Box>
-    <Typography fontSize={12} fontWeight={600} color="text.secondary" mb={0.5}>
+    <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
       {label}
     </Typography>
     <Typography fontSize={13}>{value}</Typography>

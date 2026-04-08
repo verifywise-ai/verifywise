@@ -33,6 +33,7 @@ import {
 } from "../controllers/organization.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
+import superAdminOnly from "../middleware/superAdminOnly.middleware";
 
 /**
  * GET /organizations/exists
@@ -85,7 +86,7 @@ router.get("/:id", authenticateJWT, getOrganizationById);
  * @param {express.Response} res - Express response object
  * @returns {Object} Created organization with admin user and access token
  */
-router.post("/", /**checkMultiTenancy,**/ createOrganization);
+router.post("/", authenticateJWT, superAdminOnly, createOrganization);
 
 /**
  * PATCH /organizations/:id

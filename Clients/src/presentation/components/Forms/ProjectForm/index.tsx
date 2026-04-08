@@ -42,10 +42,11 @@ import { useSelector } from "react-redux";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import { Project } from "../../../../domain/types/Project";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
-import { FormErrors, FrameworkTypeEnum } from "./constants";
+import { FrameworkTypeEnum } from "./constants";
 import { FormValues } from "./constants";
 import { initialState } from "./constants";
 import { ProjectFormProps } from "./constants";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import {
   createProject,
   updateProject,
@@ -114,12 +115,56 @@ export const ProjectForm = ({
       framework_type: defaultFrameworkType || null,
     };
   });
-  const [errors, setErrors] = useState<FormErrors>({});
-  const { users } = useUsers();
+const { users } = useUsers();
   const { allFrameworks } = useFrameworks({ listOfFrameworks: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [frameworkRequired, setFrameworkRequired] = useState<boolean>(false);
-  const [approvalWorkflows, setApprovalWorkflows] = useState<Array<{ _id: number; name: string }>>([]);
+  const [approvalWorkflows, setApprovalWorkflows] = useState<Array<{ _id: number; name: string }>>([]); 
+  const validators = useMemo(
+    () => ({
+      project_title: (v: unknown, vals: FormValues) => {
+        const label =
+          vals.framework_type === FrameworkTypeEnum.OrganizationWide
+            ? "Framework title"
+            : "Use case title";
+        const r = checkStringValidation(label, v as string, 1, 64);
+        return r.accepted ? "" : r.message;
+      },
+      goal: (v: unknown) => {
+        const r = checkStringValidation("Goal", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      start_date: (v: unknown) => {
+        const r = checkStringValidation("Start date", v as string, 1);
+        return r.accepted ? "" : r.message;
+      },
+      owner: (v: unknown) => {
+        const r = selectValidation("Owner", v as number);
+        return r.accepted ? "" : r.message;
+      },
+      geography: (v: unknown) => {
+        const r = selectValidation("Geography", v as number);
+        return r.accepted ? "" : r.message;
+      },
+      ai_risk_classification: (v: unknown, vals: FormValues) => {
+        if (vals.framework_type !== FrameworkTypeEnum.ProjectBased) return "";
+        const r = selectValidation("AI risk classification", v as number);
+        return r.accepted ? "" : r.message;
+      },
+      type_of_high_risk_role: (v: unknown, vals: FormValues) => {
+        if (vals.framework_type !== FrameworkTypeEnum.ProjectBased) return "";
+        const r = selectValidation("Type of high risk role", v as number);
+        return r.accepted ? "" : r.message;
+      },
+      monitored_regulations_and_standards: (v: unknown) => {
+        if (projectToEdit) return "";
+        const list = v as FormValues["monitored_regulations_and_standards"];
+        return list.length === 0 ? "At least one framework is required." : "";
+      },
+    }),
+    [projectToEdit]
+  );
+  const { errors, validateAll, clearFieldError } =
+    useFormValidation<FormValues>(validators);
 
   // Check if the project has a pending approval request
   // Note: We show an info banner but allow editing basic fields
@@ -252,23 +297,26 @@ export const ProjectForm = ({
   const handleOnTextFieldChange = useCallback(
     (prop: keyof FormValues) =>
       (event: React.ChangeEvent<HTMLInputElement>) => {
-        setValues({ ...values, [prop]: event.target.value });
-        setErrors({ ...errors, [prop]: "" });
+        setValues((prev) => ({ ...prev, [prop]: event.target.value }));
+        clearFieldError(prop);
       },
-    [values, errors]
+    [clearFieldError]
   );
 
   const handleOnSelectChange = useCallback(
     (prop: keyof FormValues) => (event: SelectChangeEvent<string | number>) => {
-      if (prop === "owner") {
-        values.members = values.members.filter(
-          (member) => Number(member._id) !== Number(event.target.value)
-        );
-      }
-      setValues({ ...values, [prop]: event.target.value });
-      setErrors({ ...errors, [prop]: "" });
+      setValues((prev) => {
+        const updated = { ...prev, [prop]: event.target.value };
+        if (prop === "owner") {
+          updated.members = prev.members.filter(
+            (member) => Number(member._id) !== Number(event.target.value)
+          );
+        }
+        return updated;
+      });
+      clearFieldError(prop);
     },
-    [values, errors]
+    [clearFieldError]
   );
 
   const handleOnMultiSelect = useCallback(
@@ -278,9 +326,9 @@ export const ProjectForm = ({
           ...prevValues,
           [prop]: newValue,
         }));
-        if (prop !== "members") setFrameworkRequired(newValue.length === 0);
+        if (prop !== "members") clearFieldError(prop);
       },
-    []
+    [clearFieldError]
   );
 
   const handleDateChange = useCallback((newDate: Dayjs | null) => {
@@ -299,73 +347,11 @@ export const ProjectForm = ({
     [values]
   );
 
-  const validateForm = useCallback((): boolean => {
-    const newErrors: FormErrors = {};
-
-    const projectTitle = checkStringValidation(
-      values.framework_type === FrameworkTypeEnum.OrganizationWide ? "Framework title" : "Use case title",
-      values.project_title,
-      1,
-      64
-    );
-    if (!projectTitle.accepted) {
-      newErrors.projectTitle = projectTitle.message;
-    }
-    const goal = checkStringValidation("Goal", values.goal, 1, 256);
-    if (!goal.accepted) {
-      newErrors.goal = goal.message;
-    }
-    const startDate = checkStringValidation("Start date", values.start_date, 1);
-    if (!startDate.accepted) {
-      newErrors.startDate = startDate.message;
-    }
-    const owner = selectValidation("Owner", values.owner);
-    if (!owner.accepted) {
-      newErrors.owner = owner.message;
-    }
-
-    const geography = selectValidation("Geography", values.geography);
-    if (!geography.accepted) {
-      newErrors.geography = geography.message;
-    }
-
-    // Only validate AI-specific fields for project-based frameworks
-    if (values.framework_type === FrameworkTypeEnum.ProjectBased) {
-      const riskClassification = selectValidation(
-        "AI risk classification",
-        values.ai_risk_classification
-      );
-      if (!riskClassification.accepted) {
-        newErrors.riskClassification = riskClassification.message;
-      }
-      const typeOfHighRiskRole = selectValidation(
-        "Type of high risk role",
-        values.type_of_high_risk_role
-      );
-      if (!typeOfHighRiskRole.accepted) {
-        newErrors.typeOfHighRiskRole = typeOfHighRiskRole.message;
-      }
-    }
-
-
-    // Validate frameworks for both framework types, but skip when editing
-    if (
-      !projectToEdit &&
-      values.monitored_regulations_and_standards.length === 0
-    ) {
-      newErrors.frameworks = "At least one framework is required.";
-      setFrameworkRequired(true);
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [values, projectToEdit]);
-
   const handleSubmit = useCallback(async () => {
     const userInfo = extractUserToken(authState.authToken);
     const teamMember = values.members.map((user) => String(user._id));
 
-    if (validateForm()) {
+    if (validateAll(values)) {
       setIsSubmitting(true);
       try {
         const body: any = {
@@ -449,7 +435,7 @@ export const ProjectForm = ({
     values,
     projectToEdit,
     authState.authToken,
-    validateForm,
+    validateAll,
     projectStatusItems,
     riskClassificationItems,
     highRiskRoleItems,
@@ -556,7 +542,7 @@ export const ProjectForm = ({
             width="100%"
             value={values.project_title}
             onChange={handleOnTextFieldChange("project_title")}
-            error={errors.projectTitle}
+            error={errors.project_title}
             sx={textfieldStyle}
             isRequired
           />
@@ -605,7 +591,7 @@ export const ProjectForm = ({
                 width: "100%",
                 backgroundColor: theme.palette.background.main,
               }}
-              error={errors.approvalWorkflow}
+              error={errors.approval_workflow_id}
             />
           )}
           {values.framework_type === FrameworkTypeEnum.ProjectBased && (
@@ -621,7 +607,7 @@ export const ProjectForm = ({
                   width: "100%",
                   backgroundColor: theme.palette.background.main,
                 }}
-                error={errors.riskClassification}
+                error={errors.ai_risk_classification}
                 isRequired
               />
               <Select
@@ -636,7 +622,7 @@ export const ProjectForm = ({
                   backgroundColor: theme.palette.background.main,
                 }}
                 isRequired
-                error={errors.typeOfHighRiskRole}
+                error={errors.type_of_high_risk_role}
               />
             </>
           )}
@@ -754,7 +740,7 @@ export const ProjectForm = ({
                     width: "100%",
                   }}
                   isRequired
-                  error={errors.startDate}
+                  error={errors.start_date}
                 />
               </Box>
               <Box sx={{ flex: 1 }}>
@@ -848,7 +834,7 @@ export const ProjectForm = ({
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        error={!!errors.frameworks}
+                        error={!!errors.monitored_regulations_and_standards}
                         placeholder="Select regulations and standards"
                         sx={teamMembersRenderInputStyle}
                       />
@@ -859,12 +845,12 @@ export const ProjectForm = ({
                     }}
                     slotProps={teamMembersSlotProps}
                   />
-                  {frameworkRequired && (
+                  {!!errors.monitored_regulations_and_standards && (
                     <Typography
                       variant="caption"
                       sx={{ mt: 4, color: theme.palette.status.error.text, fontWeight: 300 }}
                     >
-                      {errors.frameworks}
+                      {errors.monitored_regulations_and_standards}
                     </Typography>
                   )}
                 </Stack>
@@ -963,7 +949,7 @@ export const ProjectForm = ({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    error={!!errors.frameworks}
+                    error={!!errors.monitored_regulations_and_standards}
                     placeholder="Select regulations and standards"
                     sx={teamMembersRenderInputStyle}
                   />
@@ -975,12 +961,12 @@ export const ProjectForm = ({
                 }}
                 slotProps={teamMembersSlotProps}
               />
-              {frameworkRequired && (
+              {!!errors.monitored_regulations_and_standards && (
                 <Typography
                   variant="caption"
                   sx={{ mt: 4, color: theme.palette.status.error.text, fontWeight: 300 }}
                 >
-                  {errors.frameworks}
+                  {errors.monitored_regulations_and_standards}
                 </Typography>
               )}
             </Stack>
@@ -1014,7 +1000,7 @@ export const ProjectForm = ({
                 flex: 1,
                 backgroundColor: theme.palette.background.main,
               }}
-              error={errors.targetIndustry}
+              error={errors.target_industry}
             />
             <Field
               id="description-input"

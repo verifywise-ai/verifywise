@@ -1,6 +1,20 @@
 import redisClient from "../database/redis";
 import { getConnection } from "../controllers/notification.ctrl";
 
+// Exposed so the shutdown handler can close this connection
+let subscriberClient: ReturnType<typeof redisClient.duplicate> | null = null;
+
+export const closeNotificationSubscriber = async (): Promise<void> => {
+  if (subscriberClient) {
+    try {
+      await subscriberClient.quit();
+    } catch {
+      // already closed
+    }
+    subscriberClient = null;
+  }
+};
+
 /**
  * Setup Redis subscriber for approval notifications
  * This runs once when the server starts and listens for notification messages
@@ -10,6 +24,7 @@ export const setupNotificationSubscriber = async (): Promise<void> => {
     // Create a duplicate Redis client for subscribing
     // Note: duplicate() creates a new client with same config but not yet connected
     const subscriber = redisClient.duplicate();
+    subscriberClient = subscriber;
 
     console.log("📡 Connecting notification subscriber to Redis...");
 

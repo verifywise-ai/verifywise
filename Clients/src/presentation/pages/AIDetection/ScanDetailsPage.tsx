@@ -583,6 +583,13 @@ function FindingRow({ finding, repositoryOwner, repositoryName, scanId, onGovern
               </span>
             </Tooltip>
           </Box>
+          {finding.finding_status && finding.finding_status !== "active" && (
+            <Chip
+              label={finding.finding_status === "carried_forward" ? "Carried forward" : "Fixed"}
+              size="small"
+              variant={finding.finding_status === "fixed" ? "success" : "info"}
+            />
+          )}
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 85, justifyContent: "flex-end" }}>
             <FileCode size={14} color={palette.text.tertiary} />
             <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
@@ -1775,11 +1782,22 @@ export default function ScanDetailsPage() {
             {scan.scan.status === "failed" && (
               <Chip label="Failed" size="small" />
             )}
+            {scan.scan.scan_mode === "incremental" && (
+              <Chip label="Incremental" size="small" variant="info" />
+            )}
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, ml: "28px" }}>
             <Typography sx={{ fontSize: "13px", color: palette.text.primary, fontWeight: 500 }}>
               {formatDuration(scan.scan.duration_ms)}
             </Typography>
+            {scan.scan.scan_mode === "incremental" && scan.scan.changed_files_count != null && (
+              <>
+                <Typography sx={{ color: palette.border.dark, fontSize: "12px" }}>•</Typography>
+                <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+                  {scan.scan.changed_files_count} files changed
+                </Typography>
+              </>
+            )}
             <Typography sx={{ color: palette.border.dark, fontSize: "12px" }}>•</Typography>
             <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
               {scan.scan.status === "failed" ? "Failed" : "Scanned"}{" "}

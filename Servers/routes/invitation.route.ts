@@ -20,12 +20,12 @@ const resendLimiter = rateLimit({
   },
 });
 
-router.get("/", authenticateJWT, authorize(["Admin"]), getInvitations);
-router.delete("/:id", authenticateJWT, authorize(["Admin"]), revokeInvitation);
+router.get("/", authenticateJWT, authorize(["Admin", "SuperAdmin"]), getInvitations);
+router.delete("/:id", authenticateJWT, authorize(["Admin", "SuperAdmin"]), revokeInvitation);
 router.post(
   "/:id/resend",
   authenticateJWT,
-  authorize(["Admin"]),
+  authorize(["Admin", "SuperAdmin"]),
   resendLimiter,
   resendInvitation
 );

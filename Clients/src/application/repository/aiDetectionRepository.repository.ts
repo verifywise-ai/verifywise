@@ -77,6 +77,15 @@ export async function getRepositoryScans(
   return response.data.data;
 }
 
+export async function generateWebhookSecret(
+  id: number
+): Promise<{ webhook_secret: string }> {
+  const response = await apiServices.post<{ data: { webhook_secret: string } }>(
+    `${BASE_URL}/${id}/webhook-secret`
+  );
+  return response.data.data;
+}
+
 export async function getRepositoryCount(): Promise<number> {
   const response = await apiServices.get<{ data: RepositoriesResponse }>(
     `${BASE_URL}?page=1&limit=1`

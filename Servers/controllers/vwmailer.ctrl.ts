@@ -44,7 +44,7 @@ export const invite = async (
     // Persist invitation record
     try {
       await createInvitationQuery(
-        _req.organizationId!,
+        organizationId,
         to,
         name,
         surname || "",

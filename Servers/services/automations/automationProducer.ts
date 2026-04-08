@@ -192,3 +192,17 @@ export async function scheduleAiGatewayCacheCleanup() {
     },
   );
 }
+
+export async function scheduleMcpGatewayCleanup() {
+  logger.info("Adding MCP Gateway cleanup jobs to the queue...");
+  // Daily at 3 AM — purge expired audit logs and decided approval requests
+  await automationQueue.add(
+    "mcp_audit_cleanup",
+    { type: "mcp_gateway" },
+    {
+      repeat: { pattern: "0 3 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}

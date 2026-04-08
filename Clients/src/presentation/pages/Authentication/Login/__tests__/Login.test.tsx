@@ -31,11 +31,10 @@ describe("Login Page", () => {
     expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it("renders 'Forgot password' and 'Register here' links", () => {
+  it("renders 'Forgot password' link", () => {
     renderWithProviders(<Login />, { route: "/login" });
 
     expect(screen.getByText("Forgot password")).toBeInTheDocument();
-    expect(screen.getByText("Register here")).toBeInTheDocument();
   });
 
   it("navigates to /forgot-password when 'Forgot password' is clicked", async () => {
@@ -45,14 +44,5 @@ describe("Login Page", () => {
     await user.click(screen.getByText("Forgot password"));
 
     expect(mockNavigate).toHaveBeenCalledWith("/forgot-password", expect.anything());
-  });
-
-  it("navigates to /register when 'Register here' is clicked", async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<Login />, { route: "/login" });
-
-    await user.click(screen.getByText("Register here"));
-
-    expect(mockNavigate).toHaveBeenCalledWith("/register");
   });
 });

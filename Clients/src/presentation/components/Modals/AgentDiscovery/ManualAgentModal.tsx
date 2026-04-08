@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Drawer,
   Stack,
@@ -14,6 +14,8 @@ import { CustomizableButton } from "../../button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { checkStringValidation } from "../../../../application/validations/stringValidation";
 
 interface ManualAgentModalProps {
   isOpen: boolean;
@@ -48,7 +50,19 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
     owner_id: "",
     notes: "",
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validators = useMemo(
+    () => ({
+      display_name: (v: unknown) => {
+        const r = checkStringValidation("Display name", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      primitive_type: (v: unknown) => (!v ? "Type is required." : ""),
+    }),
+    []
+  );
+  const { errors, validateAll, clearFieldError, resetErrors } =
+    useFormValidation<typeof formData>(validators);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -82,23 +96,11 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
   const handleClose = () => {
     setIsOpen(false);
     setFormData({ display_name: "", primitive_type: "", owner_id: "", notes: "" });
-    setErrors({});
-  };
-
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.display_name.trim()) {
-      newErrors.display_name = "Display name is required";
-    }
-    if (!formData.primitive_type) {
-      newErrors.primitive_type = "Type is required";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    resetErrors();
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (!validateAll(formData)) return;
 
     setIsSubmitting(true);
     try {
@@ -154,9 +156,10 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
           label="Display name"
           placeholder="e.g. Sales Assistant Bot"
           value={formData.display_name}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, display_name: e.target.value }))
-          }
+          onChange={(e) => {
+            setFormData((prev) => ({ ...prev, display_name: e.target.value }));
+            clearFieldError("display_name");
+          }}
           isRequired
           error={errors.display_name}
         />
@@ -169,12 +172,13 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
           items={PRIMITIVE_TYPES}
           isRequired
           error={errors.primitive_type}
-          onChange={(e) =>
+          onChange={(e) => {
             setFormData((prev) => ({
               ...prev,
               primitive_type: e.target.value as string,
-            }))
-          }
+            }));
+            clearFieldError("primitive_type");
+          }}
         />
 
         <SelectComponent

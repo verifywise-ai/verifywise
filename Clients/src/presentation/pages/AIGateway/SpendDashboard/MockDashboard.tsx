@@ -54,7 +54,7 @@ export default function MockDashboard() {
       <Box sx={cardSx}>
         <Stack gap="12px">
           <Typography sx={sectionTitleSx}>Cost over time</Typography>
-          <ResponsiveContainer width="100%" height={260} style={{ outline: "none" }}>
+          <ResponsiveContainer width="100%" height={260} minWidth={0} style={{ outline: "none" }}>
             <BarChart data={MOCK_BY_DAY}>
               <CartesianGrid strokeDasharray="3 3" stroke={palette.border.light} />
               <XAxis

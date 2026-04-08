@@ -11,6 +11,20 @@ export const GUARDRAIL_ACTION_COLORS = { blocked: "#DC2626", masked: "#D97706" }
 /** Format entity_type from DB snake_case to human-readable */
 export const formatEntityType = (t?: string | null) => (t || "Unknown").replace(/_/g, " ");
 
+/** MCP status chip colors — reused across Audit Log, Approvals, and other MCP pages */
+export const MCP_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  success: { bg: "#ECFDF5", text: "#065F46" },
+  approved: { bg: "#ECFDF5", text: "#065F46" },
+  error: { bg: "#FEF2F2", text: "#991B1B" },
+  denied: { bg: "#FEF2F2", text: "#991B1B" },
+  blocked: { bg: "#FFF7ED", text: "#9A3412" },
+  pending: { bg: "#FFFBEB", text: "#92400E" },
+  rate_limited: { bg: "#FFFBEB", text: "#92400E" },
+  approval_required: { bg: "#F5F3FF", text: "#5B21B6" },
+} as const;
+
+export const MCP_STATUS_FALLBACK = { bg: "#F3F4F6", text: "#374151" } as const;
+
 export function useCardSx() {
   const theme = useTheme();
   return {
@@ -245,7 +259,7 @@ export async function streamPromptTest(
 ): Promise<StreamPromptTestResult> {
   const startTime = Date.now();
 
-  const response = await fetch(`${GATEWAY_API_URL}/ai-gateway/prompts/test`, {
+  const response = await fetch(`/api/ai-gateway/prompts/test`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -274,6 +288,7 @@ export async function streamPromptTest(
   let content = "";
   let tokens = 0;
   let cost = 0;
+  let streamError = "";
 
   try {
     while (true) {
@@ -285,6 +300,9 @@ export async function streamPromptTest(
         if (line.startsWith("data: ") && line !== "data: [DONE]") {
           try {
             const chunk = JSON.parse(line.slice(6));
+            if (chunk.error) {
+              streamError = chunk.error;
+            }
             const delta = chunk.choices?.[0]?.delta?.content;
             if (delta) {
               content += delta;
@@ -298,6 +316,14 @@ export async function streamPromptTest(
     }
   } finally {
     reader.releaseLock();
+  }
+
+  if (!content && streamError) {
+    content = `Error: ${streamError}`;
+    opts.onDelta(content);
+  } else if (!content) {
+    content = "No response received from the model. Check that the endpoint has a valid API key configured.";
+    opts.onDelta(content);
   }
 
   return { content, tokens, cost, latency: Date.now() - startTime };

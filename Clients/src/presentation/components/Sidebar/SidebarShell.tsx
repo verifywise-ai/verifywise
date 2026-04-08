@@ -20,6 +20,7 @@ import {
   PanelLeftOpen,
   Heart,
   ChevronDown,
+  ChevronRight,
   FolderKanban,
   Plus,
   LayoutGrid,
@@ -51,6 +52,10 @@ export interface SidebarMenuItem {
 export interface SidebarMenuGroup {
   name: string;
   items: SidebarMenuItem[];
+  /** When true, group is collapsible with a toggle chevron. Defaults to false. */
+  collapsible?: boolean;
+  /** Initial collapsed state when collapsible is true. Defaults to true (collapsed). */
+  defaultCollapsed?: boolean;
 }
 
 export interface RecentSection {
@@ -130,6 +135,21 @@ const SidebarShell: FC<SidebarShellProps> = ({
   useContext(VerifyWiseContext);
 
   const collapsed = useSelector((state: any) => state.ui?.sidebar?.collapsed);
+
+  // Collapsible group state: track which groups are collapsed by name
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    menuGroups.forEach((g) => {
+      if (g.collapsible) {
+        initial[g.name] = g.defaultCollapsed !== false; // default collapsed
+      }
+    });
+    return initial;
+  });
+
+  const toggleGroup = (name: string) => {
+    setCollapsedGroups((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
 
   // Delayed collapsed state for smooth animation
   const [delayedCollapsed, setDelayedCollapsed] = useState(collapsed);
@@ -907,29 +927,51 @@ const SidebarShell: FC<SidebarShellProps> = ({
         ))}
 
         {/* Grouped Items */}
-        {menuGroups.map((group) => (
-          <Box key={group.name}>
-            <Typography
-              variant="overline"
-              className="sidebar-group-header"
-              sx={{
-                px: theme.spacing(4),
-                pt: theme.spacing(4.5),
-                pb: theme.spacing(1.5),
-                mt: theme.spacing(3),
-                color: "#a0a0a0 !important",
-                fontSize: "11px !important",
-                fontWeight: 400,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-                display: collapsed ? "none" : "block",
-              }}
-            >
-              {group.name}
-            </Typography>
-            {group.items.map((item) => renderMenuItem(item))}
-          </Box>
-        ))}
+        {menuGroups.map((group) => {
+          const isCollapsible = group.collapsible && !collapsed;
+          const isGroupCollapsed = isCollapsible && collapsedGroups[group.name];
+
+          return (
+            <Box key={group.name}>
+              <Box
+                onClick={isCollapsible ? () => toggleGroup(group.name) : undefined}
+                sx={{
+                  display: collapsed ? "none" : "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  px: theme.spacing(4),
+                  pt: theme.spacing(4.5),
+                  pb: theme.spacing(1.5),
+                  mt: theme.spacing(3),
+                  cursor: isCollapsible ? "pointer" : "default",
+                  userSelect: "none",
+                  "&:hover": isCollapsible ? { opacity: 0.8 } : {},
+                }}
+              >
+                <Typography
+                  variant="overline"
+                  className="sidebar-group-header"
+                  sx={{
+                    color: "#a0a0a0 !important",
+                    fontSize: "11px !important",
+                    fontWeight: 400,
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                    lineHeight: 1,
+                  }}
+                >
+                  {group.name}
+                </Typography>
+                {isCollapsible && (
+                  isGroupCollapsed
+                    ? <ChevronRight size={14} color="#a0a0a0" />
+                    : <ChevronDown size={14} color="#a0a0a0" />
+                )}
+              </Box>
+              {!isGroupCollapsed && group.items.map((item) => renderMenuItem(item))}
+            </Box>
+          );
+        })}
 
         {/* Recent Sections - right after menu items */}
         {recentSections.map(

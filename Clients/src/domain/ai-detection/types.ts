@@ -30,6 +30,10 @@ export type LicenseSource = "package" | "huggingface" | "pypi" | "npm" | "manual
 
 export type GovernanceStatus = "reviewed" | "approved" | "flagged";
 
+export type ScanMode = "full" | "incremental";
+
+export type FindingStatus = "active" | "fixed" | "carried_forward";
+
 export interface TriggeredByUser {
   id: number;
   name: string;
@@ -55,6 +59,12 @@ export interface Scan {
   risk_score_grade?: RiskGrade | null;
   risk_score_details?: RiskScoreDetails | null;
   risk_score_calculated_at?: string | null;
+  // Incremental scan fields
+  scan_mode?: ScanMode;
+  base_commit_sha?: string | null;
+  head_commit_sha?: string | null;
+  baseline_scan_id?: number | null;
+  changed_files_count?: number | null;
   created_at: string;
 }
 
@@ -111,6 +121,8 @@ export interface Finding {
   mitigation?: string | null;
   data_flow_summary?: string | null;
   vulnerability_details?: Record<string, unknown> | null;
+  // Incremental scan fields
+  finding_status?: FindingStatus;
 }
 
 // ============================================================================
@@ -274,6 +286,9 @@ export interface ScansResponse {
 
 export interface StartScanRequest {
   repository_url: string;
+  scan_mode?: ScanMode;
+  base_commit_sha?: string;
+  head_commit_sha?: string;
 }
 
 export interface GetScansParams {

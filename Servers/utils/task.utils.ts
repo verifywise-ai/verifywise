@@ -60,7 +60,7 @@ const addVisibilityLogic = (
   whereConditions.push("t.organization_id = :organizationId");
   replacements.organizationId = organizationId;
 
-  if (role !== "Admin") {
+  if (role !== "Admin" && role !== "SuperAdmin") {
     baseQueryParts.push(
       `LEFT JOIN task_assignees ${joinAlias} ON ${joinAlias}.task_id = t.id AND ${joinAlias}.organization_id = :organizationId AND ${joinAlias}.user_id = :userId`
     );
@@ -285,7 +285,7 @@ export const getTasksQuery = async (
 
   if (filters.assignee && filters.assignee.length > 0) {
     // Add LEFT JOIN for assignee filter if not already added
-    if (role === "Admin") {
+    if (role === "Admin" || role === "SuperAdmin") {
       baseQueryParts.push(
         `LEFT JOIN task_assignees ta_filter ON ta_filter.task_id = t.id AND ta_filter.organization_id = :organizationId`
       );
@@ -293,7 +293,7 @@ export const getTasksQuery = async (
     const assigneeList = filters.assignee
       .map((_, i) => `:assignee${i}`)
       .join(", ");
-    const joinAlias = role === "Admin" ? "ta_filter" : "ta";
+    const joinAlias = role === "Admin" || role === "SuperAdmin" ? "ta_filter" : "ta";
     whereConditions.push(`${joinAlias}.user_id IN (${assigneeList})`);
     filters.assignee.forEach((assignee, i) => {
       replacements[`assignee${i}`] = assignee;
@@ -529,7 +529,7 @@ export const updateTaskByIdQuery = async (
 
   // Permission checks for specific fields
   const isCreator = existingTask.creator_id === userId;
-  const isAdmin = role === "Admin";
+  const isAdmin = role === "Admin" || role === "SuperAdmin";
 
   // Check if user is assignee using task_assignees table
   const assigneeCheck = await sequelize.query(
@@ -808,7 +808,7 @@ export const deleteTaskByIdQuery = async (
 
   // Only creator or admin can delete
   const isCreator = task.creator_id === userId;
-  const isAdmin = role === "Admin";
+  const isAdmin = role === "Admin" || role === "SuperAdmin";
 
   if (!isCreator && !isAdmin) {
     throw new ForbiddenException(
@@ -943,7 +943,7 @@ export const restoreTaskByIdQuery = async (
 
   // Only creator or admin can restore
   const isCreator = task.creator_id === userId;
-  const isAdmin = role === "Admin";
+  const isAdmin = role === "Admin" || role === "SuperAdmin";
 
   if (!isCreator && !isAdmin) {
     throw new ForbiddenException(
@@ -1013,7 +1013,7 @@ export const hardDeleteTaskByIdQuery = async (
 
   // Only creator or admin can hard delete
   const isCreator = task.creator_id === userId;
-  const isAdmin = role === "Admin";
+  const isAdmin = role === "Admin" || role === "SuperAdmin";
 
   if (!isCreator && !isAdmin) {
     throw new ForbiddenException(

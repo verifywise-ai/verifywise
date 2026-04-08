@@ -193,13 +193,13 @@ const GenerateReport: React.FC<GenerateReportProps> = ({
         </Popover>
 
         {/* Render generate report status */}
-        <Suspense fallback={"loading..."}>
+        <Suspense fallback={null}>
           <ReportStatus isDisabled={isDisabled} />
         </Suspense>
       </Box>
 
       {isModalOpen && (
-        <Suspense fallback={"loading..."}>
+        <Suspense fallback={null}>
           <GenerateReportPopup
             onClose={() => {
               setIsModalOpen(false);

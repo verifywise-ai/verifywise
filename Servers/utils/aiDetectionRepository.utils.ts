@@ -53,6 +53,7 @@ export async function createRepositoryQuery(
       display_name, default_branch, github_token_id,
       schedule_enabled, schedule_frequency, schedule_day_of_week,
       schedule_day_of_month, schedule_hour, schedule_minute,
+      ci_enabled, ci_min_score, ci_max_critical, ci_post_comments, ci_status_checks,
       next_scan_at, is_enabled, created_by,
       created_at, updated_at
     ) VALUES (
@@ -60,6 +61,7 @@ export async function createRepositoryQuery(
       :display_name, :default_branch, :github_token_id,
       :schedule_enabled, :schedule_frequency, :schedule_day_of_week,
       :schedule_day_of_month, :schedule_hour, :schedule_minute,
+      :ci_enabled, :ci_min_score, :ci_max_critical, :ci_post_comments, :ci_status_checks,
       :next_scan_at, TRUE, :created_by,
       NOW(), NOW()
     )
@@ -81,6 +83,11 @@ export async function createRepositoryQuery(
       schedule_day_of_month: input.schedule_day_of_month ?? null,
       schedule_hour: input.schedule_hour ?? 2,
       schedule_minute: input.schedule_minute ?? 0,
+      ci_enabled: input.ci_enabled ?? false,
+      ci_min_score: input.ci_min_score ?? 70,
+      ci_max_critical: input.ci_max_critical ?? 0,
+      ci_post_comments: input.ci_post_comments ?? true,
+      ci_status_checks: input.ci_status_checks ?? true,
       next_scan_at: nextScanAt,
       created_by: input.created_by,
     },
@@ -125,6 +132,25 @@ export async function getRepositoryByOwnerNameQuery(
   });
 
   return (results as IAIDetectionRepository[])[0] || null;
+}
+
+export async function getRepositoryByOwnerNameForWebhook(
+  owner: string,
+  name: string
+): Promise<(IAIDetectionRepository & { organization_id: number }) | null> {
+  const query = `
+    SELECT * FROM ai_detection_repositories
+    WHERE repository_owner = :owner AND repository_name = :name
+      AND is_enabled = TRUE AND ci_enabled = TRUE
+    LIMIT 1;
+  `;
+
+  const results = await sequelize.query(query, {
+    replacements: { owner, name },
+    type: QueryTypes.SELECT,
+  });
+
+  return (results as (IAIDetectionRepository & { organization_id: number })[])[0] || null;
 }
 
 export async function getRepositoriesListQuery(
@@ -209,6 +235,30 @@ export async function updateRepositoryQuery(
   if (input.schedule_minute !== undefined) {
     setClauses.push("schedule_minute = :schedule_minute");
     replacements.schedule_minute = input.schedule_minute;
+  }
+  if ((input as any).webhook_secret !== undefined) {
+    setClauses.push("webhook_secret = :webhook_secret");
+    replacements.webhook_secret = (input as any).webhook_secret;
+  }
+  if (input.ci_enabled !== undefined) {
+    setClauses.push("ci_enabled = :ci_enabled");
+    replacements.ci_enabled = input.ci_enabled;
+  }
+  if (input.ci_min_score !== undefined) {
+    setClauses.push("ci_min_score = :ci_min_score");
+    replacements.ci_min_score = input.ci_min_score;
+  }
+  if (input.ci_max_critical !== undefined) {
+    setClauses.push("ci_max_critical = :ci_max_critical");
+    replacements.ci_max_critical = input.ci_max_critical;
+  }
+  if (input.ci_post_comments !== undefined) {
+    setClauses.push("ci_post_comments = :ci_post_comments");
+    replacements.ci_post_comments = input.ci_post_comments;
+  }
+  if (input.ci_status_checks !== undefined) {
+    setClauses.push("ci_status_checks = :ci_status_checks");
+    replacements.ci_status_checks = input.ci_status_checks;
   }
   if (input.is_enabled !== undefined) {
     setClauses.push("is_enabled = :is_enabled");

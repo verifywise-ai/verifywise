@@ -1,10 +1,13 @@
 """
-Run GRS pipeline stages from a versioned run_config.yaml.
+Run GRS pipeline stages from configs/run_config.yaml.
 
-Reads datasets/<version>/run_config.yaml and invokes
+Reads configs/run_config.yaml and invokes
   uv run grs-scenarios generate --stage <stage> --dataset-version <version> [params]
 for each requested stage, in the fixed pipeline order:
   seeds → render → perturb → validate
+
+The config is automatically copied to datasets/<version>/run_config.yaml
+for reproducibility before any stage runs.
 
 Usage:
     uv run python scripts/run_pipeline.py --version grs_scenarios_v0.1
@@ -14,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -32,32 +36,53 @@ _PERTURB_PARAM_MAP: dict[str, str] = {
     "k_per_base": "--k-per-base",
     "coverage": "--coverage",
 }
+_VALIDATE_PARAM_MAP: dict[str, str] = {
+    "provider": "--provider",
+    "validator_model_id": "--validator-model-id",
+}
 _STAGE_PARAM_MAPS: dict[str, dict[str, str]] = {
     "render": _RENDER_PARAM_MAP,
     "perturb": _PERTURB_PARAM_MAP,
+    "validate": _VALIDATE_PARAM_MAP,
 }
 
 
-def load_run_config(dataset_dir: Path) -> dict:
-    """Load and return run_config.yaml from dataset_dir.
+def load_run_config(configs_dir: Path) -> dict:
+    """Load and return run_config.yaml from configs_dir.
+
+    Args:
+        configs_dir: Directory containing run_config.yaml (typically configs/).
 
     Raises:
-        FileNotFoundError: If run_config.yaml does not exist in dataset_dir.
+        FileNotFoundError: If run_config.yaml does not exist in configs_dir.
     """
-    config_path = dataset_dir / "run_config.yaml"
+    config_path = configs_dir / "run_config.yaml"
     if not config_path.exists():
         raise FileNotFoundError(
             f"run_config.yaml not found at {config_path}. "
-            "Create it before running the pipeline."
+            "Create run_config.yaml in the configs directory before running the pipeline."
         )
     with config_path.open() as f:
         return yaml.safe_load(f)
 
 
+def copy_run_config(configs_dir: Path, dataset_dir: Path) -> None:
+    """Copy configs/run_config.yaml into dataset_dir for reproducibility.
+
+    Creates dataset_dir if it does not exist. Overwrites any existing copy.
+
+    Args:
+        configs_dir: Source directory containing run_config.yaml.
+        dataset_dir: Destination version folder (e.g. datasets/grs_scenarios_v0.1).
+    """
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(configs_dir / "run_config.yaml", dataset_dir / "run_config.yaml")
+
+
 def build_stage_args(stage: str, config: dict) -> list[str]:
     """Build the CLI flag list for a single pipeline stage.
 
-    Returns [] for stages with no params (seeds, validate) or unknown stages.
+    Returns [] for stages with no params (seeds) or unknown stages.
     """
     param_map = _STAGE_PARAM_MAPS.get(stage)
     if param_map is None:
@@ -80,9 +105,20 @@ def run_pipeline(
     base_dir: Path,
     stages: list[str],
 ) -> None:
-    """Run the requested pipeline stages in fixed order."""
+    """Run the requested pipeline stages in fixed order.
+
+    Loads run_config.yaml from configs/ (sibling of scripts/), then copies it
+    into datasets/<version>/ for reproducibility before running any stage.
+    Raises FileNotFoundError immediately if configs/run_config.yaml is missing
+    (fail-fast — no stages will run).
+    """
     dataset_dir = base_dir / version
-    config = load_run_config(dataset_dir)
+
+    # Resolve configs/ relative to this script file, not the cwd.
+    configs_dir = Path(__file__).parent.parent / "configs"
+
+    config = load_run_config(configs_dir)
+    copy_run_config(configs_dir, dataset_dir)
 
     ordered = [s for s in PIPELINE_ORDER if s in stages]
 
@@ -101,7 +137,7 @@ def run_pipeline(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run GRS pipeline stages from datasets/<version>/run_config.yaml."
+        description="Run GRS pipeline stages from configs/run_config.yaml."
     )
     parser.add_argument(
         "--version",

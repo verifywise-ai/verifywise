@@ -6,6 +6,7 @@ import {
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
+import { sequelize } from "../database/db";
 
 export async function postAutoDriver(req: Request, res: Response) {
   logStructured(
@@ -18,6 +19,12 @@ export async function postAutoDriver(req: Request, res: Response) {
 
   try {
     await insertMockData(req.organizationId!, req.organizationId!, req.userId!);
+
+    // Mark onboarding as completed so the setup modal doesn't show again
+    await sequelize.query(
+      `UPDATE organizations SET onboarding_status = 'completed' WHERE id = :organizationId`,
+      { replacements: { organizationId: req.organizationId! } }
+    );
 
     logStructured(
       "successful",

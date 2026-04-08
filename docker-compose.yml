@@ -50,6 +50,8 @@ services:
       - ENCRYPTION_KEY=$ENCRYPTION_KEY
       - AI_GATEWAY_URL=http://ai_gateway:8100
       - AI_GATEWAY_INTERNAL_KEY=$AI_GATEWAY_INTERNAL_KEY
+      - SUPERADMIN_EMAIL=$SUPERADMIN_EMAIL
+      - SUPERADMIN_PASSWORD=$SUPERADMIN_PASSWORD
   frontend:
     depends_on:
       - backend

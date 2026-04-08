@@ -32,7 +32,7 @@ export const AIGatewaySidebarProvider: FC<{ children: ReactNode }> = ({ children
     const load = async () => {
       try {
         const [endpointsRes, promptsRes, vkeysRes] = await Promise.all([
-          apiServices.get<Record<string, any>>("/ai-gateway/endpoints"),
+          apiServices.get<Record<string, any>>("/ai-gateway/endpoints").catch(() => null),
           apiServices.get<Record<string, any>>("/ai-gateway/prompts").catch(() => null),
           apiServices.get<Record<string, any>>("/ai-gateway/virtual-keys").catch(() => null),
         ]);

@@ -2,6 +2,7 @@ import { Stack, Typography, Box } from "@mui/material";
 import "./index.css";
 import { Outlet, useLocation } from "react-router";
 import { useContext, useEffect, FC, useState } from "react";
+import { useDispatch } from "react-redux";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { EvalsSidebarProvider } from "../../../application/contexts/EvalsSidebar.context";
 import { AIDetectionSidebarProvider } from "../../../application/contexts/AIDetectionSidebar.context";
@@ -23,6 +24,9 @@ import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import AppSwitcher from "../../components/AppSwitcher";
 import { ContextSidebar } from "../../components/ContextSidebar";
 import { useAuth } from "../../../application/hooks/useAuth";
+import ReadOnlyBanner from "../../components/ReadOnlyBanner";
+import { setActiveOrganizationId } from "../../../application/redux/auth/authSlice";
+import { getOrganizations } from "../../../application/repository/superAdmin.repository";
 import { status } from "../../themes/palette";
 
 interface DashboardProps {
@@ -33,8 +37,10 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
   const { setDashboardValues, setProjects } = useContext(VerifyWiseContext);
   const location = useLocation();
   const { activeModule, setActiveModule } = useActiveModule();
-  const { userRoleName } = useAuth();
+  const { userRoleName, isSuperAdmin, activeOrganizationId } = useAuth();
   const isAdmin = userRoleName === "Admin";
+  const dispatch = useDispatch();
+  const [, setSuperAdminHasNoOrgs] = useState(false);
 
   // Demo data state
   const [showToastNotification, setShowToastNotification] =
@@ -55,6 +61,29 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
     useState<boolean>(false);
 
   const { dashboard, fetchDashboard } = useDashboard();
+
+  // Auto-select first org for super-admin, or redirect if active org was deleted
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    getOrganizations()
+      .then((res) => {
+        const orgsData = (res.data as any)?.data || [];
+        if (orgsData.length === 0) {
+          // No orgs exist — clear active org and show overlay
+          dispatch(setActiveOrganizationId(null));
+          setSuperAdminHasNoOrgs(true);
+          return;
+        }
+        setSuperAdminHasNoOrgs(false);
+        if (!activeOrganizationId || !orgsData.find((o: any) => o.id === activeOrganizationId)) {
+          // No org selected or active org was deleted — pick the first available one and reload
+          dispatch(setActiveOrganizationId(orgsData[0].id));
+          // Small delay so Redux persist writes before reload
+          setTimeout(() => window.location.reload(), 100);
+        }
+      })
+      .catch(console.error);
+  }, [isSuperAdmin, activeOrganizationId, dispatch]);
 
   // Check for demo data existence
   useEffect(() => {
@@ -234,8 +263,8 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
 
         setShowToastNotification(false);
 
-        // Reload the page to refresh all dashboard metrics
-        window.location.reload();
+        // Navigate to overview to avoid 404s on deleted entity pages
+        window.location.href = "/overview";
       } else {
         setShowToastNotification(false);
         logEngine({
@@ -289,6 +318,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
           <AppSwitcher
             activeModule={activeModule}
             onModuleChange={setActiveModule}
+            isSuperAdmin={isSuperAdmin}
           />
           <ContextSidebar
             activeModule={activeModule}
@@ -302,40 +332,44 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
             hasDemoData={hasDemoData}
             isAdmin={isAdmin}
           />
-          <Stack 
-            className="main-content-area" 
-            sx={{ 
-              flex: 1, 
-              minWidth: 0, 
-              height: "100vh", 
-              display: "flex", 
+          <Stack
+            className="main-content-area"
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              height: "100vh",
+              display: "flex",
               flexDirection: "column",
-              overflow: "hidden"
+              overflow: "hidden",
+              position: "relative",
             }}
           >
-            <DemoAppBanner />
-            {alertState && (
-              <Alert
-                variant={alertState.variant}
-                title={alertState.title}
-                body={alertState.body}
-                isToast={true}
-                onClick={() => setAlertState(undefined)}
-              />
-            )}
-            {showToastNotification && <CustomizableToast title={toastMessage} />}
-            <Box 
-              className="scrollable-content"
-              sx={{ 
-                flex: 1, 
-                minHeight: 0,
-                overflowY: "auto", 
-                overflowX: "hidden",
-                padding: "24px 8px 24px 24px"
-              }}
-            >
-              <Outlet />
-            </Box>
+            <ReadOnlyBanner />
+            <>
+              <DemoAppBanner />
+              {alertState && (
+                <Alert
+                  variant={alertState.variant}
+                  title={alertState.title}
+                  body={alertState.body}
+                  isToast={true}
+                  onClick={() => setAlertState(undefined)}
+                />
+              )}
+              {showToastNotification && <CustomizableToast title={toastMessage} />}
+              <Box
+                className="scrollable-content"
+                sx={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                  padding: "24px 8px 24px 24px"
+                }}
+              >
+                <Outlet />
+              </Box>
+            </>
           </Stack>
 
           {/* Demo Data Modals */}

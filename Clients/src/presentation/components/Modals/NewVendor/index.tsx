@@ -31,6 +31,7 @@ import { HistorySidebar } from "../../Common/HistorySidebar";
 import { useEntityChangeHistory } from "../../../../application/hooks/useEntityChangeHistory";
 import { useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import dayjs, { Dayjs } from "dayjs";
 import Alert from "../../Alert";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -49,7 +50,7 @@ import {
 } from "../../../../application/hooks/useVendors";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { User } from "../../../../domain/types/User";
-import { AddNewVendorProps, VendorFormErrors } from "../../../../domain/interfaces/i.vendor";
+import { AddNewVendorProps } from "../../../../domain/interfaces/i.vendor";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { 
   DataSensitivity,
@@ -126,7 +127,40 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
 }) => {
   const theme = useTheme();
   const [values, setValues] = useState(initialState);
-  const [errors, setErrors] = useState<VendorFormErrors>({});
+  const validators = useMemo(
+    () => ({
+      vendorName: (v: unknown) => {
+        const r = checkStringValidation("Vendor Name", v as string, 1, 64);
+        return r.accepted ? "" : r.message;
+      },
+      website: (v: unknown) => {
+        const r = checkStringValidation("Vendor Website", v as string, 1, 64);
+        return r.accepted ? "" : r.message;
+      },
+      reviewResult: (v: unknown) => {
+        if (!v) return "";
+        const r = checkStringValidation("Vendor review result", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      projectIds: (v: unknown) => {
+        if (!v || !(Array.isArray(v)) || v.length === 0) {
+          return "Please select a use case from the dropdown";
+        }
+        return "";
+      },
+      vendorProvides: (v: unknown) => {
+        const r = checkStringValidation("Vendor Provides", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      vendorContactPerson: (v: unknown) => {
+        const r = checkStringValidation("Vendor Contact Person", v as string, 1, 64, undefined, undefined, undefined, undefined, "contactPerson");
+        return r.accepted ? "" : r.message;
+      },
+      assignee: (v: unknown) => (v === null ? "Please select an assignee from the dropdown" : ""),
+    }),
+    []
+  );
+  const { errors, validateAll, clearFieldError, resetErrors } = useFormValidation<typeof initialState>(validators);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectsLoaded, setProjectsLoaded] = useState(false); // Track if projects are loaded
   const [alert, setAlert] = useState<{
@@ -173,9 +207,9 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setValues(initialState);
-      setErrors({} as VendorFormErrors);
+      resetErrors();
     }
-  }, [isOpen]);
+  }, [isOpen, resetErrors]);
 
   useEffect(() => {
     if (isOpen && !projectsLoaded) {
@@ -229,7 +263,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
    * Opens the confirmation modal if form validation passes
    */
   const handleSave = () => {
-    if (validateForm()) {
+    if (validateAll(values)) {
       handleOnSave();
     }
   };
@@ -253,87 +287,15 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
    * @param field - The field name to update
    * @param value - The new value
    */
-  const handleOnChange = (field: string, value: string | number | number[]) => {
+  const handleOnChange = (field: keyof typeof initialState, value: string | number | number[]) => {
     setValues((prevValues) => ({
       ...prevValues,
       [field]: value,
     }));
-    setErrors({ ...errors, [field]: "" });
+    clearFieldError(field);
   };
 
-  /**
-   * Validates all required fields in the form
-   * @returns boolean indicating if form is valid
-   */
-  const validateForm = (): boolean => {
-    const newErrors: VendorFormErrors = {};
-    const vendorName = checkStringValidation(
-      "Vendor Name",
-      values.vendorName,
-      1,
-      64
-    );
-    if (!vendorName.accepted) {
-      newErrors.vendorName = vendorName.message;
-    }
-    const vendorWebsite = checkStringValidation(
-      "Vendor Website",
-      values.website,
-      1,
-      64
-    );
-    if (!vendorWebsite.accepted) {
-      newErrors.website = vendorWebsite.message;
-    }
-    // Review result is now optional
-    if (values.reviewResult) {
-      const vendorReviewResult = checkStringValidation(
-        "Vendor review result",
-        values.reviewResult,
-        1,
-        256
-      );
-      if (!vendorReviewResult.accepted) {
-        newErrors.reviewResult = vendorReviewResult.message;
-      }
-    }
-    if (
-      !values.projectIds ||
-      Number(values.projectIds.length) === 0
-    ) {
-      newErrors.projectIds = "Please select a use case from the dropdown";
-    }
-    const vendorProvides = checkStringValidation(
-      "Vendor Provides",
-      values.vendorProvides,
-      1,
-      256
-    );
-    if (!vendorProvides.accepted) {
-      newErrors.vendorProvides = vendorProvides.message;
-    }
-    const vendorContactPerson = checkStringValidation(
-      "Vendor Contact Person",
-      values.vendorContactPerson,
-      1,
-      64,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      "contactPerson" //
-    );
-    if (!vendorContactPerson.accepted) {
-      newErrors.vendorContactPerson = vendorContactPerson.message;
-    }
-    // Review status, reviewer, and review date are now optional
-    if (values.assignee === null) {
-      newErrors.assignee = "Please select an assignee from the dropdown";
-    }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   /**
    * Handles the final save operation after confirmation

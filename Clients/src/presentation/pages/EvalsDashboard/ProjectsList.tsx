@@ -1,24 +1,24 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box,
-  Typography,
   Chip,
   Stack,
-  useTheme,
   Table,
   TableBody,
   TableCell,
   TableContainer,
-  TableHead,
   TableRow,
-  TablePagination,
-  TableFooter,
   IconButton,
   Menu,
   MenuItem,
+  Box,
+  Typography,
 } from "@mui/material";
-import { Plus, FileSearch, MessageSquare, Bot, ChevronsUpDown, ChevronUp, ChevronDown, MoreVertical, FlaskConical, Target, Layers, TrendingUp } from "lucide-react";
+import { Plus, FileSearch, MessageSquare, Bot, MoreVertical, FlaskConical, Target, Layers, TrendingUp } from "lucide-react";
+import { useStandardTable } from "../../../application/hooks/useStandardTable";
+import StandardTableHead from "../../components/Table/StandardTableHead";
+import StandardTablePagination from "../../components/Table/StandardTablePagination";
+import type { StandardColumn } from "../../../domain/types/standardTable";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import SelectableCard from "../../components/SelectableCard";
 import { CustomizableButton } from "../../components/button/customizable-button";
@@ -28,7 +28,6 @@ import Alert from "../../components/Alert";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
-import TablePaginationActions from "../../components/TablePagination";
 import SearchBox from "../../components/Search/SearchBox";
 import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
 import { GroupBy } from "../../components/Table/GroupBy";
@@ -47,27 +46,17 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
 import { palette } from "../../themes/palette";
 
-const EVALS_PROJECTS_ROWS_PER_PAGE_KEY = "verifywise_evals_projects_rows_per_page";
-const EVALS_PROJECTS_SORTING_KEY = "verifywise_evals_projects_sorting";
-
-type SortDirection = "asc" | "desc" | null;
-type SortConfig = {
-  key: string;
-  direction: SortDirection;
-};
-
-const columns = [
-  { id: "name", label: "Name", minWidth: 180, sortable: true, align: "left" as const },
-  { id: "useCase", label: "Use case", minWidth: 120, sortable: true, align: "center" as const },
-  { id: "description", label: "Description", minWidth: 200, sortable: false, align: "center" as const },
-  { id: "runs", label: "Runs", minWidth: 100, sortable: true, align: "center" as const },
-  { id: "created", label: "Created", minWidth: 140, sortable: true, align: "center" as const },
-  { id: "actions", label: "Action", minWidth: 80, sortable: false, align: "center" as const },
+const columns: StandardColumn[] = [
+  { id: "name", label: "Name", minWidth: "180px", sortable: true, align: "left" },
+  { id: "useCase", label: "Use case", minWidth: "120px", sortable: true, align: "center" },
+  { id: "description", label: "Description", minWidth: "200px", sortable: false, align: "center" },
+  { id: "runs", label: "Runs", minWidth: "100px", sortable: true, align: "center" },
+  { id: "created", label: "Created", minWidth: "140px", sortable: true, align: "center" },
+  { id: "actions", label: "Action", minWidth: "80px", sortable: false, align: "center" },
 ];
 
 export default function ProjectsList() {
   const navigate = useNavigate();
-  const theme = useTheme();
   const [projects, setProjects] = useState<DeepEvalProject[]>([]);
   const [runsByProject, setRunsByProject] = useState<Record<string, number>>({});
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -76,40 +65,6 @@ export default function ProjectsList() {
     variant: "success" | "error";
     body: string;
   } | null>(null);
-
-  // Pagination state
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(() => {
-    const saved = localStorage.getItem(EVALS_PROJECTS_ROWS_PER_PAGE_KEY);
-    return saved ? parseInt(saved, 10) : 10;
-  });
-
-  // Sorting state - default to date desc
-  const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
-    const saved = localStorage.getItem(EVALS_PROJECTS_SORTING_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // If saved state is empty, use the default
-        if (!parsed.key || !parsed.direction) {
-          return { key: "created", direction: "desc" };
-        }
-        return parsed;
-      } catch {
-        return { key: "created", direction: "desc" };
-      }
-    }
-    return { key: "created", direction: "desc" };
-  });
-
-  // Save preferences to localStorage
-  useEffect(() => {
-    localStorage.setItem(EVALS_PROJECTS_ROWS_PER_PAGE_KEY, rowsPerPage.toString());
-  }, [rowsPerPage]);
-
-  useEffect(() => {
-    localStorage.setItem(EVALS_PROJECTS_SORTING_KEY, JSON.stringify(sortConfig));
-  }, [sortConfig]);
 
   // RBAC permissions
   const { userRoleName } = useAuth();
@@ -218,75 +173,35 @@ export default function ProjectsList() {
     loadProjects();
   }, [loadProjects]);
 
-  // Sorting handler
-  const handleSort = useCallback((columnId: string) => {
-    setSortConfig((prevConfig) => {
-      if (prevConfig.key === columnId) {
-        if (prevConfig.direction === "asc") {
-          return { key: columnId, direction: "desc" };
-        } else if (prevConfig.direction === "desc") {
-          return { key: "", direction: null };
-        }
+  // Sort comparator for useStandardTable
+  const sortComparator = useCallback(
+    (a: DeepEvalProject, b: DeepEvalProject, key: string): number => {
+      switch (key) {
+        case "name":
+          return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+        case "useCase":
+          return (a.useCase || "chatbot").toLowerCase().localeCompare((b.useCase || "chatbot").toLowerCase());
+        case "runs":
+          return (runsByProject[a.id] ?? 0) - (runsByProject[b.id] ?? 0);
+        case "created":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        default:
+          return 0;
       }
-      return { key: columnId, direction: "asc" };
-    });
-  }, []);
-
-  // Sort projects (uses filtered results)
-  const sortedProjects = [...filteredProjects].sort((a, b) => {
-    if (!sortConfig.key || !sortConfig.direction) return 0;
-
-    let aValue: string | number;
-    let bValue: string | number;
-
-    switch (sortConfig.key) {
-      case "name":
-        aValue = a.name.toLowerCase();
-        bValue = b.name.toLowerCase();
-        break;
-      case "useCase":
-        aValue = (a.useCase || "chatbot").toLowerCase();
-        bValue = (b.useCase || "chatbot").toLowerCase();
-        break;
-      case "runs":
-        aValue = runsByProject[a.id] ?? 0;
-        bValue = runsByProject[b.id] ?? 0;
-        break;
-      case "created":
-        aValue = new Date(a.createdAt).getTime();
-        bValue = new Date(b.createdAt).getTime();
-        break;
-      default:
-        return 0;
-    }
-
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      const comparison = aValue.localeCompare(bValue);
-      return sortConfig.direction === "asc" ? comparison : -comparison;
-    }
-
-    if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-    return 0;
-  });
-
-  // Pagination
-  const paginatedProjects = sortedProjects.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
-
-  const handleChangePage = useCallback((_event: unknown, newPage: number) => {
-    setPage(newPage);
-  }, []);
-
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
     },
-    []
+    [runsByProject]
   );
+
+  const {
+    sortConfig, handleSort, sortedRows, validPage, rowsPerPage,
+    handleChangePage, handleChangeRowsPerPage, getRange, totalCount,
+  } = useStandardTable<DeepEvalProject>({
+    rows: filteredProjects,
+    storageKey: "evals_projects",
+    defaultSortColumn: "created",
+    defaultSortDirection: "desc",
+    sortComparator,
+  });
 
   const handleCreateProject = async () => {
     setLoading(true);
@@ -424,12 +339,6 @@ export default function ProjectsList() {
     }
   };
 
-  const getRange = () => {
-    const start = page * rowsPerPage + 1;
-    const end = Math.min(page * rowsPerPage + rowsPerPage, sortedProjects.length);
-    return `${start} - ${end}`;
-  };
-
   return (
     <Stack sx={{ width: "100%" }}>
       {alert && <Alert variant={alert.variant} body={alert.body} />}
@@ -531,65 +440,9 @@ export default function ProjectsList() {
       ) : (
         <TableContainer>
           <Table sx={singleTheme.tableStyles.primary.frame}>
-            <TableHead
-              sx={{
-                backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
-              }}
-            >
-              <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.id}
-                    sx={{
-                      ...singleTheme.tableStyles.primary.header.cell,
-                      minWidth: column.minWidth,
-                      cursor: column.sortable ? "pointer" : "default",
-                      userSelect: "none",
-                      textAlign: column.align,
-                      "&:hover": column.sortable ? {
-                        backgroundColor: "rgba(0, 0, 0, 0.04)",
-                      } : {},
-                    }}
-                    onClick={() => column.sortable && handleSort(column.id)}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: column.align === "center" ? "center" : "flex-start",
-                        gap: 0.5,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: sortConfig.key === column.id ? "primary.main" : "inherit",
-                        }}
-                      >
-                        {column.label}
-                      </Typography>
-                      {column.sortable && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            color: sortConfig.key === column.id ? "primary.main" : palette.text.disabled,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {sortConfig.key === column.id && sortConfig.direction === "asc" && <ChevronUp size={14} />}
-                          {sortConfig.key === column.id && sortConfig.direction === "desc" && <ChevronDown size={14} />}
-                          {sortConfig.key !== column.id && <ChevronsUpDown size={14} />}
-                        </Box>
-                      )}
-                    </Box>
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
+            <StandardTableHead columns={columns} sortConfig={sortConfig} onSort={handleSort} />
             <TableBody>
-              {paginatedProjects.map((project) => (
+              {sortedRows.slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage).map((project) => (
                 <TableRow
                   key={project.id}
                   onClick={() => handleOpenProject(project.id)}
@@ -712,86 +565,16 @@ export default function ProjectsList() {
                 </TableRow>
               ))}
             </TableBody>
-            <TableFooter>
-              <TableRow
-                sx={{
-                  "& .MuiTableCell-root.MuiTableCell-footer": {
-                    paddingX: theme.spacing(8),
-                    paddingY: theme.spacing(4),
-                  },
-                }}
-              >
-                <TableCell
-                  sx={{
-                    paddingX: theme.spacing(2),
-                    fontSize: 12,
-                    opacity: 0.7,
-                    color: theme.palette.text.tertiary,
-                  }}
-                  colSpan={3}
-                >
-                  Showing {getRange()} of {sortedProjects.length} project(s)
-                </TableCell>
-                <TablePagination
-                  count={sortedProjects.length}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  rowsPerPage={rowsPerPage}
-                  rowsPerPageOptions={[5, 10, 15, 20, 25]}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
-                  labelRowsPerPage="Projects per page"
-                  labelDisplayedRows={({ page, count }) =>
-                    `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
-                  }
-                  slotProps={{
-                    select: {
-                      MenuProps: {
-                        keepMounted: true,
-                        PaperProps: {
-                          className: "pagination-dropdown",
-                          sx: {
-                            mt: 0,
-                            mb: theme.spacing(2),
-                          },
-                        },
-                        transformOrigin: {
-                          vertical: "bottom",
-                          horizontal: "left",
-                        },
-                        anchorOrigin: { vertical: "top", horizontal: "left" },
-                        sx: { mt: theme.spacing(-2) },
-                      },
-                      inputProps: { id: "pagination-dropdown" },
-                      IconComponent: () => <ChevronsUpDown size={16} />,
-                      sx: {
-                        ml: theme.spacing(4),
-                        mr: theme.spacing(12),
-                        minWidth: theme.spacing(20),
-                        textAlign: "left",
-                        "&.Mui-focused > div": {
-                          backgroundColor: theme.palette.background.main,
-                        },
-                      },
-                    },
-                  }}
-                  sx={{
-                    mt: theme.spacing(6),
-                    color: theme.palette.text.secondary,
-                    "& .MuiSelect-icon": {
-                      width: "24px",
-                      height: "fit-content",
-                    },
-                    "& .MuiSelect-select": {
-                      width: theme.spacing(10),
-                      borderRadius: theme.shape.borderRadius,
-                      border: `1px solid ${theme.palette.border.light}`,
-                      padding: theme.spacing(4),
-                    },
-                  }}
-                />
-              </TableRow>
-            </TableFooter>
+            <StandardTablePagination
+              totalCount={totalCount}
+              page={validPage}
+              rowsPerPage={rowsPerPage}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              getRange={getRange}
+              entityLabel="project"
+              colSpan={columns.length}
+            />
           </Table>
         </TableContainer>
       )}

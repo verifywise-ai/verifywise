@@ -26,6 +26,7 @@ def _make_candidate(
 def _valid_result() -> SemanticResult:
     return SemanticResult(
         valid_scenario=True,
+        realistic_scenario=True,
         governance_triggers={
             "authority_oversight": True,
             "escalation": False,
@@ -43,12 +44,31 @@ def _valid_result() -> SemanticResult:
 def _invalid_result() -> SemanticResult:
     return SemanticResult(
         valid_scenario=False,
+        realistic_scenario=False,
         governance_triggers={k: False for k in [
             "authority_oversight", "escalation", "traceability_constraints",
             "transparency_uncertainty", "prohibited_practices", "synthetic_disclosure"
         ]},
         tension_signals={"pressure": False, "uncertainty": False, "constraint_or_bypass": False},
         reasoning="No governance relevance detected.",
+        used_heuristic_fallback=False,
+    )
+
+
+def _unrealistic_result() -> SemanticResult:
+    return SemanticResult(
+        valid_scenario=True,
+        realistic_scenario=False,
+        governance_triggers={
+            "authority_oversight": True,
+            "escalation": False,
+            "traceability_constraints": False,
+            "transparency_uncertainty": False,
+            "prohibited_practices": False,
+            "synthetic_disclosure": False,
+        },
+        tension_signals={"pressure": True, "uncertainty": False, "constraint_or_bypass": False},
+        reasoning="Scenario reads as artificially constructed.",
         used_heuristic_fallback=False,
     )
 
@@ -81,6 +101,7 @@ def test_metadata_contains_debug_fields():
     meta = accepted[0]["metadata"]
     assert "prompt_hash" in meta
     assert "tension_signals" in meta
+    assert "realistic_scenario" in meta
     assert "semantic_reasoning" in meta
     assert "used_heuristic_fallback" in meta
 
@@ -148,3 +169,15 @@ def test_accepted_scenario_id_format():
     )
 
     assert accepted[0]["scenario_id"] == "grs_abc123"
+
+
+def test_rejected_when_scenario_unrealistic():
+    accepted, rejections = validate_candidates(
+        candidates=[_make_candidate()],
+        cfg=ValidateConfig(),
+        semantic_validator=_mock_sem(_unrealistic_result()),
+    )
+
+    assert len(accepted) == 0
+    assert len(rejections) == 1
+    assert rejections[0]["reason_code"] == R.TRIG_SEMANTIC_UNREALISTIC

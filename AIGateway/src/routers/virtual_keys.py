@@ -70,12 +70,33 @@ async def create_key(request: Request):
                 detail="expires_at must be a valid ISO 8601 datetime string",
             )
 
+    # Validate model/provider ACL fields
+    acl_fields = {}
+    for field in ("allowed_models", "blocked_models", "allowed_providers", "blocked_providers"):
+        value = body.get(field)
+        if value is not None:
+            if not isinstance(value, list):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{field} must be an array",
+                )
+            if not all(isinstance(v, str) for v in value):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{field} must be an array of strings",
+                )
+            acl_fields[field] = value
+
     org_id = get_org_id(request)
     user_id = get_user_id(request)
 
     data = {
         "name": name,
         "allowed_endpoint_ids": body.get("allowed_endpoint_ids") or [],
+        "allowed_models": acl_fields.get("allowed_models", []),
+        "blocked_models": acl_fields.get("blocked_models", []),
+        "allowed_providers": acl_fields.get("allowed_providers", []),
+        "blocked_providers": acl_fields.get("blocked_providers", []),
         "max_budget_usd": body.get("max_budget_usd"),
         "rate_limit_rpm": body.get("rate_limit_rpm"),
         "metadata": body.get("metadata"),
@@ -171,6 +192,22 @@ async def update_key(key_id: int, request: Request):
                 detail="rate_limit_rpm must be an integer",
             )
         updates["rate_limit_rpm"] = value
+
+    # model/provider ACLs
+    for field in ("allowed_models", "blocked_models", "allowed_providers", "blocked_providers"):
+        if field in body:
+            value = body[field]
+            if value is not None and not isinstance(value, list):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{field} must be an array",
+                )
+            if value is not None and not all(isinstance(v, str) for v in value):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{field} must be an array of strings",
+                )
+            updates[field] = value if value is not None else []
 
     # metadata
     if "metadata" in body:

@@ -1,12 +1,13 @@
 import { FC, memo } from "react";
 import { Stack, Tooltip, Box, Typography, useTheme } from "@mui/material";
-import { Shield, FlaskConical, ScanSearch, Eye, Router } from "lucide-react";
+import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown } from "lucide-react";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import "./index.css";
 
 interface AppSwitcherProps {
   activeModule: AppModule;
   onModuleChange: (module: AppModule) => void;
+  isSuperAdmin?: boolean;
 }
 
 interface ModuleItem {
@@ -50,16 +51,26 @@ const modules: ModuleItem[] = [
   },
 ];
 
+const superAdminModule: ModuleItem = {
+  id: "super-admin",
+  icon: <Crown size={16} strokeWidth={1.5} />,
+  label: "Super Admin",
+  description: "Manage organizations, users, and system-level settings",
+};
+
 const AppSwitcher: FC<AppSwitcherProps> = ({
   activeModule,
   onModuleChange,
+  isSuperAdmin = false,
 }) => {
   const theme = useTheme();
+
+  const allModules = isSuperAdmin ? [...modules, superAdminModule] : modules;
 
   return (
     <Stack className="app-switcher">
       <Stack className="app-switcher-modules">
-        {modules.map((module) => (
+        {allModules.map((module) => (
           <Tooltip
             key={module.id}
             title={

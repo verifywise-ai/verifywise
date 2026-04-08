@@ -53,7 +53,7 @@ export const getUserProjects = async (
   const whereConditions: string[] = ["p.organization_id = :organizationId"];
   const replacements: { [key: string]: any } = { organizationId };
 
-  if (role !== "Admin") {
+  if (role !== "Admin" && role !== "SuperAdmin") {
     baseQueryParts.push(
       `LEFT JOIN projects_members pm ON pm.project_id = p.id AND pm.organization_id = :organizationId`
     );

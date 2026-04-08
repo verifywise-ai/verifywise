@@ -33,11 +33,12 @@ import {
 } from "../../../../domain/enums/dataset.enum";
 import {
   NewDatasetFormValues,
-  NewDatasetFormErrors,
   NewDatasetProps,
 } from "../../../../domain/interfaces/i.dataset";
 import dayjs, { Dayjs } from "dayjs";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import { Project } from "../../../../domain/types/Project";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
@@ -102,8 +103,47 @@ const NewDataset: FC<NewDatasetProps> = ({
   const [values, setValues] = useState<NewDatasetFormValues>(
     initialData || initialState
   );
-  const [errors, setErrors] = useState<NewDatasetFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validators = useMemo(
+    () => ({
+      name: (v: unknown) => {
+        const r = checkStringValidation("Name", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      description: (v: unknown) => {
+        const r = checkStringValidation("Description", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      version: (v: unknown) => {
+        const r = checkStringValidation("Version", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      owner: (v: unknown) => {
+        const r = checkStringValidation("Owner", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      type: (v: unknown) => (!v ? "Type is required." : ""),
+      function: (v: unknown) => {
+        const r = checkStringValidation("Function", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      source: (v: unknown) => {
+        const r = checkStringValidation("Source", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      classification: (v: unknown) => (!v ? "Classification is required." : ""),
+      status: (v: unknown) => (!v ? "Status is required." : ""),
+      status_date: (v: unknown) => {
+        const r = checkStringValidation("Status date", v as string, 1);
+        return r.accepted ? "" : r.message;
+      },
+    }),
+    []
+  );
+
+  const { errors, validateAll, clearFieldError, resetErrors } =
+    useFormValidation<NewDatasetFormValues>(validators);
 
   useEffect(() => {
     if (isOpen) {
@@ -121,16 +161,16 @@ const NewDataset: FC<NewDatasetProps> = ({
       } else {
         setValues(initialState);
       }
-      setErrors({});
+      resetErrors();
       setIsSubmitting(false);
       setActiveTab("details");
     } else {
       setValues(initialState);
-      setErrors({});
+      resetErrors();
       setIsSubmitting(false);
       setActiveTab("details");
     }
-  }, [isOpen, initialData, isEdit]);
+  }, [isOpen, initialData, isEdit, resetErrors]);
 
   const { approvedProjects } = useProjects();
 
@@ -158,18 +198,18 @@ const NewDataset: FC<NewDatasetProps> = ({
       (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setValues((prev) => ({ ...prev, [prop]: value }));
-        setErrors((prev) => ({ ...prev, [prop]: "" }));
+        clearFieldError(prop);
       },
-    []
+    [clearFieldError]
   );
 
   const handleOnSelectChange = useCallback(
     (prop: keyof NewDatasetFormValues) => (event: any) => {
       const value = event.target.value;
       setValues((prev) => ({ ...prev, [prop]: value }));
-      setErrors((prev) => ({ ...prev, [prop]: "" }));
+      clearFieldError(prop);
     },
-    []
+    [clearFieldError]
   );
 
   const handleSelectModelsChange = useCallback(
@@ -196,9 +236,9 @@ const NewDataset: FC<NewDatasetProps> = ({
         ...prev,
         status_date: newDate ? newDate.format("YYYY-MM-DD") : "",
       }));
-      setErrors((prev) => ({ ...prev, status_date: "" }));
+      clearFieldError("status_date");
     }
-  }, []);
+  }, [clearFieldError]);
 
   const handleContainsPiiChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,53 +250,6 @@ const NewDataset: FC<NewDatasetProps> = ({
     },
     []
   );
-
-  const validateForm = (): boolean => {
-    const newErrors: NewDatasetFormErrors = {};
-
-    if (!values.name || !String(values.name).trim()) {
-      newErrors.name = "Name is required.";
-    }
-
-    if (!values.description || !String(values.description).trim()) {
-      newErrors.description = "Description is required.";
-    }
-
-    if (!values.version || !String(values.version).trim()) {
-      newErrors.version = "Version is required.";
-    }
-
-    if (!values.owner || !String(values.owner).trim()) {
-      newErrors.owner = "Owner is required.";
-    }
-
-    if (!values.type) {
-      newErrors.type = "Type is required.";
-    }
-
-    if (!values.function || !String(values.function).trim()) {
-      newErrors.function = "Function is required.";
-    }
-
-    if (!values.source || !String(values.source).trim()) {
-      newErrors.source = "Source is required.";
-    }
-
-    if (!values.classification) {
-      newErrors.classification = "Classification is required.";
-    }
-
-    if (!values.status) {
-      newErrors.status = "Status is required.";
-    }
-
-    if (!values.status_date) {
-      newErrors.status_date = "Status date is required.";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleClose = () => {
     setActiveTab("details");
@@ -270,7 +263,7 @@ const NewDataset: FC<NewDatasetProps> = ({
 
   const handleSubmit = async (event?: React.FormEvent) => {
     if (event) event.preventDefault();
-    if (validateForm()) {
+    if (validateAll(values)) {
       setIsSubmitting(true);
       try {
         if (onSuccess) {
@@ -279,27 +272,6 @@ const NewDataset: FC<NewDatasetProps> = ({
         handleClose();
       } catch (error: any) {
         setIsSubmitting(false);
-        let errorData = null;
-
-        if (error?.response?.data) {
-          errorData = error.response.data;
-        } else if (error?.response) {
-          errorData = error.response;
-        } else if (error?.status && error?.errors) {
-          errorData = error;
-        }
-
-        if (errorData?.errors && Array.isArray(errorData.errors)) {
-          const serverErrors: NewDatasetFormErrors = {};
-          errorData.errors.forEach((err: any) => {
-            if (err.field && err.message) {
-              const fieldName = err.field as keyof NewDatasetFormErrors;
-              serverErrors[fieldName] = err.message;
-            }
-          });
-          setErrors(serverErrors);
-        }
-
         if (onError) {
           onError(error);
         }

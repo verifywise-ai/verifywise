@@ -1,21 +1,15 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Table,
   TableBody,
   TableCell,
   TableContainer,
-  TableHead,
-  TablePagination,
   TableRow,
   useTheme,
   Stack,
   Typography,
-  TableFooter,
   Tooltip,
-  Box,
 } from "@mui/material";
-import TablePaginationActions from "../../components/TablePagination";
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
@@ -24,27 +18,19 @@ import PluginSlot from "../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
 import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { ChevronsUpDown, ChevronUp, ChevronDown, Cpu, Layers, BarChart3, Link2 } from "lucide-react";
-
-const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
+import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
-import { ModelInventoryTableProps } from "../../../domain/interfaces/i.modelInventory";
+import {
+  ModelInventoryTableProps,
+  IModelInventory,
+} from "../../../domain/interfaces/i.modelInventory";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
-import {
-  getPaginationRowCount,
-  setPaginationRowCount,
-} from "../../../application/utils/paginationStorage";
 import {
   tableRowHoverStyle,
   tableRowDeletingStyle,
   loadingContainerStyle,
-  tableFooterRowStyle,
-  showingTextCellStyle,
-  paginationMenuProps,
-  paginationSelectStyle,
-  paginationStyle,
 } from "./style";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -54,21 +40,15 @@ import Chip from "../../components/Chip";
 import { VWLink } from "../../components/Link";
 import ModelRisksDialog from "../../components/ModelRisksDialog";
 import { palette } from "../../themes/palette";
+import { useStandardTable } from "../../../application/hooks/useStandardTable";
+import type { StandardColumn } from "../../../domain/types/standardTable";
+import StandardTableHead from "../../components/Table/StandardTableHead";
+import StandardTablePagination from "../../components/Table/StandardTablePagination";
 
 dayjs.extend(utc);
 
-// LocalStorage keys
-const MODEL_INVENTORY_SORTING_KEY = "verifywise_model_inventory_sorting";
-
-// Types for sorting
-type SortDirection = "asc" | "desc" | null;
-type SortConfig = {
-  key: string;
-  direction: SortDirection;
-};
-
 // Constants for table
-const TABLE_COLUMNS = [
+const TABLE_COLUMNS: StandardColumn[] = [
   { id: "provider", label: "PROVIDER", sortable: true },
   { id: "model", label: "MODEL", sortable: true },
   { id: "version", label: "VERSION", sortable: true },
@@ -79,8 +59,6 @@ const TABLE_COLUMNS = [
   { id: "status_date", label: "STATUS DATE", sortable: true },
   { id: "actions", label: "", sortable: false },
 ];
-
-const DEFAULT_ROWS_PER_PAGE = 10;
 
 const TooltipCell: React.FC<{ value: string | null | undefined }> = ({
   value,
@@ -109,30 +87,6 @@ const SecurityAssessmentBadge: React.FC<{ assessment: boolean }> = ({
   return <Chip label={assessment ? "Yes" : "No"} />;
 };
 
-// const CapabilitiesChips: React.FC<{ capabilities: string[] }> = ({
-//   capabilities,
-// }) => {
-//   return (
-//     <Stack direction="row" flexWrap="wrap" sx={capabilitiesChipContainerStyle}>
-//       {capabilities.slice(0, 3).map((capability, index) => (
-//         <Chip
-//           key={index}
-//           label={capability}
-//           size="small"
-//           sx={capabilityChipStyle}
-//         />
-//       ))}
-//       {capabilities.length > 3 && (
-//         <Chip
-//           label={`+${capabilities.length - 3}`}
-//           size="small"
-//           sx={capabilityChipExtraStyle}
-//         />
-//       )}
-//     </Stack>
-//   );
-// };
-
 const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   data,
   isLoading,
@@ -149,29 +103,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
 }) => {
   const theme = useTheme();
   const { userRoleName } = useAuth();
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount("modelInventory", DEFAULT_ROWS_PER_PAGE)
-  );
   const [users, setUsers] = useState<User[]>([]);
-
-  // Initialize sorting state from localStorage or default to no sorting
-  const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
-    const saved = localStorage.getItem(MODEL_INVENTORY_SORTING_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return { key: "", direction: null };
-      }
-    }
-    return { key: "", direction: null };
-  });
-
-  // Save sorting state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem(MODEL_INVENTORY_SORTING_KEY, JSON.stringify(sortConfig));
-  }, [sortConfig]);
 
   // Model risks dialog state
   const [showModelRisks, setShowModelRisks] = useState(false);
@@ -228,20 +160,6 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     return modelRisks.filter(risk => risk.model_id === modelId).length;
   }, [modelRisks]);
 
-  // Sorting handler
-  const handleSort = useCallback((columnId: string) => {
-    setSortConfig((prevConfig) => {
-      if (prevConfig.key === columnId) {
-        if (prevConfig.direction === "asc") {
-          return { key: columnId, direction: "desc" };
-        } else if (prevConfig.direction === "desc") {
-          return { key: "", direction: null };
-        }
-      }
-      return { key: columnId, direction: "asc" };
-    });
-  }, []);
-
   // Status order for sorting
   const getStatusOrder = useCallback((status: ModelInventoryStatus) => {
     switch (status) {
@@ -258,19 +176,13 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     }
   }, []);
 
-  // Sort the data based on current sort configuration
-  const sortedData = useMemo(() => {
-    if (!data || !sortConfig.key || !sortConfig.direction) {
-      return data || [];
-    }
-
-    const sortableData = [...data];
-
-    return sortableData.sort((a, b) => {
+  // Sort comparator — returns raw comparison (hook handles direction)
+  const sortComparator = useCallback(
+    (a: IModelInventory, b: IModelInventory, key: string): number => {
       let aValue: string | number;
       let bValue: string | number;
 
-      switch (sortConfig.key) {
+      switch (key) {
         case "provider":
           aValue = (a.provider || "").toLowerCase();
           bValue = (b.provider || "").toLowerCase();
@@ -308,15 +220,32 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       }
 
       if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue);
-        return sortConfig.direction === "asc" ? comparison : -comparison;
+        return aValue.localeCompare(bValue);
       }
-
-      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      if (aValue < bValue) return -1;
+      if (aValue > bValue) return 1;
       return 0;
-    });
-  }, [data, sortConfig, userMap, getModelRiskCount, getStatusOrder]);
+    },
+    [userMap, getModelRiskCount, getStatusOrder]
+  );
+
+  const {
+    sortConfig,
+    handleSort,
+    sortedRows,
+    validPage,
+    rowsPerPage,
+    handleChangePage,
+    handleChangeRowsPerPage,
+    getRange,
+    totalCount,
+  } = useStandardTable<IModelInventory>({
+    rows: data || [],
+    storageKey: "modelInventory",
+    defaultSortColumn: "",
+    defaultSortDirection: null,
+    sortComparator,
+  });
 
   const openModelRisksDialog = useCallback(
     (modelId: number, modelName: string) => {
@@ -331,99 +260,14 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     setSelectedModel(null);
   }, []);
 
-  const handleChangePage = useCallback((_: unknown, newPage: number) => {
-    setPage(newPage);
-  }, []);
-
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newRowsPerPage = parseInt(event.target.value, 10);
-      setRowsPerPage(newRowsPerPage);
-      setPaginationRowCount("modelInventory", newRowsPerPage);
-      setPage(0);
-    },
-    []
-  );
-
-  const getRange = useMemo(() => {
-    const start = page * rowsPerPage + 1;
-    const end = Math.min(page * rowsPerPage + rowsPerPage, data?.length ?? 0);
-    return `${start} - ${end}`;
-  }, [page, rowsPerPage, data?.length]);
-
-  const tableHeader = useMemo(
-    () => (
-      <TableHead
-        sx={{
-          backgroundColor:
-            singleTheme.tableStyles.primary.header.backgroundColors,
-        }}
-      >
-        <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-          {visibleTableColumns.map((column) => (
-            <TableCell
-              component={"td"}
-              className="model-inventory-table-header-cel"
-              key={column.id}
-              sx={{
-                ...singleTheme.tableStyles.primary.header.cell,
-                ...(column.sortable && {
-                  cursor: "pointer",
-                  userSelect: "none",
-                  "&:hover": {
-                    backgroundColor: "rgba(0, 0, 0, 0.04)",
-                  },
-                }),
-              }}
-              onClick={() => column.sortable && handleSort(column.id)}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                {column.label}
-                {column.sortable && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      color:
-                        sortConfig.key === column.id
-                          ? theme.palette.text.primary
-                          : theme.palette.text.disabled,
-                    }}
-                  >
-                    {sortConfig.key === column.id ? (
-                      sortConfig.direction === "asc" ? (
-                        <ChevronUp size={16} />
-                      ) : (
-                        <ChevronDown size={16} />
-                      )
-                    ) : (
-                      <ChevronsUpDown size={16} />
-                    )}
-                  </Box>
-                )}
-              </Box>
-            </TableCell>
-          ))}
-        </TableRow>
-      </TableHead>
-    ),
-    [sortConfig, handleSort, theme, visibleTableColumns]
-  );
-
   const tableBody = useMemo(
     () => (
       <TableBody>
-        {sortedData?.length > 0 ? (
-          sortedData
+        {sortedRows?.length > 0 ? (
+          sortedRows
             .slice(
-              hidePagination ? 0 : page * rowsPerPage,
-              hidePagination ? Math.min(sortedData.length, 100) : page * rowsPerPage + rowsPerPage
+              hidePagination ? 0 : validPage * rowsPerPage,
+              hidePagination ? Math.min(sortedRows.length, 100) : validPage * rowsPerPage + rowsPerPage
             )
             .map((modelInventory) => (
               <TableRow
@@ -644,9 +488,9 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       </TableBody>
     ),
     [
-      sortedData,
+      sortedRows,
       sortConfig,
-      page,
+      validPage,
       rowsPerPage,
       isDeletingAllowed,
       onEdit,
@@ -701,43 +545,23 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     <>
       <TableContainer sx={{ overflowX: "auto" }}>
         <Table sx={singleTheme.tableStyles.primary.frame}>
-          {tableHeader}
+          <StandardTableHead
+            columns={visibleTableColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
           {tableBody}
           {paginated && !hidePagination && (
-            <TableFooter>
-              <TableRow sx={tableFooterRowStyle(theme)}>
-                <TableCell sx={showingTextCellStyle(theme)}>
-                  Showing {getRange} of {data?.length} model(s)
-                </TableCell>
-                <TablePagination
-                  count={data?.length ?? 0}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  rowsPerPage={rowsPerPage}
-                  rowsPerPageOptions={[5, 10, 15, 25]}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={(props) => (
-                    <TablePaginationActions {...props} />
-                  )}
-                  labelRowsPerPage="Rows per page"
-                  labelDisplayedRows={({ page, count }) =>
-                    `Page ${page + 1} of ${Math.max(
-                      0,
-                      Math.ceil(count / rowsPerPage)
-                    )}`
-                  }
-                  slotProps={{
-                    select: {
-                      MenuProps: paginationMenuProps(theme),
-                      inputProps: { id: "pagination-dropdown" },
-                      IconComponent: SelectorVertical,
-                      sx: paginationSelectStyle(theme),
-                    },
-                  }}
-                  sx={paginationStyle(theme)}
-                />
-              </TableRow>
-            </TableFooter>
+            <StandardTablePagination
+              totalCount={totalCount}
+              page={validPage}
+              rowsPerPage={rowsPerPage}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              getRange={getRange}
+              entityLabel="model"
+              colSpan={visibleTableColumns.length}
+            />
           )}
         </Table>
       </TableContainer>

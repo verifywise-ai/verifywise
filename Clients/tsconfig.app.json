@@ -33,6 +33,7 @@
   },
   "include": [
     "src",
+    "env.vars.ts",
     "../shared/user-guide-content"
   ],
   "exclude": [

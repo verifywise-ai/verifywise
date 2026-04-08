@@ -5,7 +5,7 @@ const PASSWORD_REGEX = /[!@#$%^&*(),.?":{}|<>]/;
 // Validation constants
 export const VALIDATION_RULES = {
   NAME: { min: 2, max: 50 },
-  PASSWORD: { min: 8, max: 16 },
+  PASSWORD: { min: 8, max: 32 },
   EMAIL: { min: 0, max: 128 },
   ORGANIZATION_NAME: { min: 2, max: 50 },
 } as const;

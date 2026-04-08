@@ -24,7 +24,7 @@ const getUserFilesMetaDataQuery = async (
   const replacements: Record<string, number> = { organizationId };
 
   // Show all files regardless of approval status - UI handles display
-  if (role === "Admin") {
+  if (role === "Admin" || role === "SuperAdmin") {
     query = `
       SELECT f.id, f.filename, f.project_id, f.uploaded_time, f.source, f.review_status,
         p.project_title, u.name AS uploader_name, u.surname AS uploader_surname

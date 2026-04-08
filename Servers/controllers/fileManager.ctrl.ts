@@ -832,7 +832,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
   const { userId, orgId } = auth;
 
   // Defense-in-depth: Verify user has delete permission (in addition to route middleware)
-  if (!hasPermission(req, "delete:file", ["Admin", "Reviewer", "Editor"])) {
+  if (!hasPermission(req, "delete:file", ["Admin", "SuperAdmin", "Reviewer", "Editor"])) {
     await logFailure({
       eventType: "Error",
       description: `Unauthorized role attempted to delete file ${fileId}`,
@@ -1118,7 +1118,7 @@ export const updateMetadata = async (
   const { userId, orgId } = auth;
 
   // Defense-in-depth: Verify user has edit permission
-  if (!hasPermission(req, "update:file-metadata", ["Admin", "Reviewer", "Editor"])) {
+  if (!hasPermission(req, "update:file-metadata", ["Admin", "SuperAdmin", "Reviewer", "Editor"])) {
     return res
       .status(403)
       .json(STATUS_CODE[403]("Insufficient permissions to update file metadata"));

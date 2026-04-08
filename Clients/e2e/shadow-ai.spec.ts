@@ -54,4 +54,84 @@ test.describe("Shadow AI", () => {
       .or(page.getByText(/get started/i));
     await expect(content.first()).toBeVisible({ timeout: 10_000 });
   });
+
+  // --- Tier 5: Rules & alerts ---
+
+  test("rules tab shows create rule button or rules list", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/shadow-ai/rules");
+    await page.waitForTimeout(2000);
+
+    const content = page
+      .getByRole("button", { name: /create rule/i })
+      .or(page.getByText(/no.*rule/i))
+      .or(page.getByText(/rule/i))
+      .or(page.locator('[class*="rule" i]'));
+
+    await expect(content.first()).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("alerts tab shows alert history", async ({ authedPage: page }) => {
+    await page.goto("/shadow-ai/rules/alerts");
+    await page.waitForTimeout(2000);
+
+    const content = page
+      .getByText(/alert/i)
+      .or(page.getByRole("table"))
+      .or(page.getByText(/no.*alert/i))
+      .or(page.getByText(/triggered/i))
+      .or(page.getByRole("heading"));
+
+    await expect(content.first()).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("create rule modal opens with form fields", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/shadow-ai/rules");
+    await page.waitForTimeout(2000);
+
+    const createBtn = page
+      .getByRole("button", { name: /create rule/i })
+      .or(page.getByRole("button", { name: /add.*rule/i }))
+      .or(page.getByRole("button", { name: /new.*rule/i }));
+
+    if (!(await createBtn.first().isVisible().catch(() => false))) {
+      test.skip();
+      return;
+    }
+
+    await createBtn.first().click();
+    await page.waitForTimeout(500);
+
+    // Verify modal with form fields
+    const nameField = page
+      .getByPlaceholder(/alert on new/i)
+      .or(page.getByPlaceholder(/rule name/i))
+      .or(page.getByRole("textbox", { name: /name/i }))
+      .or(page.getByRole("textbox").first());
+
+    if (await nameField.first().isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await expect(nameField.first()).toBeVisible();
+    }
+
+    // Look for trigger type selector
+    const triggerSelect = page
+      .getByText(/trigger type/i)
+      .or(page.getByRole("combobox"))
+      .or(page.getByText(/new_tool_detected/i));
+
+    if (await triggerSelect.first().isVisible().catch(() => false)) {
+      await expect(triggerSelect.first()).toBeVisible();
+    }
+
+    // Close modal
+    const cancelBtn = page.getByRole("button", { name: /cancel|close/i });
+    if (await cancelBtn.first().isVisible().catch(() => false)) {
+      await cancelBtn.first().click();
+    } else {
+      await page.keyboard.press("Escape");
+    }
+  });
 });

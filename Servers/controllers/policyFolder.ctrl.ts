@@ -19,7 +19,7 @@ import {
 } from "../utils/policyFolder.utils";
 import { sequelize } from "../database/db";
 
-const ALLOWED_ROLES = ["Admin", "Editor"];
+const ALLOWED_ROLES = ["Admin", "SuperAdmin", "Editor"];
 
 const hasManagePermission = (userRole: string | undefined): boolean => {
   return userRole ? ALLOWED_ROLES.includes(userRole) : false;

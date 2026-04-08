@@ -23,9 +23,11 @@ import {
   IServiceContext,
   ICreateScanInput,
   ICreateFindingInput,
+  IUpdateScanProgressInput,
   IFilePath,
   IParsedGitHubUrl,
   ScanStatus,
+  ScanMode,
   IScanResponse,
   IFindingsResponse,
   IScansResponse,
@@ -57,6 +59,8 @@ import {
   getGovernanceSummaryQuery,
   getAIDetectionStatsQuery,
   IAIDetectionStats,
+  getLatestCompletedFullScanQuery,
+  getBaselineFindingsQuery,
 } from "../utils/aiDetection.utils";
 import {
   AI_DETECTION_PATTERNS,
@@ -93,6 +97,7 @@ import {
   CACHE_KEYS,
 } from "../utils/cache.utils";
 import { calculateAndStoreRiskScore } from "./aiDetection/riskScoring";
+import { reportScanToGitHub } from "./aiDetection/githubStatusReporter";
 import { scanFileForVulnerabilityIndicators, buildAnalysisContext, VulnerabilityCandidate } from "./aiDetection/vulnerabilityPreFilter";
 import { analyzeVulnerabilities } from "./aiDetection/vulnerabilityAnalyzer";
 import { getRiskScoringConfigQuery } from "../utils/aiDetectionRiskScoring.utils";
@@ -1006,7 +1011,18 @@ function getThreatNameFromType(threatType: string): string {
 export async function startScan(
   repositoryUrl: string,
   ctx: IServiceContext,
-  repoLinkOptions?: { repositoryId?: number; triggeredByType?: string }
+  repoLinkOptions?: { repositoryId?: number; triggeredByType?: string },
+  incrementalOptions?: {
+    scan_mode?: ScanMode;
+    base_commit_sha?: string;
+    head_commit_sha?: string;
+  },
+  webhookFields?: {
+    trigger_type?: string;
+    pr_number?: number;
+    commit_sha?: string;
+    branch?: string;
+  }
 ): Promise<IScan> {
   // Parse and validate URL
   const { owner, repo } = parseGitHubUrl(repositoryUrl);
@@ -1035,6 +1051,28 @@ export async function startScan(
     }
   }
 
+  // Determine scan mode and resolve baseline for incremental scans
+  let scanMode: ScanMode = incrementalOptions?.scan_mode || "full";
+  let baselineScanId: number | null = null;
+
+  if (scanMode === "incremental") {
+    // Validate commit SHAs
+    if (!incrementalOptions?.base_commit_sha || !incrementalOptions?.head_commit_sha) {
+      throw new ValidationException(
+        "Both base_commit_sha and head_commit_sha are required for incremental scans"
+      );
+    }
+
+    // Find baseline full scan
+    const baselineScan = await getLatestCompletedFullScanQuery(owner, repo, ctx.organizationId);
+    if (!baselineScan) {
+      logger.warn(`No baseline full scan found for ${owner}/${repo}, falling back to full scan`);
+      scanMode = "full";
+    } else {
+      baselineScanId = baselineScan.id!;
+    }
+  }
+
   // Create scan record
   const transaction = await sequelize.transaction();
   try {
@@ -1046,6 +1084,14 @@ export async function startScan(
       status: "pending",
       repository_id: repositoryId,
       triggered_by_type: triggeredByType,
+      scan_mode: scanMode,
+      base_commit_sha: scanMode === "incremental" ? incrementalOptions?.base_commit_sha : null,
+      head_commit_sha: scanMode === "incremental" ? incrementalOptions?.head_commit_sha : null,
+      baseline_scan_id: baselineScanId,
+      trigger_type: webhookFields?.trigger_type || "manual",
+      pr_number: webhookFields?.pr_number || null,
+      commit_sha: webhookFields?.commit_sha || null,
+      branch: webhookFields?.branch || null,
     };
 
     let scan: IScan;
@@ -1175,6 +1221,343 @@ async function crossReferenceFindings(scanId: number, organizationId: number): P
   }
 }
 
+// ============================================================================
+// Incremental Scan Helpers
+// ============================================================================
+
+/**
+ * Git diff status codes
+ */
+interface ChangedFile {
+  path: string;
+  status: "A" | "M" | "D" | "R";
+}
+
+/**
+ * Get the list of changed files between two commits using git diff.
+ *
+ * @param repoPath - Path to the cloned repository
+ * @param baseSha - Base commit SHA
+ * @param headSha - Head commit SHA
+ * @returns Array of changed files with their status
+ */
+async function getChangedFiles(
+  repoPath: string,
+  baseSha: string,
+  headSha: string
+): Promise<ChangedFile[]> {
+  // Fetch the base commit (shallow clone only has HEAD)
+  await new Promise<void>((resolve, reject) => {
+    const fetchProc = spawn("git", ["fetch", "--depth=1", "origin", baseSha], { cwd: repoPath });
+    let stderr = "";
+    fetchProc.stderr.on("data", (data) => { stderr += data.toString(); });
+    fetchProc.on("close", (code) => {
+      if (code !== 0) reject(new Error(`git fetch failed: ${stderr}`));
+      else resolve();
+    });
+    fetchProc.on("error", reject);
+  });
+
+  // Get the diff between base and head
+  return new Promise<ChangedFile[]>((resolve, reject) => {
+    const diffProc = spawn("git", ["diff", "--name-status", baseSha, headSha], { cwd: repoPath });
+    let stdout = "";
+    let stderr = "";
+    diffProc.stdout.on("data", (data) => { stdout += data.toString(); });
+    diffProc.stderr.on("data", (data) => { stderr += data.toString(); });
+    diffProc.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`git diff failed: ${stderr}`));
+        return;
+      }
+
+      const files: ChangedFile[] = [];
+      for (const line of stdout.trim().split("\n")) {
+        if (!line) continue;
+        const parts = line.split("\t");
+        const statusChar = parts[0].charAt(0).toUpperCase();
+        // For renames (R100), the new path is parts[2]
+        const filePath = statusChar === "R" ? parts[2] : parts[1];
+        if (filePath) {
+          const status = (statusChar === "R" ? "R" : statusChar) as ChangedFile["status"];
+          files.push({ path: filePath, status });
+        }
+      }
+      resolve(files);
+    });
+    diffProc.on("error", reject);
+  });
+}
+
+/**
+ * Execute an incremental scan: scan only changed files and merge with baseline.
+ */
+async function executeIncrementalScan(
+  scanId: number,
+  repoPath: string,
+  changedFiles: ChangedFile[],
+  baselineScanId: number,
+  ctx: IServiceContext,
+  signal: AbortSignal | undefined,
+  progressState: ScanProgressEntry
+): Promise<void> {
+  // Categorize files
+  const addedOrModified = changedFiles.filter((f) => f.status !== "D");
+  const deletedPaths = new Set(changedFiles.filter((f) => f.status === "D").map((f) => f.path));
+  const changedPathsSet = new Set(changedFiles.map((f) => f.path));
+
+  // Update changed_files_count in DB
+  await updateScanProgressQuery(
+    scanId,
+    { status: "scanning" } as IUpdateScanProgressInput,
+    ctx.organizationId
+  );
+  await sequelize.query(
+    `UPDATE ai_detection_scans SET changed_files_count = :count WHERE id = :scanId AND organization_id = :orgId`,
+    { replacements: { count: changedFiles.length, scanId, orgId: ctx.organizationId } }
+  );
+
+  // Filter scannable files from changed set
+  const filesToScan = addedOrModified
+    .filter((f) => shouldScanFile(f.path))
+    .map((f) => ({
+      path: f.path,
+      fullPath: path.join(repoPath, f.path),
+    }));
+
+  progressState.totalFiles = filesToScan.length;
+  progressState.status = "scanning";
+
+  // Scan changed files for AI patterns (same logic as full scan Phase 1)
+  const findingsMap = new Map<
+    string,
+    {
+      pattern: DetectionPattern;
+      filePaths: IFilePath[];
+      category: string;
+      findingType: "library" | "api_call" | "secret" | "model_ref" | "rag_component" | "agent";
+      extractedModelName?: string;
+      overrideConfidence?: "high" | "medium" | "low";
+    }
+  >();
+
+  for (let i = 0; i < filesToScan.length; i++) {
+    if (signal?.aborted) {
+      throw new BusinessLogicException("Scan was cancelled");
+    }
+
+    const file = filesToScan[i];
+    progressState.currentFile = file.path;
+    progressState.filesScanned = i + 1;
+    progressState.progress = Math.round(5 + (i / filesToScan.length) * 70);
+
+    try {
+      const content = await readFileContent(file.fullPath);
+      const fileType = shouldScanFile(file.path);
+      if (!fileType) continue;
+      const matches = scanFileForPatterns(content, fileType);
+
+      for (const match of matches) {
+        const modelNameSuffix = match.extractedModelName ? `::${match.extractedModelName}` : "";
+        const key = `${match.pattern.name}::${match.pattern.provider}::${match.findingType}${modelNameSuffix}`;
+        const existing = findingsMap.get(key);
+
+        if (existing) {
+          existing.filePaths.push({
+            path: file.path,
+            line_number: match.lineNumber,
+            matched_text: match.matchedText,
+          });
+        } else {
+          findingsMap.set(key, {
+            pattern: match.pattern,
+            category: AI_DETECTION_PATTERNS.find((c) =>
+              c.patterns.includes(match.pattern)
+            )?.name || "Unknown",
+            findingType: match.findingType,
+            extractedModelName: match.extractedModelName,
+            overrideConfidence: match.confidence,
+            filePaths: [{
+              path: file.path,
+              line_number: match.lineNumber,
+              matched_text: match.matchedText,
+            }],
+          });
+        }
+      }
+
+      progressState.findingsCount = findingsMap.size;
+    } catch {
+      // Skip unreadable files
+    }
+  }
+
+  // Build new findings from changed files (same dedup logic as full scan)
+  const newFindingInputs: ICreateFindingInput[] = [];
+  for (const [, finding] of findingsMap) {
+    const findingType = finding.findingType || "library";
+    let displayName = finding.pattern.name;
+    if (finding.extractedModelName && findingType === "model_ref") {
+      displayName = `${finding.pattern.provider}: ${finding.extractedModelName}`;
+    }
+
+    let confidence = finding.overrideConfidence || finding.pattern.confidence;
+    if (findingType === "api_call" || findingType === "secret" || findingType === "agent") {
+      confidence = "high";
+    }
+
+    newFindingInputs.push({
+      scan_id: scanId,
+      finding_type: findingType,
+      category: finding.category,
+      name: displayName,
+      provider: finding.pattern.provider,
+      confidence,
+      risk_level: calculateRiskLevel(finding.pattern.provider, findingType),
+      description: finding.pattern.description,
+      documentation_url: finding.pattern.documentationUrl,
+      file_count: finding.filePaths.length,
+      file_paths: finding.filePaths,
+      finding_status: "active",
+    });
+  }
+
+  // Fetch baseline findings and classify them
+  const baselineFindings = await getBaselineFindingsQuery(baselineScanId, ctx.organizationId);
+  const carriedForwardInputs: ICreateFindingInput[] = [];
+
+  for (const bf of baselineFindings) {
+    const filePaths: IFilePath[] = Array.isArray(bf.file_paths) ? bf.file_paths : [];
+    const allInDeleted = filePaths.length > 0 && filePaths.every((fp) => deletedPaths.has(fp.path));
+    const allOutsideChanged = filePaths.length > 0 && filePaths.every((fp) => !changedPathsSet.has(fp.path));
+
+    if (allInDeleted) {
+      // All files deleted → fixed
+      carriedForwardInputs.push({
+        scan_id: scanId,
+        finding_type: bf.finding_type,
+        category: bf.category,
+        name: bf.name,
+        provider: bf.provider,
+        confidence: bf.confidence,
+        risk_level: bf.risk_level,
+        description: bf.description,
+        documentation_url: bf.documentation_url,
+        file_count: bf.file_count,
+        file_paths: filePaths,
+        license_id: bf.license_id,
+        license_name: bf.license_name,
+        license_risk: bf.license_risk,
+        license_source: bf.license_source,
+        finding_status: "fixed",
+      });
+    } else if (allOutsideChanged) {
+      // All files unchanged → carried forward
+      carriedForwardInputs.push({
+        scan_id: scanId,
+        finding_type: bf.finding_type,
+        category: bf.category,
+        name: bf.name,
+        provider: bf.provider,
+        confidence: bf.confidence,
+        risk_level: bf.risk_level,
+        description: bf.description,
+        documentation_url: bf.documentation_url,
+        file_count: bf.file_count,
+        file_paths: filePaths,
+        license_id: bf.license_id,
+        license_name: bf.license_name,
+        license_risk: bf.license_risk,
+        license_source: bf.license_source,
+        finding_status: "carried_forward",
+      });
+    } else {
+      // Mixed: carry forward only unchanged file paths
+      const unchangedPaths = filePaths.filter((fp) => !changedPathsSet.has(fp.path));
+      if (unchangedPaths.length > 0) {
+        carriedForwardInputs.push({
+          scan_id: scanId,
+          finding_type: bf.finding_type,
+          category: bf.category,
+          name: bf.name,
+          provider: bf.provider,
+          confidence: bf.confidence,
+          risk_level: bf.risk_level,
+          description: bf.description,
+          documentation_url: bf.documentation_url,
+          file_count: unchangedPaths.length,
+          file_paths: unchangedPaths,
+          license_id: bf.license_id,
+          license_name: bf.license_name,
+          license_risk: bf.license_risk,
+          license_source: bf.license_source,
+          finding_status: "carried_forward",
+        });
+      }
+      // Changed paths will be re-detected (or not) by the new scan → ON CONFLICT merges
+    }
+  }
+
+  progressState.progress = 85;
+
+  // Store all findings in a single transaction
+  const transaction = await sequelize.transaction();
+  try {
+    const allFindings = [...newFindingInputs, ...carriedForwardInputs];
+
+    if (allFindings.length > 0) {
+      await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);
+    }
+
+    // Complete scan
+    const totalFindings = allFindings.length;
+    const completedAt = new Date();
+    const durationMs = progressState.startedAt
+      ? completedAt.getTime() - progressState.startedAt.getTime()
+      : undefined;
+
+    await updateScanProgressQuery(
+      scanId,
+      {
+        status: "completed",
+        files_scanned: filesToScan.length,
+        findings_count: totalFindings,
+        completed_at: completedAt,
+        duration_ms: durationMs,
+      },
+      ctx.organizationId,
+      transaction
+    );
+
+    await transaction.commit();
+
+    progressState.status = "completed";
+    progressState.progress = 100;
+
+    // Post-completion tasks (same as full scan)
+    updateLinkedRepositoryLastScan(scanId, "completed", ctx.organizationId).catch((err) => {
+      logger.error(`Failed to update repository last scan for scan ${scanId}:`, err);
+    });
+
+    invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {});
+
+    const scan = await getScanByIdQuery(scanId, ctx.organizationId);
+    if (scan) {
+      calculateAndStoreRiskScore(scanId, `${scan.repository_owner}/${scan.repository_name}`, ctx).catch((err) => {
+        logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
+      });
+
+      // Report to GitHub for webhook-triggered scans (fire-and-forget)
+      reportScanToGitHub(scan, ctx.organizationId).catch((err) => {
+        logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
+      });
+    }
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
 /**
  * Execute the actual scan process asynchronously using git clone
  */
@@ -1214,6 +1597,56 @@ async function executeScan(
     // Update last used timestamp if token was used
     if (githubToken) {
       await updateGitHubTokenLastUsed(ctx.organizationId);
+    }
+
+    // Check if this is an incremental scan
+    const scanRecord = await getScanByIdQuery(scanId, ctx.organizationId);
+    if (
+      scanRecord?.scan_mode === "incremental" &&
+      scanRecord.base_commit_sha &&
+      scanRecord.head_commit_sha &&
+      scanRecord.baseline_scan_id
+    ) {
+      try {
+        const changedFiles = await getChangedFiles(
+          clonedRepoPath,
+          scanRecord.base_commit_sha,
+          scanRecord.head_commit_sha
+        );
+
+        if (changedFiles.length <= 500) {
+          // Run incremental scan and return early
+          await executeIncrementalScan(
+            scanId,
+            clonedRepoPath,
+            changedFiles,
+            scanRecord.baseline_scan_id,
+            ctx,
+            signal,
+            progressState
+          );
+          return;
+        }
+
+        // Too many changed files — fall back to full scan
+        logger.warn(
+          `Incremental scan for ${owner}/${repo}: ${changedFiles.length} changed files exceeds limit, falling back to full scan`
+        );
+        await sequelize.query(
+          `UPDATE ai_detection_scans SET scan_mode = 'full', changed_files_count = :count WHERE id = :scanId AND organization_id = :orgId`,
+          { replacements: { count: changedFiles.length, scanId, orgId: ctx.organizationId } }
+        );
+      } catch (diffError) {
+        // git diff failed — fall back to full scan
+        logger.warn(
+          `Incremental scan git diff failed for ${owner}/${repo}, falling back to full scan:`,
+          diffError
+        );
+        await sequelize.query(
+          `UPDATE ai_detection_scans SET scan_mode = 'full' WHERE id = :scanId AND organization_id = :orgId`,
+          { replacements: { scanId, orgId: ctx.organizationId } }
+        );
+      }
     }
 
     // Get all files from cloned repository
@@ -1646,6 +2079,14 @@ async function executeScan(
       calculateAndStoreRiskScore(scanId, `${owner}/${repo}`, ctx).catch((err) => {
         logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
       });
+
+      // Report to GitHub for webhook-triggered scans (fire-and-forget)
+      const completedScan = await getScanByIdQuery(scanId, ctx.organizationId);
+      if (completedScan) {
+        reportScanToGitHub(completedScan, ctx.organizationId).catch((err) => {
+          logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
+        });
+      }
     } catch (error) {
       await transaction.rollback();
       throw error;
@@ -1776,6 +2217,11 @@ export async function getScan(
       risk_score_calculated_at: scan.risk_score_calculated_at
         ? (scan.risk_score_calculated_at as Date).toISOString()
         : null,
+      scan_mode: scan.scan_mode,
+      base_commit_sha: scan.base_commit_sha ?? null,
+      head_commit_sha: scan.head_commit_sha ?? null,
+      baseline_scan_id: scan.baseline_scan_id ?? null,
+      changed_files_count: scan.changed_files_count ?? null,
       created_at: scan.created_at!.toISOString(),
     },
     summary,
@@ -1837,6 +2283,8 @@ export async function getScanFindings(
       license_name: f.license_name,
       license_risk: f.license_risk,
       license_source: f.license_source,
+      // Incremental scan fields
+      finding_status: f.finding_status,
     })),
     pagination: {
       total,
@@ -1879,6 +2327,9 @@ export async function getScans(
       triggered_by: s.triggered_by_user,
       risk_score: s.risk_score != null ? parseFloat(String(s.risk_score)) : null,
       risk_score_grade: s.risk_score_grade ?? null,
+      scan_mode: s.scan_mode,
+      baseline_scan_id: s.baseline_scan_id ?? null,
+      changed_files_count: s.changed_files_count ?? null,
       created_at: s.created_at!.toISOString(),
     })),
     pagination: {

@@ -72,7 +72,7 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
           });
 
           return (
-            <ResponsiveContainer width={300} height={250}>
+            <ResponsiveContainer width={300} height={250} minWidth={0}>
               <LineChart data={lineData} margin={{ left: 0, right: 20, top: 20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                 <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={axisLine} />
@@ -98,7 +98,7 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
         if (!hasValidData) return null;
         const simpleLineData = data.map(item => ({ label: item.label, value: item.value }));
         return (
-          <ResponsiveContainer width={320} height={250}>
+          <ResponsiveContainer width={320} height={250} minWidth={0}>
             <LineChart data={simpleLineData} margin={{ left: 0, right: 20, top: 20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
               <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={axisLine} />
@@ -120,7 +120,7 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
       case 'bar': {
         const barChartData = data.map(item => ({ label: item.label, value: item.value }));
         return (
-          <ResponsiveContainer width={300} height={size}>
+          <ResponsiveContainer width={300} height={size} minWidth={0}>
             <BarChart data={barChartData} margin={{ left: 0, right: 20, top: 20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
               <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={axisLine} />

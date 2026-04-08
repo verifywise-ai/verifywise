@@ -27,10 +27,10 @@ import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import {
-  ICreateTaskFormErrors,
   ICreateTaskFormValues,
   ICreateTaskProps,
 } from "../../../types/interfaces/i.task";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import dayjs, { Dayjs } from "dayjs";
 import { datePickerStyle } from "../../Forms/ProjectForm/style";
 import useUsers from "../../../../application/hooks/useUsers";
@@ -68,14 +68,42 @@ const CreateTask: FC<ICreateTaskProps> = ({
   const theme = useTheme();
   const { users } = useUsers();
   const [values, setValues] = useState<ICreateTaskFormValues>(initialState);
-  const [errors, setErrors] = useState<ICreateTaskFormErrors>({});
+  const validators = useMemo(
+    () => ({
+      title: (v: unknown) => {
+        const r = checkStringValidation("Task title", v as string, 1, 64);
+        return r.accepted ? "" : r.message;
+      },
+      description: (v: unknown) => {
+        const r = checkStringValidation("Description", v as string, 0, 256);
+        return r.accepted ? "" : r.message;
+      },
+      priority: (v: unknown) => (!v ? "Priority is required." : ""),
+      status: (v: unknown) => (!v ? "Status is required." : ""),
+      due_date: (v: unknown) => (!v ? "Due date is required." : ""),
+      assignees: (v: unknown) => {
+        const assignees = v as ICreateTaskFormValues["assignees"];
+        if (!assignees || assignees.length === 0) {
+          return "At least one assignee is required.";
+        }
+        const ids = assignees.map((a) => String(a.id));
+        if (new Set(ids).size !== ids.length) {
+          return "Assignees cannot contain duplicates.";
+        }
+        return "";
+      },
+    }),
+    []
+  );
+  const { errors, validateAll, validateField, clearFieldError, resetErrors } =
+    useFormValidation<ICreateTaskFormValues>(validators);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
 
   useEffect(() => {
     if (!isOpen) {
       setValues(initialState);
-      setErrors({});
+      resetErrors();
       setIsSubmitting(false);
     } else if (isOpen && mode === "edit" && initialData) {
       setValues({
@@ -152,25 +180,25 @@ const CreateTask: FC<ICreateTaskProps> = ({
       (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setValues((prev) => ({ ...prev, [prop]: value }));
-        setErrors((prev) => ({ ...prev, [prop]: "" }));
+        clearFieldError(prop);
       },
-    []
+    [clearFieldError]
   );
 
   const handleOnSelectChange = useCallback(
     (prop: keyof ICreateTaskFormValues) => (event: any) => {
       const value = event.target.value;
       setValues((prev) => ({ ...prev, [prop]: value }));
-      setErrors((prev) => ({ ...prev, [prop]: "" }));
+      clearFieldError(prop);
     },
-    []
+    [clearFieldError]
   );
 
   const handlePrioritySelect = useCallback(async (newValue: string) => {
     setValues((prev) => ({ ...prev, priority: newValue as TaskPriority }));
-    setErrors((prev) => ({ ...prev, priority: "" }));
+    clearFieldError("priority");
     return true;
-  }, []);
+  }, [clearFieldError]);
 
   const handleAssigneesChange = useCallback(
     (_event: React.SyntheticEvent, newValue: any[]) => {
@@ -184,13 +212,13 @@ const CreateTask: FC<ICreateTaskProps> = ({
         .filter(Boolean);
 
       setValues((prev) => ({ ...prev, assignees: uniqueAssignees }));
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next.assignees;
-        return next;
-      });
+      if (uniqueAssignees.length === 0) {
+        validateField("assignees", uniqueAssignees, { ...values, assignees: uniqueAssignees });
+      } else {
+        clearFieldError("assignees");
+      }
     },
-    []
+    [clearFieldError, validateField, values]
   );
 
   const handleDateChange = useCallback((newDate: Dayjs | null) => {
@@ -199,9 +227,9 @@ const CreateTask: FC<ICreateTaskProps> = ({
         ...prev,
         due_date: newDate ? newDate.toISOString().split("T")[0] : "",
       }));
-      setErrors((prev) => ({ ...prev, due_date: "" }));
+      clearFieldError("due_date");
     }
-  }, []);
+  }, [clearFieldError]);
 
   const handleEntityLinksChange = useCallback((newLinks: EntityLink[]) => {
     setValues((prev) => ({
@@ -209,49 +237,6 @@ const CreateTask: FC<ICreateTaskProps> = ({
       entity_links: newLinks,
     }));
   }, []);
-
-  const validateForm = (): boolean => {
-    const newErrors: ICreateTaskFormErrors = {};
-
-    const title = checkStringValidation("Task title", values.title, 1, 64);
-    if (!title.accepted) {
-      newErrors.title = title.message;
-    }
-
-    const description = checkStringValidation(
-      "Description",
-      values.description,
-      0,
-      256
-    );
-    if (!description.accepted) {
-      newErrors.description = description.message;
-    }
-
-    if (!values.priority) {
-      newErrors.priority = "Priority is required.";
-    }
-
-    if (!values.status) {
-      newErrors.status = "Status is required.";
-    }
-
-    if (!values.due_date) {
-      newErrors.due_date = "Due date is required.";
-    }
-
-    // Validate assignees for duplicates using stable duplicate check
-    if (values.assignees && values.assignees.length > 0) {
-      const assigneeIds = values.assignees.map((a) => String(a.id));
-      const uniqueAssigneeIds = [...new Set(assigneeIds)];
-      if (uniqueAssigneeIds.length !== assigneeIds.length) {
-        newErrors.assignees = "Assignees cannot contain duplicates.";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleClose = () => {
     setIsOpen(false);
@@ -261,7 +246,7 @@ const CreateTask: FC<ICreateTaskProps> = ({
   const handleSubmit = async (event?: React.FormEvent) => {
     if (event) event.preventDefault();
 
-    if (validateForm()) {
+    if (validateAll(values)) {
       setIsSubmitting(true);
       try {
         if (onSuccess) {
@@ -485,7 +470,7 @@ const CreateTask: FC<ICreateTaskProps> = ({
               ...prevValues,
               categories: newValue,
             }));
-            setErrors((prev) => ({ ...prev, categories: "" }));
+            clearFieldError("categories");
           }}
           placeholder="Enter categories"
           error={errors.categories}

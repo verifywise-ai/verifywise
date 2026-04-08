@@ -193,7 +193,9 @@ async function getUserById(req: Request, res: Response) {
 
   try {
     const user = (await getUserByIdQuery(id)) as UserModel;
-    if (user.organization_id !== req.organizationId) {
+    // Super-admin can access their own record (no org) or any user when viewing an org
+    const isSelfLookup = id === req.userId;
+    if (!req.isSuperAdmin && !isSelfLookup && user.organization_id !== req.organizationId) {
       logStructured(
         "error",
         `access denied to user ID ${id}`,
@@ -537,16 +539,34 @@ async function loginUser(req: Request, res: Response): Promise<any> {
       if (passwordIsMatched) {
         user.updateLastLogin();
 
+        const isSuperAdmin = user.role_id === 5;
+
         // Generate JWT tokens (access + refresh)
         const { accessToken } = generateUserTokens(
           {
             id: user.id!,
             email: email,
-            roleName: (userData as any).role_name,
-            organizationId: (userData as any).organization_id,
+            roleName: (userData as any).role_name || (isSuperAdmin ? 'SuperAdmin' : ''),
+            organizationId: isSuperAdmin ? null : (userData as any).organization_id,
           },
           res
         );
+
+        if (isSuperAdmin) {
+          logStructured(
+            "successful",
+            `super-admin login successful for ${email}`,
+            "loginUser",
+            "user.ctrl.ts"
+          );
+
+          return res.status(202).json(
+            STATUS_CODE[202]({
+              token: accessToken,
+              isSuperAdmin: true,
+            })
+          );
+        }
 
         // Get organization onboarding status for setup modal
         const orgId = (userData as any).organization_id;
@@ -1038,6 +1058,14 @@ async function deleteUserById(req: Request, res: Response) {
   try {
     const user = await getUserByIdQuery(id);
 
+    // Prevent deletion of super-admin user
+    if (user && user.role_id === 5) {
+      await transaction.rollback();
+      return res
+        .status(403)
+        .json(STATUS_CODE[403]("Super-admin user cannot be deleted"));
+    }
+
     if (user.organization_id !== req.organizationId) {
       logStructured(
         "error",
@@ -1390,6 +1418,12 @@ async function updateUserRole(req: Request, res: Response) {
   );
 
   try {
+    // Prevent role escalation to SuperAdmin
+    if (newRoleId === 5) {
+      await transaction.rollback();
+      return res.status(403).json({ message: "Cannot assign SuperAdmin role" });
+    }
+
     const targetUser = await getUserByIdQuery(parseInt(id));
     if (!targetUser) {
       logStructured(
@@ -1406,6 +1440,12 @@ async function updateUserRole(req: Request, res: Response) {
       );
       await transaction.rollback();
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // Prevent changing super-admin's role
+    if (targetUser.role_id === 5) {
+      await transaction.rollback();
+      return res.status(403).json({ message: "Cannot modify SuperAdmin role" });
     }
 
     const currentUser = await getUserByIdQuery(currentUserId);

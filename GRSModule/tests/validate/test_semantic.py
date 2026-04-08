@@ -4,6 +4,7 @@ from validate import reason_codes as R
 def test_reason_codes_exist():
     assert R.TRIG_SEMANTIC_INVALID == "TRIG_SEMANTIC_INVALID"
     assert R.TRIG_SEMANTIC_PARSE_ERROR == "TRIG_SEMANTIC_PARSE_ERROR"
+    assert R.TRIG_SEMANTIC_UNREALISTIC == "TRIG_SEMANTIC_UNREALISTIC"
 
 
 import json
@@ -23,6 +24,7 @@ from llm.base import ChatResult
 
 VALID_LLM_RESPONSE = json.dumps({
     "valid_scenario": True,
+    "realistic_scenario": True,
     "governance_triggers": {
         "authority_oversight": True,
         "escalation": False,
@@ -41,6 +43,7 @@ VALID_LLM_RESPONSE = json.dumps({
 
 INVALID_LLM_RESPONSE = json.dumps({
     "valid_scenario": False,
+    "realistic_scenario": False,
     "governance_triggers": {
         "authority_oversight": False,
         "escalation": False,
@@ -115,6 +118,7 @@ def test_sanity_check_overrides_llm_valid_scenario():
     # LLM claims valid_scenario=True but all triggers are False — sanity recomputes to False
     bad_response = json.dumps({
         "valid_scenario": True,
+        "realistic_scenario": True,
         "governance_triggers": {k: False for k in [
             "authority_oversight", "escalation", "traceability_constraints",
             "transparency_uncertainty", "prohibited_practices", "synthetic_disclosure"
@@ -134,6 +138,7 @@ def test_system_prompt_contains_all_dimensions():
         "transparency_uncertainty", "prohibited_practices", "synthetic_disclosure"
     ]:
         assert dim in SYSTEM_PROMPT
+    assert "realistic_scenario" in SYSTEM_PROMPT
 
 
 def test_system_prompt_contains_all_signals():

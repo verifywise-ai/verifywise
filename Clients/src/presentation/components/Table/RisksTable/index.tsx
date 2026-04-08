@@ -3,46 +3,31 @@ import {
   TableBody,
   TableCell,
   TableContainer,
-  TableHead,
-  TablePagination,
   TableRow,
   useTheme,
-  Typography,
   Box,
   Tooltip,
-  TableFooter,
   Stack,
 } from "@mui/material";
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo } from "react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { EmptyState } from "../../EmptyState";
 import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
-import TablePaginationActions from "../../TablePagination";
 import Chip from "../../Chip";
-import { ChevronsUpDown, ChevronUp, ChevronDown, ShieldAlert, TrendingDown, Grid3X3, ListChecks } from "lucide-react";
+import { ShieldAlert, TrendingDown, Grid3X3, ListChecks } from "lucide-react";
 import { VendorRisk } from "../../../../domain/types/VendorRisk";
 import { User } from "../../../../domain/types/User";
 import { IRiskTableProps } from "../../../types/interfaces/i.table";
 import { VWLink } from "../../Link";
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
-import { text } from "../../../themes/palette";
+import { useStandardTable } from "../../../../application/hooks/useStandardTable";
+import StandardTableHead from "../StandardTableHead";
+import StandardTablePagination from "../StandardTablePagination";
+import type { StandardColumn } from "../../../../domain/types/standardTable";
 
-const VENDOR_RISKS_ROWS_PER_PAGE_KEY = "verifywise_vendor_risks_rows_per_page";
-const VENDOR_RISKS_SORTING_KEY = "verifywise_vendor_risks_sorting";
-
-type SortDirection = "asc" | "desc" | null;
-type SortConfig = {
-  key: string;
-  direction: SortDirection;
-};
-
-const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
-  <ChevronsUpDown size={16} {...props} />
-);
-
-const titleOfTableColumns = [
+const titleOfTableColumns: StandardColumn[] = [
   { id: "risk_description", label: "risk description", sortable: true },
   { id: "vendor_name", label: "vendor", sortable: true },
   { id: "project_titles", label: "use case", sortable: true },
@@ -52,82 +37,63 @@ const titleOfTableColumns = [
   { id: "actions", label: " ", sortable: false },
 ];
 
-// Sortable Table Header Component
-const SortableTableHead: React.FC<{
-  columns: typeof titleOfTableColumns;
-  sortConfig: SortConfig;
-  onSort: (columnId: string) => void;
-}> = ({ columns, sortConfig, onSort }) => {
-  const theme = useTheme();
+type EnrichedRisk = VendorRisk & { project_titles: string; vendor_name?: string };
 
-  return (
-    <TableHead
-      sx={{
-        backgroundColor:
-          singleTheme.tableStyles.primary.header.backgroundColors,
-      }}
-    >
-      <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-        {columns.map((column) => (
-          <TableCell
-            key={column.id}
-            sx={{
-              ...singleTheme.tableStyles.primary.header.cell,
-              ...(column.sortable
-                ? {
-                    cursor: "pointer",
-                    userSelect: "none",
-                    "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.04)",
-                    },
-                  }
-                : {}),
-            }}
-            onClick={() => column.sortable && onSort(column.id)}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: theme.spacing(2),
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 500,
-                  color:
-                    sortConfig.key === column.id ? "primary.main" : "inherit",
-                }}
-              >
-                {column.label}
-              </Typography>
-              {column.sortable && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    color:
-                      sortConfig.key === column.id ? "primary.main" : `${text.disabled}`,
-                  }}
-                >
-                  {sortConfig.key === column.id &&
-                    sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                  {sortConfig.key === column.id &&
-                    sortConfig.direction === "desc" && (
-                      <ChevronDown size={16} />
-                    )}
-                  {sortConfig.key !== column.id && <ChevronsUpDown size={16} />}
-                </Box>
-              )}
-            </Box>
-          </TableCell>
-        ))}
-      </TableRow>
-    </TableHead>
-  );
+const getSeverityValue = (severity: string): number => {
+  const s = severity.toLowerCase();
+  if (s.includes("catastrophic")) return 6;
+  if (s.includes("critical")) return 5;
+  if (s.includes("major")) return 4;
+  if (s.includes("moderate")) return 3;
+  if (s.includes("minor")) return 2;
+  if (s.includes("negligible")) return 1;
+  return 0;
 };
+
+const getLikelihoodValue = (likelihood: string): number => {
+  const l = likelihood.toLowerCase();
+  if (l.includes("almost certain")) return 5;
+  if (l.includes("likely")) return 4;
+  if (l.includes("possible")) return 3;
+  if (l.includes("unlikely")) return 2;
+  if (l.includes("rare")) return 1;
+  return 0;
+};
+
+const getRiskLevelValue = (riskLevel: string): number => {
+  const r = riskLevel.toLowerCase();
+  if (r.includes("high") || r.includes("critical")) return 3;
+  if (r.includes("medium") || r.includes("moderate")) return 2;
+  if (r.includes("low") || r.includes("minor")) return 1;
+  return 0;
+};
+
+function riskSortComparator(a: EnrichedRisk, b: EnrichedRisk, key: string): number {
+  switch (key) {
+    case "risk_description":
+      return (a.risk_description?.toLowerCase() || "").localeCompare(
+        b.risk_description?.toLowerCase() || ""
+      );
+    case "vendor_name":
+      return (a.vendor_name?.toLowerCase() || "").localeCompare(
+        b.vendor_name?.toLowerCase() || ""
+      );
+    case "project_titles":
+      return (a.project_titles?.toLowerCase() || "").localeCompare(
+        b.project_titles?.toLowerCase() || ""
+      );
+    case "action_owner":
+      return (a.action_owner || 0) - (b.action_owner || 0);
+    case "risk_severity":
+      return getSeverityValue(a.risk_severity) - getSeverityValue(b.risk_severity);
+    case "likelihood":
+      return getLikelihoodValue(a.likelihood) - getLikelihoodValue(b.likelihood);
+    case "risk_level":
+      return getRiskLevelValue(a.risk_level) - getRiskLevelValue(b.risk_level);
+    default:
+      return 0;
+  }
+}
 
 const RiskTable: React.FC<IRiskTableProps> = ({
   users,
@@ -140,43 +106,6 @@ const RiskTable: React.FC<IRiskTableProps> = ({
   visibleColumns,
 }) => {
   const theme = useTheme();
-  const [page, setPage] = useState(0);
-
-  // Initialize rowsPerPage from localStorage or default to 5
-  const [rowsPerPage, setRowsPerPage] = useState(() => {
-    const saved = localStorage.getItem(VENDOR_RISKS_ROWS_PER_PAGE_KEY);
-    return saved ? parseInt(saved, 10) : 5;
-  });
-
-  // Initialize sorting state from localStorage or default to no sorting
-  const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
-    const saved = localStorage.getItem(VENDOR_RISKS_SORTING_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return { key: "", direction: null };
-      }
-    }
-    return { key: "", direction: null };
-  });
-
-  // Save rowsPerPage to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem(
-      VENDOR_RISKS_ROWS_PER_PAGE_KEY,
-      rowsPerPage.toString()
-    );
-  }, [rowsPerPage]);
-
-  // Save sorting state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem(VENDOR_RISKS_SORTING_KEY, JSON.stringify(sortConfig));
-  }, [sortConfig]);
-
-  const [dropdownAnchor, setDropdownAnchor] = useState<HTMLElement | null>(
-    null
-  );
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
   const isVisible = useCallback(
@@ -201,6 +130,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
       textDecoration: "line-through",
     }),
   });
+
   const formattedUsers = users?.map((user: User) => ({
     _id: user.id,
     name: `${user.name} ${user.surname}`,
@@ -213,185 +143,60 @@ const RiskTable: React.FC<IRiskTableProps> = ({
     }));
   }, [vendors]);
 
-  // Sorting handlers
-  const handleSort = useCallback((columnId: string) => {
-    setSortConfig((prevConfig) => {
-      if (prevConfig.key === columnId) {
-        // Toggle direction if same column, or clear if already descending
-        if (prevConfig.direction === "asc") {
-          return { key: columnId, direction: "desc" };
-        } else if (prevConfig.direction === "desc") {
-          return { key: "", direction: null };
-        }
-      }
-      // New column or first sort
-      return { key: columnId, direction: "asc" };
-    });
-  }, []);
-
-  const handleChangePage = useCallback((_: unknown, newPage: number) => {
-    setPage(newPage);
-  }, []);
-
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
-    },
-    []
-  );
-
-  const handleDropdownClose = useCallback(() => {
-    setDropdownAnchor(null);
-  }, []);
-
   // Group risks by id so each risk appears only once, and collect all project titles
-  const groupedRisks: Record<
-    number,
-    VendorRisk & { project_titles: string[] }
-  > = {};
-  vendorRisks?.forEach((row: VendorRisk & { project_title?: string }) => {
-    const key = row.risk_id!;
-    if (!groupedRisks[key]) {
-      groupedRisks[key] = {
-        ...row,
-        project_titles: row.project_title ? [row.project_title] : [],
-      };
-    } else if (row.project_title) {
-      groupedRisks[key].project_titles.push(row.project_title);
-    }
-  });
-  const uniqueRisks = Object.values(groupedRisks).map((risk) => ({
-    ...risk,
-    project_titles: Array.from(new Set(risk.project_titles)).join(", "),
-  }));
-
-  // Sort the risks based on current sort configuration
-  const sortedRisks = useMemo(() => {
-    if (!uniqueRisks || !sortConfig.key || !sortConfig.direction) {
-      return uniqueRisks || [];
-    }
-
-    const sortableRisks = [...uniqueRisks];
-
-    // Helper functions for sorting
-    const getSeverityValue = (severity: string) => {
-      const severityLower = severity.toLowerCase();
-      if (severityLower.includes("catastrophic")) return 6;
-      if (severityLower.includes("critical")) return 5;
-      if (severityLower.includes("major")) return 4;
-      if (severityLower.includes("moderate")) return 3;
-      if (severityLower.includes("minor")) return 2;
-      if (severityLower.includes("negligible")) return 1;
-      return 0;
-    };
-
-    const getLikelihoodValue = (likelihood: string) => {
-      const likelihoodLower = likelihood.toLowerCase();
-      if (likelihoodLower.includes("almost certain")) return 5;
-      if (likelihoodLower.includes("likely")) return 4;
-      if (likelihoodLower.includes("possible")) return 3;
-      if (likelihoodLower.includes("unlikely")) return 2;
-      if (likelihoodLower.includes("rare")) return 1;
-      return 0;
-    };
-
-    const getRiskLevelValue = (riskLevel: string) => {
-      const riskLower = riskLevel.toLowerCase();
-      if (riskLower.includes("high") || riskLower.includes("critical"))
-        return 3;
-      if (riskLower.includes("medium") || riskLower.includes("moderate"))
-        return 2;
-      if (riskLower.includes("low") || riskLower.includes("minor")) return 1;
-      return 0;
-    };
-
-    return sortableRisks.sort(
-      (
-        a: VendorRisk & { project_titles: string; vendor_name?: string },
-        b: VendorRisk & { project_titles: string; vendor_name?: string }
-      ) => {
-        let aValue: string | number;
-        let bValue: string | number;
-
-        switch (sortConfig.key) {
-          case "risk_description":
-            aValue = a.risk_description.toLowerCase();
-            bValue = b.risk_description.toLowerCase();
-            break;
-
-          case "vendor_name":
-            aValue = a.vendor_name ? a.vendor_name.toLowerCase() : "";
-            bValue = b.vendor_name ? b.vendor_name.toLowerCase() : "";
-            break;
-
-          case "project_titles":
-            aValue = a.project_titles.toLowerCase();
-            bValue = b.project_titles.toLowerCase();
-            break;
-
-          case "action_owner":
-            aValue = a.action_owner;
-            bValue = b.action_owner;
-            break;
-
-          case "risk_severity":
-            // Severity order: Catastrophic > Critical > Major > Moderate > Minor > Negligible
-            aValue = getSeverityValue(a.risk_severity);
-            bValue = getSeverityValue(b.risk_severity);
-            break;
-
-          case "likelihood":
-            // Likelihood order: Almost certain > Likely > Possible > Unlikely > Rare
-            aValue = getLikelihoodValue(a.likelihood);
-            bValue = getLikelihoodValue(b.likelihood);
-            break;
-
-          case "risk_level":
-            // Risk level order: High > Medium > Low (assuming these are the values)
-            aValue = getRiskLevelValue(a.risk_level);
-            bValue = getRiskLevelValue(b.risk_level);
-            break;
-
-          default:
-            return 0;
-        }
-
-        // Handle string comparisons
-        if (typeof aValue === "string" && typeof bValue === "string") {
-          const comparison = aValue.localeCompare(bValue);
-          return sortConfig.direction === "asc" ? comparison : -comparison;
-        }
-
-        // Handle number comparisons
-        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
+  const uniqueRisks = useMemo(() => {
+    const groupedRisks: Record<
+      number,
+      VendorRisk & { project_titles: string[] }
+    > = {};
+    vendorRisks?.forEach((row: VendorRisk & { project_title?: string }) => {
+      const key = row.risk_id!;
+      if (!groupedRisks[key]) {
+        groupedRisks[key] = {
+          ...row,
+          project_titles: row.project_title ? [row.project_title] : [],
+        };
+      } else if (row.project_title) {
+        groupedRisks[key].project_titles.push(row.project_title);
       }
-    );
-  }, [uniqueRisks, sortConfig]);
+    });
+    return Object.values(groupedRisks).map((risk) => ({
+      ...risk,
+      project_titles: Array.from(new Set(risk.project_titles)).join(", "),
+    }));
+  }, [vendorRisks]);
 
-  const getRange = useMemo(() => {
-    const start = page * rowsPerPage + 1;
-    const end = Math.min(
-      page * rowsPerPage + rowsPerPage,
-      sortedRisks?.length ?? 0
-    );
-    return `${start} - ${end}`;
-  }, [page, rowsPerPage, sortedRisks?.length]);
+  const {
+    sortConfig,
+    handleSort,
+    sortedRows,
+    validPage,
+    rowsPerPage,
+    handleChangePage,
+    handleChangeRowsPerPage,
+    getRange,
+    totalCount,
+  } = useStandardTable<EnrichedRisk>({
+    rows: uniqueRisks,
+    storageKey: "vendor_risks",
+    defaultSortColumn: "",
+    defaultSortDirection: null,
+    defaultRowsPerPage: 5,
+    sortComparator: riskSortComparator,
+  });
 
   const tableBody = useMemo(
     () => (
       <TableBody>
-        {sortedRisks &&
-          sortedRisks
+        {sortedRows &&
+          sortedRows
             .slice(
-              hidePagination ? 0 : page * rowsPerPage,
+              hidePagination ? 0 : validPage * rowsPerPage,
               hidePagination
-                ? Math.min(sortedRisks.length, 100)
-                : page * rowsPerPage + rowsPerPage
+                ? Math.min(sortedRows.length, 100)
+                : validPage * rowsPerPage + rowsPerPage
             )
-            .map((row: VendorRisk & { project_titles: string }) => (
+            .map((row: EnrichedRisk) => (
               <TableRow
                 key={row.risk_id}
                 sx={{
@@ -619,12 +424,10 @@ const RiskTable: React.FC<IRiskTableProps> = ({
       </TableBody>
     ),
     [
-      sortedRisks,
-      page,
+      sortedRows,
+      validPage,
       rowsPerPage,
       cellStyle,
-      dropdownAnchor,
-      handleDropdownClose,
       formattedUsers,
       formattedVendors,
       getCellStyle,
@@ -666,99 +469,23 @@ const RiskTable: React.FC<IRiskTableProps> = ({
       ) : (
         <TableContainer>
           <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
-            <SortableTableHead
+            <StandardTableHead
               columns={visibleTableColumns}
               sortConfig={sortConfig}
               onSort={handleSort}
             />
             {tableBody}
             {!hidePagination && (
-              <TableFooter>
-                <TableRow
-                  sx={{
-                    "& .MuiTableCell-root.MuiTableCell-footer": {
-                      paddingX: theme.spacing(8),
-                      paddingY: theme.spacing(4),
-                    },
-                  }}
-                >
-                  <TableCell
-                    sx={{
-                      paddingX: theme.spacing(2),
-                      fontSize: 12,
-                      opacity: 0.7,
-                    }}
-                  >
-                    Showing {getRange} of {sortedRisks?.length} vendor risk(s)
-                  </TableCell>
-                  <TablePagination
-                    count={sortedRisks?.length}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    rowsPerPage={rowsPerPage}
-                    rowsPerPageOptions={[5, 10, 15, 25]}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={(props) => (
-                      <TablePaginationActions {...props} />
-                    )}
-                    labelRowsPerPage="Rows per page"
-                    labelDisplayedRows={({ page, count }) =>
-                      `Page ${page + 1} of ${Math.max(
-                        0,
-                        Math.ceil(count / rowsPerPage)
-                      )}`
-                    }
-                    slotProps={{
-                      select: {
-                        MenuProps: {
-                          keepMounted: true,
-                          PaperProps: {
-                            className: "pagination-dropdown",
-                            sx: {
-                              mt: 0,
-                              mb: theme.spacing(2),
-                            },
-                          },
-                          transformOrigin: {
-                            vertical: "bottom",
-                            horizontal: "left",
-                          },
-                          anchorOrigin: {
-                            vertical: "top",
-                            horizontal: "left",
-                          },
-                          sx: { mt: theme.spacing(-2) },
-                        },
-                        inputProps: { id: "pagination-dropdown" },
-                        IconComponent: SelectorVertical,
-                        sx: {
-                          ml: theme.spacing(4),
-                          mr: theme.spacing(12),
-                          minWidth: theme.spacing(20),
-                          textAlign: "left",
-                          "&.Mui-focused > div": {
-                            backgroundColor: theme.palette.background.main,
-                          },
-                        },
-                      },
-                    }}
-                    sx={{
-                      mt: theme.spacing(6),
-                      color: theme.palette.text.secondary,
-                      "& .MuiSelect-icon": {
-                        width: "24px",
-                        height: "fit-content",
-                      },
-                      "& .MuiSelect-select": {
-                        width: theme.spacing(10),
-                        borderRadius: theme.shape.borderRadius,
-                        border: `1px solid ${theme.palette.border.light}`,
-                        padding: theme.spacing(4),
-                      },
-                    }}
-                  />
-                </TableRow>
-              </TableFooter>
+              <StandardTablePagination
+                totalCount={totalCount}
+                page={validPage}
+                rowsPerPage={rowsPerPage}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                getRange={getRange}
+                entityLabel="vendor risk"
+                colSpan={visibleTableColumns.length}
+              />
             )}
           </Table>
         </TableContainer>

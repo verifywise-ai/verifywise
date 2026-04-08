@@ -1,5 +1,16 @@
 {
+  "scripts": {
+    "webreel:record": "webreel record",
+    "webreel:record:login": "webreel record login-flow",
+    "webreel:record:dashboard": "webreel record dashboard-overview",
+    "webreel:record:projects": "webreel record project-walkthrough",
+    "webreel:record:risks": "webreel record risk-management",
+    "webreel:record:frameworks": "webreel record frameworks",
+    "webreel:preview": "webreel preview",
+    "webreel:validate": "webreel validate"
+  },
   "devDependencies": {
-    "@types/node": "^25.2.3"
+    "@types/node": "^25.2.3",
+    "webreel": "^0.1.4"
   }
 }

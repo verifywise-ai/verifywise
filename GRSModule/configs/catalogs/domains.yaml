@@ -1,11 +1,30 @@
 version: domains_v0.1
 domains:
-  # AI governance lifecycle (maps to Art 9/10/12/13/15)
-  - domain_id: ai_governance
+  - domain_id: consumer_protection
     regulated: true
-    keywords: ["risk management", "logging", "audit", "technical documentation", "robustness", "cybersecurity"]
-
-  # content integrity (maps to synthetic content disclosure)
+    keywords: ["dark patterns", "manipulation", "vulnerable groups", "predatory marketing"]
+    default: true
+  - domain_id: privacy_biometrics
+    regulated: true
+    keywords: ["biometric categorization", "sensitive traits", "facial recognition", "privacy"]
+  - domain_id: workplace_governance
+    regulated: true
+    keywords: ["emotion recognition", "employee monitoring", "surveillance"]
+  - domain_id: public_safety
+    regulated: true
+    keywords: ["public surveillance", "real-time identification", "law enforcement"]
+  - domain_id: data_governance
+    regulated: true
+    keywords: ["representative data", "training data", "dataset quality", "data gap"]
+  - domain_id: system_deployment
+    regulated: true
+    keywords: ["high-risk AI", "repurposing", "conformity assessment"]
+  - domain_id: audit_compliance
+    regulated: true
+    keywords: ["log retention", "auditability", "infrastructure cost"]
   - domain_id: content_integrity
     regulated: true
-    keywords: ["deepfake", "synthetic content", "disclosure", "labeling", "impersonation"]
+    keywords: ["synthetic content", "watermark", "AI-generated", "deepfake"]
+  - domain_id: financial_governance
+    regulated: true
+    keywords: ["risk modeling", "data relevance", "automated credit"]

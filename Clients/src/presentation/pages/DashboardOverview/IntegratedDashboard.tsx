@@ -66,6 +66,8 @@ const DASHBOARD_VIEW_KEY = "dashboard_view_preference";
 
 const IntegratedDashboard: React.FC = () => {
   const navigateSearch = useNavigateSearch();
+  const { userId, isSuperAdmin, activeOrganizationId } = useAuth();
+  const isSuperAdminWithoutOrg = isSuperAdmin && !activeOrganizationId;
   const { dashboard, loading: dashboardLoading, fetchDashboard } = useDashboard();
 
   const [contentReady, setContentReady] = useState(false);
@@ -113,12 +115,10 @@ const IntegratedDashboard: React.FC = () => {
 
   // Mark content ready once loading completes
   useEffect(() => {
-    if (!loading) {
+    if (!loading || isSuperAdminWithoutOrg) {
       setContentReady(true);
     }
-  }, [loading]);
-
-  const { userId } = useAuth();
+  }, [loading, isSuperAdminWithoutOrg]);
 
   const [showOrgNameModal, setShowOrgNameModal] = useState(false);
   const [currentOrgName, setCurrentOrgName] = useState("");
@@ -293,7 +293,8 @@ const IntegratedDashboard: React.FC = () => {
   }
 
   // Don't render anything while loading (before content is ready)
-  if (loading) {
+  // Skip loading wait for super admin without org — API calls will fail, show zeroes immediately
+  if (loading && !isSuperAdminWithoutOrg) {
     return null;
   }
 

@@ -204,7 +204,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
   if (!data || data.length < 2) return null;
   const chartData = data.map((v, i) => ({ v, i }));
   return (
-    <ResponsiveContainer width={width} height={height} style={{ outline: "none" }}>
+    <ResponsiveContainer width={width} height={height} minWidth={0} style={{ outline: "none" }}>
       <LineChart data={chartData} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
         <Line
           type="monotone"

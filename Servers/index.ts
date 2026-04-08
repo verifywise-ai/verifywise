@@ -72,6 +72,7 @@ import datasetChangeHistoryRoutes from "./routes/datasetChangeHistory.route";
 import policyLinkedObjects from "./routes/policyLinkedObjects.route";
 import approvalWorkflowRoutes from "./routes/approvalWorkflow.route";
 import approvalRequestRoutes from "./routes/approvalRequest.route";
+import webhookRoutes from "./routes/webhook.route";
 import aiDetectionRoutes from "./routes/aiDetection.route";
 import aiDetectionRepositoryRoutes from "./routes/aiDetectionRepository.route";
 import githubIntegrationRoutes from "./routes/githubIntegration.route";
@@ -87,12 +88,15 @@ import intakeFormRoutes from "./routes/intakeForm.route";
 import versionRoutes from "./routes/version.route";
 import auditLedgerRoutes from "./routes/auditLedger.route";
 import featureSettingsRoutes from "./routes/featureSettings.route";
+import friaRoutes from "./routes/fria.route";
 import riskBenchmarkRoutes from "./routes/riskBenchmark.route";
 import quantitativeRiskRoutes from "./routes/quantitativeRisk.route";
 import aiGatewayRoutes from "./routes/aiGateway.route";
 import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
-import { setupNotificationSubscriber } from "./services/notificationSubscriber.service";
+import superAdminRoutes from "./routes/superAdmin.route";
+// superAdminReadOnly is now enforced inside authenticateJWT middleware
+import { setupNotificationSubscriber, closeNotificationSubscriber } from "./services/notificationSubscriber.service";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 
@@ -145,7 +149,7 @@ try {
         }
       },
       credentials: true,
-      allowedHeaders: ["Authorization", "Content-Type", "X-Requested-With"],
+      allowedHeaders: ["Authorization", "Content-Type", "X-Requested-With", "X-Organization-Id"],
     })
   );
   app.use(helmet()); // Use helmet for security headers
@@ -157,6 +161,10 @@ try {
     // For deepeval experiment creation and arena comparisons, we need to parse body to inject API keys
     // For other deepeval routes, let proxy handle raw body
     if (req.url.includes("/api/deepeval/") && !req.url.includes("/experiments") && !req.url.includes("/arena/compare")) {
+      return next();
+    }
+    // Webhook routes use express.raw() for HMAC signature verification
+    if (req.url.startsWith("/api/webhooks/")) {
       return next();
     }
     express.json({ limit: '10mb' })(req, res, next);
@@ -279,6 +287,7 @@ try {
   app.use("/api/dataset-change-history", datasetChangeHistoryRoutes);
   app.use("/api/approval-workflows", approvalWorkflowRoutes);
   app.use("/api/approval-requests", approvalRequestRoutes);
+  app.use("/api/webhooks", webhookRoutes);
   app.use("/api/ai-detection", aiDetectionRoutes);
   app.use("/api/ai-detection/repositories", aiDetectionRepositoryRoutes);
   app.use("/api/integrations/github", githubIntegrationRoutes);
@@ -294,9 +303,13 @@ try {
   app.use("/api/version", versionRoutes);
   app.use("/api/audit-ledger", auditLedgerRoutes);
   app.use("/api/feature-settings", featureSettingsRoutes);
+  app.use("/api/fria", friaRoutes);
   app.use("/api/risk-benchmarks", riskBenchmarkRoutes);
   app.use("/api/quantitative-risks", quantitativeRiskRoutes);
   app.use("/api/ai-gateway", aiGatewayRoutes());
+
+  // Super-admin routes (authenticated + super-admin only)
+  app.use("/api/super-admin", superAdminRoutes);
 
   // Internal routes — callbacks from Python services (no JWT, internal key auth)
   app.use("/api/internal", internalRoutes);
@@ -339,6 +352,21 @@ try {
       console.error("Data migration check failed:", error);
       // Server continues to start even if migration check fails
     }
+
+    // Dev-only auto-bootstrap — runs AFTER migration check completes
+    try {
+      const { devAutoBootstrap } = require("./utils/devAutoBootstrap");
+      await devAutoBootstrap();
+    } catch (error) {
+      console.error("❌ Dev auto-bootstrap failed:", error);
+      // When DEV_AUTO_BOOTSTRAP is explicitly on, fail fast so devs notice
+      if (
+        process.env.NODE_ENV !== "production" &&
+        process.env.DEV_AUTO_BOOTSTRAP === "true"
+      ) {
+        process.exit(1);
+      }
+    }
   })();
 
   const server = app.listen(port, () => {
@@ -351,6 +379,13 @@ try {
     // Stop accepting new connections; give in-flight requests 10 s to complete
     server.close(async () => {
       console.log("HTTP server closed");
+
+      try {
+        await closeNotificationSubscriber();
+        console.log("Notification subscriber closed");
+      } catch (err) {
+        console.error("Error closing notification subscriber:", err);
+      }
 
       try {
         await redisClient.quit();

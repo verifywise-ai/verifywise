@@ -130,6 +130,8 @@ function categorizePermissions(permissions: string[]): string[] {
  * Run agent discovery sync for a single tenant.
  * Called by the manual trigger endpoint and by the scheduled job.
  */
+const SKIP_DISCOVERY_CATEGORIES = new Set(["compliance", "communication"]);
+
 export async function runAgentDiscoverySyncForTenant(
   organizationId: number,
   triggeredBy: string = "manual"
@@ -151,21 +153,19 @@ export async function runAgentDiscoverySyncForTenant(
         continue;
       }
 
-      if (!plugin || plugin.category !== "agent_discovery") {
+      if (!plugin) continue;
+
+      // Skip plugins that are clearly not relevant (framework/compliance plugins)
+      if (SKIP_DISCOVERY_CATEGORIES.has(plugin.category)) {
         continue;
       }
 
-      // Create sync log
-      const syncLog = await createSyncLogQuery(
-        { source_system: pluginKey, triggered_by: triggeredBy },
-        organizationId
-      );
-
+      // Try to call /discover on the plugin — skip silently if route doesn't exist
+      let response;
       try {
-        // Build context and forward to plugin's discover route
         const context: PluginRouteContext = {
           organizationId,
-          userId: 0, // system-level call
+          userId: 0,
           method: "GET",
           path: "/discover",
           params: {},
@@ -174,9 +174,29 @@ export async function runAgentDiscoverySyncForTenant(
           sequelize,
           configuration: installation.configuration || {},
         };
+        response = await PluginService.forwardToPlugin(pluginKey, context);
+      } catch (routeError: any) {
+        // Plugin doesn't have a /discover route — skip silently
+        if (routeError.message?.includes("No route") || routeError.message?.includes("not found") || routeError.statusCode === 404) {
+          continue;
+        }
+        // Other errors — log and skip
+        logger.warn(`[AgentDiscoverySync] ${pluginKey}: /discover call failed: ${routeError.message}`);
+        continue;
+      }
 
-        const response = await PluginService.forwardToPlugin(pluginKey, context);
-        const rawPrimitives = response.data || [];
+      const rawPrimitives = response.data || [];
+      if (!Array.isArray(rawPrimitives) || rawPrimitives.length === 0) {
+        continue;
+      }
+
+      // Plugin returned agent primitives — create sync log and process
+      const syncLog = await createSyncLogQuery(
+        { source_system: pluginKey, triggered_by: triggeredBy },
+        organizationId
+      );
+
+      try {
 
         // Validate plugin output — skip records missing required fields
         const primitives = rawPrimitives.filter((p: any) => {

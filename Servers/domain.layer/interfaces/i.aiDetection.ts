@@ -23,6 +23,19 @@ export type ScanStatus =
   | "cancelled";
 
 /**
+ * Scan mode: full scans all files, incremental scans only changed files
+ */
+export type ScanMode = "full" | "incremental";
+
+/**
+ * Finding status for incremental scans
+ * - active: detected in this scan's changed files
+ * - fixed: was in baseline but all its files were deleted
+ * - carried_forward: unchanged from baseline (files not in diff)
+ */
+export type FindingStatus = "active" | "fixed" | "carried_forward";
+
+/**
  * Represents a scan record in the database
  */
 export interface IScan {
@@ -47,6 +60,17 @@ export interface IScan {
   risk_score_grade?: string | null;
   risk_score_details?: Record<string, unknown> | null;
   risk_score_calculated_at?: Date | null;
+  // Incremental scan fields
+  scan_mode?: ScanMode;
+  base_commit_sha?: string | null;
+  head_commit_sha?: string | null;
+  baseline_scan_id?: number | null;
+  changed_files_count?: number | null;
+  // Webhook CI/CD fields
+  trigger_type?: string;
+  pr_number?: number | null;
+  commit_sha?: string | null;
+  branch?: string | null;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -62,6 +86,16 @@ export interface ICreateScanInput {
   triggered_by: number;
   repository_id?: number | null;
   triggered_by_type?: string;
+  // Incremental scan fields
+  scan_mode?: ScanMode;
+  base_commit_sha?: string | null;
+  head_commit_sha?: string | null;
+  baseline_scan_id?: number | null;
+  // Webhook CI/CD fields
+  trigger_type?: string;
+  pr_number?: number | null;
+  commit_sha?: string | null;
+  branch?: string | null;
 }
 
 /**
@@ -168,6 +202,8 @@ export interface IFinding {
   mitigation?: string | null;
   data_flow_summary?: string | null;
   vulnerability_details?: Record<string, unknown> | null;
+  // Incremental scan fields
+  finding_status?: FindingStatus;
   created_at?: Date;
 }
 
@@ -195,6 +231,8 @@ export interface ICreateFindingInput {
   mitigation?: string | null;
   data_flow_summary?: string | null;
   vulnerability_details?: Record<string, unknown> | null;
+  // Incremental scan fields
+  finding_status?: FindingStatus;
 }
 
 // ============================================================================
@@ -206,6 +244,9 @@ export interface ICreateFindingInput {
  */
 export interface IStartScanRequest {
   repository_url: string;
+  scan_mode?: ScanMode;
+  base_commit_sha?: string;
+  head_commit_sha?: string;
 }
 
 /**
@@ -270,6 +311,11 @@ export interface IScanResponse {
     risk_score_grade?: string | null;
     risk_score_details?: Record<string, unknown> | null;
     risk_score_calculated_at?: string | null;
+    scan_mode?: ScanMode;
+    base_commit_sha?: string | null;
+    head_commit_sha?: string | null;
+    baseline_scan_id?: number | null;
+    changed_files_count?: number | null;
     created_at: string;
   };
   summary: IScanSummary;
@@ -302,6 +348,8 @@ export interface IFindingResponse {
   mitigation?: string | null;
   data_flow_summary?: string | null;
   vulnerability_details?: Record<string, unknown> | null;
+  // Incremental scan fields
+  finding_status?: FindingStatus;
 }
 
 /**
@@ -351,6 +399,9 @@ export interface IScanListItem {
   triggered_by: ITriggeredByUser;
   risk_score?: number | null;
   risk_score_grade?: string | null;
+  scan_mode?: ScanMode;
+  baseline_scan_id?: number | null;
+  changed_files_count?: number | null;
   created_at: string;
 }
 

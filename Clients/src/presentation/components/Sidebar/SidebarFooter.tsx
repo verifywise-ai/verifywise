@@ -40,8 +40,10 @@ import { brand, text, background } from "../../themes/palette";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { ROLES } from "../../../application/constants/roles";
 import useLogout from "../../../application/hooks/useLogout";
+import { getUserById } from "../../../application/repository/user.repository";
 import { User } from "../../../domain/types/User";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
+import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import ReadyToSubscribeBox from "../ReadyToSubscribeBox/ReadyToSubscribeBox";
 
 interface IManagementItem {
@@ -66,7 +68,7 @@ interface SidebarFooterProps {
   isAdmin?: boolean;
 }
 
-const getManagementItems = (): IManagementItem[] => [
+const MANAGEMENT_ITEMS: IManagementItem[] = [
   {
     name: "Event Tracker",
     icon: <Telescope size={16} strokeWidth={1.5} />,
@@ -76,6 +78,14 @@ const getManagementItems = (): IManagementItem[] => [
     name: "Settings",
     icon: <Settings size={16} strokeWidth={1.5} />,
     path: "/settings",
+  },
+];
+
+const SUPER_ADMIN_MANAGEMENT_ITEMS: IManagementItem[] = [
+  {
+    name: "Settings",
+    icon: <Settings size={16} strokeWidth={1.5} />,
+    path: "/super-admin/settings",
   },
 ];
 
@@ -111,7 +121,34 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const logout = useLogout();
+  const { activeModule } = useActiveModule();
+  const managementItems = activeModule === "super-admin" ? SUPER_ADMIN_MANAGEMENT_ITEMS : MANAGEMENT_ITEMS;
   const { userId, users, photoRefreshFlag } = useContext(VerifyWiseContext);
+  const [selfUser, setSelfUser] = useState<User | null>(null);
+
+  // Fetch current user directly when not in the org users list (e.g., super-admin)
+  useEffect(() => {
+    if (!userId) return;
+    const found = users?.find((u: User) => u.id === userId);
+    if (found) {
+      setSelfUser(null);
+      return;
+    }
+    getUserById({ userId })
+      .then((res) => {
+        const data = (res as any)?.data;
+        if (data) {
+          setSelfUser({
+            id: data.id,
+            name: data.name,
+            surname: data.surname,
+            email: data.email,
+            roleId: data.role_id,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [userId, users]);
 
   const [managementAnchorEl, setManagementAnchorEl] = useState<null | HTMLElement>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
@@ -128,9 +165,9 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
     localStorage.setItem("vw_dark_mode", String(darkMode));
   }, [darkMode]);
 
-  const user: User = users
-    ? users.find((u: User) => u.id === userId) || DEFAULT_USER
-    : DEFAULT_USER;
+  const user: User = selfUser
+    || (users ? users.find((u: User) => u.id === userId) : null)
+    || DEFAULT_USER;
 
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
@@ -185,7 +222,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
     };
   }, [slideoverOpen]);
 
-  const isManagementActive = getManagementItems().some(
+  const isManagementActive = managementItems.some(
     (item) => item.path && (location.pathname.startsWith(`${item.path}/`) || location.pathname === item.path)
   );
 
@@ -324,6 +361,83 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
       )}
 
       {/* Management Section */}
+      {activeModule === "super-admin" ? (
+        <List
+          component="nav"
+          disablePadding
+          sx={{
+            px: theme.spacing(8),
+            flexShrink: 0,
+          }}
+        >
+          <Tooltip
+            sx={{ fontSize: 13 }}
+            placement="right"
+            title={delayedCollapsed ? "Settings" : ""}
+            slotProps={{
+              popper: {
+                modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
+              },
+            }}
+            disableInteractive
+          >
+            <ListItemButton
+              disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+              onClick={() => navigate("/super-admin/settings")}
+              sx={{
+                height: "32px",
+                gap: theme.spacing(4),
+                borderRadius: theme.shape.borderRadius,
+                px: theme.spacing(4),
+                background: location.pathname.startsWith("/super-admin/settings")
+                  ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                  : "transparent",
+                border: location.pathname.startsWith("/super-admin/settings")
+                  ? "1px solid #D8D8D8"
+                  : "1px solid transparent",
+                "&:hover": {
+                  background: "#F9F9F9",
+                  border: "1px solid transparent",
+                },
+                "&:hover svg": {
+                  color: `${brand.primary} !important`,
+                  stroke: `${brand.primary} !important`,
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  width: "16px",
+                  mr: 0,
+                  "& svg": {
+                    color: location.pathname.startsWith("/super-admin/settings")
+                      ? `${brand.primary} !important`
+                      : `${theme.palette.text.tertiary} !important`,
+                    transition: "color 0.2s ease, stroke 0.2s ease",
+                  },
+                }}
+              >
+                <Settings size={16} strokeWidth={1.5} />
+              </ListItemIcon>
+              {!delayedCollapsed && (
+                <ListItemText
+                  sx={{
+                    "& .MuiListItemText-primary": {
+                      fontSize: "13px",
+                    },
+                  }}
+                >
+                  Settings
+                </ListItemText>
+              )}
+            </ListItemButton>
+          </Tooltip>
+        </List>
+      ) : (
       <List
         component="nav"
         aria-labelledby="nested-management-subheader"
@@ -451,7 +565,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             },
           }}
         >
-          {getManagementItems().map((item) => (
+          {managementItems.map((item) => (
             <MenuItem
               key={item.path || item.name}
               onClick={() => {
@@ -532,6 +646,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           ))}
         </Menu>
       </List>
+      )}
 
       {/* Ready To Subscribe Box - only shown when not collapsed and enabled */}
       {showReadyToSubscribe && !collapsed && (

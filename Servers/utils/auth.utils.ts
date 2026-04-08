@@ -5,7 +5,7 @@ export interface UserTokenData {
   id: number;
   email: string;
   roleName: string;
-  organizationId: number;
+  organizationId: number | null;
 }
 
 export interface AuthTokenResult {

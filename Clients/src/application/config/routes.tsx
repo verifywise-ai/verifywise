@@ -5,9 +5,11 @@ import Plugins from "../../presentation/pages/Plugins";
 import PluginManagement from "../../presentation/pages/Plugins/PluginManagement";
 import Setting from "../../presentation/pages/SettingsPage";
 import Organization from "../../presentation/pages/SettingsPage/Organization";
-import RegisterAdmin from "../../presentation/pages/Authentication/RegisterAdmin";
 import RegisterUser from "../../presentation/pages/Authentication/RegisterUser";
-import RegisterMultiTenant from "../../presentation/pages/Authentication/RegisterMultiTenant";
+import SuperAdminOrganizations from "../../presentation/pages/SuperAdmin/Organizations";
+import SuperAdminUsers from "../../presentation/pages/SuperAdmin/Users";
+import SuperAdminAllUsers from "../../presentation/pages/SuperAdmin/AllUsers";
+import SuperAdminSettings from "../../presentation/pages/SuperAdmin/Settings";
 import Login from "../../presentation/pages/Authentication/Login";
 import ForgotPassword from "../../presentation/pages/Authentication/ForgotPassword";
 import ResetPassword from "../../presentation/pages/Authentication/ResetPassword";
@@ -66,6 +68,12 @@ import AIGatewaySettingsPage from "../../presentation/pages/AIGateway/Settings";
 import AIGatewayVirtualKeysPage from "../../presentation/pages/AIGateway/VirtualKeys";
 import AIGatewayPromptsPage from "../../presentation/pages/AIGateway/Prompts";
 import AIGatewayPromptEditorPage from "../../presentation/pages/AIGateway/Prompts/PromptEditor";
+import MCPAgentKeysPage from "../../presentation/pages/AIGateway/MCPAgentKeys";
+import MCPServersPage from "../../presentation/pages/AIGateway/MCPServers";
+import MCPToolCatalogPage from "../../presentation/pages/AIGateway/MCPToolCatalog";
+import MCPAuditLogPage from "../../presentation/pages/AIGateway/MCPAuditLog";
+import MCPApprovalsPage from "../../presentation/pages/AIGateway/MCPApprovals";
+import MCPGuardrailsPage from "../../presentation/pages/AIGateway/MCPGuardrails";
 import MonitoringForm from "../../presentation/pages/PostMarketMonitoring/MonitoringForm";
 import ReportsArchive from "../../presentation/pages/PostMarketMonitoring/ReportsArchive";
 import IntakeFormsListPage from "../../presentation/pages/IntakeFormBuilder/IntakeFormsListPage";
@@ -172,6 +180,13 @@ export const createRoutes = (
     <Route path="/ai-gateway/virtual-keys" element={<AIGatewayVirtualKeysPage />} />
     <Route path="/ai-gateway/settings" element={<Navigate to="/ai-gateway/settings/api-keys" replace />} />
     <Route path="/ai-gateway/settings/:tab" element={<AIGatewaySettingsPage />} />
+    <Route path="/ai-gateway/mcp" element={<Navigate to="/ai-gateway/mcp/agent-keys" replace />} />
+    <Route path="/ai-gateway/mcp/agent-keys" element={<MCPAgentKeysPage />} />
+    <Route path="/ai-gateway/mcp/servers" element={<MCPServersPage />} />
+    <Route path="/ai-gateway/mcp/tools" element={<MCPToolCatalogPage />} />
+    <Route path="/ai-gateway/mcp/audit" element={<MCPAuditLogPage />} />
+    <Route path="/ai-gateway/mcp/approvals" element={<MCPApprovalsPage />} />
+    <Route path="/ai-gateway/mcp/guardrails" element={<MCPGuardrailsPage />} />
     <Route path="/monitoring/cycle/:cycleId" element={<MonitoringForm />} />
     <Route path="/monitoring/reports" element={<ReportsArchive />} />
     <Route path="/intake-forms" element={<IntakeFormsListPage />}>
@@ -179,12 +194,12 @@ export const createRoutes = (
       <Route path="submissions" element={<IntakeFormsListPage />} />
     </Route>
     <Route path="/intake-forms/:formId/edit" element={<IntakeFormBuilder />} />
+    <Route path="/super-admin" element={<SuperAdminOrganizations />} />
+    <Route path="/super-admin/users" element={<SuperAdminAllUsers />} />
+    <Route path="/super-admin/organizations/:id/users" element={<SuperAdminUsers />} />
+    <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
+    <Route path="/super-admin/settings/:tab" element={<SuperAdminSettings />} />
   </Route>,
-  <Route
-    key="admin-reg"
-    path="/admin-reg"
-    element={<ProtectedRoute Component={RegisterAdmin} />}
-  />,
   <Route
     key="user-reg"
     path="/user-reg"
@@ -193,7 +208,12 @@ export const createRoutes = (
   <Route
     key="register"
     path="/register"
-    element={<ProtectedRoute Component={RegisterMultiTenant} />}
+    element={<Navigate to="/login" replace />}
+  />,
+  <Route
+    key="admin-reg"
+    path="/admin-reg"
+    element={<Navigate to="/login" replace />}
   />,
   <Route
     key="login"

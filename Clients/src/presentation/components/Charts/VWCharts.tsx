@@ -145,7 +145,7 @@ export const VWBarChart: React.FC<VWBarChartProps> = ({
   const isVertical = layout === "vertical";
   return (
     <ChartOutlineWrapper>
-    <ResponsiveContainer width="100%" height={height} style={noOutlineStyle}>
+    <ResponsiveContainer width="100%" height={height} minWidth={0} style={noOutlineStyle}>
       <BarChart data={data} layout={layout} margin={margin} barCategoryGap={barCategoryGap}>
         <CartesianGrid
           strokeDasharray="3 3"
@@ -254,7 +254,7 @@ export const VWAreaChart: React.FC<VWAreaChartProps> = ({
   gradientOpacity = 0.12,
 }) => (
   <ChartOutlineWrapper>
-  <ResponsiveContainer width="100%" height={height} style={noOutlineStyle}>
+  <ResponsiveContainer width="100%" height={height} minWidth={0} style={noOutlineStyle}>
     <AreaChart data={data} margin={margin}>
       <defs>
         {series.map((s) => (
@@ -336,7 +336,7 @@ export const VWDonutChart: React.FC<VWDonutChartProps> = ({
   const computedOuter = outerRadius || Math.floor(size / 2) - 5;
   return (
     <Box sx={{ position: "relative", width: size, height: size, "& .recharts-tooltip-wrapper": { zIndex: "10 !important" }, "& *:focus": { outline: "none !important" }, "& svg *:focus": { outline: "none !important" } }}>
-      <ResponsiveContainer width="100%" height="100%" style={noOutlineStyle}>
+      <ResponsiveContainer width={size} height={size} minWidth={0} style={noOutlineStyle}>
         <PieChart>
           <Pie
             data={data}
@@ -421,7 +421,7 @@ export const VWLineChart: React.FC<VWLineChartProps> = ({
 }) => {
   return (
     <ChartOutlineWrapper>
-    <ResponsiveContainer width="100%" height={height} style={noOutlineStyle}>
+    <ResponsiveContainer width="100%" height={height} minWidth={0} style={noOutlineStyle}>
       <LineChart data={data} margin={margin}>
         <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
         <XAxis

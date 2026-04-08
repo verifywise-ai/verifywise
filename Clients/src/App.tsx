@@ -20,8 +20,7 @@ import Alert from "./presentation/components/Alert";
 import useUsers from "./application/hooks/useUsers";
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useLocation, useNavigate } from "react-router-dom";
-import { DeploymentManager, clearChunkReloadFlag } from "./application/utils/deploymentHelpers";
-import UpdateBanner from "./presentation/components/UpdateBanner";
+import { clearChunkReloadFlag } from "./application/utils/deploymentHelpers";
 import ChunkErrorBoundary from "./presentation/components/ChunkErrorBoundary";
 import { CommandPalette } from "./presentation/components/CommandPalette";
 import CommandPaletteErrorBoundary from "./presentation/components/CommandPalette/ErrorBoundary";
@@ -106,7 +105,6 @@ function App() {
   const navigate = useNavigate();
   const { token, userRoleName, organizationId, userId } = useAuth();
   const [alert, setAlert] = useState<AlertProps | null>(null);
-  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const { users, refreshUsers } = useUsers();
   const {userPreferences} = useUserPreferences();
   const commandPalette = useCommandPalette();
@@ -148,14 +146,8 @@ function App() {
     // chunk errors can trigger a reload again
     clearChunkReloadFlag();
 
-    // Poll backend for version updates
-    DeploymentManager.startPolling();
-    const unsubscribe = DeploymentManager.onUpdate(() => setShowUpdateBanner(true));
-
     return () => {
       setShowAlertCallback(() => {});
-      unsubscribe();
-      DeploymentManager.stopPolling();
     };
   }, []);
 
@@ -263,7 +255,6 @@ function App() {
               <PluginLoader />
               <UserGuideSidebarProvider>
                 <ConditionalThemeWrapper>
-                {showUpdateBanner && <UpdateBanner />}
                 {alert && (
                   <Alert
                     variant={alert.variant}

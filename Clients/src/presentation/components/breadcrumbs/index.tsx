@@ -100,9 +100,17 @@ function Breadcrumbs({
         return;
       }
 
+      // TODO: Hacky fix — /ai-detection/scans is auto-generated from URL segments
+      // of /ai-detection/scans/:scanId but has no route. The real fix is to restructure
+      // scan detail URLs to /ai-detection/history/:scanId so breadcrumbs work naturally.
+      const BREADCRUMB_PATH_REDIRECTS: Record<string, string> = {
+        "/ai-detection/scans": "/ai-detection/history",
+      };
+      const resolvedPath = BREADCRUMB_PATH_REDIRECTS[currentPath] || currentPath;
+
       breadcrumbs.push({
         label: pathToLabel(currentPath),
-        path: currentPath,
+        path: resolvedPath,
         icon: getRouteIcon(currentPath),
       });
     });

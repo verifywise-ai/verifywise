@@ -1,45 +1,105 @@
-version: render_vars_v0.1
-ai_governance:
-  model_names:
-    - credit_risk_model
-    - resume_ranker
-    - triage_model
-  change_types:
-    - new version rollout
-    - threshold change
-    - feature update
-  approval_roles:
-    - Compliance Officer
-    - Risk Manager
-    - Human Reviewer
-  log_artifacts:
-    - audit log entry
-    - change request ticket
-    - model card update
-  data_subjects:
-    - loan applicant
-    - job candidate
-    - patient
-    - citizen
-  criteria:
-    - human approval is required
-    - a compliance sign-off is required
-    - log the decision with an audit trail
-    - no automated final decisions
+version: render_vars_v0.2
+consumer_protection:
+  manipulation_technique:
+    - subliminal visual cues
+    - time-pressure dark patterns
+    - micro-targeted psychological triggers
+  marketing_goal:
+    - premium subscription upgrades
+    - instant credit acceptance
+    - recurring service enrollment
+  product_type:
+    - high-interest payday loan
+    - luxury crypto-asset package
+  target_demographic:
+    - first-time homeowners
+    - low-income retirees
+  social_economic_hardship:
+    - significant debt
+    - unemployment
+    - medical distress
+  high_risk_offer:
+    - a high-interest payday loan
+    - an unregulated crypto trading account
+    - a premium subscription with hidden recurring charges
+privacy_biometrics:
+  biometric_input:
+    - facial scan data
+    - voice recordings
+    - gait analysis videos
+  sensitive_trait:
+    - political affiliation
+    - religious beliefs
+    - sexual orientation
+    - racial origin
+  service_name:
+    - personalization engine
+    - audience segmentation platform
+    - content recommendation service
+  personalization_goal:
+    - show targeted advertisements
+    - restrict or unlock platform features
+    - adjust pricing tiers dynamically
+workplace_governance:
+  institution_type:
+    - corporate office
+    - public university
+    - elementary school
+  input_stream:
+    - Slack messages
+    - webcam feeds
+    - keystroke patterns
+  personnel_group:
+    - remote contractors
+    - junior employees
+    - administrative staff
+public_safety:
+  location_type:
+    - city square
+    - airport terminal
+    - shopping mall lobby
+  model_name:
+    - real-time facial recognition system
+    - live biometric identification pipeline
+    - automated watchlist-matching module
+data_governance:
+  application_type:
+    - recruitment screening tool
+    - medical triage assistant
+  dataset_source:
+    - non-EU historical data
+    - publicly scraped social media images
+system_deployment:
+  model_name:
+    - document summarization model
+    - customer service chatbot
+    - internal compliance assistant
+  original_use:
+    - internal document summarization
+    - customer service automation
+  new_high_risk_use:
+    - credit scoring for loan applications
+    - automated recruitment screening
+    - clinical decision support
+audit_compliance:
+  deletion_action:
+    - purge the logs
+    - disable the tracking
+  short_period:
+    - 30 days
+    - two weeks
+  cost_saving_amount:
+    - $50,000 per year
+    - 15% of our infrastructure budget
 content_integrity:
-  content_types:
-    - video
-    - audio
-    - image
-  vendor_types:
-    - video generator
-    - voice cloning tool
-    - image editor
-  data_subjects:
-    - a public figure
-    - a colleague
-    - a customer
-  disclosures:
-    - label as AI-generated
-    - add watermark
-    - include disclosure text
+  content_platform:
+    - Instagram marketing campaign
+    - brand influencer channel
+    - corporate news blog
+financial_governance:
+  high_risk_process:
+    - mortgage underwriting
+    - insurance premium calculation
+  unrelated_data_source:
+    - social media browsing history
+    - fitness tracker logs

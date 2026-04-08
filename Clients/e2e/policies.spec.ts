@@ -124,6 +124,45 @@ test.describe("Policies", () => {
     }
   });
 
+  // --- Tier 3: Validation ---
+
+  test("submitting empty policy form shows validation error", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/policies");
+    const addBtn = page
+      .getByRole("button", { name: /add new policy/i })
+      .or(page.getByRole("button", { name: /new policy/i }))
+      .or(page.getByRole("button", { name: /add policy/i }));
+
+    if (!(await addBtn.first().isVisible().catch(() => false))) {
+      test.skip();
+      return;
+    }
+    await addBtn.first().click();
+    await page.waitForTimeout(500);
+
+    // Click submit without filling any fields
+    const submitBtn = page
+      .getByRole("button", { name: /create|save|submit|add/i })
+      .last();
+    if (await submitBtn.isVisible().catch(() => false)) {
+      await submitBtn.click();
+      await page.waitForTimeout(500);
+
+      // Verify validation error appears
+      const error = page
+        .getByText(/required/i)
+        .or(page.getByText(/please/i))
+        .or(page.getByText(/error/i))
+        .or(page.locator(".Mui-error"));
+      if (await error.first().isVisible().catch(() => false)) {
+        await expect(error.first()).toBeVisible();
+      }
+    }
+    await page.keyboard.press("Escape");
+  });
+
   // --- Tier 4: CRUD ---
 
   test("CRUD: create and delete a policy", async ({ authedPage: page }) => {

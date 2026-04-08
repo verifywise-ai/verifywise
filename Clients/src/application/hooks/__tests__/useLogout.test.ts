@@ -29,6 +29,8 @@ function createWrapper() {
         expirationDate: Date.now() + 3600000,
         onboardingStatus: "completed",
         isOrgCreator: false,
+        isSuperAdmin: false,
+        activeOrganizationId: null,
       },
     },
   });
@@ -36,8 +38,7 @@ function createWrapper() {
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(
       Provider,
-      { store },
-      React.createElement(MemoryRouter, null, children)
+      { store, children: React.createElement(MemoryRouter, null, children) },
     );
 
   return { Wrapper, store };

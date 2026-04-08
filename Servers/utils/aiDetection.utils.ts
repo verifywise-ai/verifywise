@@ -64,6 +64,14 @@ export async function createScanQuery(
       triggered_by,
       repository_id,
       triggered_by_type,
+      scan_mode,
+      base_commit_sha,
+      head_commit_sha,
+      baseline_scan_id,
+      trigger_type,
+      pr_number,
+      commit_sha,
+      branch,
       created_at,
       updated_at
     ) VALUES (
@@ -75,6 +83,14 @@ export async function createScanQuery(
       :triggered_by,
       :repository_id,
       :triggered_by_type,
+      :scan_mode,
+      :base_commit_sha,
+      :head_commit_sha,
+      :baseline_scan_id,
+      :trigger_type,
+      :pr_number,
+      :commit_sha,
+      :branch,
       NOW(),
       NOW()
     )
@@ -91,6 +107,14 @@ export async function createScanQuery(
       triggered_by: input.triggered_by,
       repository_id: input.repository_id || null,
       triggered_by_type: input.triggered_by_type || "manual",
+      scan_mode: input.scan_mode || "full",
+      base_commit_sha: input.base_commit_sha || null,
+      head_commit_sha: input.head_commit_sha || null,
+      baseline_scan_id: input.baseline_scan_id || null,
+      trigger_type: input.trigger_type || "manual",
+      pr_number: input.pr_number || null,
+      commit_sha: input.commit_sha || null,
+      branch: input.branch || null,
     },
     transaction,
   });
@@ -484,6 +508,7 @@ export async function createFindingsBatchQuery(
       :license_name_${index},
       :license_risk_${index},
       :license_source_${index},
+      :finding_status_${index},
       NOW()
     )`;
   });
@@ -505,6 +530,7 @@ export async function createFindingsBatchQuery(
     replacements[`license_name_${index}`] = input.license_name || null;
     replacements[`license_risk_${index}`] = input.license_risk || null;
     replacements[`license_source_${index}`] = input.license_source || null;
+    replacements[`finding_status_${index}`] = input.finding_status || "active";
   });
 
   const query = `
@@ -525,6 +551,7 @@ export async function createFindingsBatchQuery(
       license_name,
       license_risk,
       license_source,
+      finding_status,
       created_at
     ) VALUES ${values.join(", ")}
     ON CONFLICT (scan_id, name, provider) DO UPDATE SET
@@ -533,7 +560,11 @@ export async function createFindingsBatchQuery(
       license_id = COALESCE(EXCLUDED.license_id, ai_detection_findings.license_id),
       license_name = COALESCE(EXCLUDED.license_name, ai_detection_findings.license_name),
       license_risk = COALESCE(EXCLUDED.license_risk, ai_detection_findings.license_risk),
-      license_source = COALESCE(EXCLUDED.license_source, ai_detection_findings.license_source)
+      license_source = COALESCE(EXCLUDED.license_source, ai_detection_findings.license_source),
+      finding_status = CASE
+        WHEN EXCLUDED.finding_status = 'active' THEN 'active'
+        ELSE ai_detection_findings.finding_status
+      END
     RETURNING id, name, provider;
   `;
 
@@ -1334,4 +1365,66 @@ export async function markStaleScansFailed(
   );
 
   return results.length;
+}
+
+// ============================================================================
+// Incremental Scan Queries
+// ============================================================================
+
+/**
+ * Get the latest completed full scan for a repository.
+ * Used to find the baseline scan for incremental scans.
+ *
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param organizationId - Organization ID for multi-tenancy
+ * @returns The latest completed full scan, or null if none exists
+ */
+export async function getLatestCompletedFullScanQuery(
+  owner: string,
+  repo: string,
+  organizationId: number
+): Promise<IScan | null> {
+  validateOrganizationId(organizationId);
+
+  const results = await sequelize.query<IScan>(
+    `SELECT * FROM ai_detection_scans
+     WHERE repository_owner = :owner
+       AND repository_name = :repo
+       AND organization_id = :organizationId
+       AND status = 'completed'
+       AND scan_mode = 'full'
+     ORDER BY completed_at DESC
+     LIMIT 1`,
+    {
+      replacements: { owner, repo, organizationId },
+      type: QueryTypes.SELECT,
+    }
+  );
+
+  return results.length > 0 ? results[0] : null;
+}
+
+/**
+ * Get all findings from a baseline scan for carry-forward logic.
+ *
+ * @param baselineScanId - The baseline scan ID
+ * @param organizationId - Organization ID for multi-tenancy
+ * @returns All findings from the baseline scan
+ */
+export async function getBaselineFindingsQuery(
+  baselineScanId: number,
+  organizationId: number
+): Promise<IFinding[]> {
+  validateOrganizationId(organizationId);
+
+  return sequelize.query<IFinding>(
+    `SELECT * FROM ai_detection_findings
+     WHERE scan_id = :baselineScanId
+       AND organization_id = :organizationId`,
+    {
+      replacements: { baselineScanId, organizationId },
+      type: QueryTypes.SELECT,
+    }
+  );
 }

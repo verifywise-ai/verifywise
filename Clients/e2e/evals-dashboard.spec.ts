@@ -72,4 +72,45 @@ test.describe("Evals Dashboard", () => {
         .first()
     ).toBeVisible({ timeout: 15_000 });
   });
+
+  // --- Tier 1: Sub-page navigation ---
+
+  test("can navigate through evals sub-pages via sidebar", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/evals");
+    await page.waitForTimeout(3000);
+
+    // Skip if the evals page didn't load (EvalServer may not be running)
+    const pageContent = page
+      .getByText(/eval/i)
+      .or(page.getByText(/experiment/i))
+      .or(page.getByRole("button", { name: /experiments/i }));
+    if (!(await pageContent.first().isVisible().catch(() => false))) {
+      test.skip();
+      return;
+    }
+
+    // The evals page uses a sidebar with navigation buttons
+    const sidebarItems = [
+      { name: /experiments/i },
+      { name: /datasets/i },
+      { name: /scorers/i },
+    ];
+
+    for (const item of sidebarItems) {
+      const sidebarBtn = page
+        .getByRole("button", { name: item.name })
+        .or(page.getByRole("link", { name: item.name }))
+        .or(page.getByRole("tab", { name: item.name }));
+
+      const btn = sidebarBtn.first();
+      if (await btn.isVisible().catch(() => false)) {
+        // Skip disabled buttons (e.g. "Experiments" requires a project)
+        if (await btn.isDisabled().catch(() => false)) continue;
+        await btn.click();
+        await page.waitForTimeout(500);
+      }
+    }
+  });
 });

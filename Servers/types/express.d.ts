@@ -21,6 +21,11 @@ declare module 'express' {
      * For new code, use organizationId instead.
      */
     tenantId?: number;
+    /**
+     * True when the authenticated user is a SuperAdmin (role_id = 5).
+     * Set by authenticateJWT middleware.
+     */
+    isSuperAdmin?: boolean;
     /** Virtual key context, set by virtualKeyAuth middleware for /v1/* proxy routes */
     virtualKey?: {
       id: number;

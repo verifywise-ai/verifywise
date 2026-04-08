@@ -19,6 +19,7 @@ import CustomizableToast from "../../../components/Toast";
 import CEMarking from "../CEMarking";
 import Activity from "../Activity";
 import PostMarketMonitoring from "../PostMarketMonitoring";
+import FriaAssessment from "../Fria";
 import allowedRoles from "../../../../application/constants/permissions";
 import { PageBreadcrumbs } from "../../../components/breadcrumbs/PageBreadcrumbs";
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -153,13 +154,11 @@ const VWProjectView = () => {
   }, [numericProjectId, refreshKey]);
 
   const handleChange = (_: SyntheticEvent, newValue: string) => {
-    if (tabParam) {
-      searchParams.delete("tab");
-      searchParams.delete("framework");
-      searchParams.delete("topicId");
-      searchParams.delete("questionId");
-      setSearchParams(searchParams);
-    }
+    searchParams.set("tab", newValue);
+    searchParams.delete("framework");
+    searchParams.delete("topicId");
+    searchParams.delete("questionId");
+    setSearchParams(searchParams);
     setValue(newValue);
   };
 
@@ -259,6 +258,13 @@ const VWProjectView = () => {
                 tooltip: "EU conformity assessment and CE marking status",
               },
               {
+                label: "FRIA",
+                value: "fria",
+                icon: "Scale",
+                disabled: isApprovalBlocked,
+                tooltip: "Fundamental Rights Impact Assessment (EU AI Act Art. 27)",
+              },
+              {
                 label: "Activity",
                 value: "activity",
                 icon: "History",
@@ -352,6 +358,14 @@ const VWProjectView = () => {
               ) : (
                 <CEMarking projectId={projectId} />
               )
+            ) : (
+              <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+            )}
+          </TabPanel>
+
+          <TabPanel value="fria" sx={tabPanelStyle}>
+            {project ? (
+              <FriaAssessment projectId={projectId} />
             ) : (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
             )}

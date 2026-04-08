@@ -86,6 +86,7 @@ describe("authenticateJWT middleware", () => {
       expect(roleMap.get(2)).toBe("Reviewer");
       expect(roleMap.get(3)).toBe("Editor");
       expect(roleMap.get(4)).toBe("Auditor");
+      expect(roleMap.get(5)).toBe("SuperAdmin");
     });
   });
 
@@ -184,6 +185,7 @@ describe("authenticateJWT middleware", () => {
   describe("organization membership", () => {
     it("should return 403 when user does not belong to organization", async () => {
       mockGetTokenPayload.mockReturnValue(validPayload as any);
+      mockGetUserById.mockResolvedValue({ role_id: 1 } as any);
       mockBelongsToOrg.mockResolvedValue({ belongs: false } as any);
       const req = createReq("Bearer valid-token");
       const res = createRes();

@@ -31,15 +31,15 @@ const BUILT_IN_TABS = [
 ];
 
 export default function ProfilePage() {
-  const { userRoleName } = useAuth();
+  const { userRoleName, isSuperAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const isTeamManagementDisabled =
-    !allowedRoles.projects.editTeamMembers.includes(userRoleName);
-  const isApiKeysDisabled = !allowedRoles.apiKeys?.view?.includes(userRoleName);
-  const isFeaturesDisabled = !allowedRoles.features?.manage?.includes(userRoleName);
-  // Audit ledger: Admin-only (toggle lives inside the tab itself)
-  const isAuditLedgerDisabled = userRoleName !== "Admin";
+    !isSuperAdmin && !allowedRoles.projects.editTeamMembers.includes(userRoleName);
+  const isApiKeysDisabled = !isSuperAdmin && !allowedRoles.apiKeys?.view?.includes(userRoleName);
+  const isFeaturesDisabled = !isSuperAdmin && !allowedRoles.features?.manage?.includes(userRoleName);
+  // Audit ledger: Admin-only (or super admin)
+  const isAuditLedgerDisabled = !isSuperAdmin && userRoleName !== "Admin";
 
   // Get plugin tabs dynamically from the plugin registry
   const { getPluginTabs, installedPlugins, isLoading: pluginsLoading } = usePluginRegistry();
@@ -50,12 +50,16 @@ export default function ProfilePage() {
 
   const { tab } = useParams<{ tab?: string }>();
 
-  const [activeTab, setActiveTab] = useState(tab || "profile");
+  const defaultTab = isSuperAdmin ? "team" : "profile";
+  const [activeTab, setActiveTab] = useState(tab || defaultTab);
 
   const validTabs = useMemo(() => {
-    // Include plugin tabs in valid tabs
-    return [...BUILT_IN_TABS, ...pluginTabs.map((t) => t.value)];
-  }, [pluginTabs]);
+    let tabs = [...BUILT_IN_TABS];
+    if (isSuperAdmin) {
+      tabs = tabs.filter((t) => !["profile", "password", "preferences"].includes(t));
+    }
+    return [...tabs, ...pluginTabs.map((t) => t.value)];
+  }, [pluginTabs, isSuperAdmin]);
 
   // keep state synced with URL
   useEffect(() => {
@@ -74,14 +78,14 @@ export default function ProfilePage() {
       }
       // Plugins finished loading and tab is not valid - redirect
       navigate("/settings", { replace: true });
-      setActiveTab("profile");
+      setActiveTab(defaultTab);
     } else if (!tab) {
       // No tab specified - stay on profile
-      setActiveTab("profile");
+      setActiveTab(defaultTab);
     } else {
       // Invalid built-in tab - redirect
       navigate("/settings", { replace: true });
-      setActiveTab("profile");
+      setActiveTab(defaultTab);
     }
   }, [tab, validTabs, navigate, pluginsLoading, installedPlugins.length, pluginTabs.length]);
 
@@ -94,7 +98,7 @@ export default function ProfilePage() {
       if (validTabs.includes(requestedTab)) {
         if (requestedTab === "team" && isTeamManagementDisabled) {
           // If team management is requested but user doesn't have permission, stay on profile
-          setActiveTab("profile");
+          setActiveTab(defaultTab);
         } else {
           setActiveTab(requestedTab);
         }
@@ -114,33 +118,48 @@ export default function ProfilePage() {
   const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
     setActiveTab(newValue);
 
-    if (newValue === "profile") navigate("/settings");
+    if (newValue === defaultTab) navigate("/settings");
     else navigate(`/settings/${newValue}`);
   };
 
   return (
     <PageHeaderExtended
-      title="Settings"
-      description="Manage your profile, security, team members, and application preferences."
-
+      title={isSuperAdmin ? "Organization Settings" : "Settings"}
+      description={
+        isSuperAdmin
+          ? "View organization settings for the selected organization."
+          : "Manage your profile, security, team members, and application preferences."
+      }
       helpArticlePath="settings/user-management"
       tipBoxEntity="settings"
     >
       <TabContext value={activeTab}>
         <TabBar
           tabs={[
-            {
-              label: "Profile",
-              value: "profile",
-              icon: "User",
-              tooltip: "Your name, email and personal details",
-            },
-            {
-              label: "Password",
-              value: "password",
-              icon: "Lock",
-              tooltip: "Update your account password",
-            },
+            // User-level tabs: hidden for super admin
+            ...(!isSuperAdmin
+              ? [
+                  {
+                    label: "Profile",
+                    value: "profile",
+                    icon: "User" as TabItem["icon"],
+                    tooltip: "Your name, email and personal details",
+                  },
+                  {
+                    label: "Password",
+                    value: "password",
+                    icon: "Lock" as TabItem["icon"],
+                    tooltip: "Update your account password",
+                  },
+                  {
+                    label: "Preferences",
+                    value: "preferences",
+                    icon: "Settings" as TabItem["icon"],
+                    tooltip: "Customize your display and notification preferences",
+                  },
+                ]
+              : []),
+            // Org-level tabs: always shown
             {
               label: "Team",
               value: "team",
@@ -153,12 +172,6 @@ export default function ProfilePage() {
               value: "organization",
               icon: "Building2",
               tooltip: "Organization name and general settings",
-            },
-            {
-              label: "Preferences",
-              value: "preferences",
-              icon: "Settings",
-              tooltip: "Customize your display and notification preferences",
             },
             {
               label: "Features",
@@ -180,8 +193,7 @@ export default function ProfilePage() {
                     label: "Audit ledger",
                     value: "audit-ledger",
                     icon: "FileCheck" as TabItem["icon"],
-                    tooltip:
-                      "Tamper-proof log of all platform changes",
+                    tooltip: "Tamper-proof log of all platform changes",
                   },
                 ]
               : []),
@@ -196,36 +208,40 @@ export default function ProfilePage() {
           onChange={handleTabChange}
         />
 
-        <TabPanel value="profile">
-          <Profile />
-        </TabPanel>
+        {!isSuperAdmin && (
+          <>
+            <TabPanel sx={{ p: 0 }} value="profile">
+              <Profile />
+            </TabPanel>
 
-        <TabPanel value="password">
-          <Password />
-        </TabPanel>
+            <TabPanel sx={{ p: 0 }} value="password">
+              <Password />
+            </TabPanel>
 
-        <TabPanel value="preferences">
-          <Preferences />
-        </TabPanel>
+            <TabPanel sx={{ p: 0 }} value="preferences">
+              <Preferences />
+            </TabPanel>
+          </>
+        )}
 
-        <TabPanel value="team">
+        <TabPanel sx={{ p: 0 }} value="team">
           <TeamManagement />
         </TabPanel>
 
-        <TabPanel value="organization">
+        <TabPanel sx={{ p: 0 }} value="organization">
           <Organization />
         </TabPanel>
 
-        <TabPanel value="features">
+        <TabPanel sx={{ p: 0 }} value="features">
           <Features />
         </TabPanel>
 
-        <TabPanel value="apikeys">
+        <TabPanel sx={{ p: 0 }} value="apikeys">
           <ApiKeys />
         </TabPanel>
 
         {!isAuditLedgerDisabled && (
-          <TabPanel value="audit-ledger">
+          <TabPanel sx={{ p: 0 }} value="audit-ledger">
             <AuditLedger />
           </TabPanel>
         )}

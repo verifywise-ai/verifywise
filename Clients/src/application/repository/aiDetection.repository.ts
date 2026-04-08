@@ -52,10 +52,19 @@ const BASE_URL = "/ai-detection";
 export async function startScan(
   repositoryUrl: string,
   signal?: AbortSignal,
+  options?: {
+    scan_mode?: "full" | "incremental";
+    base_commit_sha?: string;
+    head_commit_sha?: string;
+  },
 ): Promise<Scan> {
+  const body: StartScanRequest = {
+    repository_url: repositoryUrl,
+    ...options,
+  };
   const response = await apiServices.post<{ data: Scan }>(
     `${BASE_URL}/scans`,
-    { repository_url: repositoryUrl } as StartScanRequest,
+    body,
     {
       signal,
     }

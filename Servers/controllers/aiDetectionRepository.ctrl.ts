@@ -23,6 +23,7 @@ import { getScansListQuery, getActiveScanForRepoQuery } from "../utils/aiDetecti
 import { startScan } from "../services/aiDetection.service";
 import { IServiceContext } from "../domain.layer/interfaces/i.aiDetection";
 import { ScheduleFrequency } from "../domain.layer/interfaces/i.aiDetectionRepository";
+import { generateWebhookSecret } from "../services/webhook.service";
 
 /**
  * Parse GitHub URL to extract owner and repo name
@@ -251,7 +252,8 @@ export async function updateRepository(req: Request, res: Response): Promise<any
 
     const { display_name, default_branch, github_token_id,
       schedule_enabled, schedule_frequency, schedule_day_of_week,
-      schedule_day_of_month, schedule_hour, schedule_minute, is_enabled } = req.body;
+      schedule_day_of_month, schedule_hour, schedule_minute, is_enabled,
+      ci_enabled, ci_min_score, ci_max_critical, ci_post_comments, ci_status_checks } = req.body;
 
     // Validate schedule fields if enabling
     const willBeEnabled = schedule_enabled !== undefined ? schedule_enabled : existing.schedule_enabled;
@@ -277,6 +279,11 @@ export async function updateRepository(req: Request, res: Response): Promise<any
         schedule_day_of_month,
         schedule_hour,
         schedule_minute,
+        ci_enabled,
+        ci_min_score,
+        ci_max_critical,
+        ci_post_comments,
+        ci_status_checks,
         is_enabled,
       },
       req.organizationId!
@@ -540,6 +547,62 @@ export async function getRepositoryScans(req: Request, res: Response): Promise<a
       eventType: "Read",
       description: "Failed to get repository scans",
       functionName: "getRepositoryScans",
+      fileName: "aiDetectionRepository.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+// ============================================================================
+// Generate Webhook Secret
+// ============================================================================
+
+export async function generateWebhookSecretController(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "generating webhook secret",
+    functionName: "generateWebhookSecretController",
+    fileName: "aiDetectionRepository.ctrl.ts",
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+
+  try {
+    const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json(STATUS_CODE[400]({ message: "Invalid repository ID" }));
+    }
+
+    const existing = await getRepositoryByIdQuery(id, req.organizationId!);
+    if (!existing) {
+      return res.status(404).json(STATUS_CODE[404]({ message: "Repository not found" }));
+    }
+
+    const secret = generateWebhookSecret();
+
+    await updateRepositoryQuery(
+      id,
+      { webhook_secret: secret } as any,
+      req.organizationId!
+    );
+
+    await logSuccess({
+      eventType: "Update",
+      description: `Generated webhook secret for repository ${existing.repository_owner}/${existing.repository_name}`,
+      functionName: "generateWebhookSecretController",
+      fileName: "aiDetectionRepository.ctrl.ts",
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200]({ webhook_secret: secret }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: "Failed to generate webhook secret",
+      functionName: "generateWebhookSecretController",
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,

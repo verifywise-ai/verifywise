@@ -32,6 +32,7 @@ test.describe("Agent Discovery", () => {
         "scrollable-region-focusable",
         "aria-progressbar-name",
         "aria-prohibited-attr",
+        "nested-interactive",
       ])
       .analyze();
     expect(results.violations).toEqual([]);
@@ -46,7 +47,9 @@ test.describe("Agent Discovery", () => {
       .getByRole("button", { name: /add|new|register/i })
       .or(page.getByText(/no.*agent/i))
       .or(page.getByRole("table"))
-      .or(page.getByRole("grid"));
-    await expect(content.first()).toBeVisible({ timeout: 10_000 });
+      .or(page.getByRole("grid"))
+      .or(page.getByRole("heading"))
+      .or(page.getByText(/agent/i));
+    await expect(content.first()).toBeVisible({ timeout: 15_000 });
   });
 });

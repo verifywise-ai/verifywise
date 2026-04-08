@@ -32,7 +32,7 @@ import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import TablePaginationActions from "../../components/TablePagination";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import { Play, Pencil, Trash2, Loader2, GitBranch, Github, Shield, RefreshCw } from "lucide-react";
+import { Play, Pencil, Trash2, Loader2, GitBranch, GitFork, Shield, RefreshCw } from "lucide-react";
 import axios from "axios";
 import {
   getRepositories,
@@ -422,7 +422,7 @@ export default function RepositoriesPage() {
                       message="No repositories added yet. Add a repository to start detecting AI components."
                     >
                       <EmptyStateTip
-                        icon={Github}
+                        icon={GitFork}
                         title="Connect your GitHub repositories"
                         description="Paste a GitHub repository URL and the system will scan its codebase for AI/ML libraries, model files, and inference endpoints."
                       />

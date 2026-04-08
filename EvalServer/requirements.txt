@@ -1,5 +1,5 @@
 aiohappyeyeballs==2.6.1
-aiohttp==3.13.3
+aiohttp==3.13.4
 aiosignal==1.4.0
 alembic==1.17.1
 annotated-doc==0.0.3
@@ -11,7 +11,7 @@ attrs==25.4.0
 backoff==2.2.1
 cachetools==6.2.1
 certifi==2025.10.5
-cryptography==46.0.5
+cryptography==46.0.6
 charset-normalizer==3.4.4
 click==8.2.1
 deepeval==3.7.0
@@ -66,7 +66,7 @@ propcache==0.4.1
 proto-plus==1.26.1
 protobuf==5.29.6
 psycopg2-binary==2.9.11
-pyasn1==0.6.2
+pyasn1==0.6.3
 pyasn1_modules==0.4.2
 pydantic==2.12.3
 pydantic-settings==2.11.0
@@ -82,7 +82,7 @@ PyYAML==6.0.3
 redis==7.0.1
 regex==2025.11.3
 reportlab==4.4.10
-requests==2.32.5
+requests==2.33.0
 rich==14.2.0
 rsa==4.9.1
 safetensors==0.6.2
@@ -99,7 +99,7 @@ threadpoolctl==3.6.0
 tokenizers==0.22.1
 torch==2.10.0
 tqdm==4.67.1
-transformers==4.57.1
+transformers==5.0.0rc3
 typer==0.20.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0

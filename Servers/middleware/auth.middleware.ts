@@ -48,6 +48,7 @@ export const roleMap = new Map([
   [2, "Reviewer"],
   [3, "Editor"],
   [4, "Auditor"],
+  [5, "SuperAdmin"],
 ])
 
 /**
@@ -138,35 +139,68 @@ const authenticateJWT = async (
       return res.status(400).json({ message: 'Invalid token' });
     }
 
-    // Verify user belongs to the organization claimed in token
-    const belongs = await doesUserBelongsToOrganizationQuery(decoded.id, decoded.organizationId);
-    if (!belongs.belongs) {
-      return res.status(403).json({ message: 'User does not belong to this organization' });
-    }
-
     // Validate role hasn't changed since token was issued
     const user = await getUserByIdQuery(decoded.id)
     if (decoded.roleName !== roleMap.get(user.role_id)) {
       return res.status(403).json({ message: 'Not allowed to access' });
     }
 
-    // Attach user context to request for downstream handlers
-    req.userId = decoded.id;
-    req.role = decoded.roleName;
-    req.organizationId = decoded.organizationId;
-    // tenantId is set to organizationId for backward compatibility during migration
-    // TODO: Remove tenantId once all usages are migrated to use organizationId
-    req.tenantId = decoded.organizationId;
-    // tenantHash is the schema name derived from organizationId
-    // Use for schema-qualified queries: FROM "${tenantHash}".table_name
-    const { getTenantHash } = require('../tools/getTenantHash');
-    req.tenantHash = getTenantHash(decoded.organizationId);
+    const isSuperAdmin = decoded.roleName === 'SuperAdmin';
+
+    if (isSuperAdmin) {
+      // Super-admin: skip org membership check, resolve org from header
+      req.userId = decoded.id;
+      req.isSuperAdmin = true;
+
+      req.role = decoded.roleName;
+
+      const headerOrgId = req.headers['x-organization-id'];
+      if (headerOrgId) {
+        const orgId = parseInt(headerOrgId as string, 10);
+        if (!isNaN(orgId) && orgId > 0) {
+          req.organizationId = orgId;
+          req.tenantId = orgId;
+          const { getTenantHash } = require('../tools/getTenantHash');
+          req.tenantHash = getTenantHash(orgId);
+        }
+      }
+      // If no X-Organization-Id header, organizationId stays undefined (super-admin-only routes)
+    } else {
+      // Normal user: verify org membership
+      const belongs = await doesUserBelongsToOrganizationQuery(decoded.id, decoded.organizationId);
+      if (!belongs.belongs) {
+        return res.status(403).json({ message: 'User does not belong to this organization' });
+      }
+
+      // Attach user context to request for downstream handlers
+      req.userId = decoded.id;
+      req.role = decoded.roleName;
+      req.organizationId = decoded.organizationId;
+      // tenantId is set to organizationId for backward compatibility during migration
+      // TODO: Remove tenantId once all usages are migrated to use organizationId
+      req.tenantId = decoded.organizationId;
+      // tenantHash is the schema name derived from organizationId
+      // Use for schema-qualified queries: FROM "${tenantHash}".table_name
+      const { getTenantHash } = require('../tools/getTenantHash');
+      req.tenantHash = getTenantHash(decoded.organizationId);
+    }
+
+    // Enforce read-only mode for super-admin viewing an org
+    if (req.isSuperAdmin && req.organizationId) {
+      const readOnlyMethods = ['GET', 'HEAD', 'OPTIONS'];
+      const isSuperAdminRoute = req.path.startsWith('/api/super-admin') || req.baseUrl?.startsWith('/api/super-admin');
+      if (!readOnlyMethods.includes(req.method.toUpperCase()) && !isSuperAdminRoute) {
+        return res.status(403).json(
+          STATUS_CODE[403]("Super-admin has read-only access when viewing an organization")
+        );
+      }
+    }
 
     // Initialize AsyncLocalStorage context for request tracing
     asyncLocalStorage.run({
       userId: decoded.id,
-      tenantId: decoded.organizationId,
-      organizationId: decoded.organizationId
+      tenantId: req.organizationId ?? 0,
+      organizationId: req.organizationId ?? 0
     }, () => {
       next();
     });

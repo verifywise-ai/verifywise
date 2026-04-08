@@ -107,7 +107,7 @@ export async function startScanController(
   });
 
   try {
-    const { repository_url } = req.body;
+    const { repository_url, scan_mode, base_commit_sha, head_commit_sha } = req.body;
 
     if (!repository_url) {
       return res
@@ -115,8 +115,26 @@ export async function startScanController(
         .json(STATUS_CODE[400]("repository_url is required"));
     }
 
+    // Validate incremental scan parameters
+    const SHA_PATTERN = /^[0-9a-f]{7,40}$/i;
+    if (scan_mode === "incremental") {
+      if (!base_commit_sha || !head_commit_sha) {
+        return res
+          .status(400)
+          .json(STATUS_CODE[400]("Both base_commit_sha and head_commit_sha are required for incremental scans"));
+      }
+      if (!SHA_PATTERN.test(base_commit_sha) || !SHA_PATTERN.test(head_commit_sha)) {
+        return res
+          .status(400)
+          .json(STATUS_CODE[400]("base_commit_sha and head_commit_sha must be valid hex strings (7-40 characters)"));
+      }
+    }
+
     const ctx = buildServiceContext(req);
-    const scan = await startScan(repository_url, ctx);
+    const incrementalOptions = scan_mode === "incremental"
+      ? { scan_mode: scan_mode as "incremental", base_commit_sha, head_commit_sha }
+      : undefined;
+    const scan = await startScan(repository_url, ctx, undefined, incrementalOptions);
 
     await logSuccess({
       eventType: "Create",

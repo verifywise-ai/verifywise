@@ -103,7 +103,7 @@ describe("Field Component", () => {
   it("does not display error when error prop is empty", () => {
     renderWithProviders(<Field label="Email" />);
 
-    expect(screen.queryByClassName?.("input-error")).not.toBeTruthy();
+    expect(screen.queryByText(/error/i)).not.toBeTruthy();
   });
 
   it("renders disabled input", () => {

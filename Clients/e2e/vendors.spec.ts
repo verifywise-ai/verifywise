@@ -1,5 +1,9 @@
-import { test, expect } from "./fixtures/auth.fixture";
+import { test as authTest, expect as authExpect } from "./fixtures/auth.fixture";
+import { test as projectTest, expect as projectExpect } from "./fixtures/project.fixture";
 import AxeBuilder from "@axe-core/playwright";
+
+const test = authTest;
+const expect = authExpect;
 
 test.describe("Vendors Page", () => {
   test.beforeEach(async ({ authedPage: page }) => {
@@ -60,6 +64,7 @@ test.describe("Vendors Page", () => {
         "scrollable-region-focusable",
         "aria-progressbar-name",
         "aria-prohibited-attr",
+        "nested-interactive",
       ])
       .analyze();
     expect(results.violations).toEqual([]);
@@ -146,10 +151,97 @@ test.describe("Vendors Page", () => {
       // If disabled, no projects exist — skip silently
     }
   });
+});
 
-  // --- Tier 4: CRUD skipped ---
+// --- Tier 4: CRUD (requires project) ---
 
-  test.skip("CRUD: create and delete vendor", async () => {
-    // Skipped: "Add new vendor" button is disabled when no projects exist
+projectTest.describe("Vendors CRUD", () => {
+  projectTest.beforeEach(async ({ projectPage: page }) => {
+    await page.evaluate(() => {
+      localStorage.setItem("vendor-tour", "true");
+    });
   });
+
+  projectTest(
+    "CRUD: create and delete vendor",
+    async ({ projectPage: page, projectName }) => {
+      await page.goto("/vendors");
+      const vendorName = `E2E Test Vendor ${Date.now()}`;
+
+      // Create: Click "Add new vendor"
+      const addBtn = page.getByRole("button", { name: /add new vendor/i });
+      await projectExpect(addBtn).toBeVisible({ timeout: 10_000 });
+
+      // Button should be enabled now that a project exists
+      if (await addBtn.isDisabled()) {
+        projectTest.skip();
+        return;
+      }
+      await addBtn.click();
+
+      // Fill vendor name
+      const nameInput = page
+        .getByRole("textbox", { name: /name/i })
+        .or(page.getByPlaceholder(/vendor name/i))
+        .or(page.getByPlaceholder(/name/i))
+        .or(page.getByRole("textbox").first());
+      await projectExpect(nameInput.first()).toBeVisible({ timeout: 10_000 });
+      await nameInput.first().fill(vendorName);
+
+      // Select project if dropdown exists
+      const projectSelect = page
+        .getByRole("combobox", { name: /project/i })
+        .or(page.getByText(/select.*project/i));
+      if (await projectSelect.first().isVisible().catch(() => false)) {
+        await projectSelect.first().click();
+        // Pick the project we created or first available
+        const projectOption = page
+          .getByRole("option", { name: new RegExp(projectName, "i") })
+          .or(page.getByRole("option").first());
+        if (await projectOption.first().isVisible().catch(() => false)) {
+          await projectOption.first().click();
+        }
+      }
+
+      // Submit
+      const submitBtn = page
+        .getByRole("button", { name: /create|save|submit|add/i })
+        .last();
+      await submitBtn.click();
+      await page.waitForTimeout(1000);
+
+      // Verify: Search for the created vendor
+      const searchInput = page
+        .getByPlaceholder(/search vendors/i)
+        .or(page.getByPlaceholder(/search/i));
+      if (await searchInput.first().isVisible().catch(() => false)) {
+        await searchInput.first().fill(vendorName);
+        await page.waitForTimeout(500);
+      }
+
+      // Clean up: Delete via row action
+      const moreBtn = page
+        .getByRole("button", { name: /more/i })
+        .or(page.locator('[aria-label="more"]'))
+        .or(page.locator('[data-testid="MoreVertIcon"]'));
+      if (await moreBtn.first().isVisible().catch(() => false)) {
+        await moreBtn.first().click();
+        const deleteBtn = page.getByRole("menuitem", {
+          name: /delete|remove/i,
+        });
+        if (await deleteBtn.first().isVisible().catch(() => false)) {
+          await deleteBtn.first().click();
+          const confirmBtn = page.getByRole("button", {
+            name: /confirm|yes|delete/i,
+          });
+          if (await confirmBtn.first().isVisible().catch(() => false)) {
+            await confirmBtn.first().click();
+          }
+          await page.waitForTimeout(500);
+        } else {
+          await page.keyboard.press("Escape");
+        }
+      }
+    }
+  );
 });

@@ -65,4 +65,14 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn'
     },
   }
+  ,
+  {
+    files: ['**/*.{test,spec}.{ts,tsx}', '**/__tests__/**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.vitest,
+      },
+    },
+  }
 );

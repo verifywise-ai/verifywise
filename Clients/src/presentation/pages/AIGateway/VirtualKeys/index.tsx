@@ -31,6 +31,10 @@ interface CreateVirtualKeyPayload {
   max_budget_usd?: number;
   rate_limit_rpm?: number;
   expires_at?: string;
+  allowed_models?: string[];
+  blocked_models?: string[];
+  allowed_providers?: string[];
+  blocked_providers?: string[];
 }
 
 interface VirtualKey {
@@ -38,6 +42,10 @@ interface VirtualKey {
   key_prefix: string;
   name: string;
   allowed_endpoint_ids: number[];
+  allowed_models: string[];
+  blocked_models: string[];
+  allowed_providers: string[];
+  blocked_providers: string[];
   max_budget_usd: number | null;
   current_spend_usd: number;
   rate_limit_rpm: number | null;
@@ -62,6 +70,10 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
     max_budget_usd: "",
     rate_limit_rpm: "",
     expires_at: "",
+    allowed_models: "",
+    blocked_models: "",
+    allowed_providers: "",
+    blocked_providers: "",
   });
   const [createError, setCreateError] = useState("");
   const [createSubmitting, setCreateSubmitting] = useState(false);
@@ -115,10 +127,16 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
       if (createForm.rate_limit_rpm) payload.rate_limit_rpm = Number(createForm.rate_limit_rpm);
       if (createForm.expires_at) payload.expires_at = new Date(createForm.expires_at).toISOString();
 
+      const parseList = (v: string) => v.split(",").map((s) => s.trim()).filter(Boolean);
+      if (createForm.allowed_models.trim()) payload.allowed_models = parseList(createForm.allowed_models);
+      if (createForm.blocked_models.trim()) payload.blocked_models = parseList(createForm.blocked_models);
+      if (createForm.allowed_providers.trim()) payload.allowed_providers = parseList(createForm.allowed_providers);
+      if (createForm.blocked_providers.trim()) payload.blocked_providers = parseList(createForm.blocked_providers);
+
       const res = await apiServices.post<Record<string, any>>("/ai-gateway/virtual-keys", payload);
       const created = res?.data?.data;
       setIsCreateOpen(false);
-      setCreateForm({ name: "", max_budget_usd: "", rate_limit_rpm: "", expires_at: "" });
+      setCreateForm({ name: "", max_budget_usd: "", rate_limit_rpm: "", expires_at: "", allowed_models: "", blocked_models: "", allowed_providers: "", blocked_providers: "" });
 
       if (created?.plain_key) {
         setNewKey(created.plain_key);
@@ -173,7 +191,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
       text="Create key"
       icon={<CirclePlus size={14} strokeWidth={1.5} />}
       onClick={() => {
-        setCreateForm({ name: "", max_budget_usd: "", rate_limit_rpm: "", expires_at: "" });
+        setCreateForm({ name: "", max_budget_usd: "", rate_limit_rpm: "", expires_at: "", allowed_models: "", blocked_models: "", allowed_providers: "", blocked_providers: "" });
         setCreateError("");
         setIsCreateOpen(true);
       }}
@@ -275,6 +293,18 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                               {key.rate_limit_rpm} RPM
                             </Typography>
                           )}
+                          {key.allowed_models?.length > 0 && (
+                            <Chip label={`models: ${key.allowed_models.join(", ")}`} size="small" uppercase={false} />
+                          )}
+                          {key.blocked_models?.length > 0 && (
+                            <Chip label={`blocked: ${key.blocked_models.join(", ")}`} size="small" uppercase={false} />
+                          )}
+                          {key.allowed_providers?.length > 0 && (
+                            <Chip label={`providers: ${key.allowed_providers.join(", ")}`} size="small" uppercase={false} />
+                          )}
+                          {key.blocked_providers?.length > 0 && (
+                            <Chip label={`blocked providers: ${key.blocked_providers.join(", ")}`} size="small" uppercase={false} />
+                          )}
                           <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                             by {key.created_by_name} &middot; {displayFormattedDate(key.created_at)}
                           </Typography>
@@ -367,6 +397,30 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
             placeholder="e.g., 60 (leave empty for no limit)"
             value={createForm.rate_limit_rpm}
             onChange={(e) => setCreateForm((p) => ({ ...p, rate_limit_rpm: e.target.value }))}
+          />
+          <Field
+            label="Allowed models"
+            placeholder="e.g., gpt-4o-mini, claude-haiku* (comma-separated, leave empty for all)"
+            value={createForm.allowed_models}
+            onChange={(e) => setCreateForm((p) => ({ ...p, allowed_models: e.target.value }))}
+          />
+          <Field
+            label="Blocked models"
+            placeholder="e.g., gpt-4o, claude-opus* (comma-separated)"
+            value={createForm.blocked_models}
+            onChange={(e) => setCreateForm((p) => ({ ...p, blocked_models: e.target.value }))}
+          />
+          <Field
+            label="Allowed providers"
+            placeholder="e.g., openai, anthropic (comma-separated, leave empty for all)"
+            value={createForm.allowed_providers}
+            onChange={(e) => setCreateForm((p) => ({ ...p, allowed_providers: e.target.value }))}
+          />
+          <Field
+            label="Blocked providers"
+            placeholder="e.g., openrouter (comma-separated)"
+            value={createForm.blocked_providers}
+            onChange={(e) => setCreateForm((p) => ({ ...p, blocked_providers: e.target.value }))}
           />
           <DatePicker
             label="Expiry date"

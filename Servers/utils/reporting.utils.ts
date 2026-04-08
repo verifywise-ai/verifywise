@@ -79,7 +79,7 @@ export const getGeneratedReportsQuery = async ({
     "All reports",
   ];
 
-  const isAdmin = role === "Admin";
+  const isAdmin = role === "Admin" || role === "SuperAdmin";
 
   const baseQueryParts = [
     `SELECT

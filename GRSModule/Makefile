@@ -1,16 +1,20 @@
-.PHONY: seeds render perturb all export-parquet publish-dataset generate
+.PHONY: seeds render perturb validate all backfill-base export-parquet publish-dataset generate
 
 seeds:
 	uv run grs-scenarios generate --stage seeds
 
 render:
-	uv run grs-scenarios generate --stage render --seed 42 --per-obligation 2
+	uv run grs-scenarios generate --stage render --seed 42 --per-obligation 3
 
 perturb:
 	uv run grs-scenarios generate --stage perturb --seed 42 --k-per-base 3 --coverage per_family
 
 validate:
 	uv run grs-scenarios generate --stage validate
+
+backfill-base:
+	@if [ -z "$(VERSION)" ]; then echo "Error: VERSION is required. Usage: make backfill-base VERSION=grs_scenarios_v0.3"; exit 1; fi
+	uv run grs-scenarios generate --stage backfill-base --dataset-version $(VERSION)
 
 infer-mock-client:
 	uv run grs-scenarios generate --stage infer --model-id mock-v0 --limit 3
@@ -33,7 +37,7 @@ run-scenario-viewer:
 all: seeds render perturb validate
 
 export-parquet:
-	uv run python scripts/export_parquet.py --dataset-dir datasets/grs_scenarios_v0.1
+	uv run python scripts/export_parquet.py --dataset-dir datasets/$(VERSION)
 
 VERSION ?= grs_scenarios_v0.1
 
@@ -43,11 +47,15 @@ generate:
 publish-dataset: export-parquet
 	@if [ -z "$(VERSION)" ]; then echo "Error: VERSION is required. Usage: make publish-dataset VERSION=grs_scenarios_v0.1"; exit 1; fi
 	@echo "Snapshotting configs/ → datasets/$(VERSION)/configs_snapshot/ ..."
-	cp -r configs/ datasets/$(VERSION)/configs_snapshot/
-	@echo "Publishing datasets/ to data/$(VERSION) branch via git worktree..."
+	mkdir -p datasets/$(VERSION)/configs_snapshot/
+	cp -r configs/. datasets/$(VERSION)/configs_snapshot/
+	@echo "Publishing datasets/ to data/grs_scenarios branch via git worktree..."
 	git -C .. worktree remove --force /tmp/grs-data 2>/dev/null || true
-	git -C .. worktree add /tmp/grs-data data/$(VERSION)
+	git -C .. show-ref --verify --quiet refs/heads/data/grs_scenarios \
+		&& git -C .. worktree add /tmp/grs-data data/grs_scenarios \
+		|| git -C .. worktree add -b data/grs_scenarios /tmp/grs-data
+	mkdir -p /tmp/grs-data/GRSModule
 	cp -r datasets/ /tmp/grs-data/GRSModule/
 	cd /tmp/grs-data && git add GRSModule/datasets/ && git commit -m "data: publish $(VERSION) $$(date +%Y-%m-%d)"
 	git -C .. worktree remove /tmp/grs-data
-	@echo "Done. $(VERSION) committed to data/$(VERSION)."
+	@echo "Done. $(VERSION) committed to data/grs_scenarios."

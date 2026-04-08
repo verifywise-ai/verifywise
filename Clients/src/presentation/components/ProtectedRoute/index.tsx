@@ -26,9 +26,7 @@ const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
   // List of public routes that don't need authentication
   const publicRoutes = [
     "/login",
-    "/admin-reg",
     "/user-reg",
-    "/register",
     "/forgot-password",
     "/reset-password",
     "/set-new-password",
@@ -94,14 +92,9 @@ const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
     return <CustomizableToast title="Loading..." />; // Show a loading indicator while checking user existence
   }
 
-  // Always allow access to login and register routes in multi-tenant mode
-  if (location.pathname === "/login" || location.pathname === "/register") {
+  // Always allow access to login route
+  if (location.pathname === "/login") {
     return <Component {...rest} />;
-  }
-
-  // Redirect to login if trying to access "/admin-reg" (legacy route)
-  if (location.pathname === "/admin-reg") {
-    return <Navigate to="/login" />;
   }
 
   // If users exist and we have an auth token, allow access to protected routes

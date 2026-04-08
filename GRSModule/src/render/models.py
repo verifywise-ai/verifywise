@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
-from typing import List, Literal, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import List
 
 from models.generated_by import GeneratedBy
 
@@ -36,6 +36,7 @@ class DomainItem(BaseModel):
     domain_id: str
     regulated: bool
     keywords: List[str]
+    default: bool = False
     generated_by: GeneratedBy | None = None
 
 
@@ -78,23 +79,13 @@ class BaseTemplatesFile(BaseModel):
     templates: List[BaseTemplate]
 
 
-class AiGovernanceVars(BaseModel):
-    model_names: List[str]
-    change_types: List[str]
-    approval_roles: List[str]
-    log_artifacts: List[str]
-    data_subjects: List[str]
-    criteria: List[str]
-
-
-class ContentIntegrityVars(BaseModel):
-    content_types: List[str]
-    vendor_types: List[str]
-    data_subjects: List[str]
-    disclosures: List[str]
+# Slots filled from role/org context — not looked up in render_vars
+CONTEXT_SLOTS: frozenset[str] = frozenset({"assistant_role", "user_role", "org_context", "verb"})
 
 
 class RenderVarsCatalog(BaseModel):
+    model_config = ConfigDict(extra="allow")
     version: str
-    ai_governance: AiGovernanceVars
-    content_integrity: ContentIntegrityVars
+
+    def get_domain_vars(self, domain: str) -> dict[str, list[str]]:
+        return self.model_extra.get(domain, {})

@@ -38,7 +38,7 @@ export async function createApiKey(req: Request, res: Response) {
 
   try {
     // Check admin role
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res
         .status(403)
         .json(STATUS_CODE[403]("Only admins can manage API keys"));
@@ -103,7 +103,7 @@ export async function listApiKeys(req: Request, res: Response) {
   });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res
         .status(403)
         .json(STATUS_CODE[403]("Only admins can manage API keys"));
@@ -156,7 +156,7 @@ export async function revokeApiKey(req: Request, res: Response) {
   });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res
         .status(403)
         .json(STATUS_CODE[403]("Only admins can manage API keys"));
@@ -224,7 +224,7 @@ export async function deleteApiKey(req: Request, res: Response) {
   });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res
         .status(403)
         .json(STATUS_CODE[403]("Only admins can manage API keys"));

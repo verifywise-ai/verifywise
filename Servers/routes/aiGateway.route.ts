@@ -23,6 +23,8 @@ function aiGatewayRoutes() {
   const proxy = createProxyMiddleware({
     target: AI_GATEWAY_URL,
     changeOrigin: true,
+    timeout: 30_000,        // 30s — abort if AI Gateway doesn't respond
+    proxyTimeout: 30_000,   // 30s — abort if connection takes too long
     // /api/ai-gateway/* → /internal/*
     pathRewrite: { "^/": "/internal/" },
     on: {

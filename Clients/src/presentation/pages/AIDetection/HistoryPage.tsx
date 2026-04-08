@@ -537,7 +537,16 @@ export default function HistoryPage() {
       id: "status",
       label: "STATUS",
       render: (scan: Scan) => (
-        <Chip label={STATUS_CONFIG[scan.status]} size="small" />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <Chip label={STATUS_CONFIG[scan.status]} size="small" />
+          {scan.scan_mode === "incremental" && (
+            <Chip
+              label="Incremental"
+              size="small"
+              variant="info"
+            />
+          )}
+        </Box>
       ),
     },
     {
@@ -589,7 +598,11 @@ export default function HistoryPage() {
       label: "FILES SCANNED",
       render: (scan: Scan) => (
         <Typography sx={{ fontSize: "13px" }}>
-          {scan.status === "completed" ? scan.files_scanned : "-"}
+          {scan.status === "completed"
+            ? scan.scan_mode === "incremental" && scan.changed_files_count != null
+              ? `${scan.files_scanned} (${scan.changed_files_count} changed)`
+              : scan.files_scanned
+            : "-"}
         </Typography>
       ),
     },

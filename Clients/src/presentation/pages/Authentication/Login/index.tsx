@@ -1,5 +1,6 @@
-import { Button, Stack, Typography, useTheme, Box } from "@mui/material";
-import React, { Suspense, useState } from "react";
+import { Button, IconButton, Stack, Typography, useTheme, Box } from "@mui/material";
+import React, { Suspense, useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { ReactComponent as Background } from "../../../assets/imgs/background-grid.svg";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import Field from "../../../components/Inputs/Field";
@@ -7,10 +8,12 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { useNavigate } from "react-router-dom";
 import { logEngine } from "../../../../application/tools/log.engine";
 import { useDispatch } from "react-redux";
-import { setAuthToken, setExpiration, setOnboardingStatus, setIsOrgCreator } from "../../../../application/redux/auth/authSlice";
+import { setAuthToken, setExpiration, setOnboardingStatus, setIsOrgCreator, setIsSuperAdmin, setActiveOrganizationId } from "../../../../application/redux/auth/authSlice";
 import Alert from "../../../components/Alert";
 import { ENV_VARs } from "../../../../../env.vars";
 import { loginUser } from "../../../../application/repository/user.repository";
+import { getOrganizations } from "../../../../application/repository/superAdmin.repository";
+import { checkOrganizationExists } from "../../../../application/repository/organization.repository";
 
 // Animated loading component specifically for login
 const LoginLoadingOverlay: React.FC = () => {
@@ -126,6 +129,15 @@ const Login: React.FC = () => {
     title?: string;
     body: string;
   } | null>(null);
+  const [showSetupBanner, setShowSetupBanner] = useState(false);
+
+  useEffect(() => {
+    checkOrganizationExists()
+      .then((exists) => {
+        if (!exists) setShowSetupBanner(true);
+      })
+      .catch(() => {});
+  }, []);
 
   // Handle changes in input fields
   const handleChange =
@@ -142,13 +154,12 @@ const Login: React.FC = () => {
     await loginUser({
       body: values,
     })
-      .then((response) => {
+      .then(async (response) => {
         setValues(initialState);
 
         if (response.status === 202) {
           const token = response.data.data.token;
-          const onboardingStatus = response.data.data.onboarding_status || "completed";
-          const isOrgCreatorFlag = response.data.data.is_org_creator || false;
+          const isSuperAdminFlag = response.data.data.isSuperAdmin || false;
 
           if (values.rememberMe) {
             const expirationDate = Date.now() + 30 * 24 * 60 * 60 * 1000;
@@ -158,6 +169,31 @@ const Login: React.FC = () => {
             dispatch(setAuthToken(token));
             dispatch(setExpiration(null));
           }
+
+          if (isSuperAdminFlag) {
+            dispatch(setIsSuperAdmin(true));
+            localStorage.setItem("root_version", __APP_VERSION__);
+            logEngine({ type: "info", message: "Super-admin login successful." });
+
+            // Auto-select the first organization so super-admin can view org data
+            try {
+              const orgsResponse = await getOrganizations();
+              const orgsData = (orgsResponse.data as any)?.data || [];
+              if (orgsData.length > 0) {
+                dispatch(setActiveOrganizationId(orgsData[0].id));
+              }
+            } catch (err) {
+              console.error("Failed to fetch organizations for auto-select:", err);
+            }
+
+            // Always go to super-admin panel
+            setIsSubmitting(false);
+            navigate("/super-admin");
+            return;
+          }
+
+          const onboardingStatus = response.data.data.onboarding_status || "completed";
+          const isOrgCreatorFlag = response.data.data.is_org_creator || false;
 
           // Store onboarding status from server
           dispatch(setOnboardingStatus(onboardingStatus));
@@ -287,6 +323,40 @@ const Login: React.FC = () => {
           <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
             {loginText}
           </Typography>
+          {showSetupBanner && (
+            <Stack
+              direction="row"
+              alignItems="flex-start"
+              gap={theme.spacing(8)}
+              sx={{
+                width: 360,
+                padding: theme.spacing(8),
+                backgroundColor: singleTheme.alertStyles.info.bg,
+                border: `1px solid ${singleTheme.alertStyles.info.border}`,
+                borderRadius: theme.shape.borderRadius,
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  color: singleTheme.alertStyles.info.text,
+                  flex: 1,
+                }}
+              >
+                Welcome to VerifyWise! To get started, log in with your
+                superadmin credentials to create an organization and invite
+                users.
+              </Typography>
+              <IconButton
+                disableRipple
+                onClick={() => setShowSetupBanner(false)}
+                aria-label="Close banner"
+                sx={{ padding: 0 }}
+              >
+                <X size={16} color={singleTheme.alertStyles.info.text} />
+              </IconButton>
+            </Stack>
+          )}
           <Stack sx={{ gap: theme.spacing(7.5) }}>
             <Field
               label="Email"
@@ -350,33 +420,6 @@ const Login: React.FC = () => {
             >
               Sign in
             </Button>
-              <Stack
-                sx={{
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: theme.spacing(1),
-                }}
-              >
-                <Typography
-                  sx={{ fontSize: 14, color: theme.palette.text.secondary }}
-                >
-                  Don't have an account yet?
-                </Typography>
-                <Typography
-                  sx={{
-                    color:
-                      singleTheme.buttons.primary.contained.backgroundColor,
-                    fontSize: 14,
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => navigate("/register")}
-                >
-                  Register here
-                </Typography>
-              </Stack>
           </Stack>
         </Stack>
       </form>

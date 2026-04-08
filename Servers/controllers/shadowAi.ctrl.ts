@@ -54,7 +54,7 @@ const FILE_NAME = "shadowAi.ctrl.ts";
 // ─── Helpers ────────────────────────────────────────────────────────────
 
 function isWriteRole(role: string): boolean {
-  return role === "Admin" || role === "Editor";
+  return role === "Admin" || role === "SuperAdmin" || role === "Editor";
 }
 
 function parsePeriod(period?: string): number {
@@ -661,7 +661,7 @@ export async function getSyslogConfigs(req: Request, res: Response) {
   logProcessing({ description: "fetching syslog configs", functionName: fn, fileName: FILE_NAME, userId, organizationId });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res.status(403).json(STATUS_CODE[403]("Only admins can manage syslog configuration"));
     }
 
@@ -683,7 +683,7 @@ export async function createSyslogConfig(req: Request, res: Response) {
   logProcessing({ description: "creating syslog config", functionName: fn, fileName: FILE_NAME, userId, organizationId });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res.status(403).json(STATUS_CODE[403]("Only admins can manage syslog configuration"));
     }
 
@@ -721,7 +721,7 @@ export async function updateSyslogConfig(req: Request, res: Response) {
   logProcessing({ description: `updating syslog config: ${configId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res.status(403).json(STATUS_CODE[403]("Only admins can manage syslog configuration"));
     }
 
@@ -766,7 +766,7 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
   logProcessing({ description: `deleting syslog config: ${configId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res.status(403).json(STATUS_CODE[403]("Only admins can manage syslog configuration"));
     }
 
@@ -816,7 +816,7 @@ export async function updateSettings(req: Request, res: Response) {
   logProcessing({ description: "updating settings", functionName: fn, fileName: FILE_NAME, userId, organizationId });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res.status(403).json(STATUS_CODE[403]("Only admins can manage settings"));
     }
 

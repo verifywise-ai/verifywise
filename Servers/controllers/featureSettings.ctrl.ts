@@ -75,7 +75,7 @@ export async function updateFeatureSettings(
   });
 
   try {
-    if (req.role !== "Admin") {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
       return res
         .status(403)
         .json(STATUS_CODE[403]("Only admins can manage feature settings"));

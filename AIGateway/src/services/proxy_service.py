@@ -13,7 +13,6 @@ import time
 from datetime import datetime, timezone
 from typing import Optional
 
-import redis.asyncio as aioredis
 from fastapi import HTTPException
 from sqlalchemy import text
 
@@ -21,19 +20,10 @@ from config import settings
 from database.db import get_db
 from services.guardrail_service import scan_text
 from utils.encryption import decrypt as decrypt_api_key  # noqa: F401 — re-export
+from utils.redis import get_redis as _get_redis
+from utils.rate_limit import check_rate_limit
 
 logger = logging.getLogger("uvicorn")
-
-# ─── Redis connection ────────────────────────────────────────────────────────
-
-_redis: Optional[aioredis.Redis] = None
-
-
-async def _get_redis() -> aioredis.Redis:
-    global _redis
-    if _redis is None:
-        _redis = aioredis.from_url(settings.redis_url, decode_responses=True)
-    return _redis
 
 
 # ─── Virtual Key Authentication ──────────────────────────────────────────────
@@ -56,6 +46,8 @@ async def authenticate_virtual_key(bearer_token: str) -> dict:
         result = await db.execute(
             text("""
                 SELECT id, organization_id, name, allowed_endpoint_ids,
+                       allowed_models, blocked_models,
+                       allowed_providers, blocked_providers,
                        max_budget_usd, current_spend_usd, rate_limit_rpm,
                        is_active, revoked_at, expires_at
                 FROM ai_gateway_virtual_keys
@@ -76,6 +68,44 @@ async def authenticate_virtual_key(bearer_token: str) -> dict:
             if float(row["current_spend_usd"]) >= float(row["max_budget_usd"]):
                 raise ValueError("Virtual key budget exhausted")
         return dict(row)
+
+
+# ─── Model / Provider ACL Enforcement ────────────────────────────────────────
+
+def _matches_acl(value: str, patterns: list[str]) -> bool:
+    """Check if a value matches any pattern in the list. Supports trailing wildcard (e.g. 'gpt-4o*')."""
+    for pattern in patterns:
+        if pattern.endswith("*"):
+            if value.startswith(pattern[:-1]):
+                return True
+        elif value == pattern:
+            return True
+    return False
+
+
+def enforce_model_provider_acls(vk: dict, endpoint: dict):
+    """
+    Check virtual key model/provider ACLs against the resolved endpoint.
+    Raises ValueError if the request is denied.
+    """
+    provider = endpoint.get("provider", "")
+    model = endpoint.get("model", "")
+
+    allowed_providers = vk.get("allowed_providers") or []
+    if allowed_providers and not _matches_acl(provider, allowed_providers):
+        raise ValueError(f"Virtual key does not allow provider: {provider}")
+
+    blocked_providers = vk.get("blocked_providers") or []
+    if blocked_providers and _matches_acl(provider, blocked_providers):
+        raise ValueError(f"Virtual key blocks provider: {provider}")
+
+    allowed_models = vk.get("allowed_models") or []
+    if allowed_models and not _matches_acl(model, allowed_models):
+        raise ValueError(f"Virtual key does not allow model: {model}")
+
+    blocked_models = vk.get("blocked_models") or []
+    if blocked_models and _matches_acl(model, blocked_models):
+        raise ValueError(f"Virtual key blocks model: {model}")
 
 
 # ─── Endpoint Resolution ─────────────────────────────────────────────────────
@@ -184,32 +214,6 @@ async def reconcile_budget(organization_id: int, estimated_cost: float, actual_c
 
 
 # ─── Rate Limiting ───────────────────────────────────────────────────────────
-
-RATE_LIMIT_WINDOW = 60  # seconds
-
-
-async def check_rate_limit(key: str, rpm: int) -> bool:
-    """Check RPM rate limit using Redis sorted set. Returns True if allowed. Fail-open on Redis error."""
-    if rpm <= 0:
-        return True
-    try:
-        r = await _get_redis()
-        redis_key = f"gw:rate:{key}"
-        now = time.time()
-        window_start = now - RATE_LIMIT_WINDOW
-
-        pipe = r.pipeline()
-        pipe.zremrangebyscore(redis_key, 0, window_start)
-        pipe.zcard(redis_key)
-        pipe.zadd(redis_key, {str(now): now})
-        pipe.expire(redis_key, RATE_LIMIT_WINDOW + 10)
-        results = await pipe.execute()
-
-        count = results[1]  # zcard result before zadd
-        return count < rpm
-    except Exception as e:
-        logger.warning(f"Rate limit check failed (fail-open): {e}")
-        return True
 
 
 async def enforce_rate_limits(endpoint: dict, vk: dict):

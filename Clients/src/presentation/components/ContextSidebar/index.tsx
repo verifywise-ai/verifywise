@@ -5,6 +5,7 @@ import { useAIDetectionSidebarContextSafe } from "../../../application/contexts/
 import { useShadowAISidebarContextSafe } from "../../../application/contexts/ShadowAISidebar.context";
 import { useAIGatewaySidebarContextSafe } from "../../../application/contexts/AIGatewaySidebar.context";
 import Sidebar from "../Sidebar";
+import SuperAdminSidebar from "../SuperAdminSidebar";
 import EvalsSidebar from "../../pages/EvalsDashboard/EvalsSidebar";
 import AIDetectionSidebar from "../../pages/AIDetection/AIDetectionSidebar";
 import ShadowAISidebar from "../../pages/ShadowAI/ShadowAISidebar";
@@ -190,6 +191,8 @@ export function ContextSidebar({
         />
       );
     }
+    case "super-admin":
+      return <SuperAdminSidebar />;
     default:
       return (
         <Sidebar

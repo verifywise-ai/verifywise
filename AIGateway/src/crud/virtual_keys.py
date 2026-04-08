@@ -26,6 +26,10 @@ async def get_all_virtual_keys(org_id: int) -> list[dict]:
                     vk.key_prefix,
                     vk.name,
                     vk.allowed_endpoint_ids,
+                    vk.allowed_models,
+                    vk.blocked_models,
+                    vk.allowed_providers,
+                    vk.blocked_providers,
                     vk.max_budget_usd,
                     vk.current_spend_usd,
                     vk.rate_limit_rpm,
@@ -67,6 +71,16 @@ async def create_virtual_key(org_id: int, data: dict) -> Optional[dict]:
     rate_limit_rpm = data.get("rate_limit_rpm")
     name = data.get("name")
 
+    def _to_text_array(lst):
+        if lst and len(lst) > 0:
+            return "{" + ",".join(f'"{v}"' for v in lst) + "}"
+        return "{}"
+
+    allowed_models = _to_text_array(data.get("allowed_models"))
+    blocked_models = _to_text_array(data.get("blocked_models"))
+    allowed_providers = _to_text_array(data.get("allowed_providers"))
+    blocked_providers = _to_text_array(data.get("blocked_providers"))
+
     async with get_db() as db:
         result = await db.execute(
             text("""
@@ -76,6 +90,10 @@ async def create_virtual_key(org_id: int, data: dict) -> Optional[dict]:
                     key_prefix,
                     name,
                     allowed_endpoint_ids,
+                    allowed_models,
+                    blocked_models,
+                    allowed_providers,
+                    blocked_providers,
                     max_budget_usd,
                     rate_limit_rpm,
                     metadata,
@@ -87,6 +105,10 @@ async def create_virtual_key(org_id: int, data: dict) -> Optional[dict]:
                     :key_prefix,
                     :name,
                     :allowed_endpoint_ids::int[],
+                    :allowed_models::text[],
+                    :blocked_models::text[],
+                    :allowed_providers::text[],
+                    :blocked_providers::text[],
                     :max_budget_usd,
                     :rate_limit_rpm,
                     :metadata::jsonb,
@@ -98,6 +120,10 @@ async def create_virtual_key(org_id: int, data: dict) -> Optional[dict]:
                     key_prefix,
                     name,
                     allowed_endpoint_ids,
+                    allowed_models,
+                    blocked_models,
+                    allowed_providers,
+                    blocked_providers,
                     max_budget_usd,
                     current_spend_usd,
                     rate_limit_rpm,
@@ -115,6 +141,10 @@ async def create_virtual_key(org_id: int, data: dict) -> Optional[dict]:
                 "key_prefix": key_data["prefix"],
                 "name": name,
                 "allowed_endpoint_ids": array_literal,
+                "allowed_models": allowed_models,
+                "blocked_models": blocked_models,
+                "allowed_providers": allowed_providers,
+                "blocked_providers": blocked_providers,
                 "max_budget_usd": max_budget_usd,
                 "rate_limit_rpm": rate_limit_rpm,
                 "metadata": metadata_json,
@@ -149,6 +179,16 @@ async def update_virtual_key(org_id: int, key_id: int, data: dict) -> Optional[d
         set_clauses.append("allowed_endpoint_ids = :allowed_endpoint_ids::int[]")
         params["allowed_endpoint_ids"] = array_literal
 
+    def _to_text_array(lst):
+        if lst and len(lst) > 0:
+            return "{" + ",".join(f'"{v}"' for v in lst) + "}"
+        return "{}"
+
+    for field in ("allowed_models", "blocked_models", "allowed_providers", "blocked_providers"):
+        if field in data:
+            set_clauses.append(f"{field} = :{field}::text[]")
+            params[field] = _to_text_array(data[field])
+
     if "max_budget_usd" in data:
         set_clauses.append("max_budget_usd = :max_budget_usd")
         params["max_budget_usd"] = data["max_budget_usd"]
@@ -181,6 +221,10 @@ async def update_virtual_key(org_id: int, key_id: int, data: dict) -> Optional[d
             key_prefix,
             name,
             allowed_endpoint_ids,
+            allowed_models,
+            blocked_models,
+            allowed_providers,
+            blocked_providers,
             max_budget_usd,
             current_spend_usd,
             rate_limit_rpm,

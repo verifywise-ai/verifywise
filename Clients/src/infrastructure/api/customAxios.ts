@@ -87,6 +87,12 @@ CustomAxios.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // Attach X-Organization-Id header when super-admin is viewing an org
+    const activeOrgId = state.auth.activeOrganizationId;
+    if (activeOrgId) {
+      config.headers['X-Organization-Id'] = String(activeOrgId);
+    }
+
     // Enable credentials for auth-related endpoints
     if (config.url?.includes('/users/login') || config.url?.includes('/users/refresh-token')) {
       config.withCredentials = true;

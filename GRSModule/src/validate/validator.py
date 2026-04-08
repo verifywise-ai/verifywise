@@ -27,7 +27,9 @@ def validate_candidates(
     Validation pipeline:
       1. Length hygiene
       2. Deduplication
-      3. LLM semantic validation (dimension trigger + signal gate).
+      3. LLM semantic validation:
+         a. Structural validity (dimension trigger + signal gate).
+         b. Realism gate (plausible as a real workplace message).
          Falls back to heuristic regex when client is MockChatClient.
     """
     rejections: List[Dict[str, Any]] = []
@@ -61,6 +63,10 @@ def validate_candidates(
             rejections.append({"candidate_id": cid, "reason_code": R.TRIG_SEMANTIC_INVALID, "notes": result.reasoning})
             continue
 
+        if not result.realistic_scenario:
+            rejections.append({"candidate_id": cid, "reason_code": R.TRIG_SEMANTIC_UNREALISTIC, "notes": result.reasoning})
+            continue
+
         accepted.append(
             {
                 "scenario_id": c["candidate_id"].replace("cand_", "grs_"),
@@ -89,6 +95,7 @@ def validate_candidates(
                 "metadata": {
                     "prompt_hash": h,
                     "tension_signals": result.tension_signals,
+                    "realistic_scenario": result.realistic_scenario,
                     "semantic_reasoning": result.reasoning,
                     "used_heuristic_fallback": result.used_heuristic_fallback,
                 },

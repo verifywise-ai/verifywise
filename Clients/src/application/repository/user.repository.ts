@@ -164,6 +164,7 @@ interface LoginResponse {
     token: string;
     onboarding_status?: string;
     is_org_creator?: boolean;
+    isSuperAdmin?: boolean;
   };
 }
 

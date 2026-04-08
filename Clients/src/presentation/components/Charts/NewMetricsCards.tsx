@@ -37,7 +37,7 @@ interface MetricBarChartProps {
 function MetricBarChart({ data, height = 130 }: MetricBarChartProps) {
   return (
     <ChartOutlineWrapper>
-      <ResponsiveContainer width="100%" height={height}>
+      <ResponsiveContainer width="100%" height={height} minWidth={0}>
         <BarChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: -24 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={borderPalette.light} vertical={false} />
           <XAxis

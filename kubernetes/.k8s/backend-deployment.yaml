@@ -215,6 +215,18 @@ spec:
               key: SLACK_BOT_TOKEN
               optional: true
 
+        # Super-Admin Credentials
+        - name: SUPERADMIN_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: SUPERADMIN_EMAIL
+        - name: SUPERADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: SUPERADMIN_PASSWORD
+
         # Encryption Settings
         - name: ENCRYPTION_PASSWORD
           valueFrom:

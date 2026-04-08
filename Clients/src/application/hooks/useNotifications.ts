@@ -30,7 +30,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useSelector } from "react-redux";
-import { RootState } from "../redux/store";
+import { RootState, store } from "../redux/store";
 import { ENV_VARs } from "../../../env.vars";
 import { showAlert } from "../../infrastructure/api/customAxios";
 import { apiServices } from "../../infrastructure/api/networkServices";
@@ -359,12 +359,20 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
       isManuallyDisconnectedRef.current = false;
 
       // Use fetch() instead of EventSource to send custom headers
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${authToken}`,
+        'Accept': 'text/event-stream',
+      };
+
+      // Include X-Organization-Id for super-admin org context
+      const activeOrgId = store.getState().auth.activeOrganizationId;
+      if (activeOrgId) {
+        headers['X-Organization-Id'] = String(activeOrgId);
+      }
+
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Accept': 'text/event-stream',
-        },
+        headers,
         signal: abortController.signal,
       });
 

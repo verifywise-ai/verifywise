@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export type AppModule = "main" | "evals" | "ai-detection" | "shadow-ai" | "ai-gateway";
+export type AppModule = "main" | "evals" | "ai-detection" | "shadow-ai" | "ai-gateway" | "super-admin";
 
 const initialState = {
   sidebar: {

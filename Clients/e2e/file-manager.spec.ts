@@ -142,6 +142,52 @@ test.describe("File Manager", () => {
     }
   });
 
+  // --- Tier 4: File upload ---
+
+  test("can upload a file via file chooser", async ({ authedPage: page }) => {
+    await page.goto("/file-manager");
+
+    const uploadBtn = page.getByRole("button", { name: /upload file/i });
+    if (!(await uploadBtn.isVisible().catch(() => false))) {
+      test.skip();
+      return;
+    }
+    await uploadBtn.click();
+    await page.waitForTimeout(500);
+
+    // Wait for dialog/upload area
+    const uploadArea = page
+      .getByRole("dialog")
+      .or(page.getByText(/drag.*drop/i))
+      .or(page.getByText(/browse/i))
+      .or(page.getByText(/choose.*file/i));
+
+    if (await uploadArea.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+      // Use Playwright fileChooser API to upload a test file
+      const browseBtn = page
+        .getByRole("button", { name: /browse|choose|select/i })
+        .or(page.getByText(/browse/i))
+        .or(page.locator('input[type="file"]'));
+
+      if (await browseBtn.first().isVisible().catch(() => false)) {
+        const [fileChooser] = await Promise.all([
+          page.waitForEvent("filechooser").catch(() => null),
+          browseBtn.first().click(),
+        ]);
+
+        if (fileChooser) {
+          await fileChooser.setFiles({
+            name: `e2e-test-file-${Date.now()}.txt`,
+            mimeType: "text/plain",
+            buffer: Buffer.from("E2E test file content"),
+          });
+          await page.waitForTimeout(1000);
+        }
+      }
+    }
+    await page.keyboard.press("Escape");
+  });
+
   // --- Tier 4: CRUD - Folder ---
 
   test("CRUD: create and delete a folder", async ({ authedPage: page }) => {

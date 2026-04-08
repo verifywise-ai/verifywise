@@ -11,6 +11,23 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 'v2.2',
+    date: 'April 2, 2026',
+    title: 'AI Gateway, Policy Radar, and CI/CD scanning',
+    summary:
+      'Major release introducing the AI Gateway for centralized LLM traffic control with guardrails, spend tracking, and virtual keys. Adds Policy Radar for automated vendor policy monitoring, incremental AI detection scans, GitHub webhook CI/CD integration, super admin management, and intake form builder for use case registration.',
+    items: [
+      'AI Gateway — proxy all LLM traffic through a single control plane with spend dashboards, request/response logging, and per-endpoint analytics',
+      'AI Gateway guardrails — PII detection (Presidio) and content filtering with block/mask actions on any endpoint',
+      'AI Gateway virtual keys — scoped API keys with model/provider access controls and budget limits',
+      'AI Gateway prompt library — save, version, and reuse prompt templates across endpoints',
+      'Incremental AI detection scans — scan only changed files between two commits, carrying forward baseline findings',
+      'GitHub webhook CI/CD integration — trigger AI detection scans automatically on push events with status reporting',
+      'Super admin panel — manage organizations, users, and platform settings across all tenants',
+      'Intake form builder — create custom use case registration forms with public submission links',
+    ],
+  },
+  {
     version: 'v2.1',
     date: 'February 19, 2026',
     title: 'Shadow AI, agent discovery, and bias audits',

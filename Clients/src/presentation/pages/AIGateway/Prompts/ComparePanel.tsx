@@ -116,6 +116,7 @@ export default function ComparePanel({
             items={versionItems}
             placeholder="Select version"
             sx={{ flex: 1 }}
+            getOptionValue={(item) => item._id}
           />
           <Select
             id="compare-select-right"
@@ -125,6 +126,7 @@ export default function ComparePanel({
             items={versionItems}
             placeholder="Select version"
             sx={{ flex: 1 }}
+            getOptionValue={(item) => item._id}
           />
         </Box>
         <Typography fontSize={13} fontWeight={500} color="text.secondary" mt="8px">Endpoint</Typography>
@@ -135,6 +137,7 @@ export default function ComparePanel({
           items={endpoints.map((e) => ({ _id: e.slug, name: `${e.display_name} (${e.slug})` }))}
           placeholder="Select endpoint"
           sx={{ width: "100%" }}
+          getOptionValue={(item) => item._id}
         />
         <Typography fontSize={11} color="text.disabled" mt="4px">
           {detectedVars.length > 0

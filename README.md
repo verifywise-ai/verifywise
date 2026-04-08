@@ -123,11 +123,15 @@ cd ..
 cp .env.dev Servers/.env
 ```
 
-In `.env` file, change FRONTEND_URL:
+In `.env` file, change FRONTEND_URL and set your super admin credentials:
 
 ```
 FRONTEND_URL=http://localhost:5173
+SUPERADMIN_EMAIL=admin@verifywise.com
+SUPERADMIN_PASSWORD=ChangeMe!Str0ng
 ```
+
+**Important:** Change `SUPERADMIN_PASSWORD` to a strong password (minimum 8 characters). These credentials are used to create the initial super admin account on first setup.
 
 Note: CORS is automatically configured to allow requests from the same host (localhost, 127.0.0.1) where the backend is running.
 
@@ -193,7 +197,7 @@ npm run dev
 
 **Note:** Make sure to replace {env variable password} with the actual password from your environment variables.
 
-**Note:** Since no users exist by default, you'll see the admin registration page first. Register your admin account here. After registration, you'll be redirected to login, and will be able to use your new credentials.
+**Note:** On a fresh setup, a super admin account is created automatically using the `SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD` environment variables. Log in with these credentials, then create an organization and invite users to get started. The login page will display a banner guiding you through this process.
 
 ### Installation using Docker (production)
 
@@ -217,11 +221,13 @@ curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/insta
 curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/.env.prod
 ```
 
-Make sure to change the JWT_SECRET variable to your liking, and change `localhost` to the IP of the server. An example is shown below:
+Make sure to change the JWT_SECRET variable to your liking, set your super admin credentials (`SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD`), and change `localhost` to the IP of the server. An example is shown below:
 
 ```
 BACKEND_URL=http://64.23.242.4:3000
 FRONTEND_URL=http://64.23.242.4:8080
+SUPERADMIN_EMAIL=admin@verifywise.com
+SUPERADMIN_PASSWORD=YourStr0ngPassword!
 ```
 
 Note: CORS is automatically configured to allow requests from the same host where the backend is running.
@@ -251,7 +257,7 @@ docker-compose --env-file .env.prod down
 ./install.sh
 ```
 
-**Note:** Since no users exist by default, you'll see the admin registration page first. Register your admin account here. After registration, you'll be redirected to login, and will be able to use your new credentials.
+**Note:** On a fresh setup, a super admin account is created automatically using the `SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD` environment variables. Log in with these credentials, then create an organization and invite users to get started.
 
 ### Installing SSL
 

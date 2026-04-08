@@ -272,7 +272,7 @@ export default function SpendDashboardPage() {
                 <Box sx={{ display: "flex", cursor: "help" }}><Info size={14} color={palette.text.disabled} /></Box>
               </MuiTooltip>
             </Stack>
-            <ResponsiveContainer width="100%" height={260} style={{ outline: "none" }}>
+            <ResponsiveContainer width="100%" height={260} minWidth={0} style={{ outline: "none" }}>
               <BarChart data={byDay}>
                 <defs>
                   <GradientDef id="costBarGradient" color={palette.brand.primary} />
@@ -451,7 +451,7 @@ export default function SpendDashboardPage() {
                     <Box sx={{ display: "flex", cursor: "help" }}><Info size={14} color={palette.text.disabled} /></Box>
                   </MuiTooltip>
                 </Stack>
-                <ResponsiveContainer width="100%" height={180} style={{ outline: "none" }}>
+                <ResponsiveContainer width="100%" height={180} minWidth={0} style={{ outline: "none" }}>
                   <AreaChart data={errorRateByDay}>
                     <defs>
                       <GradientDef id="errorGradient" color={GUARDRAIL_ACTION_COLORS.blocked} />
@@ -488,7 +488,7 @@ export default function SpendDashboardPage() {
                     <Box sx={{ display: "flex", cursor: "help" }}><Info size={14} color={palette.text.disabled} /></Box>
                   </MuiTooltip>
                 </Stack>
-                <ResponsiveContainer width="100%" height={180} style={{ outline: "none" }}>
+                <ResponsiveContainer width="100%" height={180} minWidth={0} style={{ outline: "none" }}>
                   <BarChart data={tokensPerEndpoint} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke={palette.border.light} />
                     <XAxis
@@ -535,7 +535,7 @@ export default function SpendDashboardPage() {
                 </Stack>
                 <Box sx={{ display: "flex", alignItems: "center", gap: "16px" }}>
                   <Box sx={{ position: "relative", width: 160, height: 160 }}>
-                    <ResponsiveContainer width={160} height={160} style={{ outline: "none" }}>
+                    <ResponsiveContainer width={160} height={160} minWidth={0} style={{ outline: "none" }}>
                       <PieChart>
                         <Pie
                           data={byProvider}
@@ -602,7 +602,7 @@ export default function SpendDashboardPage() {
                     <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>Masked</Typography>
                   </Stack>
                 </Stack>
-                <ResponsiveContainer width="100%" height={160} style={{ outline: "none" }}>
+                <ResponsiveContainer width="100%" height={160} minWidth={0} style={{ outline: "none" }}>
                   <AreaChart data={guardrailStats?.byDay || []} margin={{ left: 0, right: 0 }}>
                     <defs>
                       <GradientDef id="blockedGradient" color={GUARDRAIL_ACTION_COLORS.blocked} />

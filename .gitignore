@@ -14,7 +14,6 @@ express.log
 fastapi.log
 react.log
 .idea/
-.claude
 # CLAUDE.md
 .kombai
 .vscode
@@ -42,3 +41,8 @@ EvaluationModule/data/uploads/*
 nul
 agent-plan.md
 pdf-templates/
+
+# WebReel generated videos and screenshots
+videos/
+screenshots/
+.webreel/

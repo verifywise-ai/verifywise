@@ -38,7 +38,7 @@ import { sectionTitleSx, useCardSx, formatEntityType } from "../shared";
 
 const AUTO_REFRESH_INTERVAL_MS = 10_000;
 const SEARCH_DEBOUNCE_MS = 300;
-const GR_PAGE_SIZE = 50;
+const GR_DEFAULT_PAGE_SIZE = 25;
 
 type StatusFilter = "all" | "success" | "error";
 type SourceFilter = "all" | "playground" | "virtual-key";
@@ -162,12 +162,15 @@ export default function LogsPage() {
   const [grLogs, setGrLogs] = useState<any[]>([]);
   const [grTotal, setGrTotal] = useState(0);
   const [grPage, setGrPage] = useState(0);
+  const [grRowsPerPage, setGrRowsPerPage] = useState(() =>
+    getPaginationRowCount("aiGatewayGuardrailLogs", GR_DEFAULT_PAGE_SIZE)
+  );
   const [grLoading, setGrLoading] = useState(false);
 
   const loadGuardrailLogs = useCallback(async () => {
     setGrLoading(true);
     try {
-      const res = await apiServices.get<Record<string, any>>(`/ai-gateway/guardrails/logs?limit=${GR_PAGE_SIZE}&offset=${grPage * GR_PAGE_SIZE}`);
+      const res = await apiServices.get<Record<string, any>>(`/ai-gateway/guardrails/logs?limit=${grRowsPerPage}&offset=${grPage * grRowsPerPage}`);
       const data = res?.data || {};
       setGrLogs(data.logs || data?.data?.logs || []);
       setGrTotal(data.total || data.logs?.length || 0);
@@ -176,7 +179,7 @@ export default function LogsPage() {
     } finally {
       setGrLoading(false);
     }
-  }, [grPage]);
+  }, [grPage, grRowsPerPage]);
 
   useEffect(() => {
     if (activeLogTab === "guardrails") loadGuardrailLogs();
@@ -308,9 +311,9 @@ export default function LogsPage() {
             </Typography>
           </Stack>
           <CustomizableButton
-            text={loading ? "Loading..." : "Refresh"}
+            text={(activeLogTab === "requests" ? loading : grLoading) ? "Loading..." : "Refresh"}
             icon={<RefreshCw size={14} strokeWidth={1.5} />}
-            onClick={() => loadLogs(page, rowsPerPage)}
+            onClick={() => activeLogTab === "requests" ? loadLogs(page, rowsPerPage) : loadGuardrailLogs()}
           />
         </Stack>
       }
@@ -776,17 +779,78 @@ export default function LogsPage() {
                   ))}
 
                   {/* Pagination */}
-                  {grTotal > GR_PAGE_SIZE && (
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pt: "12px" }}>
-                      <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                        Page {grPage + 1} of {Math.ceil(grTotal / GR_PAGE_SIZE)}  ({grTotal} total)
-                      </Typography>
-                      <Stack direction="row" gap="8px">
-                        <CustomizableButton text="Previous" variant="outlined" onClick={() => setGrPage(Math.max(0, grPage - 1))} isDisabled={grPage === 0} />
-                        <CustomizableButton text="Next" variant="outlined" onClick={() => setGrPage(grPage + 1)} isDisabled={(grPage + 1) * GR_PAGE_SIZE >= grTotal} />
-                      </Stack>
-                    </Stack>
-                  )}
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TablePagination
+                          count={grTotal}
+                          page={grPage}
+                          onPageChange={(_, newPage) => setGrPage(newPage)}
+                          rowsPerPage={grRowsPerPage}
+                          rowsPerPageOptions={[10, 25, 50]}
+                          onRowsPerPageChange={(e) => {
+                            const rpp = parseInt(e.target.value, 10);
+                            setGrRowsPerPage(rpp);
+                            setGrPage(0);
+                            setPaginationRowCount("aiGatewayGuardrailLogs", rpp);
+                          }}
+                          ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                          labelRowsPerPage="Rows per page"
+                          labelDisplayedRows={({ page, count }) =>
+                            `Page ${page + 1} of ${Math.max(1, Math.ceil(count / grRowsPerPage))}`
+                          }
+                          slotProps={{
+                            select: {
+                              MenuProps: {
+                                keepMounted: true,
+                                PaperProps: {
+                                  className: "pagination-dropdown",
+                                  sx: { mt: 0, mb: theme.spacing(2) },
+                                },
+                                transformOrigin: { vertical: "bottom", horizontal: "left" },
+                                anchorOrigin: { vertical: "top", horizontal: "left" },
+                                sx: { mt: theme.spacing(-2) },
+                              },
+                              inputProps: { id: "gr-pagination-dropdown" },
+                              IconComponent: () => <ChevronsUpDown size={16} />,
+                              sx: {
+                                ml: theme.spacing(4),
+                                mr: theme.spacing(12),
+                                minWidth: theme.spacing(20),
+                                textAlign: "left",
+                                "&.Mui-focused > div": {
+                                  backgroundColor: theme.palette.background.main,
+                                },
+                              },
+                            },
+                          }}
+                          sx={{
+                            backgroundColor: theme.palette.grey[50],
+                            border: `1px solid ${theme.palette.border.light}`,
+                            borderTop: "none",
+                            borderRadius: `0 0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px`,
+                            color: theme.palette.text.secondary,
+                            height: "50px",
+                            minHeight: "50px",
+                            "& .MuiTablePagination-toolbar": {
+                              minHeight: "50px",
+                              paddingTop: "4px",
+                              paddingBottom: "4px",
+                            },
+                            "& .MuiSelect-icon": {
+                              width: "24px",
+                              height: "fit-content",
+                            },
+                            "& .MuiSelect-select": {
+                              width: theme.spacing(10),
+                              borderRadius: theme.shape.borderRadius,
+                              border: `1px solid ${theme.palette.border.light}`,
+                            },
+                          }}
+                        />
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </Stack>
               )}
             </Stack>

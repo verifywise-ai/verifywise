@@ -69,6 +69,8 @@ jobs:
           DB_NAME: verifywise_test
           DB_USER: postgres
           DB_PASSWORD: postgres
+          SUPERADMIN_EMAIL: admin@verifywise-test.com
+          SUPERADMIN_PASSWORD: TestAdmin!Str0ng
         run: npx sequelize db:migrate
 
       - name: Seed test data
@@ -83,7 +85,7 @@ jobs:
 
       # ---- AIGateway setup ----
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 

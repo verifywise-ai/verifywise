@@ -36,6 +36,7 @@ import {
   Bot,
   Database,
   FileSearch,
+  FolderGit2,
   Search,
   History,
   Eye,
@@ -124,6 +125,7 @@ export const routeMapping: Record<string, string> = {
   "/ai-detection/scan": "Scan repository",
   "/ai-detection/history": "Scan history",
   "/ai-detection/scans": "Scan history",
+  "/ai-detection/repositories": "Repositories",
   "/ai-detection/settings": "Settings",
 
   // AI Gateway
@@ -148,6 +150,15 @@ export const routeMapping: Record<string, string> = {
   "/ai-gateway/settings/guardrails": "Guardrail settings",
   "/ai-gateway/settings/risks": "Suggested risks",
 
+  // MCP Gateway
+  "/ai-gateway/mcp": "MCP Gateway",
+  "/ai-gateway/mcp/agent-keys": "Agent keys",
+  "/ai-gateway/mcp/servers": "Servers",
+  "/ai-gateway/mcp/tools": "Tool catalog",
+  "/ai-gateway/mcp/audit": "Audit log",
+  "/ai-gateway/mcp/approvals": "Approvals",
+  "/ai-gateway/mcp/guardrails": "Guardrails",
+
   // Shadow AI
   "/shadow-ai": "Shadow AI",
   "/shadow-ai/insights": "Insights",
@@ -165,6 +176,10 @@ export const routeMapping: Record<string, string> = {
 
   // Policies
   "/policies": "Policies",
+
+  // Super Admin
+  "/super-admin": "Super Admin",
+  "/super-admin/users": "Users",
 
   // Authentication
   "/login": "Sign in",
@@ -266,6 +281,7 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/ai-detection/scan": () => React.createElement(Search, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/history": () => React.createElement(History, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/scans": () => React.createElement(History, { size: 14, strokeWidth: 1.5 }),
+  "/ai-detection/repositories": () => React.createElement(FolderGit2, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
 
   // Intake forms
@@ -293,6 +309,19 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/ai-gateway/settings/virtual-keys": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/settings/guardrails": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/settings/risks": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+
+  // MCP Gateway
+  "/ai-gateway/mcp": () => React.createElement(Router, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/mcp/agent-keys": () => React.createElement(KeyRound, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/mcp/servers": () => React.createElement(Router, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/mcp/tools": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/mcp/audit": () => React.createElement(FileSearch, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/mcp/approvals": () => React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/mcp/guardrails": () => React.createElement(ShieldAlert, { size: 14, strokeWidth: 1.5 }),
+
+  // Super Admin
+  "/super-admin": () => React.createElement(Shield, { size: 14, strokeWidth: 1.5 }),
+  "/super-admin/users": () => React.createElement(Users, { size: 14, strokeWidth: 1.5 }),
 
   // Shadow AI
   "/shadow-ai": () => React.createElement(Eye, { size: 14, strokeWidth: 1.5 }),
@@ -358,6 +387,12 @@ export const dynamicRoutePatterns = [
     label: "Tool details",
     description: "Detailed view of specific AI tool",
     icon: () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
+  },
+  {
+    pattern: /\/super-admin\/organizations\/\d+\/users/,
+    label: "Organization users",
+    description: "Users in a specific organization",
+    icon: () => React.createElement(Users, { size: 14, strokeWidth: 1.5 }),
   },
   {
     pattern: /\/intake-forms\/\w+\/edit/,

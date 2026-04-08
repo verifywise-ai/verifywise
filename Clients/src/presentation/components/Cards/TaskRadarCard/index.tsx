@@ -88,7 +88,7 @@ export function TaskRadarCard({
       </Stack>
 
       <ChartOutlineWrapper>
-        <ResponsiveContainer width="100%" height={130}>
+        <ResponsiveContainer width="100%" height={130} minWidth={0}>
           <BarChart data={chartData} margin={{ top: 8, right: 0, bottom: 0, left: -24 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={borderPalette.light} vertical={false} />
             <XAxis

@@ -118,7 +118,7 @@ export const canUserAccessFile = async (
   userOrgId?: number
 ): Promise<boolean> => {
   // Admins can access all files
-  if (role === "Admin") {
+  if (role === "Admin" || role === "SuperAdmin") {
     return true;
   }
 

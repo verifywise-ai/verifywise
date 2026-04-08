@@ -25,5 +25,7 @@ export interface AgentTableProps {
   onRowClick: (agent: AgentPrimitiveRow) => void;
   onEdit: (agent: AgentPrimitiveRow) => void;
   onDelete: (agent: AgentPrimitiveRow) => void;
+  onSync?: () => void;
+  isSyncing?: boolean;
   visibleColumns?: Set<string>;
 }

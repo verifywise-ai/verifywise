@@ -371,6 +371,7 @@ export const deleteUserByIdQuery = async (
     { table: "vendorrisks", model: VendorRiskModel, fields: ["action_owner"] },
     { table: "files", model: FileModel, fields: ["uploaded_by"] },
     { table: "automations", model: AutomationModel, fields: ["created_by"] },
+    { table: "invitations", model: null as any, fields: ["invited_by"] },
   ];
 
   for (let entry of usersFK) {
