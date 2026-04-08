@@ -4,7 +4,7 @@ import { useTheme } from "@mui/material/styles";
 import { Paperclip, X, Upload } from "lucide-react";
 import { CustomizableButton } from "../button/customizable-button";
 import { FilePickerModal } from "../FilePickerModal";
-import FileUploadModal from "../Modals/FileUpload";
+import FileManagerUploadModal from "../Modals/FileManagerUpload";
 import {
   attachFileToEntity,
   detachFileFromEntity,
@@ -63,22 +63,20 @@ const PolicyAttachments = ({ policyId }: PolicyAttachmentsProps) => {
     }
   };
 
-  const handleUploadSuccess = async (fileResponse: {
-    data?: { id?: number };
-    id?: number;
-  }) => {
+  const handleUploadSuccess = async (uploadedFiles: Array<{ id?: number }>) => {
     setUploadOpen(false);
-    const fileId = fileResponse?.data?.id ?? fileResponse?.id;
-    if (!fileId) return;
     setIsLoading(true);
     try {
-      await attachFileToEntity({
-        file_id: fileId,
-        framework_type: FRAMEWORK_TYPE,
-        entity_type: ENTITY_TYPE,
-        entity_id: policyId,
-        link_type: LINK_TYPE,
-      });
+      for (const file of uploadedFiles) {
+        if (!file?.id) continue;
+        await attachFileToEntity({
+          file_id: file.id,
+          framework_type: FRAMEWORK_TYPE,
+          entity_type: ENTITY_TYPE,
+          entity_id: policyId,
+          link_type: LINK_TYPE,
+        });
+      }
       await fetchAttachments();
     } finally {
       setIsLoading(false);
@@ -185,14 +183,13 @@ const PolicyAttachments = ({ policyId }: PolicyAttachmentsProps) => {
         title="Attach PDF to policy"
       />
 
-      <FileUploadModal
-        uploadProps={{
-          open: uploadOpen,
-          onClose: () => setUploadOpen(false),
-          onSuccess: handleUploadSuccess,
-          uploadEndpoint: "/file-manager",
-          allowedFileTypes: ["application/pdf"],
-        }}
+      <FileManagerUploadModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onSuccess={handleUploadSuccess}
+        acceptedMimeTypes={["application/pdf"]}
+        title="Upload PDF"
+        multiple
       />
     </Box>
   );
