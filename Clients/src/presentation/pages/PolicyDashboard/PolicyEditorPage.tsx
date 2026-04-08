@@ -97,6 +97,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import { HistorySidebar } from "../../components/Common/HistorySidebar";
 import { usePolicyChangeHistory } from "../../../application/hooks/usePolicyChangeHistory";
 import PolicyForm from "../../components/Policies/PolicyForm";
+import PolicyAttachments from "../../components/Policies/PolicyAttachments";
 import InsertLinkModal from "../../components/Modals/InsertLinkModal/InsertLinkModal";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import { uploadFileToManager } from "../../../application/repository/file.repository";
@@ -1743,6 +1744,13 @@ export default function PolicyEditorPage() {
             clearFieldError={clearFieldError}
           />
         </Box>
+
+        {/* ── PDF Attachments ──────────────────────────────────────── */}
+        {!isNew && policy?.id && (
+          <Box sx={{ mb: "8px", flexShrink: 0 }}>
+            <PolicyAttachments policyId={policy.id} />
+          </Box>
+        )}
 
         {/* ── Toolbar ──────────────────────────────────────────────── */}
         <Box
