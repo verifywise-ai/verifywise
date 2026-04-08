@@ -3,6 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { useOnboarding } from "../useOnboarding";
+import { useAuth } from "../useAuth";
 import { VerifyWiseContext } from "../../contexts/VerifyWise.context";
 
 vi.mock("../useAuth", () => ({
@@ -73,6 +74,16 @@ describe("useOnboarding", () => {
       });
 
       expect(result.current.isOrgCreator).toBe(true);
+    });
+
+    it("should handle when userId is null", () => {
+      vi.mocked(useAuth).mockReturnValueOnce({ userId: null as any });
+
+      const { result } = renderHook(() => useOnboarding(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.state).toBeDefined();
     });
   });
 
@@ -272,6 +283,26 @@ describe("useOnboarding", () => {
       });
 
       expect(result.current.serverOnboardingStatus).toBe("completed");
+    });
+  });
+
+  describe("error handling", () => {
+    it("should handle invalid localStorage data gracefully", () => {
+      const originalGetItem = localStorage.getItem;
+      localStorage.getItem = vi.fn((key: string) => {
+        if (key.includes("verifywise_onboarding")) {
+          return "invalid json {";
+        }
+        return originalGetItem(key);
+      });
+
+      const { result } = renderHook(() => useOnboarding(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.state).toBeDefined();
+
+      localStorage.getItem = originalGetItem;
     });
   });
 });

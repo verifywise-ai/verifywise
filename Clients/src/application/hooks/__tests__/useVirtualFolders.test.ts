@@ -208,5 +208,179 @@ describe("useVirtualFolders", () => {
 
       expect(typeof result.current.refreshFolders).toBe("function");
     });
+
+    it("should set loading true during refresh", async () => {
+      mockGetFolderTree.mockResolvedValue([]);
+      mockGetAllFolders.mockResolvedValue([]);
+
+      const { result } = renderHook(() => useVirtualFolders());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      mockGetFolderTree.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve([]), 100)));
+
+      await act(async () => {
+        result.current.refreshFolders();
+      });
+
+      expect(result.current.loading).toBe(true);
+    });
+  });
+
+  describe("handleUpdateFolder", () => {
+    it("should update folder and refresh", async () => {
+      mockGetFolderTree.mockResolvedValue([]);
+      mockGetAllFolders.mockResolvedValue([]);
+      mockUpdateFolder.mockResolvedValue({ id: 1, name: "Updated Folder" });
+
+      const { result } = renderHook(() => useVirtualFolders());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let updatedFolder: { id: number; name: string } | null = null;
+      await act(async () => {
+        updatedFolder = await result.current.handleUpdateFolder(1, { name: "Updated Folder" });
+      });
+
+      expect(mockUpdateFolder).toHaveBeenCalledWith(1, { name: "Updated Folder" });
+      expect(updatedFolder).toEqual({ id: 1, name: "Updated Folder" });
+    });
+
+    it("should handle update error", async () => {
+      mockGetFolderTree.mockResolvedValue([]);
+      mockGetAllFolders.mockResolvedValue([]);
+      mockUpdateFolder.mockRejectedValue(new Error("Failed to update"));
+
+      const { result } = renderHook(() => useVirtualFolders());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.handleUpdateFolder(1, { name: "Updated" });
+      });
+
+      expect(result.current.error).toBe("Failed to update");
+    });
+  });
+
+  describe("selectedFolder with number", () => {
+    it("should load breadcrumb for selected folder number", async () => {
+      const mockPath = [{ id: 1, name: "Folder 1" }];
+
+      mockGetFolderTree.mockResolvedValue([]);
+      mockGetAllFolders.mockResolvedValue([]);
+      mockGetFolderPath.mockResolvedValue(mockPath);
+
+      const { result } = renderHook(() => useVirtualFolders());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      act(() => {
+        result.current.setSelectedFolder(1);
+      });
+
+      await waitFor(() => {
+        expect(mockGetFolderPath).toHaveBeenCalledWith(1);
+      });
+    });
+
+    it("should handle breadcrumb loading state", async () => {
+      mockGetFolderTree.mockResolvedValue([]);
+      mockGetAllFolders.mockResolvedValue([]);
+      mockGetFolderPath.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve([]), 100)));
+
+      const { result } = renderHook(() => useVirtualFolders());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      act(() => {
+        result.current.setSelectedFolder(1);
+      });
+
+      expect(result.current.loadingBreadcrumb).toBe(true);
+    });
+  });
+
+  describe("delete folder edge cases", () => {
+    it("should reset to all files when deleting selected folder", async () => {
+      mockGetFolderTree.mockResolvedValue([]);
+      mockGetAllFolders.mockResolvedValue([]);
+
+      const { result } = renderHook(() => useVirtualFolders());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      act(() => {
+        result.current.setSelectedFolder(5);
+      });
+
+      await waitFor(() => {
+        expect(result.current.selectedFolder).toBe(5);
+      });
+
+      mockDeleteFolder.mockResolvedValue(undefined);
+
+      await act(async () => {
+        await result.current.handleDeleteFolder(5);
+      });
+
+      expect(result.current.selectedFolder).toBe("all");
+    });
+
+    it("should handle delete error", async () => {
+      mockGetFolderTree.mockResolvedValue([]);
+      mockGetAllFolders.mockResolvedValue([]);
+      mockDeleteFolder.mockRejectedValue(new Error("Failed to delete"));
+
+      const { result } = renderHook(() => useVirtualFolders());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let success = false;
+      await act(async () => {
+        success = await result.current.handleDeleteFolder(1);
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.error).toBe("Failed to delete");
+    });
+  });
+
+  describe("breadcrumb loading", () => {
+    it("should handle breadcrumb fetch error", async () => {
+      mockGetFolderTree.mockResolvedValue([]);
+      mockGetAllFolders.mockResolvedValue([]);
+      mockGetFolderPath.mockRejectedValue(new Error("Failed to load path"));
+
+      const { result } = renderHook(() => useVirtualFolders());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      act(() => {
+        result.current.setSelectedFolder(1);
+      });
+
+      await waitFor(() => {
+        expect(result.current.loadingBreadcrumb).toBe(false);
+      });
+
+      expect(result.current.breadcrumb).toEqual([]);
+    });
   });
 });

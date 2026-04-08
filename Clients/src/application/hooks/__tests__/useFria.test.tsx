@@ -286,6 +286,63 @@ describe("useFria", () => {
 
       expect(result.current.error).toBe("Submit failed");
     });
+
+    it("should set isSaving during submission", async () => {
+      mockGetFria.mockResolvedValue(mockFriaData);
+      mockSubmitFria.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+
+      const { result } = renderHook(() => useFria("project-1"));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      act(() => {
+        result.current.submitFria();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSaving).toBe(true);
+      });
+    });
+  });
+
+  describe("unlinkModel error handling", () => {
+    it("should handle unlinkModel error", async () => {
+      mockGetFria.mockResolvedValue(mockFriaData);
+      mockUnlinkModel.mockRejectedValue(new Error("Failed to unlink model"));
+
+      const { result } = renderHook(() => useFria("project-1"));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.unlinkModel(123);
+      });
+
+      expect(result.current.error).toBe("Failed to unlink model");
+    });
+  });
+
+  describe("updateAssessment", () => {
+    it("should call updateFria with debounced data", async () => {
+      mockGetFria.mockResolvedValue(mockFriaData);
+      mockUpdateFria.mockResolvedValue({ success: true });
+
+      const { result } = renderHook(() => useFria("project-1"));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      act(() => {
+        result.current.updateAssessment({ operational_context: "Test context" });
+      });
+
+      expect(mockUpdateFria).not.toHaveBeenCalled();
+    });
   });
 
 });

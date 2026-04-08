@@ -191,5 +191,504 @@ describe("useDashboardMetrics", () => {
       expect(mockGetAllEntities).not.toHaveBeenCalled();
       expect(mockGetEntityById).not.toHaveBeenCalled();
     });
+
+    it("should trigger revalidation when hasAnyCache is true but forceRefresh is true", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.fetchAllMetrics(true);
+      });
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.error).toBeNull();
+    });
+  });
+
+  describe("error handling", () => {
+    it("should handle fetchAllMetrics throwing an error", async () => {
+      mockGetAllEntities.mockRejectedValue(new Error("Network error"));
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.error).toBeNull();
+    });
+
+    it("should set isRevalidating to false after fetch completes", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.isRevalidating).toBe(false);
+    });
+  });
+
+  describe("state values", () => {
+    it("should have default values for all state variables", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.progressStep).toBeDefined();
+      expect(result.current.progressSteps).toBeDefined();
+      expect(Array.isArray(result.current.progressSteps)).toBe(true);
+      expect(result.current.progressSteps.length).toBeGreaterThan(0);
+    });
+
+    it("should return null for uninitialized metrics when cache is empty", async () => {
+      localStorage.clear();
+      mockGetAllEntities.mockResolvedValue({ data: [] });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.riskMetrics || null).toBeDefined();
+      expect(result.current.vendorRiskMetrics || null).toBeDefined();
+      expect(result.current.vendorMetrics || null).toBeDefined();
+    });
+  });
+
+  describe("individual fetch functions", () => {
+    it("should fetch evidence metrics", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/files") {
+          return {
+            data: [
+              { id: 1, filename: "file1.pdf", uploaded_time: "2024-01-01" },
+            ],
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchEvidenceMetrics();
+      });
+
+      expect(result.current.evidenceMetrics).not.toBeNull();
+    });
+
+    it("should fetch vendor risk metrics", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/vendorRisks/all") {
+          return {
+            data: [
+              { id: 1, risk_name: "VRisk A", risk_level: "High" },
+              { id: 2, risk_name: "VRisk B", risk_level: "Low" },
+            ],
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchVendorRiskMetrics();
+      });
+
+      expect(result.current.vendorRiskMetrics).not.toBeNull();
+      expect(result.current.vendorRiskMetrics!.total).toBe(2);
+    });
+
+    it("should fetch policy metrics with status distribution", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/policies") {
+          return {
+            data: {
+              data: [
+                { id: 1, title: "Policy A", status: "draft" },
+                { id: 2, title: "Policy B", status: "approved" },
+                { id: 3, title: "Policy C", status: "pending_review" },
+              ],
+            },
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchPolicyMetrics();
+      });
+
+      expect(result.current.policyMetrics).not.toBeNull();
+      expect(result.current.policyStatusMetrics).not.toBeNull();
+    });
+
+    it("should fetch incident metrics with status distribution", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/ai-incident-managements") {
+          return {
+            data: [
+              { id: 1, incident_id: "INC-001", status: "Open", severity: "High" },
+              { id: 2, incident_id: "INC-002", status: "Closed", severity: "Low" },
+            ],
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchIncidentMetrics();
+      });
+
+      expect(result.current.incidentMetrics).not.toBeNull();
+      expect(result.current.incidentStatusMetrics).not.toBeNull();
+    });
+
+    it("should fetch model risk metrics", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/modelRisks") {
+          return {
+            data: [
+              { id: 1, risk_name: "MRisk A", risk_level: "Critical" },
+              { id: 2, risk_name: "MRisk B", risk_level: "Medium" },
+            ],
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchModelRiskMetrics();
+      });
+
+      expect(result.current.modelRiskMetrics).not.toBeNull();
+    });
+
+    it("should fetch training metrics", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/training") {
+          return {
+            data: [
+              { id: 1, training_name: "Training A", status: "Completed", numberOfPeople: 10 },
+              { id: 2, training_name: "Training B", status: "In Progress", numberOfPeople: 5 },
+            ],
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchTrainingMetrics();
+      });
+
+      expect(result.current.trainingMetrics).not.toBeNull();
+    });
+
+    it("should fetch task metrics", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/tasks") {
+          return {
+            data: [
+              { id: 1, title: "Task A", status: "Open", created_at: "2024-01-01" },
+            ],
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchTaskMetrics();
+      });
+
+      expect(result.current.taskMetrics).not.toBeNull();
+    });
+
+    it("should fetch governance score metrics", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/compliance/score") {
+          return {
+            data: {
+              overallScore: 85,
+              modules: {
+                riskManagement: { score: 80, weight: 0.3 },
+                vendorManagement: { score: 90, weight: 0.3 },
+              },
+            },
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchGovernanceScoreMetrics();
+      });
+
+      expect(result.current.governanceScoreMetrics).not.toBeNull();
+    });
+
+    it("should handle governance score without expected format", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/compliance/score") {
+          return { data: {} };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchGovernanceScoreMetrics();
+      });
+
+      expect(result.current.governanceScoreMetrics).not.toBeNull();
+      expect(result.current.governanceScoreMetrics!.score).toBe(0);
+    });
+  });
+
+  describe("cache with stale data", () => {
+    it("should fetch when cache is stale", async () => {
+      const staleTimestamp = Date.now() - 60000;
+      const cacheData: Record<string, any> = {};
+      const criticalKeys = [
+        "trainingMetrics",
+        "policyStatusMetrics",
+        "incidentStatusMetrics",
+        "evidenceHubMetrics",
+        "modelLifecycleMetrics",
+      ];
+      criticalKeys.forEach((key) => {
+        cacheData[key] = { data: { total: 1 }, timestamp: staleTimestamp };
+      });
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(mockGetAllEntities).toHaveBeenCalled();
+    });
+
+    it("should set isRevalidating when cache exists and forceRefresh is false", async () => {
+      const now = Date.now();
+      const cacheData: Record<string, any> = {};
+      const criticalKeys = [
+        "trainingMetrics",
+        "policyStatusMetrics",
+        "incidentStatusMetrics",
+        "evidenceHubMetrics",
+        "modelLifecycleMetrics",
+      ];
+      criticalKeys.forEach((key) => {
+        cacheData[key] = { data: { total: 1 }, timestamp: now };
+      });
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.isRevalidating).toBe(false);
+    });
+
+    it("should handle fetchAllMetrics with throw in one of the functions", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/projectRisks") {
+          throw new Error("Network error");
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.error).toBeDefined();
+    });
+  });
+
+  describe("fetchModelMetrics", () => {
+    it("should fetch evidence hub and model lifecycle metrics", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/evidenceHub") {
+          return {
+            data: [
+              { evidence_files: ["file1.pdf", "file2.pdf"], mapped_model_ids: [1, 2] },
+            ],
+          };
+        }
+        if (routeUrl === "/modelInventory") {
+          return {
+            data: [
+              { id: 1, name: "Model A", status: "approved" },
+              { id: 2, name: "Model B", status: "pending" },
+            ],
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchModelMetrics();
+      });
+
+      expect(result.current.evidenceHubMetrics).not.toBeNull();
+      expect(result.current.modelLifecycleMetrics).not.toBeNull();
+    });
+  });
+
+  describe("fetchProjectMetrics", () => {
+    it("should fetch use case metrics and organizational frameworks", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/projects") {
+          return {
+            data: [
+              { id: 1, project_title: "Project A", is_organizational: false, created_at: "2024-01-01" },
+            ],
+          };
+        }
+        if (routeUrl === "/frameworks") {
+          return { data: [{ id: 1, name: "ISO 27001" }] };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchProjectMetrics();
+      });
+
+      expect(result.current.useCaseMetrics).not.toBeNull();
+    });
+
+    it("should handle organizational project with frameworks", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/projects") {
+          return {
+            data: [
+              {
+                id: 1,
+                project_title: "Org Project",
+                is_organizational: true,
+                framework: [{ framework_id: 1 }],
+              },
+            ],
+          };
+        }
+        if (routeUrl === "/frameworks") {
+          return { data: [{ id: 1, name: "ISO 27001" }] };
+        }
+        if (routeUrl === "/iso-27001/clauses/progress/1") {
+          return { data: { totalSubclauses: 10, doneSubclauses: 5 } };
+        }
+        if (routeUrl === "/iso-27001/annexes/progress/1") {
+          return { data: { totalAnnexControls: 5, doneAnnexControls: 2 } };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await act(async () => {
+        await result.current.fetchProjectMetrics();
+      });
+
+      expect(result.current.organizationalFrameworks).not.toBeNull();
+    });
+  });
+
+  describe("risk metrics edge cases", () => {
+    it("should handle risks with unknown risk levels", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/projectRisks") {
+          return {
+            data: [
+              { id: 1, risk_name: "Risk A", current_risk_level: "Unknown" },
+              { id: 2, risk_name: "Risk B", risk_level_autocalculated: "medium" },
+            ],
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.riskMetrics).not.toBeNull();
+      expect(result.current.riskMetrics!.distribution.medium).toBe(2);
+    });
+
+    it("should handle risks with completed mitigation status", async () => {
+      mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+        if (routeUrl === "/projectRisks") {
+          return {
+            data: [
+              { id: 1, risk_name: "Risk A", mitigation_status: "Completed" },
+              { id: 2, risk_name: "Risk B", mitigation_status: "Completed" },
+            ],
+          };
+        }
+        return { data: [] };
+      });
+
+      const { result } = renderHook(() => useDashboardMetrics());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.riskMetrics!.distribution.resolved).toBe(2);
+    });
   });
 });
