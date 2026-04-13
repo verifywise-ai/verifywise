@@ -259,7 +259,10 @@ def _cover_page(
         "verifywise_logo.png",
     )
     if os.path.exists(logo_path):
-        story.append(Image(logo_path, width=1.4 * inch, height=0.42 * inch))
+        # Preserve aspect ratio: logo is 1063x197 (5.4:1)
+        logo_width = 2.0 * inch
+        logo_height = logo_width / 5.4
+        story.append(Image(logo_path, width=logo_width, height=logo_height))
         story.append(Spacer(1, 0.8 * inch))
     else:
         story.append(Spacer(1, 1.2 * inch))
@@ -665,6 +668,7 @@ def _results(
 
     for tbl in tables:
         story.append(Paragraph(tbl.get("title", ""), styles["h2"]))
+        is_intersectional = tbl.get("category_key") == "intersectional"
         if tbl.get("highest_group") and tbl.get("highest_rate") is not None:
             story.append(Paragraph(
                 f"Highest-rate group: <b>{tbl['highest_group']}</b> ({tbl['highest_rate'] * 100:.1f}%)",
@@ -680,6 +684,9 @@ def _results(
             ),
         )
 
+        # Truncate long group names for table display
+        max_name_len = 36 if is_intersectional else 42
+
         header = ["Group", "Records", "Selected", "Rate", "Impact ratio", "Status"]
         body_rows: List[List[Any]] = [header]
         flagged_rows: List[int] = []
@@ -688,16 +695,24 @@ def _results(
             flagged = row.get("flagged")
             if flagged:
                 flagged_rows.append(idx)
-            status = "Excluded (<threshold)" if excluded else ("Flagged" if flagged else "Pass")
+            status = "Excluded" if excluded else ("Flagged" if flagged else "Pass")
+            name = row.get("category_name", "")
+            if len(name) > max_name_len:
+                name = name[:max_name_len - 1] + "\u2026"
             body_rows.append([
-                row.get("category_name", ""),
+                name,
                 f"{row.get('applicant_count', 0):,}",
                 f"{row.get('selected_count', 0):,}",
                 _pct(row.get("selection_rate")),
                 "\u2014" if excluded else _num(row.get("impact_ratio")),
                 status,
             ])
-        t = Table(body_rows, colWidths=[2.0 * inch, 0.85 * inch, 0.85 * inch, 0.75 * inch, 1.0 * inch, 1.05 * inch])
+        # Wider first column for intersectional to fit compound names
+        if is_intersectional:
+            col_widths = [2.4 * inch, 0.7 * inch, 0.7 * inch, 0.65 * inch, 0.9 * inch, 0.85 * inch]
+        else:
+            col_widths = [2.0 * inch, 0.85 * inch, 0.85 * inch, 0.75 * inch, 1.0 * inch, 1.05 * inch]
+        t = Table(body_rows, colWidths=col_widths)
         style = _data_table_style()
         for fr in flagged_rows:
             style.add("BACKGROUND", (0, fr), (-1, fr), FLAG_BG)
@@ -705,20 +720,22 @@ def _results(
         t.setStyle(style)
         story.append(t)
 
-        # Flag explanations
-        highest_group = tbl.get("highest_group", "")
-        highest_rate = tbl.get("highest_rate", 0) or 0
-        for row in sorted_rows:
-            if row.get("flagged") and not row.get("excluded"):
-                ratio = row.get("impact_ratio", 0) or 0
-                explanation = template.flag_explanation(
-                    group=row.get("category_name", ""),
-                    ratio=ratio,
-                    highest_group=highest_group,
-                    highest_rate=highest_rate,
-                    threshold=threshold,
-                )
-                story.append(Paragraph(explanation, styles["muted"]))
+        # Flag explanations — only for non-intersectional tables
+        # (intersectional tables have too many groups; the table speaks for itself)
+        if not is_intersectional:
+            highest_group = tbl.get("highest_group", "")
+            highest_rate = tbl.get("highest_rate", 0) or 0
+            for row in sorted_rows:
+                if row.get("flagged") and not row.get("excluded"):
+                    ratio = row.get("impact_ratio", 0) or 0
+                    explanation = template.flag_explanation(
+                        group=row.get("category_name", ""),
+                        ratio=ratio,
+                        highest_group=highest_group,
+                        highest_rate=highest_rate,
+                        threshold=threshold,
+                    )
+                    story.append(Paragraph(explanation, styles["muted"]))
 
         story.append(Spacer(1, 0.15 * inch))
 
@@ -869,16 +886,16 @@ def _conclusion(
 def _data_table_style() -> TableStyle:
     return TableStyle([
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("TEXTCOLOR", (0, 0), (-1, 0), TEXT),
         ("BACKGROUND", (0, 0), (-1, 0), BG_ACCENT),
         ("LINEBELOW", (0, 0), (-1, 0), 0.5, BORDER),
         ("LINEBELOW", (0, 1), (-1, -2), 0.25, BORDER),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
         ("ALIGN", (0, 0), (0, -1), "LEFT"),
     ])
