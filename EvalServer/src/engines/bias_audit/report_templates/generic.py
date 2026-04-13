@@ -26,7 +26,7 @@ def _min_impact_ratio(results: Dict[str, Any]) -> Tuple[float, str]:
             ratio = row.get("impact_ratio")
             if ratio is not None and ratio < min_ratio:
                 min_ratio = ratio
-                group_name = row.get("group", "")
+                group_name = row.get("category_name", "")
 
     return (min_ratio, group_name)
 
@@ -37,8 +37,8 @@ def _category_names_from_tables(results: Dict[str, Any]) -> List[str]:
     for table in results.get("tables", []):
         title = table.get("title", "")
         key = table.get("category_key", "")
-        # Skip intersectional tables (they typically contain " x " or "×")
-        if " x " in key.lower() or "\u00d7" in key.lower():
+        # Skip intersectional tables
+        if key == "intersectional" or " x " in key.lower() or "\u00d7" in key.lower():
             continue
         if title and title not in names:
             names.append(title)
@@ -85,7 +85,7 @@ class GenericTemplate(BiasAuditReportTemplate):
         total_evaluated, total_flagged = _count_evaluated_groups(results)
         categories = _category_names_from_tables(results)
         category_str = ", ".join(categories) if categories else "the provided categories"
-        total_records = results.get("total_records", 0)
+        total_records = results.get("total_applicants", 0)
 
         # Overall color / label
         if min_ratio >= 0.80:
@@ -275,7 +275,7 @@ class GenericTemplate(BiasAuditReportTemplate):
         self, config: Dict[str, Any], results: Dict[str, Any]
     ) -> str:
         system_name = config.get("systemName", "the assessed system")
-        total_records = results.get("total_records", 0)
+        total_records = results.get("total_applicants", 0)
         categories = _category_names_from_tables(results)
         category_str = ", ".join(categories) if categories else "the provided categories"
         total_evaluated, total_flagged = _count_evaluated_groups(results)
