@@ -3,70 +3,7 @@
 from typing import Any, Dict, List, Tuple
 
 from .base import BiasAuditReportTemplate
-
-
-# ---------------------------------------------------------------------------
-# Module-level helpers
-# ---------------------------------------------------------------------------
-
-
-def _min_impact_ratio(results: Dict[str, Any]) -> Tuple[float, str]:
-    """Find the minimum impact ratio across all result table rows.
-
-    Skips rows marked as excluded.  Returns ``(min_ratio, group_name)``.
-    If no valid ratios are found, returns ``(1.0, "")``.
-    """
-    min_ratio = 1.0
-    group_name = ""
-
-    for table in results.get("tables", []):
-        for row in table.get("rows", []):
-            if row.get("excluded", False):
-                continue
-            ratio = row.get("impact_ratio")
-            if ratio is not None and ratio < min_ratio:
-                min_ratio = ratio
-                group_name = row.get("category_name", "")
-
-    return (min_ratio, group_name)
-
-
-def _category_names_from_tables(results: Dict[str, Any]) -> List[str]:
-    """Extract non-intersectional category titles from results tables."""
-    names: List[str] = []
-    for table in results.get("tables", []):
-        title = table.get("title", "")
-        key = table.get("category_key", "")
-        # Skip intersectional tables
-        if key == "intersectional" or " x " in key.lower() or "\u00d7" in key.lower():
-            continue
-        if title and title not in names:
-            names.append(title)
-    return names
-
-
-def _count_evaluated_groups(
-    results: Dict[str, Any],
-) -> Tuple[int, int]:
-    """Return ``(total_evaluated, total_flagged)`` across all tables.
-
-    Excluded rows are not counted.
-    """
-    total_evaluated = 0
-    total_flagged = 0
-    for table in results.get("tables", []):
-        for row in table.get("rows", []):
-            if row.get("excluded", False):
-                continue
-            total_evaluated += 1
-            if row.get("flagged", False):
-                total_flagged += 1
-    return (total_evaluated, total_flagged)
-
-
-# ---------------------------------------------------------------------------
-# Template
-# ---------------------------------------------------------------------------
+from .helpers import min_impact_ratio, category_names_from_tables, count_evaluated_groups
 
 
 class GenericTemplate(BiasAuditReportTemplate):
@@ -76,64 +13,7 @@ class GenericTemplate(BiasAuditReportTemplate):
     def framework_name(self) -> str:
         return "Custom framework"
 
-    # --------------------------------------------------------------------- #
-    # verdict
-    # --------------------------------------------------------------------- #
-
-    def verdict(self, results: Dict[str, Any]) -> Dict[str, Any]:
-        min_ratio, worst_group = _min_impact_ratio(results)
-        total_evaluated, total_flagged = _count_evaluated_groups(results)
-        categories = _category_names_from_tables(results)
-        category_str = ", ".join(categories) if categories else "the provided categories"
-        total_records = results.get("total_applicants", 0)
-
-        # Overall color / label
-        if min_ratio >= 0.80:
-            color = "green"
-            label = "No adverse impact detected"
-        elif min_ratio >= 0.50:
-            color = "amber"
-            label = "Adverse impact detected \u2014 review recommended"
-        else:
-            color = "red"
-            label = "Significant adverse impact detected \u2014 action required"
-
-        # Data completeness
-        excluded_count = results.get("excluded_count", 0)
-        unknown_count = results.get("unknown_count", 0)
-        if excluded_count == 0 and unknown_count == 0:
-            dc_color = "green"
-            dc_label = "Complete"
-        else:
-            dc_color = "amber"
-            dc_label = "Gaps noted"
-
-        # Narrative
-        severity = "substantially" if min_ratio < 0.50 else ""
-        flag_detail = ""
-        if total_flagged > 0:
-            below_phrase = f" {severity} below" if severity else " below"
-            flag_detail = (
-                f" {total_flagged} group(s) were flagged as having an impact ratio"
-                f"{below_phrase} the threshold."
-                f" The lowest impact ratio observed was {min_ratio:.3f}"
-                f" for {worst_group}."
-            )
-
-        narrative = (
-            f"This audit analyzed {total_records:,} records across {category_str}."
-            f"{flag_detail}"
-        )
-
-        return {
-            "color": color,
-            "label": label,
-            "narrative": narrative,
-            "data_completeness": {
-                "color": dc_color,
-                "label": dc_label,
-            },
-        }
+    # Uses base class verdict() and flag_explanation() defaults
 
     # --------------------------------------------------------------------- #
     # scope_in
@@ -145,7 +25,7 @@ class GenericTemplate(BiasAuditReportTemplate):
         items: List[str] = []
 
         # Categories tested
-        categories = _category_names_from_tables(results)
+        categories = category_names_from_tables(results)
         if categories:
             items.append(f"Categories tested: {', '.join(categories)}")
 
@@ -197,27 +77,6 @@ class GenericTemplate(BiasAuditReportTemplate):
             "compares a group\u2019s selection or scoring rate to that of the "
             "highest-performing group. A flag is a statistical indicator that warrants "
             "further review; it does not automatically indicate a violation.</p>"
-        )
-
-    # --------------------------------------------------------------------- #
-    # flag_explanation
-    # --------------------------------------------------------------------- #
-
-    def flag_explanation(
-        self,
-        group: str,
-        ratio: float,
-        highest_group: str,
-        highest_rate: float,
-        threshold: float,
-    ) -> str:
-        pct = ratio * 100
-        severity = "substantially below" if ratio < 0.50 else "below"
-        return (
-            f"<strong>{group}</strong>: impact ratio {ratio:.3f} \u2014 "
-            f"this group is selected at {pct:.1f}% the rate of the highest "
-            f"group ({highest_group}, {highest_rate * 100:.1f}%), which is "
-            f"{severity} the {threshold:.2f} threshold."
         )
 
     # --------------------------------------------------------------------- #
@@ -276,9 +135,9 @@ class GenericTemplate(BiasAuditReportTemplate):
     ) -> str:
         system_name = config.get("systemName", "the assessed system")
         total_records = results.get("total_applicants", 0)
-        categories = _category_names_from_tables(results)
+        categories = category_names_from_tables(results)
         category_str = ", ".join(categories) if categories else "the provided categories"
-        total_evaluated, total_flagged = _count_evaluated_groups(results)
+        total_evaluated, total_flagged = count_evaluated_groups(results)
 
         if total_flagged == 0:
             return (
@@ -288,7 +147,7 @@ class GenericTemplate(BiasAuditReportTemplate):
                 "periodic re-auditing are recommended."
             )
 
-        min_ratio, worst_group = _min_impact_ratio(results)
+        min_ratio, worst_group = min_impact_ratio(results)
         return (
             f"This audit of {system_name} analyzed {total_records:,} records "
             f"across {category_str}. {total_flagged} of {total_evaluated} "

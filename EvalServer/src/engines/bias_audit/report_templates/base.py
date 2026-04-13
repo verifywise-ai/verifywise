@@ -1,7 +1,9 @@
 """Abstract base class that every framework template must implement."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
+
+from .helpers import min_impact_ratio, category_names_from_tables, count_evaluated_groups
 
 
 class BiasAuditReportTemplate(ABC):
@@ -9,6 +11,9 @@ class BiasAuditReportTemplate(ABC):
 
     Each compliance framework (e.g. NYC LL144, EU AI Act) subclasses this
     and provides framework-specific content for the PDF report.
+
+    Methods marked @abstractmethod MUST be overridden. Methods with default
+    implementations CAN be overridden if the framework needs different behavior.
     """
 
     @property
@@ -17,17 +22,65 @@ class BiasAuditReportTemplate(ABC):
         """Return the human-readable name of the compliance framework."""
         ...
 
-    @abstractmethod
+    # ------------------------------------------------------------------ verdict
+
     def verdict(self, results: Dict[str, Any]) -> Dict[str, Any]:
-        """Return an overall pass/fail verdict for the audit.
+        """Return an overall assessment verdict for the audit.
 
         Returns a dict with keys:
-            - color: hex color string for the verdict badge
-            - label: short verdict label (e.g. "PASS", "FAIL", "REVIEW NEEDED")
-            - narrative: one-paragraph explanation of the verdict
-            - data_completeness: float between 0 and 1 indicating data quality
+            - color: "green" | "amber" | "red"
+            - label: short verdict label
+            - narrative: one-paragraph explanation
+            - data_completeness: dict with "color" and "label"
+
+        Default implementation uses 4/5ths rule thresholds (0.80 / 0.50).
+        Override to change the logic for frameworks with different standards.
         """
-        ...
+        min_ratio, worst_group = min_impact_ratio(results)
+        total_evaluated, total_flagged = count_evaluated_groups(results)
+        categories = category_names_from_tables(results)
+        category_str = ", ".join(categories) if categories else "the provided categories"
+        total_applicants = results.get("total_applicants", 0)
+
+        if min_ratio >= 0.80:
+            color = "green"
+            label = "No adverse impact detected"
+        elif min_ratio >= 0.50:
+            color = "amber"
+            label = "Adverse impact detected \u2014 review recommended"
+        else:
+            color = "red"
+            label = "Significant adverse impact detected \u2014 action required"
+
+        excluded_count = results.get("excluded_count", 0)
+        unknown_count = results.get("unknown_count", 0)
+        if excluded_count == 0 and unknown_count == 0:
+            dc_color, dc_label = "green", "Complete"
+        else:
+            dc_color, dc_label = "amber", "Gaps noted"
+
+        if total_flagged == 0:
+            narrative = (
+                f"This audit analyzed {total_applicants:,} records across {category_str}. "
+                f"No group was found to have an impact ratio below the configured threshold."
+            )
+        else:
+            severity = "substantially " if min_ratio < 0.50 else ""
+            narrative = (
+                f"This audit analyzed {total_applicants:,} records across {category_str}. "
+                f"{total_flagged} group(s) were flagged as having an impact ratio "
+                f"{severity}below the threshold. "
+                f"The lowest impact ratio observed was {min_ratio:.3f} for {worst_group}."
+            )
+
+        return {
+            "color": color,
+            "label": label,
+            "narrative": narrative,
+            "data_completeness": {"color": dc_color, "label": dc_label},
+        }
+
+    # ------------------------------------------------------------------ scope
 
     @abstractmethod
     def scope_in(self, config: Dict[str, Any], results: Dict[str, Any]) -> List[str]:
@@ -39,6 +92,8 @@ class BiasAuditReportTemplate(ABC):
         """Return a list of items that are explicitly out of scope."""
         ...
 
+    # ------------------------------------------------------------------ checklist
+
     @abstractmethod
     def checklist(
         self, config: Dict[str, Any], results: Dict[str, Any]
@@ -47,7 +102,7 @@ class BiasAuditReportTemplate(ABC):
 
         Each dict has keys:
             - requirement: description of the requirement
-            - status: one of "met", "not_met", "partial", "not_applicable"
+            - status: "pass" | "warning" | "info"
             - note: additional context or explanation
         """
         ...
@@ -61,16 +116,15 @@ class BiasAuditReportTemplate(ABC):
         """
         ...
 
+    # ------------------------------------------------------------------ methodology
+
     @abstractmethod
     def threshold_explanation(self, threshold: float) -> str:
-        """Return a plain-language explanation of the impact ratio threshold.
-
-        Args:
-            threshold: the numeric threshold value (e.g. 0.8).
-        """
+        """Return a plain-language explanation of the impact ratio threshold."""
         ...
 
-    @abstractmethod
+    # ------------------------------------------------------------------ results
+
     def flag_explanation(
         self,
         group: str,
@@ -79,32 +133,34 @@ class BiasAuditReportTemplate(ABC):
         highest_rate: float,
         threshold: float,
     ) -> str:
-        """Return a plain-language explanation of why a specific group was flagged.
+        """Return a one-line prose explanation for a flagged group.
 
-        Args:
-            group: the demographic group that was flagged.
-            ratio: the impact ratio for the flagged group.
-            highest_group: the group with the highest selection rate.
-            highest_rate: the highest selection rate value.
-            threshold: the threshold that was violated.
+        Default implementation works for any threshold-based framework.
+        Override only if the framework uses a different explanation style.
         """
-        ...
+        pct = ratio * 100
+        severity = "substantially below" if ratio < 0.50 else "below"
+        return (
+            f"<b>{group}</b>: impact ratio {ratio:.3f} \u2014 "
+            f"this group is selected at {pct:.1f}% the rate of the highest "
+            f"group ({highest_group}, {highest_rate * 100:.1f}%), which is "
+            f"{severity} the {threshold:.2f} threshold."
+        )
+
+    # ------------------------------------------------------------------ actions
 
     @abstractmethod
     def recommended_actions(
         self, has_flags: bool, results: Dict[str, Any]
     ) -> List[str]:
-        """Return a list of recommended next steps.
-
-        Args:
-            has_flags: whether any groups were flagged in the audit.
-            results: the full audit results dict.
-        """
+        """Return a list of recommended next steps."""
         ...
+
+    # ------------------------------------------------------------------ context
 
     @abstractmethod
     def regulatory_context(self) -> List[str]:
-        """Return paragraphs describing the regulatory background and legal context."""
+        """Return paragraphs describing the regulatory background."""
         ...
 
     @abstractmethod
@@ -112,19 +168,16 @@ class BiasAuditReportTemplate(ABC):
         """Return a glossary of terms as (term, definition) tuples."""
         ...
 
+    # ------------------------------------------------------------------ conclusion
+
     @abstractmethod
     def conclusion_summary(
         self, config: Dict[str, Any], results: Dict[str, Any]
     ) -> str:
-        """Return a concluding summary paragraph for the report.
-
-        Args:
-            config: the audit configuration dict.
-            results: the full audit results dict.
-        """
+        """Return a concluding summary paragraph for the report."""
         ...
 
     @abstractmethod
     def additional_limitations(self) -> List[str]:
-        """Return additional limitations or caveats specific to this framework."""
+        """Return additional limitations specific to this framework."""
         ...

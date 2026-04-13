@@ -3,79 +3,12 @@
 from typing import Any, Dict, List, Tuple
 
 from .base import BiasAuditReportTemplate
-
-
-# ---------------------------------------------------------------------------
-# Module-level helpers
-# ---------------------------------------------------------------------------
-
-
-def _min_impact_ratio(results: Dict[str, Any]) -> Tuple[float, str]:
-    """Find the minimum impact ratio across all result table rows.
-
-    Skips rows marked as excluded.  Returns ``(min_ratio, group_name)``.
-    If no valid ratios are found, returns ``(1.0, "")``.
-    """
-    min_ratio = 1.0
-    group_name = ""
-
-    for table in results.get("tables", []):
-        for row in table.get("rows", []):
-            if row.get("excluded", False):
-                continue
-            ratio = row.get("impact_ratio")
-            if ratio is not None and ratio < min_ratio:
-                min_ratio = ratio
-                group_name = row.get("category_name", "")
-
-    return (min_ratio, group_name)
-
-
-def _category_names_from_tables(results: Dict[str, Any]) -> List[str]:
-    """Extract non-intersectional category titles from results tables."""
-    names: List[str] = []
-    for table in results.get("tables", []):
-        title = table.get("title", "")
-        key = table.get("category_key", "")
-        # Skip intersectional tables
-        if key == "intersectional" or " x " in key.lower() or "\u00d7" in key.lower():
-            continue
-        if title and title not in names:
-            names.append(title)
-    return names
-
-
-def _has_category(results: Dict[str, Any], keyword: str) -> bool:
-    """Check whether results contain a table whose category_key contains *keyword*."""
-    kw = keyword.lower()
-    for table in results.get("tables", []):
-        if kw in table.get("category_key", "").lower():
-            return True
-    return False
-
-
-def _count_evaluated_groups(
-    results: Dict[str, Any],
-) -> Tuple[int, int]:
-    """Return ``(total_evaluated, total_flagged)`` across all tables.
-
-    Excluded rows are not counted.
-    """
-    total_evaluated = 0
-    total_flagged = 0
-    for table in results.get("tables", []):
-        for row in table.get("rows", []):
-            if row.get("excluded", False):
-                continue
-            total_evaluated += 1
-            if row.get("flagged", False):
-                total_flagged += 1
-    return (total_evaluated, total_flagged)
-
-
-# ---------------------------------------------------------------------------
-# Template
-# ---------------------------------------------------------------------------
+from .helpers import (
+    min_impact_ratio,
+    category_names_from_tables,
+    count_evaluated_groups,
+    has_category,
+)
 
 
 class LL144Template(BiasAuditReportTemplate):
@@ -85,64 +18,7 @@ class LL144Template(BiasAuditReportTemplate):
     def framework_name(self) -> str:
         return "NYC Local Law 144"
 
-    # --------------------------------------------------------------------- #
-    # verdict
-    # --------------------------------------------------------------------- #
-
-    def verdict(self, results: Dict[str, Any]) -> Dict[str, Any]:
-        min_ratio, worst_group = _min_impact_ratio(results)
-        total_evaluated, total_flagged = _count_evaluated_groups(results)
-        categories = _category_names_from_tables(results)
-        category_str = ", ".join(categories) if categories else "the provided categories"
-        total_records = results.get("total_applicants", 0)
-
-        # Overall color / label
-        if min_ratio >= 0.80:
-            color = "green"
-            label = "No adverse impact detected"
-        elif min_ratio >= 0.50:
-            color = "amber"
-            label = "Adverse impact detected \u2014 review recommended"
-        else:
-            color = "red"
-            label = "Significant adverse impact detected \u2014 action required"
-
-        # Data completeness
-        excluded_count = results.get("excluded_count", 0)
-        unknown_count = results.get("unknown_count", 0)
-        if excluded_count == 0 and unknown_count == 0:
-            dc_color = "green"
-            dc_label = "Complete"
-        else:
-            dc_color = "amber"
-            dc_label = "Gaps noted"
-
-        # Narrative
-        severity = "substantially" if min_ratio < 0.50 else ""
-        flag_detail = ""
-        if total_flagged > 0:
-            below_phrase = f" {severity} below" if severity else " below"
-            flag_detail = (
-                f" {total_flagged} group(s) were flagged as having an impact ratio"
-                f"{below_phrase} the threshold."
-                f" The lowest impact ratio observed was {min_ratio:.3f}"
-                f" for {worst_group}."
-            )
-
-        narrative = (
-            f"This audit analyzed {total_records:,} records across {category_str}."
-            f"{flag_detail}"
-        )
-
-        return {
-            "color": color,
-            "label": label,
-            "narrative": narrative,
-            "data_completeness": {
-                "color": dc_color,
-                "label": dc_label,
-            },
-        }
+    # Uses base class verdict() — same 0.80/0.50 threshold logic
 
     # --------------------------------------------------------------------- #
     # scope_in
@@ -154,7 +30,7 @@ class LL144Template(BiasAuditReportTemplate):
         items: List[str] = []
 
         # Categories tested
-        categories = _category_names_from_tables(results)
+        categories = category_names_from_tables(results)
         if categories:
             items.append(f"Categories tested: {', '.join(categories)}")
 
@@ -230,7 +106,7 @@ class LL144Template(BiasAuditReportTemplate):
             })
 
         # 2. Sex / gender category
-        if _has_category(results, "sex") or _has_category(results, "gender"):
+        if has_category(results, "sex") or has_category(results, "gender"):
             items.append({
                 "requirement": "Sex/gender category tested",
                 "status": "pass",
@@ -244,7 +120,7 @@ class LL144Template(BiasAuditReportTemplate):
             })
 
         # 3. Race / ethnicity category
-        if _has_category(results, "race") or _has_category(results, "ethnicity"):
+        if has_category(results, "race") or has_category(results, "ethnicity"):
             items.append({
                 "requirement": "Race/ethnicity category tested",
                 "status": "pass",
@@ -326,40 +202,21 @@ class LL144Template(BiasAuditReportTemplate):
 
     def threshold_explanation(self, threshold: float) -> str:
         return (
-            f"<p>This audit uses a threshold of <strong>{threshold}</strong>, "
-            "derived from the <strong>4/5ths rule</strong> (also known as the "
+            f"This audit uses a threshold of <b>{threshold}</b>, "
+            "derived from the <b>4/5ths rule</b> (also known as the "
             "EEOC adverse impact standard). Under this rule, a selection rate "
             "for any demographic group that is less than four-fifths (80%) of "
             "the rate for the group with the highest selection rate is generally "
-            "regarded as evidence of adverse impact.</p>"
-            f"<p>A threshold of {threshold} means that any group whose impact "
+            "regarded as evidence of adverse impact. "
+            f"A threshold of {threshold} means that any group whose impact "
             f"ratio falls below {threshold} is flagged for further review. "
             "A flag does not automatically indicate a legal violation; it is a "
-            "statistical indicator that warrants closer examination.</p>"
-            "<p>Reference: Uniform Guidelines on Employee Selection Procedures "
-            "(1978), 29 C.F.R. Part 1607, \u00a7\u00a060-3.4.D.</p>"
+            "statistical indicator that warrants closer examination. "
+            "Reference: Uniform Guidelines on Employee Selection Procedures "
+            "(1978), 29 C.F.R. Part 1607, \u00a7 60-3.4.D."
         )
 
-    # --------------------------------------------------------------------- #
-    # flag_explanation
-    # --------------------------------------------------------------------- #
-
-    def flag_explanation(
-        self,
-        group: str,
-        ratio: float,
-        highest_group: str,
-        highest_rate: float,
-        threshold: float,
-    ) -> str:
-        pct = ratio * 100
-        severity = "substantially below" if ratio < 0.50 else "below"
-        return (
-            f"<strong>{group}</strong>: impact ratio {ratio:.3f} \u2014 "
-            f"this group is selected at {pct:.1f}% the rate of the highest "
-            f"group ({highest_group}, {highest_rate * 100:.1f}%), which is "
-            f"{severity} the {threshold:.2f} threshold."
-        )
+    # Uses base class flag_explanation() — same format for all threshold-based frameworks
 
     # --------------------------------------------------------------------- #
     # recommended_actions
@@ -410,33 +267,33 @@ class LL144Template(BiasAuditReportTemplate):
     def regulatory_context(self) -> List[str]:
         return [
             (
-                "<p>NYC Local Law 144 (Int. 1894-A), codified at NYC Admin Code "
-                "\u00a7\u00a7\u00a020-870 through 20-874, requires employers and "
+                "NYC Local Law 144 (Int. 1894-A), codified at NYC Admin Code "
+                "\u00a7\u00a7 20-870 through 20-874, requires employers and "
                 "employment agencies in New York City that use an automated employment "
                 "decision tool (AEDT) to conduct an annual bias audit, publicly post "
                 "the audit summary on their website, and provide notice to candidates "
-                "before the tool is used.</p>"
+                "before the tool is used."
             ),
             (
-                "<p>An \u201cindependent auditor\u201d under LL144 is a person or entity "
+                "An \u201cindependent auditor\u201d under LL144 is a person or entity "
                 "that is not involved in using or developing the AEDT and that exercises "
                 "objective and impartial judgment in conducting the bias audit "
-                "(6 RCNY \u00a7\u00a05-300).</p>"
+                "(6 RCNY \u00a7 5-300)."
             ),
             (
-                "<p>The <strong>4/5ths rule</strong> originates from the EEOC Uniform "
+                "The <b>4/5ths rule</b> originates from the EEOC Uniform "
                 "Guidelines on Employee Selection Procedures (1978), "
-                "\u00a7\u00a060-3.4.D. It states that a selection rate for any "
+                "\u00a7 60-3.4.D. It states that a selection rate for any "
                 "demographic group that is less than four-fifths of the rate for the "
                 "group with the highest rate is generally regarded as evidence of "
-                "adverse impact.</p>"
+                "adverse impact."
             ),
             (
-                "<p>A flag in this audit is a <strong>statistical indicator</strong> "
+                "A flag in this audit is a <b>statistical indicator</b> "
                 "that a particular group\u2019s selection or scoring rate falls below "
                 "the established threshold relative to the highest-performing group. "
                 "It does not automatically constitute a legal violation or proof of "
-                "intentional discrimination.</p>"
+                "intentional discrimination."
             ),
         ]
 
@@ -498,9 +355,9 @@ class LL144Template(BiasAuditReportTemplate):
     ) -> str:
         system_name = config.get("systemName", "the assessed system")
         total_records = results.get("total_applicants", 0)
-        categories = _category_names_from_tables(results)
+        categories = category_names_from_tables(results)
         category_str = ", ".join(categories) if categories else "the provided categories"
-        total_evaluated, total_flagged = _count_evaluated_groups(results)
+        total_evaluated, total_flagged = count_evaluated_groups(results)
 
         if total_flagged == 0:
             return (
@@ -512,7 +369,7 @@ class LL144Template(BiasAuditReportTemplate):
                 "with NYC Local Law 144."
             )
 
-        min_ratio, worst_group = _min_impact_ratio(results)
+        min_ratio, worst_group = min_impact_ratio(results)
         return (
             f"This audit of {system_name} analyzed {total_records:,} records "
             f"across {category_str}. {total_flagged} of {total_evaluated} "

@@ -213,9 +213,12 @@ def _independence_label(code: Optional[str]) -> str:
     }.get(code, code)
 
 
-def _key_value_table(rows: List[tuple], col_widths=(1.8 * inch, 4.7 * inch)) -> Table:
+def _key_value_table(
+    rows: List[tuple],
+    styles: Dict[str, ParagraphStyle],
+    col_widths=(1.8 * inch, 4.7 * inch),
+) -> Table:
     """Two-column label/value table used for metadata blocks."""
-    styles = _styles()
     data = []
     for label, value in rows:
         data.append([
@@ -280,7 +283,7 @@ def _cover_page(
         ("Auditor", config.get("auditorName") or "Not declared"),
         ("Auditor role", config.get("auditorRole") or "Not declared"),
         ("Independence", _independence_label(config.get("auditorIndependence"))),
-    ]))
+    ], styles))
     story.append(Spacer(1, 0.3 * inch))
 
     # Prominent warning when the audit is self-declared
@@ -501,7 +504,7 @@ def _executive_summary(
         ("Flagged groups", str(results.get("flags_count", 0))),
         ("Excluded groups", str(results.get("excluded_count", 0))),
         ("Records with missing data", _count(results.get("unknown_count"))),
-    ]))
+    ], styles))
     story.append(Spacer(1, 0.15 * inch))
 
     summary_text = results.get("summary") or "No summary available."
@@ -531,7 +534,7 @@ def _system_description(
         ("Version", config.get("systemVersion", "")),
         ("Description", config.get("systemDescription", "")),
         ("Deployment context", config.get("deploymentContext", "")),
-    ]))
+    ], styles))
 
 
 def _data_description(
@@ -557,7 +560,7 @@ def _data_description(
         ("Date range", date_range),
         ("Total records", _count(results.get("total_applicants"))),
         ("Records with missing data", _count(results.get("unknown_count"))),
-    ]))
+    ], styles))
 
     # Category breakdowns
     tables = results.get("tables", [])
