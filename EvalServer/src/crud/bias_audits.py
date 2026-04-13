@@ -124,6 +124,41 @@ async def update_bias_audit_status(
     return _row_to_dict(row)
 
 
+async def update_bias_audit_system_name(
+    organization_id: int,
+    db: AsyncSession,
+    audit_id: str,
+    system_name: str,
+) -> Optional[Dict[str, Any]]:
+    """Update the user-editable system name stored in config.systemName."""
+    result = await db.execute(
+        text(
+            '''
+            UPDATE llm_evals_bias_audits
+            SET config = jsonb_set(
+                COALESCE(config, '{}'::jsonb),
+                '{systemName}',
+                to_jsonb(:system_name::text),
+                true
+            ),
+            updated_at = CURRENT_TIMESTAMP
+            WHERE organization_id = :organization_id AND id = :id
+            RETURNING id, organization_id, project_id, preset_id, preset_name, mode, status,
+                      config, results, error, created_at, updated_at, completed_at, created_by
+            '''
+        ),
+        {
+            "id": audit_id,
+            "organization_id": organization_id,
+            "system_name": system_name,
+        },
+    )
+    row = result.mappings().first()
+    if not row:
+        return None
+    return _row_to_dict(row)
+
+
 async def list_bias_audits(
     organization_id: int,
     db: AsyncSession,

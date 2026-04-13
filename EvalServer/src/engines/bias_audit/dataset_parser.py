@@ -1,14 +1,15 @@
 """
 Parse CSV demographic data for bias audits.
 
-Reads a CSV file with demographic columns and a binary outcome column,
-then produces structured records for the computation engine.
+Reads a CSV file with demographic columns and either a binary outcome column,
+a numeric score column, or prediction + ground-truth columns, then produces
+structured records for the computation engine.
 """
 
 import csv
 import io
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -26,35 +27,58 @@ def _decode_csv(csv_bytes: bytes) -> str:
     raise ValueError("Unable to decode CSV file. Please ensure it is UTF-8 encoded.")
 
 
+def _parse_bool(value: str) -> Optional[bool]:
+    """Parse a cell value into True/False, or None if unrecognized."""
+    v = value.strip().lower()
+    if v in VALID_TRUE:
+        return True
+    if v in VALID_FALSE:
+        return False
+    return None
+
+
+def _parse_float(value: str) -> Optional[float]:
+    """Parse a cell value into a float, or None if not numeric."""
+    v = value.strip()
+    if not v:
+        return None
+    try:
+        return float(v)
+    except (ValueError, TypeError):
+        return None
+
+
 def parse_csv_dataset(
     csv_bytes: bytes,
     column_mapping: Dict[str, str],
     outcome_column: str,
-) -> Tuple[List[Dict[str, str]], int]:
+    score_column: Optional[str] = None,
+    prediction_column: Optional[str] = None,
+    ground_truth_column: Optional[str] = None,
+) -> Tuple[List[Dict], int]:
     """
     Parse CSV bytes into a list of record dicts.
 
     Args:
         csv_bytes: Raw CSV file content.
         column_mapping: Maps preset category keys to CSV column names.
-            e.g. {"sex": "Gender", "race_ethnicity": "Race"}
-        outcome_column: Name of the CSV column containing the binary outcome
-            (1/true/yes/selected = selected, 0/false/no = not selected).
+        outcome_column: Column containing the binary outcome (selection rate mode).
+        score_column: Optional column containing a numeric score (scoring rate mode).
+        prediction_column: Optional column containing the model prediction (binary).
+        ground_truth_column: Optional column containing the ground truth label (binary).
 
     Returns:
-        Tuple of (records, unknown_count):
-        - records: List of dicts with keys for each category + "selected" (bool).
-        - unknown_count: Number of rows with missing demographic data in any
-          mapped category.
+        (records, unknown_count) where each record has keys for each category,
+        plus any of "selected" / "score" / "prediction" / "ground_truth" that were
+        resolved from the CSV.
     """
     text = _decode_csv(csv_bytes)
     reader = csv.DictReader(io.StringIO(text))
 
-    records: List[Dict[str, str]] = []
+    records: List[Dict] = []
     unknown_count = 0
     unknown_outcome_count = 0
 
-    # Normalize header names for case-insensitive matching
     if reader.fieldnames is None:
         return [], 0
 
@@ -71,11 +95,18 @@ def parse_csv_dataset(
         else:
             resolved_mapping[category_key] = csv_col.strip()
 
-    outcome_col_lower = outcome_column.strip().lower()
-    resolved_outcome = header_map.get(outcome_col_lower, outcome_column.strip())
+    def _resolve(col: Optional[str]) -> Optional[str]:
+        if not col:
+            return None
+        return header_map.get(col.strip().lower(), col.strip())
+
+    resolved_outcome = _resolve(outcome_column)
+    resolved_score = _resolve(score_column)
+    resolved_prediction = _resolve(prediction_column)
+    resolved_ground_truth = _resolve(ground_truth_column)
 
     for row in reader:
-        record: Dict[str, str] = {}
+        record: Dict = {}
         has_missing = False
 
         for category_key, csv_col in resolved_mapping.items():
@@ -84,15 +115,33 @@ def parse_csv_dataset(
                 has_missing = True
             record[category_key] = value
 
-        # Parse outcome — log unrecognized values to help users debug data issues
-        outcome_raw = (row.get(resolved_outcome) or "").strip().lower()
-        if outcome_raw in VALID_TRUE:
-            record["selected"] = True
-        elif outcome_raw in VALID_FALSE or outcome_raw == "":
-            record["selected"] = False
-        else:
-            record["selected"] = False
-            unknown_outcome_count += 1
+        if resolved_outcome:
+            outcome_raw = (row.get(resolved_outcome) or "").strip()
+            parsed = _parse_bool(outcome_raw)
+            if parsed is None:
+                record["selected"] = False
+                if outcome_raw:
+                    unknown_outcome_count += 1
+            else:
+                record["selected"] = parsed
+
+        if resolved_score:
+            score_val = _parse_float(row.get(resolved_score) or "")
+            if score_val is None:
+                has_missing = True
+            record["score"] = score_val
+
+        if resolved_prediction:
+            pred = _parse_bool(row.get(resolved_prediction) or "")
+            if pred is None:
+                has_missing = True
+            record["prediction"] = pred
+
+        if resolved_ground_truth:
+            truth = _parse_bool(row.get(resolved_ground_truth) or "")
+            if truth is None:
+                has_missing = True
+            record["ground_truth"] = truth
 
         if has_missing:
             unknown_count += 1
@@ -109,16 +158,7 @@ def parse_csv_dataset(
 
 
 def parse_csv_headers(csv_bytes: bytes) -> List[str]:
-    """
-    Parse just the headers from a CSV file.
-    Used client-side (or server-side) for column mapping UI.
-
-    Args:
-        csv_bytes: Raw CSV file content.
-
-    Returns:
-        List of column header names.
-    """
+    """Parse just the headers from a CSV file."""
     text = _decode_csv(csv_bytes)
     reader = csv.DictReader(io.StringIO(text))
     if reader.fieldnames is None:

@@ -96,8 +96,72 @@ export interface CategoryTableResult {
   highest_rate: number | null;
 }
 
+export type BiasAuditMetric =
+  | "selection_rate"
+  | "scoring_rate"
+  | "fairness_metrics";
+
+export interface ScoreDistributionBin {
+  lower: number;
+  upper: number;
+  count: number;
+}
+
+export interface ScoreDistributionGroup {
+  category_type: string;
+  category_name: string;
+  count: number;
+  mean: number;
+  median: number;
+  std: number;
+  bins: ScoreDistributionBin[];
+  ks_statistic: number | null;
+  ks_pvalue: number | null;
+}
+
+export interface ScoreDistributionTable {
+  title: string;
+  category_key: string;
+  groups: ScoreDistributionGroup[];
+  overall_mean: number;
+  overall_median: number;
+}
+
+export interface ConfusionMatrixGroupResult {
+  category_type: string;
+  category_name: string;
+  count: number;
+  true_positive: number;
+  false_positive: number;
+  true_negative: number;
+  false_negative: number;
+  true_positive_rate: number;
+  false_positive_rate: number;
+  false_negative_rate: number;
+  true_negative_rate: number;
+  precision: number;
+  accuracy: number;
+  excluded: boolean;
+}
+
+export interface FairnessMetricsTable {
+  title: string;
+  category_key: string;
+  groups: ConfusionMatrixGroupResult[];
+  equal_opportunity_difference: number | null;
+  equalized_odds_difference: number | null;
+  predictive_parity_difference: number | null;
+  tpr_max_group: string | null;
+  tpr_min_group: string | null;
+  fpr_max_group: string | null;
+  fpr_min_group: string | null;
+}
+
 export interface BiasAuditResultFull {
+  metric?: BiasAuditMetric;
   tables: CategoryTableResult[];
+  score_distribution_tables?: ScoreDistributionTable[];
+  fairness_metrics_tables?: FairnessMetricsTable[];
   overall_selection_rate: number;
   total_applicants: number;
   total_selected: number;
@@ -125,6 +189,7 @@ export interface CreateBiasAuditConfig {
   presetId: string;
   presetName?: string;
   mode?: string;
+  metric?: BiasAuditMetric;
   orgId: string;
   projectId?: string;
   categories?: Record<string, CategoryConfig>;
@@ -133,8 +198,22 @@ export interface CreateBiasAuditConfig {
   threshold?: number | null;
   smallSampleExclusion?: number | null;
   outcomeColumn: string;
+  scoreColumn?: string;
+  predictionColumn?: string;
+  groundTruthColumn?: string;
   columnMapping: Record<string, string>;
   metadata?: Record<string, string>;
+  // Audit metadata for the formal PDF report
+  systemName?: string;
+  systemVersion?: string;
+  systemDescription?: string;
+  auditorName?: string;
+  auditorRole?: string;
+  auditorIndependence?: "self" | "internal" | "third_party";
+  deploymentContext?: string;
+  dataSource?: string;
+  dataDateRangeStart?: string;
+  dataDateRangeEnd?: string;
 }
 
 // ==================== SERVICE ====================
@@ -202,6 +281,25 @@ class BiasAuditService {
       `/deepeval/bias-audits/${auditId}`
     );
     return res.data as { message: string; auditId: string };
+  }
+
+  async updateAuditName(
+    auditId: string,
+    systemName: string
+  ): Promise<{ auditId: string; systemName: string }> {
+    const res = await CustomAxios.patch(
+      `/deepeval/bias-audits/${auditId}`,
+      { systemName }
+    );
+    return res.data as { auditId: string; systemName: string };
+  }
+
+  async downloadReport(auditId: string): Promise<Blob> {
+    const res = await CustomAxios.get(
+      `/deepeval/bias-audits/${auditId}/report.pdf`,
+      { responseType: "blob" }
+    );
+    return res.data as Blob;
   }
 
   async parseHeaders(dataset: File): Promise<string[]> {

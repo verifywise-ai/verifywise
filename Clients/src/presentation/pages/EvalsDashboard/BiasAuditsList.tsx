@@ -64,8 +64,10 @@ function getResultSummary(audit: BiasAuditSummary) {
 
 function getSortValue(audit: BiasAuditSummary, key: string): string | number {
   switch (key) {
-    case "framework":
-      return audit.presetName.toLowerCase();
+    case "framework": {
+      const systemName = (audit.config?.systemName as string | undefined) || "";
+      return (systemName || audit.presetName).toLowerCase();
+    }
     case "mode":
       return audit.mode.toLowerCase();
     case "status":
@@ -168,9 +170,13 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
   };
 
   const sortedAudits = useMemo(() => {
-    const filtered = audits.filter((a) =>
-      a.presetName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const q = searchQuery.toLowerCase();
+    const filtered = audits.filter((a) => {
+      const systemName = ((a.config?.systemName as string | undefined) || "").toLowerCase();
+      return (
+        a.presetName.toLowerCase().includes(q) || systemName.includes(q)
+      );
+    });
     if (!sortConfig.key || !sortConfig.direction) return filtered;
 
     return [...filtered].sort((a, b) => {
@@ -305,9 +311,16 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                   }}
                 >
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Typography sx={{ fontSize: 13, color: theme.palette.text.primary }}>
-                      {audit.presetName}
-                    </Typography>
+                    <Stack spacing={0.25}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.primary }}>
+                        {(audit.config?.systemName as string | undefined) || audit.presetName}
+                      </Typography>
+                      {(audit.config?.systemName as string | undefined) && (
+                        <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary }}>
+                          {audit.presetName}
+                        </Typography>
+                      )}
+                    </Stack>
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getModeChip(audit.mode)}</TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getStatusChip(audit.status)}</TableCell>

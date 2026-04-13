@@ -2,6 +2,7 @@ import React, {
   FC,
   useState,
   useCallback,
+  useRef,
   lazy,
   Suspense,
   useContext,
@@ -17,9 +18,7 @@ import { Likelihood, Severity } from "../RiskLevel/constants";
 import { RiskLikelihood, RiskSeverity } from "../RiskLevel/riskValues";
 import {
   RiskFormValues,
-  RiskFormErrors,
   MitigationFormValues,
-  MitigationFormErrors,
 } from "./interface";
 import {
   aiLifecyclePhase,
@@ -32,8 +31,6 @@ import {
 } from "./projectRiskValue";
 import { AddNewRiskFormProps } from "../../types/riskForm.types";
 import { ApiResponse } from "../../../domain/interfaces/i.response";
-import { checkStringValidation } from "../../../application/validations/stringValidation";
-import selectValidation from "../../../application/validations/selectValidation";
 import { createProjectRisk, updateProjectRisk } from "../../../application/repository/projectRisk.repository";
 import useUsers from "../../../application/hooks/useUsers";
 import { useAuth } from "../../../application/hooks/useAuth";
@@ -158,9 +155,8 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
   const disableRipple =
     theme.components?.MuiButton?.defaultProps?.disableRipple ?? false;
 
-  const [riskErrors, setRiskErrors] = useState<RiskFormErrors>({});
-  const [mitigationErrors, setMitigationErrors] =
-    useState<MitigationFormErrors>({});
+  const riskValidateRef = useRef<((values: RiskFormValues) => boolean) | null>(null);
+  const mitigateValidateRef = useRef<((values: MitigationFormValues) => boolean) | null>(null);
   const [riskValues, setRiskValues] =
     useState<RiskFormValues>(initialRiskValues); // Use initialValues
   const [mitigationValues, setMitigationValues] =
@@ -311,184 +307,16 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
     }
   }, [popupStatus, inputValues, users, usersLoading]);
 
-  // Helper functions for validation
-  const validateRiskFields = useCallback(
-    (values: RiskFormValues): RiskFormErrors => {
-      const errors: RiskFormErrors = {};
-
-      const riskName = checkStringValidation(
-        "Risk name",
-        values.riskName,
-        VALIDATION_LIMITS.RISK_NAME.MIN,
-        VALIDATION_LIMITS.RISK_NAME.MAX
-      );
-      if (!riskName.accepted) {
-        errors.riskName = riskName.message;
-      }
-
-      const riskDescription = checkStringValidation(
-        "Risk description",
-        values.riskDescription,
-        VALIDATION_LIMITS.RISK_DESCRIPTION.MIN,
-        VALIDATION_LIMITS.RISK_DESCRIPTION.MAX
-      );
-      if (!riskDescription.accepted) {
-        errors.riskDescription = riskDescription.message;
-      }
-
-      const potentialImpact = checkStringValidation(
-        "Potential impact",
-        values.potentialImpact,
-        VALIDATION_LIMITS.POTENTIAL_IMPACT.MIN,
-        VALIDATION_LIMITS.POTENTIAL_IMPACT.MAX
-      );
-      if (!potentialImpact.accepted) {
-        errors.potentialImpact = potentialImpact.message;
-      }
-
-      if (values.reviewNotes.length > 0) {
-        const reviewNotes = checkStringValidation(
-          "Review notes",
-          values.reviewNotes,
-          VALIDATION_LIMITS.REVIEW_NOTES.MIN,
-          VALIDATION_LIMITS.REVIEW_NOTES.MAX
-        );
-        if (!reviewNotes.accepted) {
-          errors.reviewNotes = reviewNotes.message;
-        }
-      }
-
-      const aiLifecyclePhase = selectValidation(
-        "AI lifecycle phase",
-        values.aiLifecyclePhase
-      );
-      if (!aiLifecyclePhase.accepted) {
-        errors.aiLifecyclePhase = aiLifecyclePhase.message;
-      }
-
-      values.riskCategory.forEach((category) => {
-        const riskCategory = selectValidation("Risk category", category);
-        if (!riskCategory.accepted) {
-          errors.riskCategory = [riskCategory.message];
-        }
-      });
-
-      return errors;
-    },
-    []
-  );
-
-  const validateMitigationFields = useCallback(
-    (values: MitigationFormValues): MitigationFormErrors => {
-      const errors: MitigationFormErrors = {};
-
-      const mitigationPlan = checkStringValidation(
-        "Mitigation plan",
-        values.mitigationPlan,
-        VALIDATION_LIMITS.MITIGATION_PLAN.MIN,
-        VALIDATION_LIMITS.MITIGATION_PLAN.MAX
-      );
-      if (!mitigationPlan.accepted) {
-        errors.mitigationPlan = mitigationPlan.message;
-      }
-
-      const implementationStrategy = checkStringValidation(
-        "Implementation strategy",
-        values.implementationStrategy,
-        VALIDATION_LIMITS.IMPLEMENTATION_STRATEGY.MIN,
-        VALIDATION_LIMITS.IMPLEMENTATION_STRATEGY.MAX
-      );
-      if (!implementationStrategy.accepted) {
-        errors.implementationStrategy = implementationStrategy.message;
-      }
-
-      const deadline = checkStringValidation(
-        "Deadline",
-        values.deadline,
-        VALIDATION_LIMITS.REQUIRED_FIELD.MIN
-      );
-      if (!deadline.accepted) {
-        errors.deadline = deadline.message;
-      }
-
-      const dateOfAssessment = checkStringValidation(
-        "Date Of Assessment",
-        values.dateOfAssessment,
-        VALIDATION_LIMITS.REQUIRED_FIELD.MIN
-      );
-      if (!dateOfAssessment.accepted) {
-        errors.dateOfAssessment = dateOfAssessment.message;
-      }
-
-      const mitigationStatus = selectValidation(
-        "Mitigation status",
-        values.mitigationStatus
-      );
-      if (!mitigationStatus.accepted) {
-        errors.mitigationStatus = mitigationStatus.message;
-      }
-
-      const currentRiskLevel = selectValidation(
-        "Current risk level",
-        values.currentRiskLevel
-      );
-      if (!currentRiskLevel.accepted) {
-        errors.currentRiskLevel = currentRiskLevel.message;
-      }
-
-      const approver = selectValidation("Approver", values.approver);
-      if (!approver.accepted) {
-        errors.approver = approver.message;
-      }
-
-      const approvalStatus = selectValidation(
-        "Approval status",
-        values.approvalStatus
-      );
-      if (!approvalStatus.accepted) {
-        errors.approvalStatus = approvalStatus.message;
-      }
-
-      if (values.recommendations.length > 0) {
-        const recommendations = checkStringValidation(
-          "Recommendation",
-          values.recommendations,
-          VALIDATION_LIMITS.RECOMMENDATIONS.MIN,
-          VALIDATION_LIMITS.RECOMMENDATIONS.MAX
-        );
-        if (!recommendations.accepted) {
-          errors.recommendations = recommendations.message;
-        }
-      }
-
-      return errors;
-    },
-    []
-  );
-
-  const validateForm = useCallback((): {
-    isValid: boolean;
-    errors: RiskFormErrors;
-    mitigationErrors: MitigationFormErrors;
-  } => {
-    const newErrors = validateRiskFields(riskValues);
-    const newMitigationErrors = validateMitigationFields(mitigationValues);
-
-    setMitigationErrors(newMitigationErrors);
-    setRiskErrors(newErrors);
-
+  const validateForm = useCallback((): { isValid: boolean; riskValid: boolean } => {
+    const riskValid = riskValidateRef.current ? riskValidateRef.current(riskValues) : false;
+    const mitigationValid = mitigateValidateRef.current ? mitigateValidateRef.current(mitigationValues) : false;
     return {
-      isValid:
-        Object.keys(newErrors).length === 0 &&
-        Object.keys(newMitigationErrors).length === 0,
-      errors: newErrors,
-      mitigationErrors: newMitigationErrors,
+      isValid: riskValid && mitigationValid,
+      riskValid,
     };
   }, [
     riskValues,
     mitigationValues,
-    validateRiskFields,
-    validateMitigationFields,
   ]);
 
   // Helper function to get only changed fields for UPDATE requests
@@ -672,7 +500,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
   );
 
   const riskFormSubmitHandler = async () => {
-    const { isValid, errors } = validateForm();
+    const { isValid, riskValid } = validateForm();
     const selectedRiskLikelihood = likelihoodItems.find(
       (r) => r._id === riskValues.likelihood
     );
@@ -829,7 +657,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         }
       }
     } else {
-      if (Object.keys(errors).length) {
+      if (!riskValid) {
         setValue("risks");
       } else {
         setValue("mitigation");
@@ -910,6 +738,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         <Suspense fallback={<div>Loading...</div>}>
           <TabPanel
             value="risks"
+            keepMounted
             sx={{
               p: COMPONENT_CONSTANTS.TAB_PADDING,
               // Only set maxHeight when not in StandardModal (no onSubmitRef)
@@ -919,7 +748,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
             <RiskSection
               riskValues={riskValues}
               setRiskValues={setRiskValues}
-              riskErrors={riskErrors}
+              validateRef={riskValidateRef}
               userRoleName={userRoleName}
               disableInternalScroll={!!onSubmitRef}
               compactMode={compactMode}
@@ -927,6 +756,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
           </TabPanel>
           <TabPanel
             value="mitigation"
+            keepMounted
             sx={{
               p: COMPONENT_CONSTANTS.TAB_PADDING,
               // Only set maxHeight when not in StandardModal (no onSubmitRef)
@@ -936,7 +766,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
             <MitigationSection
               mitigationValues={mitigationValues}
               setMitigationValues={setMitigationValues}
-              mitigationErrors={mitigationErrors}
+              validateRef={mitigateValidateRef}
               userRoleName={userRoleName}
               disableInternalScroll={!!onSubmitRef}
               compactMode={compactMode}

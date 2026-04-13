@@ -11,7 +11,7 @@ attrs==25.4.0
 backoff==2.2.1
 cachetools==6.2.1
 certifi==2025.10.5
-cryptography==46.0.6
+cryptography==46.0.7
 charset-normalizer==3.4.4
 click==8.2.1
 deepeval==3.7.0

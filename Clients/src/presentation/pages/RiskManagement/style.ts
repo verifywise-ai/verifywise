@@ -39,25 +39,48 @@ export const riskPopoverStyle = {
 };
 
 export const riskPopoverContentStyle = {
-  p: 2,
-  width: "420px",
+  p: 1,
+  width: "440px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
 };
 
-// D. Menu Item (Add New Risk Manually)
+// D. Uniform list row (used by Manual, IBM, MIT, and plugin items)
 export const riskMenuItemStyle = {
   display: "flex",
   alignItems: "center",
-  padding: "12px 16px",
+  gap: "12px",
+  padding: "12px 14px",
   borderRadius: singleTheme.borderRadius,
   cursor: "pointer",
-  border: "1px solid rgba(0, 0, 0, 0.08)",
-  backgroundColor: "background.main",
-  transition: "all 0.2s ease",
-  mb: 2,
+  border: "1px solid transparent",
+  backgroundColor: "transparent",
+  transition: "background-color 0.15s ease, border-color 0.15s ease",
+  position: "relative" as const,
   "&:hover": {
-    backgroundColor: "background.accent",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
+    backgroundColor: "rgba(19, 113, 91, 0.04)",
+    border: "1px solid rgba(19, 113, 91, 0.12)",
   },
+  "&:focus-visible": {
+    outline: "none",
+    backgroundColor: "rgba(19, 113, 91, 0.04)",
+    border: "1px solid rgba(19, 113, 91, 0.24)",
+  },
+};
+
+export const riskMenuItemTextWrapStyle = {
+  flex: 1,
+  minWidth: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: "2px",
+};
+
+export const riskMenuItemTitleRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
 };
 
 export const riskMenuItemTitleStyle = {
@@ -69,72 +92,18 @@ export const riskMenuItemTitleStyle = {
 export const riskMenuItemSubtitleStyle = {
   fontSize: singleTheme.fontSizes.small,
   color: "rgba(0, 0, 0, 0.6)",
+  lineHeight: 1.4,
 };
 
-// E. Divider ("Or Import From")
-export const riskDividerContainerStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 1.5,
-  mb: 2,
+export const riskMenuItemLogoStyle: React.CSSProperties = {
+  height: 18,
+  width: "auto",
+  flexShrink: 0,
+  opacity: 0.75,
 };
 
-export const riskDividerLineStyle = {
-  flex: 1,
-  height: "1px",
-  backgroundColor: "rgba(0, 0, 0, 0.08)",
-};
-
-export const riskDividerTextStyle = {
-  fontSize: singleTheme.fontSizes.small,
-  color: "rgba(0, 0, 0, 0.45)",
-  textTransform: "uppercase" as const,
-  letterSpacing: "0.5px",
-};
-
-// F. AI Risk Cards Grid
-export const riskCardsGridStyle = (hasPlugin: boolean) => ({
-  display: "grid",
-  gridTemplateColumns: hasPlugin ? "repeat(3, 1fr)" : "repeat(2, 1fr)",
-  gap: 2,
-});
-
-// F. AI Risk Cards (deduplicated IBM/MIT)
-export const aiRiskCardBaseStyle = {
-  background:
-    "linear-gradient(135deg, rgba(252, 252, 252, 1) 0%, rgba(248, 248, 248, 1) 100%)",
-  borderRadius: singleTheme.borderRadius,
-  padding: "20px 16px",
-  cursor: "pointer",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "flex-start",
-  gap: 1.5,
-  border: "1px solid rgba(0, 0, 0, 0.04)",
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  minHeight: "140px",
-  "&:hover": {
-    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
-    border: "1px solid rgba(0, 0, 0, 0.08)",
-    background:
-      "linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 250, 250, 1) 100%)",
-  },
-  "&:active": {
-    transform: "scale(0.98)",
-  },
-};
-
-export const aiRiskCardIbmStyle = {
-  ...aiRiskCardBaseStyle,
-  position: "relative" as const,
-};
-
-export const aiRiskCardRecommendedBadgeStyle = {
-  position: "absolute",
-  top: 8,
-  right: 8,
-  backgroundColor: "#10B981",
+export const riskMenuItemRecommendedBadgeStyle = {
+  backgroundColor: "#13715B",
   color: "white",
   fontSize: "9px",
   fontWeight: 600,
@@ -142,22 +111,5 @@ export const aiRiskCardRecommendedBadgeStyle = {
   borderRadius: "3px",
   textTransform: "uppercase" as const,
   letterSpacing: "0.5px",
-};
-
-export const aiRiskCardLogoStyle: React.CSSProperties = {
-  height: 24,
-};
-
-export const aiRiskCardTitleStyle = {
-  fontWeight: 600,
-  fontSize: singleTheme.fontSizes.medium,
-  color: "rgba(0, 0, 0, 0.85)",
-  textAlign: "center",
-};
-
-export const aiRiskCardCaptionStyle = {
-  fontSize: singleTheme.fontSizes.small,
-  color: "rgba(0, 0, 0, 0.6)",
-  textAlign: "center",
-  lineHeight: 1.4,
+  lineHeight: 1.2,
 };

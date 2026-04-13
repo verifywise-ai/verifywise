@@ -467,8 +467,14 @@ def _cmd_generate(args: argparse.Namespace) -> int:
 
         rubric = load_judge_rubric(Path(args.judge_rubric))
 
-        # judge client (OpenRouter)
-        judge_client = OpenRouterChatClient(model_id=args.judge_model_id)
+        # judge client (provider-agnostic via build_client)
+        judge_spec = ModelSpec(
+            provider=args.judge_provider,
+            model_id=args.judge_model_id,
+            region=getattr(args, "judge_region", None),
+            profile=getattr(args, "judge_profile", None),
+        )
+        judge_client = build_client(judge_spec)
 
         responses_dir = Path(args.responses_dir) if args.responses_dir else (final_dir / "responses")
         out_dir = Path(args.judge_out_dir) if args.judge_out_dir else (final_dir / "judge_scores")
@@ -478,6 +484,15 @@ def _cmd_generate(args: argparse.Namespace) -> int:
         if not resp_files:
             console.print(f"[red]No response files found in:[/red] {responses_dir}")
             return 2
+
+        if args.judge_model_filter:
+            from infer.paths import sanitize_model_id
+            target_stem = sanitize_model_id(args.judge_model_filter)
+            resp_files = [f for f in resp_files if f.stem == target_stem]
+            if not resp_files:
+                console.print(f"[red]No response file matched --judge-model-filter:[/red] {args.judge_model_filter} (looked for {target_stem}.jsonl)")
+                return 2
+            console.print(f"[yellow]Filtering to model:[/yellow] {args.judge_model_filter} → {target_stem}.jsonl")
 
         outputs = []
         for rf in resp_files:
@@ -497,7 +512,7 @@ def _cmd_generate(args: argparse.Namespace) -> int:
 
             cfg = JudgeConfig(
                 judge_model_id=args.judge_model_id,
-                judge_provider="openrouter",
+                judge_provider=args.judge_provider,
                 temperature=float(args.judge_temperature),
                 max_tokens=int(args.judge_max_tokens),
             )
@@ -513,10 +528,9 @@ def _cmd_generate(args: argparse.Namespace) -> int:
 
             if args.judge_resume:
                 append_jsonl(out_path, scores)
-                append_jsonl(fail_path, failures)
             else:
                 write_jsonl(out_path, scores)
-                write_jsonl(fail_path, failures)
+            write_jsonl(fail_path, failures)
 
             outputs.append({
                 "candidate_response_file": rf.name,
@@ -542,6 +556,14 @@ def _cmd_generate(args: argparse.Namespace) -> int:
             stats = compute_judge_stats(sp, fp)
             stats["candidate_response_file"] = o["candidate_response_file"]
             per_candidate.append(stats)
+
+        # Merge with existing report: preserve entries for other candidate models.
+        if judge_report_path.exists():
+            existing = json.loads(judge_report_path.read_text(encoding="utf-8"))
+            existing_by_file = {e["candidate_response_file"]: e for e in existing.get("per_candidate", [])}
+            for entry in per_candidate:
+                existing_by_file[entry["candidate_response_file"]] = entry
+            per_candidate = list(existing_by_file.values())
 
         report = build_judge_report(
             judge_model_id=args.judge_model_id,
@@ -696,13 +718,17 @@ def main() -> None:
     gen.add_argument("--resume", action="store_true")
     gen.add_argument("--retry-max-attempts", default="5")
     gen.add_argument("--judge-model-id", default="openai/gpt-4o-mini")
+    gen.add_argument("--judge-provider", default="openrouter", choices=["openrouter", "bedrock", "mock"])
+    gen.add_argument("--judge-region", default=None)
+    gen.add_argument("--judge-profile", default=None)
     gen.add_argument("--judge-rubric", default="configs/judge_rubric.yaml")
     gen.add_argument("--responses-dir", default=None)  # default: <final_dir>/responses
     gen.add_argument("--judge-out-dir", default=None)  # default: <final_dir>/judge_scores
     gen.add_argument("--judge-temperature", default="0.0")
-    gen.add_argument("--judge-max-tokens", default="800")
+    gen.add_argument("--judge-max-tokens", default="2048")
     gen.add_argument("--judge-limit", default=None)  # optional: limit scenarios for smoke tests
     gen.add_argument("--judge-resume", action="store_true")
+    gen.add_argument("--judge-model-filter", default=None, help="Only judge responses from this candidate model (raw model_id, e.g. openai/gpt-4o-mini)")
     gen.add_argument("--judge-retry-max-attempts", default="5")
     gen.add_argument("--judge-scores-dir", default=None)
     gen.add_argument("--leaderboard-out-dir", default=None)

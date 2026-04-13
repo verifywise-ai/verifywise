@@ -4,7 +4,6 @@ import { Box, Stack, TableRow, TableCell } from "@mui/material";
 import { FileText, Copy, Filter, BookOpen } from "lucide-react";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { EmptyState } from "../../components/EmptyState";
-import policyTemplates from "../../../application/data/PolicyTemplates.json";
 import { PolicyTemplatesProps } from "../../types/interfaces/i.policy";
 import { SearchBox } from "../../components/Search";
 import { PolicyTemplateCategory } from "../../../domain/enums/policy.enum";
@@ -46,6 +45,16 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [policyTemplates, setPolicyTemplates] = useState<
+    { id: number; title: string; description: string; tags: string[]; category: string; content: string }[]
+  >([]);
+
+  useEffect(() => {
+    fetch("/data/PolicyTemplates.json")
+      .then((res) => res.json())
+      .then(setPolicyTemplates)
+      .catch(() => {});
+  }, []);
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
@@ -118,7 +127,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
     }
 
     return result;
-  }, [filterPolicyTemplateData, searchTerm]);
+  }, [filterPolicyTemplateData, policyTemplates, searchTerm]);
 
   // Define how to get the group key for each policy template
   const getTemplateGroupKey = useCallback((template: PolicyTemplateItem, field: string): string => {

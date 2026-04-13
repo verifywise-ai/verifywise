@@ -10,11 +10,15 @@ export const biasAuditsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A bias audit analyzes whether an AI system treats demographic groups fairly. You upload applicant data with demographic categories and outcomes (selected or not), and the system calculates selection rates and impact ratios for each group. If any group\'s selection rate falls below the threshold compared to the most-selected group, it gets flagged.',
+      text: 'A bias audit checks whether an automated decision tool treats demographic groups consistently. You upload records with demographic columns and one of three kinds of outcome data, and VerifyWise calculates per-group rates, cross-group disparities and flags groups that fall below the configured threshold. The tool is not LLM-specific; it works for any system that produces a decision, a score or a classification.',
     },
     {
       type: 'paragraph',
-      text: 'This matters for regulatory compliance. NYC Local Law 144, for example, requires annual independent bias audits for any automated employment decision tool. The EU AI Act and EEOC guidelines have similar expectations. VerifyWise supports 15 compliance frameworks out of the box, each with pre-configured categories, thresholds, and reporting requirements.',
+      text: 'NYC Local Law 144 requires annual independent bias audits for any automated employment decision tool. EU AI Act Article 9 and the EEOC guidelines set comparable expectations. VerifyWise ships with 15 compliance frameworks out of the box, each pre-configured with the right categories, thresholds and reporting requirements.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Every run gives you an interactive results dashboard, a raw JSON export and a formal PDF report you can hand to a reviewer or procurement team without any additional explanation.',
     },
     {
       type: 'heading',
@@ -25,6 +29,29 @@ export const biasAuditsContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Open the LLM Evals module from the sidebar and click **Bias audits**. You\'ll see a list of all audits for your organization, sortable by date, status, framework, or mode. Running audits update automatically every few seconds.',
+    },
+    {
+      type: 'heading',
+      id: 'choosing-metric',
+      level: 2,
+      text: 'Choosing a metric',
+    },
+    {
+      type: 'paragraph',
+      text: 'Before uploading your data, you pick an audit metric. The metric determines what your CSV needs to contain and what the results mean. VerifyWise supports three modes:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Selection rate', text: 'The default, and the right choice for any tool that produces a binary decision (hire or reject, approve or deny, flag or pass). Your CSV needs one outcome column. The audit computes each group\'s selection rate and an impact ratio against the highest-rate group. NYC Local Law 144 mandates this metric for binary employment decisions.' },
+        { bold: 'Scoring rate', text: 'Use this when your tool outputs a continuous score rather than a yes/no: a ranker, a risk score, a suitability score. Your CSV needs one numeric score column. VerifyWise computes each group\'s "above-median rate" (the share of records whose score beats the overall median) and then applies the same impact ratio logic. Local Law 144 explicitly allows this as an alternative to selection rate for scoring tools.' },
+        { bold: 'Fairness metrics', text: 'Pick this when you have both the model\'s prediction and the real answer. Your CSV needs a prediction column and a ground-truth column. You get a confusion matrix per group (true positive rate, false positive rate, precision, accuracy) plus the three standard cross-group differences: equal opportunity (TPR gap), equalized odds, predictive parity. This is the most informative mode but it also requires the most data.' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'tip',
+      text: 'Not sure which metric fits? Let your data pick for you. If the outcome is a yes/no flag, go with selection rate. If it\'s a numeric score, go with scoring rate. Fairness metrics is the right choice only when you also have ground-truth labels sitting next to the predictions.',
     },
     {
       type: 'heading',
@@ -90,28 +117,33 @@ export const biasAuditsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Upload a CSV file where each row represents one applicant. The file needs demographic columns and a binary outcome column.',
+      text: 'Upload a CSV file where each row represents one record. The file needs demographic columns plus the metric-specific column(s) described in the "Choosing a metric" section above.',
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'The wizard shows required columns based on your selected framework. For NYC LL144, you need sex and race/ethnicity columns plus an outcome column. Categories with empty group definitions are marked as optional.',
+      text: 'The wizard shows required columns based on your selected framework and your chosen metric. For NYC LL144 with selection rate, you need sex and race/ethnicity columns plus an outcome column. Categories with empty group definitions are marked as optional.',
     },
     {
       type: 'paragraph',
-      text: 'After uploading, you\'ll see:',
+      text: 'Step 3 starts with a metric dropdown. Pick selection rate, scoring rate or fairness metrics, and the rest of the step adapts to your choice. After uploading the CSV you\'ll see:',
     },
     {
       type: 'bullet-list',
       items: [
+        { bold: 'Metric selector', text: 'Dropdown at the top of the step. Changing the metric swaps the column selectors below it.' },
         { bold: 'Column mapping', text: 'Dropdowns that map each required demographic category to a column in your CSV. For example, map "Sex" to your CSV\'s "Gender" column.' },
-        { bold: 'Outcome column', text: 'Select the column that indicates selection outcomes. Accepted values: 1, true, yes, selected, hired, promoted (and their inverses for non-selection).' },
+        { bold: 'Metric column(s)', text: 'For selection rate, an outcome column. For scoring rate, a numeric score column. For fairness metrics, a prediction column plus a ground-truth column.' },
         { bold: 'Data preview', text: 'A preview of the first five rows so you can confirm the data looks correct before proceeding.' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'The wizard validates that required categories are mapped, no duplicate mappings exist, and the outcome column isn\'t reused as a demographic column.',
+      text: 'Accepted outcome values for selection-rate and fairness-metrics modes are 1/true/yes/selected/hired/promoted as positive, and 0/false/no/rejected/declined as negative. Scoring-rate columns need to parse as numbers; missing or non-numeric values are counted as unknown.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The wizard validates that required categories are mapped, no duplicate mappings exist, and your metric columns aren\'t reused as demographic columns.',
     },
     {
       type: 'heading',
@@ -143,7 +175,17 @@ export const biasAuditsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click into a completed audit to see the results. The detail page has three sections: summary cards, a text summary, and the impact ratio tables.',
+      text: 'Click into a completed audit to see the results. The detail page shows the audit title, the compliance framework, headline summary cards, a plain-English summary, and the metric-specific results tables underneath.',
+    },
+    {
+      type: 'heading',
+      id: 'editable-name',
+      level: 3,
+      text: 'Naming your audit',
+    },
+    {
+      type: 'paragraph',
+      text: 'Hover over the audit title at the top of the detail page and click the pencil icon to rename it. New audits inherit the compliance framework as their default title ("NYC Local Law 144"), but a descriptive name like "Acme Resume Screener Q1 2026" makes the list view easier to scan. The compliance framework continues to appear as a subtitle.',
     },
     {
       type: 'heading',
@@ -153,7 +195,7 @@ export const biasAuditsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'At the top you\'ll see cards for total applicants, total selected, overall selection rate, and number of flags. If rows were excluded due to missing demographic data, an "Unknown" card also appears.',
+      text: 'At the top you\'ll see cards for total records, the count and rate of positive outcomes, and the number of flagged groups. The positive-outcome label depends on the metric: "Total selected" for selection rate, "Above median" for scoring rate, "Predicted positive" for fairness metrics. If rows were excluded due to missing demographic data, an "Unknown" card also appears.',
     },
     {
       type: 'heading',
@@ -197,6 +239,47 @@ export const biasAuditsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'fairness-metrics-results',
+      level: 3,
+      text: 'Fairness metrics tables',
+    },
+    {
+      type: 'paragraph',
+      text: 'When you run the audit with the fairness-metrics mode, the results page renders a confusion-matrix table for each demographic category. Each row shows one group with its true positive rate, false positive rate, false negative rate, precision, accuracy, and the raw TP/FP/TN/FN counts.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Above the per-group table you\'ll find three cross-group differences that summarize the disparity in a single number each:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Equal opportunity difference', text: 'The gap between the highest and lowest true positive rate across groups. A value near zero means every group\'s qualified members get correctly identified at the same rate. Big values mean some groups are systematically missed.' },
+        { bold: 'Equalized odds difference', text: 'The larger of the TPR gap and the FPR gap. A stricter version of equal opportunity that penalizes both missed positives and false alarms.' },
+        { bold: 'Predictive parity difference', text: 'The gap in precision across groups. A positive prediction should mean roughly the same thing regardless of which group it applies to.' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'No single fairness metric is "correct." They can conflict with each other: optimizing for equal opportunity can worsen predictive parity and vice versa. Which one matters most depends on the downstream consequences of a wrong decision in your specific context.',
+    },
+    {
+      type: 'heading',
+      id: 'score-distributions',
+      level: 3,
+      text: 'Score distributions',
+    },
+    {
+      type: 'paragraph',
+      text: 'If your CSV includes a score column, the results page shows a score-distribution section alongside the impact-ratio tables. Each group gets a histogram of its scores plus descriptive statistics (mean, median, standard deviation) and a Kolmogorov-Smirnov statistic comparing the group\'s distribution to the overall one. Small K-S values mean the group looks like the overall distribution; large values mean it\'s shifted in some way.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Score distributions are diagnostic. Two groups can have identical impact ratios but very different score distributions, and the distribution view surfaces that difference.',
+    },
+    {
+      type: 'heading',
       id: 'actions',
       level: 2,
       text: 'Audit actions',
@@ -208,9 +291,29 @@ export const biasAuditsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Download JSON', text: 'Export the full results as a JSON file for external reporting or record-keeping.' },
+        { bold: 'Download PDF report', text: 'Generate a formal PDF audit report. This is the artifact to hand to a reviewer, auditor, or procurement team. Described in detail below.' },
+        { bold: 'Download JSON', text: 'Export the full raw results as a JSON file for external reporting, record-keeping, or downstream tooling.' },
         { bold: 'Delete', text: 'Permanently remove the audit and all its results. This requires confirmation.' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'pdf-report',
+      level: 2,
+      text: 'The PDF report',
+    },
+    {
+      type: 'paragraph',
+      text: 'The PDF is built so a reader who has never opened VerifyWise can still understand what was audited and what the numbers mean. It starts with a cover page, moves through an executive summary, describes the system and the data, walks through the methodology, then presents the results tables with any fairness metrics or score distributions your audit produced. It closes with a limitations section. Nowhere does the PDF offer mitigation advice: that\'s a conversation for qualified counsel, not a tool output.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The cover page also shows the auditor\'s declared independence level. Self-declared audits carry a warning box so readers know the tool vendor or system owner produced the report without third-party oversight. Plenty of legitimate audits are self-declared, but it\'s the first thing a reviewer should see.',
+    },
+    {
+      type: 'callout',
+      variant: 'warning',
+      text: 'The PDF report does not constitute legal advice. It documents statistical results against a chosen framework. Interpretation in your specific regulatory context is a conversation to have with qualified counsel.',
     },
     {
       type: 'heading',
@@ -281,23 +384,100 @@ export const biasAuditsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The core calculation is straightforward. For each demographic group:',
+      text: 'Each metric mode uses a slightly different formula, but the shape of the output is the same: a per-group rate, a ratio against the highest-rate group, and a flag when the ratio falls below the threshold.',
+    },
+    {
+      type: 'heading',
+      id: 'math-selection-rate',
+      level: 3,
+      text: 'Selection rate',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: '**Selection rate** = number selected / total applicants in that group' },
+        { text: '**Selection rate** = number selected / total records in that group' },
         { text: '**Impact ratio** = this group\'s selection rate / highest group\'s selection rate' },
         { text: 'If the impact ratio falls below the threshold (typically 0.80), the group is **flagged**' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'The 0.80 threshold is the "four-fifths rule" from the EEOC Uniform Guidelines on Employee Selection Procedures. It means a group\'s selection rate should be at least 80% of the most-selected group\'s rate. A ratio of 0.75 means that group is selected at 75% the rate of the top group, which falls below the threshold.',
+      text: 'The 0.80 threshold is the "four-fifths rule" from the EEOC Uniform Guidelines on Employee Selection Procedures. A group\'s selection rate should be at least 80% of the most-selected group\'s rate. A ratio of 0.75 means that group is selected at 75% the rate of the top group, which falls below the threshold.',
+    },
+    {
+      type: 'heading',
+      id: 'math-scoring-rate',
+      level: 3,
+      text: 'Scoring rate',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Compute the **overall median** of every record\'s score (one number across all groups)' },
+        { text: '**Scoring rate** for a group = share of that group\'s records whose score is above the overall median' },
+        { text: '**Impact ratio** = this group\'s scoring rate / highest group\'s scoring rate' },
+        { text: 'The same threshold and flagging rules apply as for selection rate' },
+      ],
     },
     {
       type: 'paragraph',
-      text: 'Groups that make up less than the small sample exclusion percentage (default 2%) are excluded from the calculation entirely, since small samples produce unreliable ratios.',
+      text: 'Scoring rate is the right metric for ranking tools and continuous-score tools because it asks "does this tool place group X above its overall median as often as it places group Y?" rather than collapsing the score into a yes/no first.',
+    },
+    {
+      type: 'heading',
+      id: 'math-fairness-metrics',
+      level: 3,
+      text: 'Fairness metrics',
+    },
+    {
+      type: 'paragraph',
+      text: 'Fairness metrics are computed from a confusion matrix per group. Each record has both a model prediction and a ground-truth label, so every record falls into exactly one of four cells:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'TP (true positive)', text: 'Predicted positive, actually positive.' },
+        { bold: 'FP (false positive)', text: 'Predicted positive, actually negative.' },
+        { bold: 'TN (true negative)', text: 'Predicted negative, actually negative.' },
+        { bold: 'FN (false negative)', text: 'Predicted negative, actually positive.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'From these counts VerifyWise derives the standard per-group rates:',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: '**True positive rate (TPR)** = TP / (TP + FN), also called recall or sensitivity' },
+        { text: '**False positive rate (FPR)** = FP / (FP + TN)' },
+        { text: '**Precision** = TP / (TP + FP)' },
+        { text: '**Accuracy** = (TP + TN) / total' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Cross-group differences are then reported as the max-minus-min gap across groups: equal opportunity difference is the TPR gap, equalized odds difference takes the larger of the TPR and FPR gaps, and predictive parity difference is the precision gap.',
+    },
+    {
+      type: 'heading',
+      id: 'math-ks',
+      level: 3,
+      text: 'Kolmogorov-Smirnov for score distributions',
+    },
+    {
+      type: 'paragraph',
+      text: 'The score distribution view uses a two-sample Kolmogorov-Smirnov test to compare each group\'s scores against the overall distribution. The K-S statistic is the largest gap between the two empirical cumulative distribution functions. A statistic of 0.0 means the distributions are identical; 1.0 means they are completely disjoint. The reported p-value uses the standard Kolmogorov asymptotic formula and tells you how surprising that gap would be under the null hypothesis that both samples come from the same distribution.',
+    },
+    {
+      type: 'heading',
+      id: 'math-exclusion',
+      level: 3,
+      text: 'Small sample exclusion',
+    },
+    {
+      type: 'paragraph',
+      text: 'Groups that make up less than the small sample exclusion percentage (default 2%) are excluded from the calculation entirely. Small samples produce unreliable ratios, and including them can mask real patterns with noise. Excluded groups appear in the results with a grey "N/A" status so it\'s obvious they were present in the data but set aside.',
     },
     {
       type: 'article-links',

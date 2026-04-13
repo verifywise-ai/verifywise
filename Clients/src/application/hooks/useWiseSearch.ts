@@ -14,7 +14,7 @@ import {
   SearchResult,
   getEntityDisplayName,
 } from "../repository/search.repository";
-import PolicyTemplates from "../data/PolicyTemplates.json";
+// PolicyTemplates.json loaded dynamically from /data/PolicyTemplates.json
 
 /**
  * Recent search entry
@@ -64,12 +64,23 @@ const DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 3;
 
 /**
- * Search policy templates locally (from JSON file)
+ * Search policy templates by fetching from public data
  */
-function searchPolicyTemplates(query: string): SearchResult[] {
+let _policyTemplatesCache: { id: number; title: string; description: string }[] | null = null;
+
+async function searchPolicyTemplates(query: string): Promise<SearchResult[]> {
+  if (!_policyTemplatesCache) {
+    try {
+      const res = await fetch("/data/PolicyTemplates.json");
+      _policyTemplatesCache = await res.json();
+    } catch {
+      return [];
+    }
+  }
+
   const lowerQuery = query.toLowerCase();
 
-  return (PolicyTemplates as { id: number; title: string; description: string }[])
+  return (_policyTemplatesCache ?? [])
     .filter(
       (template) =>
         template.title.toLowerCase().includes(lowerQuery) ||
@@ -183,7 +194,7 @@ export function useWiseSearch(): UseWiseSearchReturn {
       // When reviewStatus filter is active, skip local policy templates (they don't have review status)
       const [apiResponse, policyTemplateResults] = await Promise.all([
         performWiseSearch(searchParams),
-        statusFilter ? Promise.resolve([]) : Promise.resolve(searchPolicyTemplates(searchQuery)),
+        statusFilter ? Promise.resolve([]) : searchPolicyTemplates(searchQuery),
       ]);
 
       // Check if this request was aborted

@@ -13,7 +13,16 @@
       "Bash(grep -r \"superadmin\\\\|super.admin\\\\|SuperAdmin\" /Users/harsh/Data/vw/verifywise/Servers/src --include=*.ts -i)",
       "Bash(grep:*)",
       "Bash(git log:*)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(gh issue view:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(npx vite build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx vitest run:*)"
     ]
   }
 }
