@@ -62,8 +62,11 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Clean cache
+        run: npm cache clean --force
+
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: rm -rf node_modules && npm install --legacy-peer-deps
 
       - name: Rebuild native modules
         run: npm rebuild @swc/core

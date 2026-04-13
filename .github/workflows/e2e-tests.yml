@@ -144,7 +144,7 @@ jobs:
       # ---- Frontend setup ----
       - name: Install frontend dependencies
         working-directory: Clients
-        run: npm install --legacy-peer-deps
+        run: npm cache clean --force && rm -rf node_modules && npm install --legacy-peer-deps
 
       - name: Rebuild native modules
         working-directory: Clients
