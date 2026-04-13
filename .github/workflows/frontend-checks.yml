@@ -65,6 +65,9 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Rebuild native modules
+        run: npm rebuild @swc/core
+
       - name: Run tests with coverage
         run: npx vitest run --coverage
 

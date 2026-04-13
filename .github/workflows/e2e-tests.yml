@@ -146,6 +146,10 @@ jobs:
         working-directory: Clients
         run: npm install --legacy-peer-deps
 
+      - name: Rebuild native modules
+        working-directory: Clients
+        run: npm rebuild @swc/core
+
       - name: Install Playwright browsers
         working-directory: Clients
         run: npx playwright install --with-deps chromium
