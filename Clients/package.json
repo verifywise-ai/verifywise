@@ -57,7 +57,7 @@
     "@tiptap/react": "^3.22.2",
     "@tiptap/starter-kit": "^3.22.2",
     "@types/katex": "^0.16.7",
-    "@vitejs/plugin-react-swc": "^4.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
     "@xyflow/react": "^12.10.2",
     "axios": "^1.14.0",
     "canvas-confetti": "^1.9.4",

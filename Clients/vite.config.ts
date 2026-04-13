@@ -1,5 +1,5 @@
 import svgr from "@svgr/rollup";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vitest/config";
 import { version } from "../version.json";
