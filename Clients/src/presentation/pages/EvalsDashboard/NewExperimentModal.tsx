@@ -58,6 +58,7 @@ import {
   type LLMApiKey,
   type LLMProvider,
 } from "../../../application/repository/deepEval.repository";
+import { getAllEntities } from "../../../application/repository/entity.repository";
 import { PROVIDERS, type ModelInfo } from "../../utils/providers";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
 import { useModelPreferences } from "../../../application/hooks/useModelPreferences";
@@ -138,6 +139,10 @@ export default function NewExperimentModal({
   // Model preferences hook for auto-loading saved settings
   const { preferences: savedPreferences, loading: preferencesLoading, savePreferences } = useModelPreferences(projectId, orgId);
   const [preferencesApplied, setPreferencesApplied] = useState(false);
+
+  // Model inventory link (optional)
+  const [modelInventories, setModelInventories] = useState<Array<{ id: number; provider: string; model: string; version: string; status: string }>>([]);
+  const [selectedModelInventoryId, setSelectedModelInventoryId] = useState<number | null>(null);
 
   // Configuration state - taskType initialized from project's useCase prop
   const [config, setConfig] = useState({
@@ -240,6 +245,21 @@ export default function NewExperimentModal({
   useEffect(() => {
     setApiKeyWarningAcknowledged(false);
   }, [config.model.name, config.model.accessMethod]);
+
+  // Fetch model inventories when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      getAllEntities({ routeUrl: "/modelInventory" })
+        .then((response) => {
+          if (response?.data) {
+            setModelInventories(response.data);
+          }
+        })
+        .catch(() => {
+          // Non-critical — dropdown just stays empty
+        });
+    }
+  }, [isOpen]);
 
   // Track if selected dataset is multi-turn
   const isMultiTurnDataset = selectedUserDataset?.turnType === "multi-turn" ||
@@ -598,6 +618,7 @@ export default function NewExperimentModal({
         project_id: projectId,
         name: `${experimentModelName} - ${dateTimeStr}`,
         description: `Evaluating ${experimentModelName} with ${datasetPrompts.length} prompts`,
+        model_inventory_id: selectedModelInventoryId || undefined,
         config: {
           project_id: projectId,  // Include in config for runner
           model: {
@@ -767,6 +788,7 @@ export default function NewExperimentModal({
     // Reset custom model name toggles
     setUseCustomModelName(false);
     setUseCustomJudgeModelName(false);
+    setSelectedModelInventoryId(null);
     setConfig({
       taskType: useCase,
       model: {
@@ -1346,6 +1368,36 @@ export default function NewExperimentModal({
                 </Stack>
               </Box>
             )}
+
+            {/* Link to model inventory (optional) */}
+            <Box sx={{ mt: "16px" }}>
+              <Typography variant="body2" sx={{ mb: "4px", fontWeight: 500, fontSize: "13px", color: palette.text.secondary }}>
+                Link to model inventory (optional)
+              </Typography>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={selectedModelInventoryId !== null ? selectedModelInventoryId : ""}
+                  onChange={(e) => {
+                    const val = String(e.target.value);
+                    setSelectedModelInventoryId(val === "" ? null : Number(val));
+                  }}
+                  displayEmpty
+                  sx={{ height: "34px", fontSize: "13px", borderRadius: "4px" }}
+                >
+                  <MenuItem value="">
+                    <Typography sx={{ fontSize: "13px", color: palette.text.secondary }}>None — don't link to inventory</Typography>
+                  </MenuItem>
+                  {modelInventories.map((m) => (
+                    <MenuItem key={m.id} value={m.id}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography sx={{ fontSize: "13px" }}>{m.provider} — {m.model}</Typography>
+                        <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>v{m.version}</Typography>
+                      </Stack>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
           </Stack>
         );
 

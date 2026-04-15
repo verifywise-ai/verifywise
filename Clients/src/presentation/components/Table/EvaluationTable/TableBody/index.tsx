@@ -199,6 +199,40 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
               {row.dataset}
             </TableCell>
 
+            {/* LINKED MODEL - center aligned */}
+            {row.linkedModel !== undefined && (
+              <TableCell
+                sx={{
+                  ...singleTheme.tableStyles.primary.body.cell,
+                  paddingLeft: "12px",
+                  paddingRight: "12px",
+                  textTransform: "none",
+                  textAlign: "center",
+                  width: "10%",
+                }}
+              >
+                {row.linkedModel ? (
+                  <Box
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      px: "8px",
+                      py: "2px",
+                      borderRadius: "4px",
+                      backgroundColor: palette.status.success.bg,
+                      color: palette.status.success.text,
+                      fontSize: "11px",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Linked
+                  </Box>
+                ) : (
+                  <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>Unlinked</Typography>
+                )}
+              </TableCell>
+            )}
+
             {/* DATE - center aligned */}
             {row.date !== undefined && (
               <TableCell

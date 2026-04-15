@@ -52,8 +52,9 @@ const columnWidths: Record<string, string> = {
   "MODEL": "12%",
   "JUDGE/SCORER": "16%",
   "# PROMPTS": "8%",
-  "DATASET": "14%",
-  "DATE": "16%",
+  "DATASET": "12%",
+  "LINKED MODEL": "10%",
+  "DATE": "14%",
   "ACTION": "60px",
 };
 

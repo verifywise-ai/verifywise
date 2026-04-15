@@ -27,17 +27,18 @@ async def create_bias_audit(
     mode: str,
     config: Dict[str, Any],
     created_by: Optional[str] = None,
+    model_inventory_id: Optional[int] = None,
 ) -> Optional[Dict[str, Any]]:
     """Create a new bias audit record."""
     result = await db.execute(
         text(
             '''
             INSERT INTO llm_evals_bias_audits
-            (id, organization_id, project_id, preset_id, preset_name, mode, status, config, created_by)
+            (id, organization_id, project_id, preset_id, preset_name, mode, status, config, created_by, model_inventory_id)
             VALUES
-            (:id, :organization_id, :project_id, :preset_id, :preset_name, :mode, 'pending', :config, :created_by)
+            (:id, :organization_id, :project_id, :preset_id, :preset_name, :mode, 'pending', :config, :created_by, :model_inventory_id)
             RETURNING id, organization_id, project_id, preset_id, preset_name, mode, status,
-                      config, results, error, created_at, updated_at, completed_at, created_by
+                      config, results, error, created_at, updated_at, completed_at, created_by, model_inventory_id
             '''
         ),
         {
@@ -49,6 +50,7 @@ async def create_bias_audit(
             "mode": mode,
             "config": json.dumps(config),
             "created_by": created_by,
+            "model_inventory_id": model_inventory_id,
         },
     )
     row = result.mappings().first()
@@ -67,7 +69,7 @@ async def get_bias_audit(
         text(
             '''
             SELECT id, organization_id, project_id, preset_id, preset_name, mode, status,
-                   config, results, error, created_at, updated_at, completed_at, created_by
+                   config, results, error, created_at, updated_at, completed_at, created_by, model_inventory_id
             FROM llm_evals_bias_audits
             WHERE organization_id = :organization_id AND id = :id
             '''
@@ -113,7 +115,7 @@ async def update_bias_audit_status(
             SET {", ".join(updates)}
             WHERE organization_id = :organization_id AND id = :id
             RETURNING id, organization_id, project_id, preset_id, preset_name, mode, status,
-                      config, results, error, created_at, updated_at, completed_at, created_by
+                      config, results, error, created_at, updated_at, completed_at, created_by, model_inventory_id
             '''
         ),
         params,
@@ -144,7 +146,7 @@ async def update_bias_audit_system_name(
             updated_at = CURRENT_TIMESTAMP
             WHERE organization_id = :organization_id AND id = :id
             RETURNING id, organization_id, project_id, preset_id, preset_name, mode, status,
-                      config, results, error, created_at, updated_at, completed_at, created_by
+                      config, results, error, created_at, updated_at, completed_at, created_by, model_inventory_id
             '''
         ),
         {
@@ -178,7 +180,7 @@ async def list_bias_audits(
         text(
             f'''
             SELECT id, organization_id, project_id, preset_id, preset_name, mode, status,
-                   config, results, error, created_at, updated_at, completed_at, created_by
+                   config, results, error, created_at, updated_at, completed_at, created_by, model_inventory_id
             FROM llm_evals_bias_audits
             {where_sql}
             ORDER BY created_at DESC
@@ -314,4 +316,5 @@ def _row_to_dict(row) -> Dict[str, Any]:
         "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
         "completedAt": row["completed_at"].isoformat() if row["completed_at"] else None,
         "createdBy": row["created_by"],
+        "modelInventoryId": row["model_inventory_id"],
     }

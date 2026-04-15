@@ -31,6 +31,7 @@ import {
   type BiasAuditMetric,
   type CreateBiasAuditConfig,
 } from "../../../application/repository/deepEval.repository";
+import { getAllEntities } from "../../../application/repository/entity.repository";
 import { palette } from "../../themes/palette";
 
 /** Parse a single CSV row handling quoted fields (RFC 4180). */
@@ -215,6 +216,10 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
   const [alert, setAlert] = useState<{ show: boolean; variant: "success" | "error" | "info"; title: string; body: string } | null>(null);
   const presetRequestIdRef = useRef(0);
 
+  // Model inventory link
+  const [modelInventories, setModelInventories] = useState<Array<{ id: number; provider: string; model: string; version: string; status: string }>>([]);
+  const [selectedModelInventoryId, setSelectedModelInventoryId] = useState<number | null>(null);
+
   // Load presets on modal open
   useEffect(() => {
     if (!isOpen) return;
@@ -231,6 +236,18 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         setPresetsError("Failed to load compliance frameworks. Please try again.");
       })
       .finally(() => setLoadingPresets(false));
+  }, [isOpen]);
+
+  // Load model inventories on modal open
+  useEffect(() => {
+    if (!isOpen) return;
+    getAllEntities({ routeUrl: "/modelInventory" })
+      .then((response) => {
+        if (response?.data) {
+          setModelInventories(response.data);
+        }
+      })
+      .catch(() => {});
   }, [isOpen]);
 
   // Handle preset selection (request ID prevents race conditions on rapid clicks)
@@ -345,6 +362,7 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         metadata: {
           distribution_date: distributionDate,
         },
+        modelInventoryId: selectedModelInventoryId || undefined,
       };
       const result = await runBiasAudit(csvFile, config);
       const rowCount = csvPreview.length > 0 ? `${csvHeaders.length} columns` : "";
@@ -388,6 +406,7 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
     setIntersectionalEnabled(false);
     setSubmitError(null);
     setPresetsError(null);
+    setSelectedModelInventoryId(null);
     onClose();
   };
 
@@ -541,6 +560,26 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         rows={3}
         isOptional
       />
+
+      <Box mt="16px">
+        <Select
+          id="model-inventory-link"
+          label="Link to model inventory (optional)"
+          placeholder="None — don't link to inventory"
+          value={selectedModelInventoryId !== null ? String(selectedModelInventoryId) : ""}
+          onChange={(e) =>
+            setSelectedModelInventoryId(e.target.value === "" ? null : Number(e.target.value))
+          }
+          items={[
+            { _id: "", name: "None — don't link to inventory" },
+            ...modelInventories.map((m) => ({
+              _id: String(m.id),
+              name: `${m.provider} — ${m.model} (v${m.version})`,
+            })),
+          ]}
+          sx={{ width: "100%" }}
+        />
+      </Box>
     </Stack>
   );
 

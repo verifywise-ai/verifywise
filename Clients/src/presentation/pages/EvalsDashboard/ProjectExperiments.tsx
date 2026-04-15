@@ -481,7 +481,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
   }, [experiments, filterData, searchTerm]);
 
   // Transform to table format
-  const tableColumns = ["EXPERIMENT NAME", "MODEL", "JUDGE/SCORER", "# PROMPTS", "DATASET", "DATE", "ACTION"];
+  const tableColumns = ["EXPERIMENT NAME", "MODEL", "JUDGE/SCORER", "# PROMPTS", "DATASET", "LINKED MODEL", "DATE", "ACTION"];
 
   const tableRows: IEvaluationRow[] = filteredExperiments.map((exp) => {
     // Get dataset name from config - try multiple sources
@@ -545,6 +545,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
       judge: judgeDisplay,
       dataset: datasetName,
       prompts: exp.sampleCount || 0,
+      linkedModel: exp.model_inventory_id ?? null,
       date: createdDate,
       status:
         exp.status === "completed" ? "Completed" :

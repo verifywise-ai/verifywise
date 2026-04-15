@@ -123,6 +123,7 @@ async def create_bias_audit_controller(
                 mode=mode,
                 config=config_data,
                 created_by=user_id,
+                model_inventory_id=config_data.get("modelInventoryId"),
             )
             await db.commit()
     except Exception as e:

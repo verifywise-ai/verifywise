@@ -63,6 +63,7 @@ export interface BiasAuditSummary {
   updatedAt: string;
   completedAt: string | null;
   createdBy: string | null;
+  modelInventoryId?: number | null;
 }
 
 export interface GroupResultRow {
@@ -214,6 +215,7 @@ export interface CreateBiasAuditConfig {
   dataSource?: string;
   dataDateRangeStart?: string;
   dataDateRangeEnd?: string;
+  modelInventoryId?: number;
 }
 
 // ==================== SERVICE ====================

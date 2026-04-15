@@ -53,6 +53,7 @@ export interface Experiment {
   updated_at: string;
   tenant: string;
   created_by?: number;
+  model_inventory_id?: number;
 }
 
 export interface MetricAggregates {
@@ -194,6 +195,7 @@ export const experimentsService = {
     description?: string;
     config: Record<string, any>;
     baseline_experiment_id?: string;
+    model_inventory_id?: number;
   }) {
     const response = await CustomAxios.post("/deepeval/experiments", data);
     return response.data;

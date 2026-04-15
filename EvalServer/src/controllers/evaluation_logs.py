@@ -159,6 +159,7 @@ async def create_experiment_controller(
                 description=data.get("description"),
                 baseline_experiment_id=data.get("baseline_experiment_id"),
                 created_by=user_id,
+                model_inventory_id=data.get("model_inventory_id"),
             )
             print(f"✅ Controller - Experiment created successfully")
             return {"experiment": experiment}

@@ -43,10 +43,11 @@ type SortConfig = { key: string; direction: SortDirection };
 const SORTING_KEY = "verifywise_bias_audits_sorting";
 
 const columns = [
-  { id: "framework", label: "FRAMEWORK", sortable: true, width: "25%" },
-  { id: "mode", label: "MODE", sortable: true, width: "15%" },
-  { id: "status", label: "STATUS", sortable: true, width: "15%" },
-  { id: "result", label: "RESULT", sortable: true, width: "15%" },
+  { id: "framework", label: "FRAMEWORK", sortable: true, width: "22%" },
+  { id: "mode", label: "MODE", sortable: true, width: "12%" },
+  { id: "status", label: "STATUS", sortable: true, width: "12%" },
+  { id: "result", label: "RESULT", sortable: true, width: "12%" },
+  { id: "linkedModel", label: "LINKED MODEL", sortable: false, width: "12%" },
   { id: "date", label: "DATE", sortable: true, width: "20%" },
   { id: "action", label: "ACTION", sortable: false, width: "60px" },
 ];
@@ -325,6 +326,27 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getModeChip(audit.mode)}</TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getStatusChip(audit.status)}</TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getResultSummary(audit)}</TableCell>
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    {audit.modelInventoryId ? (
+                      <Box
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          px: "8px",
+                          py: "2px",
+                          borderRadius: "4px",
+                          backgroundColor: palette.status.success.bg,
+                          color: palette.status.success.text,
+                          fontSize: "11px",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Linked
+                      </Box>
+                    ) : (
+                      <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>Unlinked</Typography>
+                    )}
+                  </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
                       {formatDate(audit.createdAt)}
