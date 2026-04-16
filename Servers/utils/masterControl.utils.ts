@@ -221,6 +221,17 @@ export const deleteMasterControlQuery = async (
       WHERE master_control_id = :id AND organization_id = :organizationId`,
     { replacements: { id, organizationId }, transaction }
   );
+
+  // Evidence file-entity links keyed on entity_type='master_control' have
+  // no FK back to master_controls, so clean them up explicitly. The files
+  // themselves are NOT deleted — only the association row.
+  await sequelize.query(
+    `DELETE FROM file_entity_links
+      WHERE entity_type = 'master_control'
+        AND entity_id = :id
+        AND organization_id = :organizationId`,
+    { replacements: { id, organizationId }, transaction }
+  );
   const [, affected] = await sequelize.query(
     `DELETE FROM master_controls
       WHERE id = :id AND organization_id = :organizationId`,
