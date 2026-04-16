@@ -31,6 +31,7 @@ import TabBar, { type TabItem } from "../../../../components/TabBar";
 import { useMasterControl } from "../../../../../application/hooks/useMasterControls";
 import DetailsTab from "./DetailsTab";
 import MappingsTab from "./MappingsTab";
+import EvidenceTab from "./EvidenceTab";
 
 const DRAWER_WIDTH = 720;
 
@@ -176,7 +177,11 @@ export default function MasterControlDrawer({
                 value="evidence"
                 sx={{ padding: "20px", flex: 1, overflowY: "auto" }}
               >
-                <ComingSoonPanel label="Evidence" />
+                {master ? (
+                  <EvidenceTab master={master} />
+                ) : (
+                  <EmptyTabMessage message="Select a master control to view evidence." />
+                )}
               </TabPanel>
 
               <TabPanel
