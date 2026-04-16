@@ -30,6 +30,7 @@ import { X as CloseIcon } from "lucide-react";
 import TabBar, { type TabItem } from "../../../../components/TabBar";
 import { useMasterControl } from "../../../../../application/hooks/useMasterControls";
 import DetailsTab from "./DetailsTab";
+import MappingsTab from "./MappingsTab";
 
 const DRAWER_WIDTH = 720;
 
@@ -164,7 +165,11 @@ export default function MasterControlDrawer({
                 value="mappings"
                 sx={{ padding: "20px", flex: 1, overflowY: "auto" }}
               >
-                <ComingSoonPanel label="Mappings" />
+                {master ? (
+                  <MappingsTab master={master} />
+                ) : (
+                  <EmptyTabMessage message="Select a master control to view mappings." />
+                )}
               </TabPanel>
 
               <TabPanel
