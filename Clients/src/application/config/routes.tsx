@@ -33,6 +33,7 @@ const PolicyDashboard = lazyRoute(() => import("../../presentation/pages/PolicyD
 const PolicyEditorPage = lazyRoute(() => import("../../presentation/pages/PolicyDashboard/PolicyEditorPage"));
 const WatchTower = lazyRoute(() => import("../../presentation/pages/WatchTower"));
 const RiskManagement = lazyRoute(() => import("../../presentation/pages/RiskManagement"));
+const ControlsHub = lazyRoute(() => import("../../presentation/pages/ControlsHub/1.0ControlsHub"));
 const Tasks = lazyRoute(() => import("../../presentation/pages/Tasks"));
 const AutomationsPage = lazyRoute(() => import("../../presentation/pages/Automations"));
 const ApprovalWorkflows = lazyRoute(() => import("../../presentation/pages/ApprovalWorkflows"));
@@ -162,6 +163,7 @@ export const createRoutes = (
     {/* Dynamic route for plugin tabs (e.g., mlflow, other future plugins) */}
     <Route path="/model-inventory/:pluginTab" element={<Suspense fallback={<LazyFallback />}><ModelInventory /></Suspense>} />
     <Route path="/risk-management" element={<Suspense fallback={<LazyFallback />}><RiskManagement /></Suspense>} />
+    <Route path="/controls-hub" element={<Suspense fallback={<LazyFallback />}><ControlsHub /></Suspense>} />
     <Route path="/tasks" element={<Suspense fallback={<LazyFallback />}><Tasks /></Suspense>} />
     <Route path="/automations" element={<Suspense fallback={<LazyFallback />}><AutomationsPage /></Suspense>} />
     <Route path="/ai-incident-managements" element={<Suspense fallback={<LazyFallback />}><IncidentManagement /></Suspense>} />
