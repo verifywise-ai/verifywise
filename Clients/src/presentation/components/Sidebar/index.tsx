@@ -17,6 +17,7 @@ import {
   Bot,
   Database,
   Rocket,
+  Library,
 } from "lucide-react";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
@@ -150,6 +151,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: "Risk management",
           icon: <AlertTriangle size={16} strokeWidth={1.5} />,
           path: "/risk-management",
+        },
+        {
+          id: "controls-hub",
+          label: "Controls hub",
+          icon: <Library size={16} strokeWidth={1.5} />,
+          path: "/controls-hub",
         },
         {
           id: "training-registry",
