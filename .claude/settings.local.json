@@ -22,7 +22,16 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(npx vitest run:*)"
+      "Bash(npx vitest run:*)",
+      "Bash(npx jest:*)",
+      "Bash(node -e \"const y=require\\(''js-yaml''\\);const fs=require\\(''fs''\\);const doc=y.load\\(fs.readFileSync\\(''swagger.yaml'',''utf8''\\)\\);const mc=Object.keys\\(doc.paths\\).filter\\(p=>p.startsWith\\(''/master-controls''\\)\\);console.log\\(''master-controls paths:'',mc.length\\);mc.forEach\\(p=>console.log\\('' '',p\\)\\);\")",
+      "Bash(git stash:*)",
+      "Bash(node -e:*)",
+      "Bash(git stash pop:*)",
+      "Bash(library of controls\" concept that unifies the four framework silos.\nEOF\n\\)\")",
+      "Bash(git reset:*)",
+      "Bash(master control\". Clicking it opens a confirmation modal that explains\nwhat the CSV contains, then streams the blob through the browser''s\nstandard anchor-download helper. The button is disabled when the\norganization has no master controls yet.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm test:*)"
     ]
   }
 }
