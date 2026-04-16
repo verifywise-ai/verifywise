@@ -143,6 +143,8 @@ export default function BulkEditBar({
 
   return (
     <Box
+      role="region"
+      aria-label="Bulk edit selected master controls"
       sx={{
         position: "sticky",
         bottom: 0,
@@ -230,7 +232,11 @@ export default function BulkEditBar({
         </Stack>
 
         {feedback && (
-          <Alert severity={feedback.severity} sx={{ fontSize: 13 }}>
+          <Alert
+            severity={feedback.severity}
+            role={feedback.severity === "error" ? "alert" : "status"}
+            sx={{ fontSize: 13 }}
+          >
             {feedback.message}
           </Alert>
         )}

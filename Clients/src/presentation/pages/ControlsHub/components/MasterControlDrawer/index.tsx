@@ -78,6 +78,9 @@ export default function MasterControlDrawer({
       open={open}
       onClose={onClose}
       anchor="right"
+      ModalProps={{
+        "aria-labelledby": "master-control-drawer-title",
+      }}
       PaperProps={{
         sx: {
           width: DRAWER_WIDTH,
@@ -86,7 +89,11 @@ export default function MasterControlDrawer({
         },
       }}
     >
-      <Stack sx={{ width: DRAWER_WIDTH, height: "100%" }}>
+      <Stack
+        sx={{ width: DRAWER_WIDTH, height: "100%" }}
+        role="region"
+        aria-labelledby="master-control-drawer-title"
+      >
         {/* Header */}
         <Stack
           direction="row"
@@ -105,7 +112,11 @@ export default function MasterControlDrawer({
             >
               Master control
             </Typography>
-            <Typography fontSize={15} fontWeight={700}>
+            <Typography
+              id="master-control-drawer-title"
+              fontSize={15}
+              fontWeight={700}
+            >
               {title}
             </Typography>
           </Stack>

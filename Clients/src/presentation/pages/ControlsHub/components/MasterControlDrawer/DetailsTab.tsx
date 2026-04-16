@@ -244,7 +244,7 @@ export default function DetailsTab({ master, onSaved }: DetailsTabProps) {
         </Alert>
       )}
       {success && !error && (
-        <Alert severity="success" sx={{ fontSize: 13 }}>
+        <Alert severity="success" role="status" sx={{ fontSize: 13 }}>
           Saved.
         </Alert>
       )}
