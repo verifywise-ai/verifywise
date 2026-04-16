@@ -15,12 +15,13 @@ import {
   useTheme,
 } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
-import { Save as SaveIcon } from "lucide-react";
+import { GitBranchPlus, Save as SaveIcon } from "lucide-react";
 
 import Field from "../../../../components/Inputs/Field";
 import Select from "../../../../components/Inputs/Select";
 import DatePicker from "../../../../components/Inputs/Datepicker";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
+import PropagationPreviewModal from "../PropagationPreviewModal";
 
 import {
   MASTER_CONTROL_RISK_REVIEWS,
@@ -30,7 +31,10 @@ import {
   type MasterControlStatus,
 } from "../../../../../domain/models/Common/masterControl/masterControl.model";
 import { useMasterControlMutations } from "../../../../../application/hooks/useMasterControls";
-import type { MasterControlUpdatePayload } from "../../../../../application/repository/masterControl.repository";
+import type {
+  MasterControlUpdatePayload,
+  PropagationPreviewPayload,
+} from "../../../../../application/repository/masterControl.repository";
 import useUsers from "../../../../../application/hooks/useUsers";
 
 const INPUT_SX = {
@@ -132,6 +136,7 @@ export default function DetailsTab({ master, onSaved }: DetailsTabProps) {
   );
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const userItems = useMemo(
     () =>
@@ -143,6 +148,27 @@ export default function DetailsTab({ master, onSaved }: DetailsTabProps) {
       })),
     [users]
   );
+
+  /**
+   * Subset of the sparse patch that actually propagates to framework rows.
+   * Title, description, and risk_review are master-only — they never touch
+   * mapped requirements.
+   */
+  const previewPayload = useMemo<PropagationPreviewPayload>(() => {
+    const patch = diffPayload(master, form, dueDate);
+    const result: PropagationPreviewPayload = {};
+    if (patch.status !== undefined) result.status = patch.status;
+    if (patch.owner !== undefined) result.owner = patch.owner ?? null;
+    if (patch.reviewer !== undefined) result.reviewer = patch.reviewer ?? null;
+    if (patch.approver !== undefined) result.approver = patch.approver ?? null;
+    if (patch.due_date !== undefined) result.due_date = patch.due_date ?? null;
+    if (patch.implementation_details !== undefined) {
+      result.implementation_details = patch.implementation_details ?? null;
+    }
+    return result;
+  }, [master, form, dueDate]);
+
+  const hasPropagatablePatch = Object.keys(previewPayload).length > 0;
 
   const statusItems = MASTER_CONTROL_STATUSES.map((s) => ({ _id: s, name: s }));
   const riskItems = [
@@ -318,12 +344,22 @@ export default function DetailsTab({ master, onSaved }: DetailsTabProps) {
 
       <Stack
         direction="row"
-        justifyContent="flex-end"
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={1}
         sx={{
           paddingTop: 2,
           borderTop: `1px solid ${theme.palette.border.light}`,
         }}
       >
+        <CustomizableButton
+          variant="outlined"
+          text="Preview propagation"
+          icon={<GitBranchPlus size={14} />}
+          onClick={() => setIsPreviewOpen(true)}
+          isDisabled={disabled || !hasPropagatablePatch || !master.id}
+          sx={{ height: 34 }}
+        />
         <CustomizableButton
           variant="contained"
           text={update.isPending ? "Saving…" : "Save changes"}
@@ -333,6 +369,13 @@ export default function DetailsTab({ master, onSaved }: DetailsTabProps) {
           sx={{ minWidth: 160, height: 34 }}
         />
       </Stack>
+
+      <PropagationPreviewModal
+        open={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        masterControlId={master.id ?? null}
+        payload={previewPayload}
+      />
 
       {master.updated_at && (
         <Typography fontSize={11} color={theme.palette.text.tertiary}>
