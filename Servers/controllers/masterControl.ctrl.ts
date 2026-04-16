@@ -30,6 +30,13 @@ import {
   type PropagationResult,
 } from "../services/masterControlPropagation.service";
 import {
+  recordEntityChange,
+  recordEntityCreation,
+  recordEntityDeletion,
+  recordMultipleFieldChanges,
+  trackEntityChanges,
+} from "../utils/changeHistory.base.utils";
+import {
   createMappingQuery,
   createMasterControlQuery,
   deleteMappingQuery,
@@ -165,6 +172,17 @@ export async function createMasterControl(
       transaction
     );
 
+    if (req.userId && created.id) {
+      await recordEntityCreation(
+        "master_control",
+        created.id,
+        req.userId,
+        req.organizationId!,
+        body,
+        transaction
+      );
+    }
+
     await transaction.commit();
     await logSuccess({
       eventType: "Create",
@@ -246,6 +264,14 @@ export async function updateMasterControl(
     const instance = new MasterControlModel(existing);
     instance.canBeModified();
 
+    // Track field-level changes BEFORE applying the update so we compare
+    // against the persisted snapshot rather than the mutated in-memory one.
+    const changes = await trackEntityChanges(
+      "master_control",
+      instance,
+      updateData
+    );
+
     await instance.updateMasterControl(updateData);
     await instance.validateMasterControlData();
 
@@ -293,6 +319,19 @@ export async function updateMasterControl(
         id,
         req.organizationId!,
         propagationPayload,
+        transaction
+      );
+    }
+
+    // Record field-level change history after the update succeeded so the
+    // audit log doesn't diverge from the DB state on rollback.
+    if (req.userId && changes.length > 0) {
+      await recordMultipleFieldChanges(
+        "master_control",
+        id,
+        req.userId,
+        req.organizationId!,
+        changes,
         transaction
       );
     }
@@ -501,6 +540,20 @@ export async function addMasterControlMapping(
       transaction
     );
 
+    if (created && req.userId) {
+      await recordEntityChange(
+        "master_control",
+        masterId,
+        "updated",
+        req.userId,
+        req.organizationId!,
+        "mapping",
+        undefined,
+        mapping.toKey(),
+        transaction
+      );
+    }
+
     await transaction.commit();
 
     if (!created) {
@@ -600,6 +653,21 @@ export async function deleteMasterControlMapping(
         .json(STATUS_CODE[403]("Demo master controls cannot be modified"));
     }
 
+    if (req.userId) {
+      const key = `${deleted.framework}:${deleted.framework_entity_type}:${deleted.framework_entity_id}`;
+      await recordEntityChange(
+        "master_control",
+        deleted.master_control_id,
+        "updated",
+        req.userId,
+        req.organizationId!,
+        "mapping",
+        key,
+        undefined,
+        transaction
+      );
+    }
+
     await transaction.commit();
     await logSuccess({
       eventType: "Delete",
@@ -666,6 +734,16 @@ export async function deleteMasterControl(
     if (!ok) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]({}));
+    }
+
+    if (req.userId) {
+      await recordEntityDeletion(
+        "master_control",
+        id,
+        req.userId,
+        req.organizationId!,
+        transaction
+      );
     }
 
     await transaction.commit();
