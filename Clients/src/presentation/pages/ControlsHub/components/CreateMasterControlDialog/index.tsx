@@ -147,7 +147,7 @@ export default function CreateMasterControlDialog({
             onChange={(e: SelectChangeEvent<string | number>) =>
               setStatus(e.target.value as MasterControlStatus)
             }
-            sx={{ height: 34 }}
+            sx={{ width: "100%", height: 34 }}
             isRequired
             disabled={create.isPending}
           />
