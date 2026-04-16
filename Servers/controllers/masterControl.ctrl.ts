@@ -29,6 +29,7 @@ import {
   type PropagationPayload,
   type PropagationResult,
 } from "../services/masterControlPropagation.service";
+import { buildMasterControlsCsv } from "../services/masterControlExport.service";
 import {
   recordEntityChange,
   recordEntityCreation,
@@ -564,6 +565,57 @@ export async function bulkUpdateMasterControls(
       },
     })
   );
+}
+
+// ---------- CSV Export ----------
+
+/**
+ * GET /master-controls/export — streams a CSV of every master control in
+ * the current organization, one row per control, with per-framework
+ * mapping counts and a semicolon-joined list of mapped entity codes.
+ */
+export async function exportMasterControlsCsv(
+  req: Request,
+  res: Response
+): Promise<any> {
+  logProcessing({
+    description: "starting exportMasterControlsCsv",
+    functionName: "exportMasterControlsCsv",
+    fileName: FILE,
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+  try {
+    const csv = await buildMasterControlsCsv(req.organizationId!);
+    const filename = `master-controls-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    await logSuccess({
+      eventType: "Read",
+      description: `Exported master controls CSV (${csv.length} bytes)`,
+      functionName: "exportMasterControlsCsv",
+      fileName: FILE,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`
+    );
+    return res.status(200).send(csv);
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to export master controls CSV",
+      functionName: "exportMasterControlsCsv",
+      fileName: FILE,
+      error: error as Error,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
 }
 
 // ---------- Propagation Preview ----------
