@@ -32,6 +32,7 @@ import { useMasterControl } from "../../../../../application/hooks/useMasterCont
 import DetailsTab from "./DetailsTab";
 import MappingsTab from "./MappingsTab";
 import EvidenceTab from "./EvidenceTab";
+import HistoryTab from "./HistoryTab";
 
 const DRAWER_WIDTH = 720;
 
@@ -188,7 +189,11 @@ export default function MasterControlDrawer({
                 value="history"
                 sx={{ padding: "20px", flex: 1, overflowY: "auto" }}
               >
-                <ComingSoonPanel label="History" />
+                {master ? (
+                  <HistoryTab masterControlId={master.id!} />
+                ) : (
+                  <EmptyTabMessage message="Select a master control to view history." />
+                )}
               </TabPanel>
             </>
           )}
@@ -197,17 +202,6 @@ export default function MasterControlDrawer({
         <Divider />
       </Stack>
     </Drawer>
-  );
-}
-
-function ComingSoonPanel({ label }: { label: string }) {
-  const theme = useTheme();
-  return (
-    <Stack alignItems="center" justifyContent="center" sx={{ padding: 6 }}>
-      <Typography fontSize={13} color={theme.palette.text.tertiary}>
-        {label} tab is coming next.
-      </Typography>
-    </Stack>
   );
 }
 

@@ -21,7 +21,8 @@ export type EntityType =
   | "training"
   | "task"
   | "model_risk"
-  | "dataset";
+  | "dataset"
+  | "master_control";
 
 export interface EntityHistoryConfig {
   entityName: string; // Display name (e.g., "Model", "Vendor")
@@ -127,6 +128,12 @@ export const ENTITY_HISTORY_CONFIGS: {
     emptyStateTitle: "Activity history",
     emptyStateMessage:
       "Automatically tracks every change to this dataset. See what your team is working on and what updates they've made, in real time.",
+  },
+  master_control: {
+    entityName: "Master control",
+    emptyStateTitle: "Activity history",
+    emptyStateMessage:
+      "Automatically tracks every change to this master control. See what your team is working on and what updates they've made, in real time.",
   },
 };
 
