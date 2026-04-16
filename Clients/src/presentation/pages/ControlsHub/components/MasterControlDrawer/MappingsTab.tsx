@@ -3,33 +3,38 @@
  *
  * Lists every framework mapping attached to a master control, grouped by
  * framework. Users remove a mapping by clicking its trash icon; adding a
- * new mapping is handled by the inline form (T-030 commit 2).
+ * new mapping uses the inline searchable picker backed by the framework
+ * catalog (real struct rows from controls_struct_eu / subclauses_struct_iso
+ * / …). No more raw numeric id entry.
  *
  * The server enforces uniqueness on (master_control_id, framework,
  * framework_entity_type, framework_entity_id), so we rely on the list
  * refetch after mutations rather than trying to dedupe in the UI.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Autocomplete,
   Box,
   CircularProgress,
   IconButton,
   SelectChangeEvent,
   Stack,
+  TextField,
   Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
 import { Plus, Trash2 } from "lucide-react";
 
-import Field from "../../../../components/Inputs/Field";
 import Select from "../../../../components/Inputs/Select";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
 import {
+  useFrameworkCatalog,
   useMasterControlMappings,
   useMasterControlMutations,
 } from "../../../../../application/hooks/useMasterControls";
+import type { FrameworkCatalogEntry } from "../../../../../application/repository/masterControl.repository";
 import type {
   Framework,
   FrameworkEntityType,
@@ -208,9 +213,21 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
   const [entityType, setEntityType] = useState<FrameworkEntityType>(
     ENTITY_TYPES_BY_FRAMEWORK.eu_ai_act[0]
   );
-  const [entityIdRaw, setEntityIdRaw] = useState("");
+  const [selected, setSelected] = useState<FrameworkCatalogEntry | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const {
+    data: catalog,
+    isLoading: catalogLoading,
+    error: catalogError,
+  } = useFrameworkCatalog();
+
+  // When the framework or entity type changes, drop the previous selection
+  // so the picker can't submit a row from the wrong struct table.
+  useEffect(() => {
+    setSelected(null);
+  }, [framework, entityType]);
 
   const entityTypeOptions = useMemo(
     () =>
@@ -226,10 +243,11 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
     name: FRAMEWORK_LABELS[f],
   }));
 
+  const entries: FrameworkCatalogEntry[] = catalog?.[entityType] ?? [];
+
   const handleFrameworkChange = (event: SelectChangeEvent<string | number>) => {
     const next = event.target.value as Framework;
     setFramework(next);
-    // Reset entity type to the first valid option for the new framework.
     setEntityType(ENTITY_TYPES_BY_FRAMEWORK[next][0]);
     setError(null);
   };
@@ -241,18 +259,12 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
     setError(null);
   };
 
-  const reset = () => {
-    setEntityIdRaw("");
-    setError(null);
-  };
-
   const handleSubmit = async () => {
     setError(null);
     setSuccess(null);
 
-    const parsed = Number(entityIdRaw);
-    if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
-      setError("Entity id must be a positive integer.");
+    if (!selected) {
+      setError("Pick a requirement from the list.");
       return;
     }
 
@@ -260,15 +272,13 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
       await onSubmit({
         framework,
         framework_entity_type: entityType,
-        framework_entity_id: parsed,
+        framework_entity_id: selected.id,
       });
-      reset();
-      setSuccess("Mapping added.");
+      setSelected(null);
+      setSuccess(`Mapped to ${selected.code}.`);
       setTimeout(() => setSuccess(null), 2500);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to add mapping."
-      );
+      setError(err instanceof Error ? err.message : "Failed to add mapping.");
     }
   };
 
@@ -289,8 +299,8 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
         color={theme.palette.text.tertiary}
         sx={{ marginBottom: 2 }}
       >
-        Link this master control to a specific framework requirement. Enter
-        the numeric entity id from the framework&apos;s struct table.
+        Pick a framework, choose the entity type, then search by code or
+        title to link this master control to the matching requirement.
       </Typography>
 
       <Stack spacing={2}>
@@ -304,6 +314,11 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
             {success}
           </Alert>
         )}
+        {catalogError && (
+          <Alert severity="warning" sx={{ fontSize: 12 }}>
+            Could not load framework catalog. Try again.
+          </Alert>
+        )}
 
         <Stack direction="row" spacing={2} flexWrap="wrap">
           <Select
@@ -312,7 +327,7 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
             value={framework}
             items={frameworkOptions}
             onChange={handleFrameworkChange}
-            sx={{ minWidth: 180, flexGrow: 1, height: 34 }}
+            sx={{ minWidth: 200, flexGrow: 1, height: 34 }}
           />
           <Select
             id="add-mapping-entity-type"
@@ -320,19 +335,107 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
             value={entityType}
             items={entityTypeOptions}
             onChange={handleEntityTypeChange}
-            sx={{ minWidth: 180, flexGrow: 1, height: 34 }}
+            sx={{ minWidth: 200, flexGrow: 1, height: 34 }}
           />
         </Stack>
 
-        <Field
-          id="add-mapping-entity-id"
-          type="number"
-          label="Entity id"
-          value={entityIdRaw}
-          onChange={(e) => setEntityIdRaw(e.target.value)}
-          placeholder="e.g. 42"
-          isRequired
-        />
+        <Stack spacing={1}>
+          <Typography
+            component="label"
+            htmlFor="add-mapping-entity-search"
+            fontSize={13}
+            fontWeight={500}
+            color={theme.palette.text.secondary}
+          >
+            Requirement
+            <Typography
+              component="span"
+              ml={1}
+              color={theme.palette.error.text}
+            >
+              *
+            </Typography>
+          </Typography>
+          <Autocomplete<FrameworkCatalogEntry>
+            id="add-mapping-entity-search"
+            size="small"
+            options={entries}
+            value={selected}
+            loading={catalogLoading}
+            disabled={catalogLoading || isPending}
+            onChange={(_e, value) => setSelected(value)}
+            getOptionLabel={(option) => `${option.code} — ${option.title}`}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            filterOptions={(options, state) => {
+              const q = state.inputValue.trim().toLowerCase();
+              if (!q) return options.slice(0, 200);
+              return options
+                .filter(
+                  (o) =>
+                    o.code.toLowerCase().includes(q) ||
+                    o.title.toLowerCase().includes(q) ||
+                    (o.description?.toLowerCase().includes(q) ?? false)
+                )
+                .slice(0, 200);
+            }}
+            renderOption={(props, option) => {
+              const { key: _k, ...rest } = props as any;
+              return (
+                <li key={option.id} {...rest} style={{ display: "block" }}>
+                  <Typography fontSize={13} fontWeight={500}>
+                    {option.code}
+                  </Typography>
+                  <Typography
+                    fontSize={12}
+                    color={theme.palette.text.tertiary}
+                    sx={{
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {option.title}
+                  </Typography>
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder={
+                  catalogLoading
+                    ? "Loading framework catalog…"
+                    : entries.length === 0
+                    ? "No requirements available for this entity type"
+                    : "Search by code or title"
+                }
+                InputProps={{
+                  ...params.InputProps,
+                  sx: {
+                    minHeight: 34,
+                    fontSize: 13,
+                    paddingTop: "2px !important",
+                    paddingBottom: "2px !important",
+                  },
+                }}
+              />
+            )}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: theme.shape.borderRadius,
+              },
+            }}
+          />
+          {selected && (
+            <Typography
+              fontSize={11}
+              color={theme.palette.text.tertiary}
+              sx={{ fontStyle: "italic" }}
+            >
+              Will link to struct row #{selected.id}
+            </Typography>
+          )}
+        </Stack>
 
         <Stack direction="row" justifyContent="flex-end">
           <CustomizableButton
@@ -340,7 +443,7 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
             text={isPending ? "Adding…" : "Add mapping"}
             icon={<Plus size={14} />}
             onClick={handleSubmit}
-            isDisabled={isPending || !entityIdRaw}
+            isDisabled={isPending || !selected}
             sx={{ minWidth: 150, height: 34 }}
           />
         </Stack>
