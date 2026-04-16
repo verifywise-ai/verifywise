@@ -141,17 +141,28 @@ jest.mock(
   }
 );
 
+jest.mock("../../services/masterControlExport.service", () => ({
+  buildMasterControlsCsv: jest.fn<any>(),
+}));
+
+jest.mock("../../services/masterControlSeed.service", () => ({
+  importRecommendedMasterControls: jest.fn<any>(),
+}));
+
 // ---------- Imports after mocks ----------
 
 import {
   addMasterControlMapping,
+  bulkUpdateMasterControls,
   createMasterControl,
   deleteMasterControl,
   deleteMasterControlMapping,
+  exportMasterControlsCsv,
   getAllMasterControls,
   getMasterControlById,
   getMasterControlMappings,
   getMasterControlPropagationPreview,
+  importRecommendedMappings,
   updateMasterControl,
 } from "../masterControl.ctrl";
 import {
@@ -169,6 +180,8 @@ import {
   previewPropagation,
   propagateMasterControlUpdate,
 } from "../../services/masterControlPropagation.service";
+import { buildMasterControlsCsv } from "../../services/masterControlExport.service";
+import { importRecommendedMasterControls } from "../../services/masterControlSeed.service";
 
 // Use `any`-typed mock wrappers so callers can supply arbitrary resolved
 // values without fighting jest's overly-precise generic inference.
@@ -186,6 +199,8 @@ const mSvc = {
   hasChanges: hasPropagatableChanges as any,
   preview: previewPropagation as any,
   propagate: propagateMasterControlUpdate as any,
+  buildCsv: buildMasterControlsCsv as any,
+  importSeed: importRecommendedMasterControls as any,
 };
 
 function mkReq(overrides: Partial<Request> = {}): Request {
@@ -201,6 +216,8 @@ function mkRes(): Response {
   const res: any = {};
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
+  res.send = jest.fn().mockReturnValue(res);
+  res.setHeader = jest.fn().mockReturnValue(res);
   return res as Response;
 }
 
@@ -596,6 +613,307 @@ describe("masterControl.ctrl", () => {
       );
       expect(mSvc.preview).toHaveBeenCalledWith(5, 42, { status: "Done" });
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+  });
+
+  // ----- bulkUpdateMasterControls -----
+  describe("bulkUpdateMasterControls", () => {
+    it("returns 400 when ids is missing", async () => {
+      const res = mkRes();
+      await bulkUpdateMasterControls(
+        mkReq({ body: { patch: { status: "Done" } } } as any),
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: "ids must be a non-empty array",
+      });
+    });
+
+    it("returns 400 when ids is empty", async () => {
+      const res = mkRes();
+      await bulkUpdateMasterControls(
+        mkReq({ body: { ids: [], patch: { status: "Done" } } } as any),
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("returns 400 when any id is non-positive", async () => {
+      const res = mkRes();
+      await bulkUpdateMasterControls(
+        mkReq({
+          body: { ids: [1, 0], patch: { status: "Done" } },
+        } as any),
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: "ids must all be positive integers",
+      });
+    });
+
+    it("returns 400 when patch is empty", async () => {
+      const res = mkRes();
+      await bulkUpdateMasterControls(
+        mkReq({ body: { ids: [1, 2], patch: {} } } as any),
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: "patch body is required",
+      });
+    });
+
+    it("returns per-row results with a 'Not found' failure for missing rows", async () => {
+      mUtils.getById.mockResolvedValueOnce(null);
+      const res = mkRes();
+
+      await bulkUpdateMasterControls(
+        mkReq({ body: { ids: [99], patch: { status: "Done" } } } as any),
+        res
+      );
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const payload = (res.json as any).mock.calls[0][0].data;
+      expect(payload.results).toEqual([
+        { id: 99, success: false, error: "Not found" },
+      ]);
+      expect(payload.summary).toEqual({ total: 1, updated: 0, failed: 1 });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("records a failure when the row is a demo master control", async () => {
+      mUtils.getById.mockResolvedValue({ id: 1, is_demo: true });
+      const res = mkRes();
+
+      await bulkUpdateMasterControls(
+        mkReq({ body: { ids: [1], patch: { status: "Done" } } } as any),
+        res
+      );
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const payload = (res.json as any).mock.calls[0][0].data;
+      expect(payload.results[0].success).toBe(false);
+      expect(payload.results[0].error).toContain("Demo");
+      expect(payload.summary).toEqual({ total: 1, updated: 0, failed: 1 });
+    });
+
+    it("propagates when a trackable field actually changed and reports success", async () => {
+      mUtils.getById.mockResolvedValue({
+        id: 5,
+        status: "Waiting",
+        owner: 1,
+        is_demo: false,
+      });
+      mUtils.update.mockResolvedValue({ id: 5, status: "Done" });
+      mSvc.hasChanges.mockReturnValue(true);
+      mSvc.propagate.mockResolvedValue([
+        { mappingId: 1, rowsUpdated: 2, skipped: false },
+      ]);
+      const res = mkRes();
+
+      await bulkUpdateMasterControls(
+        mkReq({
+          body: { ids: [5], patch: { status: "Done" } },
+        } as any),
+        res
+      );
+
+      expect(mSvc.propagate).toHaveBeenCalledWith(
+        5,
+        42,
+        { status: "Done" },
+        mockTransaction
+      );
+      expect(mockTransaction.commit).toHaveBeenCalled();
+      const payload = (res.json as any).mock.calls[0][0].data;
+      expect(payload.results[0].success).toBe(true);
+      expect(payload.results[0].propagation).toHaveLength(1);
+      expect(payload.summary).toEqual({ total: 1, updated: 1, failed: 0 });
+    });
+
+    it("skips propagation when no trackable field changed", async () => {
+      mUtils.getById.mockResolvedValue({
+        id: 5,
+        status: "Waiting",
+        is_demo: false,
+      });
+      mUtils.update.mockResolvedValue({ id: 5, status: "Waiting" });
+      mSvc.hasChanges.mockReturnValue(false);
+      const res = mkRes();
+
+      await bulkUpdateMasterControls(
+        mkReq({
+          body: { ids: [5], patch: { title: "renamed" } },
+        } as any),
+        res
+      );
+
+      expect(mSvc.propagate).not.toHaveBeenCalled();
+      const payload = (res.json as any).mock.calls[0][0].data;
+      expect(payload.results[0].success).toBe(true);
+      expect(payload.results[0].propagation).toEqual([]);
+    });
+
+    it("mixes success + failure rows without one poisoning the other", async () => {
+      // Row 1 succeeds, row 2 is not-found.
+      mUtils.getById
+        .mockResolvedValueOnce({ id: 1, status: "Waiting", is_demo: false })
+        .mockResolvedValueOnce(null);
+      mUtils.update.mockResolvedValueOnce({ id: 1, status: "Done" });
+      mSvc.hasChanges.mockReturnValue(true);
+      mSvc.propagate.mockResolvedValue([]);
+      const res = mkRes();
+
+      await bulkUpdateMasterControls(
+        mkReq({
+          body: { ids: [1, 2], patch: { status: "Done" } },
+        } as any),
+        res
+      );
+
+      const payload = (res.json as any).mock.calls[0][0].data;
+      expect(payload.summary).toEqual({ total: 2, updated: 1, failed: 1 });
+      expect(payload.results[0]).toEqual(
+        expect.objectContaining({ id: 1, success: true })
+      );
+      expect(payload.results[1]).toEqual({
+        id: 2,
+        success: false,
+        error: "Not found",
+      });
+    });
+
+    it("forwards req.organizationId into every update call", async () => {
+      mUtils.getById.mockResolvedValue({
+        id: 5,
+        status: "Waiting",
+        is_demo: false,
+      });
+      mUtils.update.mockResolvedValue({ id: 5, status: "Done" });
+      mSvc.hasChanges.mockReturnValue(false);
+      const res = mkRes();
+
+      await bulkUpdateMasterControls(
+        mkReq({
+          organizationId: 99,
+          body: { ids: [5], patch: { title: "renamed" } },
+        } as any),
+        res
+      );
+
+      expect(mUtils.getById).toHaveBeenCalledWith(5, 99);
+      expect(mUtils.update).toHaveBeenCalledWith(
+        5,
+        expect.anything(),
+        99,
+        mockTransaction
+      );
+    });
+  });
+
+  // ----- exportMasterControlsCsv -----
+  describe("exportMasterControlsCsv", () => {
+    it("returns 200 with CSV body and download headers", async () => {
+      const csv = "id,title\r\n1,Hello";
+      mSvc.buildCsv.mockResolvedValue(csv);
+      const res = mkRes();
+
+      await exportMasterControlsCsv(mkReq(), res);
+
+      expect(mSvc.buildCsv).toHaveBeenCalledWith(42);
+      expect(res.setHeader).toHaveBeenCalledWith(
+        "Content-Type",
+        "text/csv; charset=utf-8"
+      );
+      expect(res.setHeader).toHaveBeenCalledWith(
+        "Content-Disposition",
+        expect.stringMatching(
+          /^attachment; filename="master-controls-\d{4}-\d{2}-\d{2}\.csv"$/
+        )
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith(csv);
+    });
+
+    it("returns 500 on build failure", async () => {
+      mSvc.buildCsv.mockRejectedValue(new Error("boom"));
+      const res = mkRes();
+
+      await exportMasterControlsCsv(mkReq(), res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Internal Server Error",
+        data: "boom",
+      });
+    });
+
+    it("forwards req.organizationId to the export service", async () => {
+      mSvc.buildCsv.mockResolvedValue("");
+      await exportMasterControlsCsv(
+        mkReq({ organizationId: 99 } as any),
+        mkRes()
+      );
+      expect(mSvc.buildCsv).toHaveBeenCalledWith(99);
+    });
+  });
+
+  // ----- importRecommendedMappings -----
+  describe("importRecommendedMappings", () => {
+    it("returns 201 with the import summary on success", async () => {
+      const summary = {
+        mastersCreated: 3,
+        mastersSkipped: 0,
+        mappingsCreated: 5,
+        mappingsSkipped: 2,
+        skippedCodes: [
+          { code: "EU AI Act Article 9", reason: "unsupported" },
+        ],
+      };
+      mSvc.importSeed.mockResolvedValue(summary);
+      const res = mkRes();
+
+      await importRecommendedMappings(mkReq(), res);
+
+      expect(mSvc.importSeed).toHaveBeenCalledWith(42);
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Created",
+        data: summary,
+      });
+    });
+
+    it("returns 500 when the seed service throws", async () => {
+      mSvc.importSeed.mockRejectedValue(new Error("seed failed"));
+      const res = mkRes();
+
+      await importRecommendedMappings(mkReq(), res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Internal Server Error",
+        data: "seed failed",
+      });
+    });
+
+    it("forwards req.organizationId to the seed service", async () => {
+      mSvc.importSeed.mockResolvedValue({
+        mastersCreated: 0,
+        mastersSkipped: 0,
+        mappingsCreated: 0,
+        mappingsSkipped: 0,
+        skippedCodes: [],
+      });
+      await importRecommendedMappings(
+        mkReq({ organizationId: 99 } as any),
+        mkRes()
+      );
+      expect(mSvc.importSeed).toHaveBeenCalledWith(99);
     });
   });
 
