@@ -50,7 +50,8 @@ export type EntityType =
   | "model_risk"
   | "dataset"
   | "ai_gateway_endpoint"
-  | "ai_gateway_guardrail";
+  | "ai_gateway_guardrail"
+  | "master_control";
 
 /**
  * Field formatter function type
@@ -803,6 +804,39 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     },
     fieldFormatters: {
       is_active: GENERIC_FORMATTERS.boolean,
+    },
+  },
+
+  master_control: {
+    tableName: "master_control_change_history",
+    foreignKeyField: "master_control_id",
+    fieldsToTrack: [
+      "title",
+      "description",
+      "status",
+      "risk_review",
+      "owner",
+      "reviewer",
+      "approver",
+      "due_date",
+      "implementation_details",
+    ],
+    fieldLabels: {
+      title: "Title",
+      description: "Description",
+      status: "Status",
+      risk_review: "Risk review",
+      owner: "Owner",
+      reviewer: "Reviewer",
+      approver: "Approver",
+      due_date: "Due date",
+      implementation_details: "Implementation details",
+    },
+    fieldFormatters: {
+      owner: GENERIC_FORMATTERS.user,
+      reviewer: GENERIC_FORMATTERS.user,
+      approver: GENERIC_FORMATTERS.user,
+      due_date: GENERIC_FORMATTERS.date,
     },
   },
 };
