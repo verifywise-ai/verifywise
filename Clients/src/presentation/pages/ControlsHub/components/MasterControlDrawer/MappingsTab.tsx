@@ -9,25 +9,30 @@
  * framework_entity_type, framework_entity_id), so we rely on the list
  * refetch after mutations rather than trying to dedupe in the UI.
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   Box,
   CircularProgress,
   IconButton,
+  SelectChangeEvent,
   Stack,
   Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
+import Field from "../../../../components/Inputs/Field";
+import Select from "../../../../components/Inputs/Select";
+import { CustomizableButton } from "../../../../components/button/customizable-button";
 import {
   useMasterControlMappings,
   useMasterControlMutations,
 } from "../../../../../application/hooks/useMasterControls";
 import type {
   Framework,
+  FrameworkEntityType,
   MasterControlFrameworkMapping,
   MasterControlModel,
 } from "../../../../../domain/models/Common/masterControl/masterControl.model";
@@ -46,6 +51,28 @@ const FRAMEWORK_ORDER: Framework[] = [
   "nist_ai_rmf",
 ];
 
+/**
+ * Which `framework_entity_type` values are valid for each framework. Matches
+ * the FrameworkEntityType union in the domain model; keeping the picker
+ * honest prevents the server from rejecting a mismatched pair.
+ */
+const ENTITY_TYPES_BY_FRAMEWORK: Record<Framework, FrameworkEntityType[]> = {
+  eu_ai_act: ["control_eu", "subcontrol_eu"],
+  iso_42001: ["subclause_struct_iso", "annex_category_iso"],
+  iso_27001: ["iso27001_subclause", "iso27001_annex_category"],
+  nist_ai_rmf: ["subcategory_nist"],
+};
+
+const ENTITY_TYPE_LABELS: Record<FrameworkEntityType, string> = {
+  control_eu: "Control",
+  subcontrol_eu: "Sub-control",
+  subclause_struct_iso: "Sub-clause",
+  annex_category_iso: "Annex category",
+  iso27001_subclause: "Sub-clause",
+  iso27001_annex_category: "Annex control",
+  subcategory_nist: "Sub-category",
+};
+
 interface MappingsTabProps {
   master: MasterControlModel;
 }
@@ -55,7 +82,7 @@ export default function MappingsTab({ master }: MappingsTabProps) {
   const { data: mappings, isLoading, error } = useMasterControlMappings(
     master.id ?? null
   );
-  const { removeMapping } = useMasterControlMutations();
+  const { addMapping, removeMapping } = useMasterControlMutations();
 
   const grouped = useMemo(() => {
     const bucket = new Map<Framework, MasterControlFrameworkMapping[]>();
@@ -149,7 +176,176 @@ export default function MappingsTab({ master }: MappingsTabProps) {
           </Stack>
         );
       })}
+
+      {!master.is_demo && master.id != null && (
+        <AddMappingForm
+          masterId={master.id}
+          isPending={addMapping.isPending}
+          onSubmit={async (payload) => {
+            await addMapping.mutateAsync({ id: master.id!, body: payload });
+          }}
+        />
+      )}
     </Stack>
+  );
+}
+
+// ---------- Add-mapping form ----------
+
+interface AddMappingFormProps {
+  masterId: number;
+  isPending: boolean;
+  onSubmit: (payload: {
+    framework: Framework;
+    framework_entity_type: FrameworkEntityType;
+    framework_entity_id: number;
+  }) => Promise<void>;
+}
+
+function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMappingFormProps) {
+  const theme = useTheme();
+  const [framework, setFramework] = useState<Framework>("eu_ai_act");
+  const [entityType, setEntityType] = useState<FrameworkEntityType>(
+    ENTITY_TYPES_BY_FRAMEWORK.eu_ai_act[0]
+  );
+  const [entityIdRaw, setEntityIdRaw] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const entityTypeOptions = useMemo(
+    () =>
+      ENTITY_TYPES_BY_FRAMEWORK[framework].map((t) => ({
+        _id: t,
+        name: ENTITY_TYPE_LABELS[t],
+      })),
+    [framework]
+  );
+
+  const frameworkOptions = FRAMEWORK_ORDER.map((f) => ({
+    _id: f,
+    name: FRAMEWORK_LABELS[f],
+  }));
+
+  const handleFrameworkChange = (event: SelectChangeEvent<string | number>) => {
+    const next = event.target.value as Framework;
+    setFramework(next);
+    // Reset entity type to the first valid option for the new framework.
+    setEntityType(ENTITY_TYPES_BY_FRAMEWORK[next][0]);
+    setError(null);
+  };
+
+  const handleEntityTypeChange = (
+    event: SelectChangeEvent<string | number>
+  ) => {
+    setEntityType(event.target.value as FrameworkEntityType);
+    setError(null);
+  };
+
+  const reset = () => {
+    setEntityIdRaw("");
+    setError(null);
+  };
+
+  const handleSubmit = async () => {
+    setError(null);
+    setSuccess(null);
+
+    const parsed = Number(entityIdRaw);
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
+      setError("Entity id must be a positive integer.");
+      return;
+    }
+
+    try {
+      await onSubmit({
+        framework,
+        framework_entity_type: entityType,
+        framework_entity_id: parsed,
+      });
+      reset();
+      setSuccess("Mapping added.");
+      setTimeout(() => setSuccess(null), 2500);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to add mapping."
+      );
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        marginTop: 2,
+        padding: "16px",
+        border: `1px dashed ${theme.palette.border.light}`,
+        borderRadius: 1,
+      }}
+    >
+      <Typography fontSize={13} fontWeight={600} sx={{ marginBottom: 1 }}>
+        Add a mapping
+      </Typography>
+      <Typography
+        fontSize={12}
+        color={theme.palette.text.tertiary}
+        sx={{ marginBottom: 2 }}
+      >
+        Link this master control to a specific framework requirement. Enter
+        the numeric entity id from the framework&apos;s struct table.
+      </Typography>
+
+      <Stack spacing={2}>
+        {error && (
+          <Alert severity="error" sx={{ fontSize: 12 }}>
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert severity="success" sx={{ fontSize: 12 }}>
+            {success}
+          </Alert>
+        )}
+
+        <Stack direction="row" spacing={2} flexWrap="wrap">
+          <Select
+            id="add-mapping-framework"
+            label="Framework"
+            value={framework}
+            items={frameworkOptions}
+            onChange={handleFrameworkChange}
+            sx={{ minWidth: 180, flexGrow: 1, height: 34 }}
+          />
+          <Select
+            id="add-mapping-entity-type"
+            label="Entity type"
+            value={entityType}
+            items={entityTypeOptions}
+            onChange={handleEntityTypeChange}
+            sx={{ minWidth: 180, flexGrow: 1, height: 34 }}
+          />
+        </Stack>
+
+        <Field
+          id="add-mapping-entity-id"
+          type="number"
+          label="Entity id"
+          value={entityIdRaw}
+          onChange={(e) => setEntityIdRaw(e.target.value)}
+          placeholder="e.g. 42"
+          isRequired
+        />
+
+        <Stack direction="row" justifyContent="flex-end">
+          <CustomizableButton
+            variant="contained"
+            text={isPending ? "Adding…" : "Add mapping"}
+            icon={<Plus size={14} />}
+            onClick={handleSubmit}
+            isDisabled={isPending || !entityIdRaw}
+            sx={{ minWidth: 150, height: 34 }}
+          />
+        </Stack>
+      </Stack>
+    </Box>
   );
 }
 
