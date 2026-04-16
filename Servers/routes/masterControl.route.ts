@@ -20,6 +20,7 @@ import {
   getMasterControlById,
   getMasterControlMappings,
   getMasterControlPropagationPreview,
+  importRecommendedMappings,
   updateMasterControl,
 } from "../controllers/masterControl.ctrl";
 
@@ -28,6 +29,7 @@ const router = express.Router();
 // Literal segments — defined BEFORE "/:id" so they don't get matched as ids.
 router.patch("/bulk", authenticateJWT, bulkUpdateMasterControls);
 router.get("/export", authenticateJWT, exportMasterControlsCsv);
+router.post("/seed-recommended", authenticateJWT, importRecommendedMappings);
 router.delete("/mappings/:mappingId", authenticateJWT, deleteMasterControlMapping);
 router.get("/:id/mappings", authenticateJWT, getMasterControlMappings);
 router.post("/:id/mappings", authenticateJWT, addMasterControlMapping);

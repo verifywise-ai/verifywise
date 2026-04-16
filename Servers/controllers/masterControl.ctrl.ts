@@ -30,6 +30,7 @@ import {
   type PropagationResult,
 } from "../services/masterControlPropagation.service";
 import { buildMasterControlsCsv } from "../services/masterControlExport.service";
+import { importRecommendedMasterControls } from "../services/masterControlSeed.service";
 import {
   recordEntityChange,
   recordEntityCreation,
@@ -565,6 +566,50 @@ export async function bulkUpdateMasterControls(
       },
     })
   );
+}
+
+// ---------- Recommended Mappings Import ----------
+
+/**
+ * POST /master-controls/seed-recommended — import the curated master
+ * controls + framework mappings for bootstrap. Every master is created;
+ * mappings that cannot be resolved to a struct row are reported back so
+ * the UI can surface them.
+ */
+export async function importRecommendedMappings(
+  req: Request,
+  res: Response
+): Promise<any> {
+  logProcessing({
+    description: "starting importRecommendedMappings",
+    functionName: "importRecommendedMappings",
+    fileName: FILE,
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+  try {
+    const summary = await importRecommendedMasterControls(req.organizationId!);
+    await logSuccess({
+      eventType: "Create",
+      description: `Seed import: ${summary.mastersCreated} masters, ${summary.mappingsCreated} mappings (${summary.mappingsSkipped} skipped)`,
+      functionName: "importRecommendedMappings",
+      fileName: FILE,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(201).json(STATUS_CODE[201](summary));
+  } catch (error) {
+    await logFailure({
+      eventType: "Create",
+      description: "Failed to import recommended mappings",
+      functionName: "importRecommendedMappings",
+      fileName: FILE,
+      error: error as Error,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
 }
 
 // ---------- CSV Export ----------
