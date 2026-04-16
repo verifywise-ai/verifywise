@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-03-24
+> **Last Updated:** 2026-04-16
 
 ---
 
@@ -138,6 +138,10 @@ import entityRoutes from "./routes/entity.route";
 app.use("/api/entities", entityRoutes);
 ```
 
+### Transactional fan-out services
+
+When a single write on one table must cascade to rows in several other tables, extract a **service** that accepts a Sequelize `Transaction` and is called from inside the controller's transaction. The propagation service at `services/masterControlPropagation.service.ts` is the canonical example — it takes a sparse patch, translates it per entity-type adapter, and issues one `UPDATE` per mapped row inside the caller's transaction. Any failure rolls back the master write and every fan-out write atomically.
+
 ---
 
 ## Key Files
@@ -167,6 +171,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | API conventions | `docs/technical/guides/api-conventions.md` |
 | Code style | `docs/technical/guides/code-style.md` |
 | API routes & endpoints | `docs/technical/api/endpoints.md` |
+| Controls Hub (transactional cross-framework propagation) | `docs/technical/domains/controls-hub.md` |
 | Background jobs (BullMQ) | `docs/technical/infrastructure/automations.md` |
 | Email templates (MJML) | `docs/technical/infrastructure/email-service.md` |
 | PDF/DOCX reporting | `docs/technical/infrastructure/pdf-generation.md` |

@@ -1,6 +1,6 @@
 # Clients — Frontend Development Guide
 
-> **Last Updated:** 2026-03-24
+> **Last Updated:** 2026-04-16
 
 ---
 
@@ -70,5 +70,6 @@ Read the relevant file BEFORE implementing changes in that area:
 | Frontend styling | `docs/technical/frontend/styling.md` |
 | Frontend components | `docs/technical/frontend/components.md` |
 | Redux, Axios, frontend architecture | `docs/technical/frontend/overview.md` |
+| Controls Hub (`/controls-hub`, master × frameworks matrix) | `docs/technical/domains/controls-hub.md` |
 
 > All `docs/` paths are relative to the repository root.
