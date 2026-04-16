@@ -277,19 +277,13 @@ export async function updateMasterControl(
     await instance.updateMasterControl(updateData);
     await instance.validateMasterControlData();
 
+    // Pass updateData through directly so the utils' allow-list sees only
+    // the keys the client actually sent. Re-packing every column here would
+    // turn absent fields into `undefined`, which the SET-builder treats as
+    // "present-with-null" and clears NOT NULL columns like title/status.
     const updated = await updateMasterControlQuery(
       id,
-      {
-        title: updateData.title,
-        description: updateData.description,
-        status: updateData.status,
-        risk_review: updateData.risk_review,
-        owner: updateData.owner,
-        reviewer: updateData.reviewer,
-        approver: updateData.approver,
-        due_date: updateData.due_date,
-        implementation_details: updateData.implementation_details,
-      },
+      updateData,
       req.organizationId!,
       transaction
     );
@@ -475,22 +469,11 @@ export async function bulkUpdateMasterControls(
       await instance.updateMasterControl(patch);
       await instance.validateMasterControlData();
 
+      // Pass the sparse patch through directly — see updateMasterControl for
+      // why re-packing every column here would null out NOT NULL fields.
       const updated = await updateMasterControlQuery(
         id,
-        {
-          title: patch.title as string | undefined,
-          description: patch.description as string | null | undefined,
-          status: patch.status as any,
-          risk_review: patch.risk_review as any,
-          owner: patch.owner as number | null | undefined,
-          reviewer: patch.reviewer as number | null | undefined,
-          approver: patch.approver as number | null | undefined,
-          due_date: patch.due_date as string | null | undefined,
-          implementation_details: patch.implementation_details as
-            | string
-            | null
-            | undefined,
-        },
+        patch as Parameters<typeof updateMasterControlQuery>[1],
         req.organizationId!,
         transaction
       );
