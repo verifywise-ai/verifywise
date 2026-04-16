@@ -327,7 +327,7 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
             value={framework}
             items={frameworkOptions}
             onChange={handleFrameworkChange}
-            sx={{ minWidth: 200, flexGrow: 1, height: 34 }}
+            sx={{ minWidth: 220, maxWidth: "100%", flexGrow: 1, height: 34 }}
           />
           <Select
             id="add-mapping-entity-type"
@@ -335,7 +335,7 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
             value={entityType}
             items={entityTypeOptions}
             onChange={handleEntityTypeChange}
-            sx={{ minWidth: 200, flexGrow: 1, height: 34 }}
+            sx={{ minWidth: 220, maxWidth: "100%", flexGrow: 1, height: 34 }}
           />
         </Stack>
 
@@ -444,7 +444,7 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
             icon={<Plus size={14} />}
             onClick={handleSubmit}
             isDisabled={isPending || !selected}
-            sx={{ minWidth: 150, height: 34 }}
+            sx={{ minWidth: 160, height: 34 }}
           />
         </Stack>
       </Stack>
