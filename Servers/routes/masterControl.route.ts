@@ -10,14 +10,22 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
 import {
+  addMasterControlMapping,
   createMasterControl,
   deleteMasterControl,
+  deleteMasterControlMapping,
   getAllMasterControls,
   getMasterControlById,
+  getMasterControlMappings,
   updateMasterControl,
 } from "../controllers/masterControl.ctrl";
 
 const router = express.Router();
+
+// Mappings — defined BEFORE "/:id" so the literal "mappings" segment wins.
+router.delete("/mappings/:mappingId", authenticateJWT, deleteMasterControlMapping);
+router.get("/:id/mappings", authenticateJWT, getMasterControlMappings);
+router.post("/:id/mappings", authenticateJWT, addMasterControlMapping);
 
 // Master controls CRUD
 router.get("/", authenticateJWT, getAllMasterControls);
