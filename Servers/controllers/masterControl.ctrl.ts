@@ -22,6 +22,14 @@ import {
 import { MasterControlModel } from "../domain.layer/models/masterControl/masterControl.model";
 import { MasterControlFrameworkMappingModel } from "../domain.layer/models/masterControl/masterControlMapping.model";
 import {
+  hasPropagatableChanges,
+  previewPropagation,
+  propagateMasterControlUpdate,
+  PropagationError,
+  type PropagationPayload,
+  type PropagationResult,
+} from "../services/masterControlPropagation.service";
+import {
   createMappingQuery,
   createMasterControlQuery,
   deleteMappingQuery,
@@ -258,16 +266,47 @@ export async function updateMasterControl(
       transaction
     );
 
+    // Build propagation payload from fields that were actually sent AND
+    // changed vs the pre-update snapshot.
+    const propagationPayload: Partial<PropagationPayload> = {};
+    const trackableFields: (keyof PropagationPayload)[] = [
+      "status",
+      "owner",
+      "reviewer",
+      "approver",
+      "due_date",
+      "implementation_details",
+    ];
+    for (const field of trackableFields) {
+      if (field in updateData) {
+        const next = (updateData as any)[field];
+        const prev = (existing as any)[field];
+        if (next !== prev) {
+          (propagationPayload as any)[field] = next;
+        }
+      }
+    }
+
+    let propagation: PropagationResult[] = [];
+    if (hasPropagatableChanges(propagationPayload)) {
+      propagation = await propagateMasterControlUpdate(
+        id,
+        req.organizationId!,
+        propagationPayload,
+        transaction
+      );
+    }
+
     await transaction.commit();
     await logSuccess({
       eventType: "Update",
-      description: `Updated master control ID ${id}`,
+      description: `Updated master control ID ${id} (propagated to ${propagation.filter((p) => !p.skipped).length} framework groups)`,
       functionName: "updateMasterControl",
       fileName: FILE,
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(200).json(STATUS_CODE[200](updated));
+    return res.status(200).json(STATUS_CODE[200]({ master: updated, propagation }));
   } catch (error) {
     await transaction.rollback();
     if (error instanceof ValidationException) {
@@ -297,10 +336,72 @@ export async function updateMasterControl(
     if (error instanceof NotFoundException) {
       return res.status(404).json(STATUS_CODE[404](error.message));
     }
+    if (error instanceof PropagationError) {
+      await logFailure({
+        eventType: "Update",
+        description: `Propagation failed for master ID ${id}: ${error.message}`,
+        functionName: "updateMasterControl",
+        fileName: FILE,
+        error: error as Error,
+        userId: req.userId!,
+        tenantId: req.organizationId!,
+      });
+      return res
+        .status(502)
+        .json(STATUS_CODE[500]({ error: error.message, context: error.context }));
+    }
     await logFailure({
       eventType: "Update",
       description: `Failed to update master control ID ${id}`,
       functionName: "updateMasterControl",
+      fileName: FILE,
+      error: error as Error,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+// ---------- Propagation Preview ----------
+
+export async function getMasterControlPropagationPreview(
+  req: Request,
+  res: Response
+): Promise<any> {
+  const id = parseInt(
+    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
+  );
+  const payload = (req.body ?? {}) as Partial<PropagationPayload>;
+  logProcessing({
+    description: `starting getMasterControlPropagationPreview for master ID ${id}`,
+    functionName: "getMasterControlPropagationPreview",
+    fileName: FILE,
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+  try {
+    if (!Number.isFinite(id) || id < 1) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid master control id"));
+    }
+    const existing = await getMasterControlByIdQuery(id, req.organizationId!);
+    if (!existing) return res.status(404).json(STATUS_CODE[404]({}));
+
+    const preview = await previewPropagation(id, req.organizationId!, payload);
+    await logSuccess({
+      eventType: "Read",
+      description: `Propagation preview computed for master ID ${id}: ${preview.length} mapping(s)`,
+      functionName: "getMasterControlPropagationPreview",
+      fileName: FILE,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](preview));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: `Failed to compute propagation preview for ID ${id}`,
+      functionName: "getMasterControlPropagationPreview",
       fileName: FILE,
       error: error as Error,
       userId: req.userId!,

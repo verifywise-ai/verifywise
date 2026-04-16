@@ -17,6 +17,7 @@ import {
   getAllMasterControls,
   getMasterControlById,
   getMasterControlMappings,
+  getMasterControlPropagationPreview,
   updateMasterControl,
 } from "../controllers/masterControl.ctrl";
 
@@ -26,6 +27,7 @@ const router = express.Router();
 router.delete("/mappings/:mappingId", authenticateJWT, deleteMasterControlMapping);
 router.get("/:id/mappings", authenticateJWT, getMasterControlMappings);
 router.post("/:id/mappings", authenticateJWT, addMasterControlMapping);
+router.post("/:id/propagation-preview", authenticateJWT, getMasterControlPropagationPreview);
 
 // Master controls CRUD
 router.get("/", authenticateJWT, getAllMasterControls);
