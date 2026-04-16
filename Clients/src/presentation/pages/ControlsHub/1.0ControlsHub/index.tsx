@@ -15,7 +15,7 @@
 
 import { useCallback, useState } from "react";
 import { Box, Stack, Typography, Alert as MuiAlert } from "@mui/material";
-import { Plus, Library } from "lucide-react";
+import { Plus, Library, Download } from "lucide-react";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -23,6 +23,7 @@ import { useMasterControls } from "../../../../application/hooks/useMasterContro
 import { ControlsMatrix } from "./ControlsMatrix";
 import MasterControlDrawer from "../components/MasterControlDrawer";
 import BulkEditBar from "../components/BulkEditBar";
+import CsvExportModal from "../components/CsvExportModal";
 
 export default function ControlsHub() {
   // Placeholder state for the create-drawer toggle. "New master control"
@@ -35,6 +36,9 @@ export default function ControlsHub() {
 
   // Bulk-edit selection set, keyed by master control id.
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // CSV export confirmation modal.
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const { data: masterControls, isLoading, error, refetch } = useMasterControls();
 
@@ -67,12 +71,23 @@ export default function ControlsHub() {
         title="Controls Hub"
         description="Manage a single library of controls and map each one to requirements across EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF. Updates to status, owner, evidence, and due date automatically propagate to every mapped framework row."
         actionButton={
-          <CustomizableButton
-            variant="contained"
-            text="New master control"
-            icon={<Plus size={16} strokeWidth={2} />}
-            onClick={() => setIsCreateOpen(true)}
-          />
+          <Stack direction="row" gap={1.5}>
+            <CustomizableButton
+              variant="outlined"
+              text="Export CSV"
+              icon={<Download size={16} strokeWidth={2} />}
+              onClick={() => setIsExportOpen(true)}
+              isDisabled={
+                Array.isArray(masterControls) && masterControls.length === 0
+              }
+            />
+            <CustomizableButton
+              variant="contained"
+              text="New master control"
+              icon={<Plus size={16} strokeWidth={2} />}
+              onClick={() => setIsCreateOpen(true)}
+            />
+          </Stack>
         }
       />
 
@@ -120,6 +135,12 @@ export default function ControlsHub() {
         open={isDrawerOpen}
         onClose={handleDrawerClose}
         masterControlId={selectedId}
+      />
+
+      <CsvExportModal
+        open={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        totalControls={masterControls?.length}
       />
     </Stack>
   );

@@ -147,6 +147,40 @@ export async function bulkUpdateMasterControls({
   return (response.data as any).data ?? response.data;
 }
 
+export interface MasterControlsCsvExport {
+  blob: Blob;
+  filename: string;
+}
+
+/** Downloads the master controls CSV for the current organization. */
+export async function exportMasterControlsCsv({
+  signal,
+}: {
+  signal?: AbortSignal;
+} = {}): Promise<MasterControlsCsvExport> {
+  const response = await apiServices.get("/master-controls/export", {
+    signal,
+    responseType: "blob",
+  });
+
+  const rawName =
+    (response.headers as any)?.["content-disposition"] ??
+    (response.headers as any)?.get?.("Content-Disposition");
+
+  // Best-effort filename extraction — fall back to a dated default so the
+  // download always has a sensible name.
+  const match =
+    typeof rawName === "string" ? rawName.match(/filename="([^"]+)"/) : null;
+  const filename =
+    match?.[1] ??
+    `master-controls-${new Date().toISOString().slice(0, 10)}.csv`;
+
+  return {
+    blob: response.data as Blob,
+    filename,
+  };
+}
+
 // ---------- Mappings ----------
 
 export async function getMasterControlMappings({
