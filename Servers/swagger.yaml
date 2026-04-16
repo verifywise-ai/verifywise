@@ -51,6 +51,7 @@ tags:
   - name: Invitations
   - name: LLM Keys
   - name: Mail
+  - name: Master Controls
   - name: Model Inventory
   - name: Model Risks
   - name: NIST AI RMF
@@ -5998,6 +5999,354 @@ paths:
       responses:
         "201":
           description: Created successfully
+        "500":
+          description: Internal server error
+  /master-controls:
+    get:
+      tags:
+        - Master Controls
+      summary: List all master controls for the current organisation
+      description: |
+        Returns every master control in the authenticated organisation,
+        enriched with owner/reviewer/approver display names, total mapping
+        count, and per-framework mapping counts. Results are ordered by
+        created_at DESC, id ASC.
+      operationId: getAllMasterControls
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+    post:
+      tags:
+        - Master Controls
+      summary: Create a master control
+      description: |
+        Creates a new master control scoped to the authenticated
+        organisation. Validates the payload via MasterControlModel before
+        persisting. Emits an entity-creation change-history event.
+      operationId: createMasterControl
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                status:
+                  type: string
+                  enum: [Waiting, "In progress", Done]
+                risk_review:
+                  type: string
+                  nullable: true
+                owner:
+                  type: integer
+                  nullable: true
+                reviewer:
+                  type: integer
+                  nullable: true
+                approver:
+                  type: integer
+                  nullable: true
+                due_date:
+                  type: string
+                  format: date
+                  nullable: true
+                implementation_details:
+                  type: string
+                  nullable: true
+                is_demo:
+                  type: boolean
+      responses:
+        "201":
+          description: Created successfully
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+  /master-controls/{id}:
+    get:
+      tags:
+        - Master Controls
+      summary: Get master control by id
+      operationId: getMasterControlById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+        "500":
+          description: Internal server error
+    patch:
+      tags:
+        - Master Controls
+      summary: Update master control
+      description: |
+        Partial update. Any diff to `status`, `owner`, `reviewer`, `approver`,
+        `due_date`, or `implementation_details` is fanned out to every mapped
+        framework row inside a single transaction. The response includes both
+        the updated master and the propagation result set.
+      operationId: updateMasterControl
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                status:
+                  type: string
+                  enum: [Waiting, "In progress", Done]
+                risk_review:
+                  type: string
+                  nullable: true
+                owner:
+                  type: integer
+                  nullable: true
+                reviewer:
+                  type: integer
+                  nullable: true
+                approver:
+                  type: integer
+                  nullable: true
+                due_date:
+                  type: string
+                  format: date
+                  nullable: true
+                implementation_details:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Demo master controls cannot be modified
+        "404":
+          description: Not found
+        "502":
+          description: Propagation failure
+        "500":
+          description: Internal server error
+    delete:
+      tags:
+        - Master Controls
+      summary: Delete master control
+      description: |
+        Deletes a master control and all of its framework mappings. Rejects
+        deletes on demo (seeded) rows.
+      operationId: deleteMasterControl
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Demo master controls cannot be modified
+        "404":
+          description: Not found
+        "500":
+          description: Internal server error
+  /master-controls/{id}/mappings:
+    get:
+      tags:
+        - Master Controls
+      summary: List framework mappings for a master control
+      operationId: getMasterControlMappings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+    post:
+      tags:
+        - Master Controls
+      summary: Attach a framework mapping to a master control
+      description: |
+        Creates a mapping from the master control to a specific framework
+        requirement row. `framework_entity_type` must be one of:
+        `control_eu`, `subcontrol_eu`, `subclause_struct_iso`,
+        `annex_category_iso`, `iso27001_subclause`,
+        `iso27001_annex_category`, `subcategory_nist`.
+        Duplicate (master, framework, type, id) tuples are idempotent via
+        ON CONFLICT DO NOTHING.
+      operationId: addMasterControlMapping
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - framework
+                - framework_entity_type
+                - framework_entity_id
+              properties:
+                framework:
+                  type: string
+                  enum: [eu_ai_act, iso_42001, iso_27001, nist_ai_rmf]
+                framework_entity_type:
+                  type: string
+                  enum:
+                    - control_eu
+                    - subcontrol_eu
+                    - subclause_struct_iso
+                    - annex_category_iso
+                    - iso27001_subclause
+                    - iso27001_annex_category
+                    - subcategory_nist
+                framework_entity_id:
+                  type: integer
+      responses:
+        "201":
+          description: Created successfully
+        "200":
+          description: Mapping already existed (idempotent)
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "404":
+          description: Parent master control not found
+        "500":
+          description: Internal server error
+  /master-controls/mappings/{mappingId}:
+    delete:
+      tags:
+        - Master Controls
+      summary: Remove a framework mapping
+      operationId: deleteMasterControlMapping
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mappingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Parent master control is demo and cannot be modified
+        "404":
+          description: Not found
+        "500":
+          description: Internal server error
+  /master-controls/{id}/propagation-preview:
+    post:
+      tags:
+        - Master Controls
+      summary: Preview which framework rows would be affected by a proposed change
+      description: |
+        Read-only preview endpoint. Accepts the same partial payload used
+        by PATCH /master-controls/{id} and returns the count of tenant
+        rows that WOULD be updated per mapping. Does not write.
+      operationId: getMasterControlPropagationPreview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [Waiting, "In progress", Done]
+                owner:
+                  type: integer
+                  nullable: true
+                reviewer:
+                  type: integer
+                  nullable: true
+                approver:
+                  type: integer
+                  nullable: true
+                due_date:
+                  type: string
+                  format: date
+                  nullable: true
+                implementation_details:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Preview computed
+        "401":
+          description: Unauthorized
         "500":
           description: Internal server error
   /model-risk-change-history/{id}:
