@@ -24,6 +24,7 @@ import {
 import { useCallback } from "react";
 import {
   addMasterControlMapping,
+  bulkUpdateMasterControls,
   createMasterControl,
   deleteMasterControl,
   deleteMasterControlMapping,
@@ -32,6 +33,8 @@ import {
   getMasterControlMappings,
   getMasterControlPropagationPreview,
   updateMasterControl,
+  type BulkUpdateResponse,
+  type MasterControlBulkUpdatePayload,
   type MasterControlCreatePayload,
   type MasterControlMappingCreatePayload,
   type MasterControlUpdatePayload,
@@ -109,6 +112,11 @@ export interface MasterControlMutations {
     { id: number; body: MasterControlUpdatePayload }
   >;
   remove: UseMutationResult<any, Error, { id: number }>;
+  bulkUpdate: UseMutationResult<
+    BulkUpdateResponse,
+    Error,
+    MasterControlBulkUpdatePayload
+  >;
   addMapping: UseMutationResult<
     any,
     Error,
@@ -152,6 +160,19 @@ export function useMasterControlMutations(): MasterControlMutations {
     onSuccess: invalidateAll,
   });
 
+  const bulkUpdate = useMutation({
+    mutationFn: (body: MasterControlBulkUpdatePayload) =>
+      bulkUpdateMasterControls({ body }),
+    onSuccess: (_res, variables) => {
+      queryClient.invalidateQueries({ queryKey: masterControlKeys.list() });
+      for (const id of variables.ids) {
+        queryClient.invalidateQueries({
+          queryKey: masterControlKeys.detail(id),
+        });
+      }
+    },
+  });
+
   const addMapping = useMutation({
     mutationFn: ({
       id,
@@ -187,7 +208,15 @@ export function useMasterControlMutations(): MasterControlMutations {
     },
   });
 
-  return { create, update, remove, addMapping, removeMapping, invalidateAll };
+  return {
+    create,
+    update,
+    remove,
+    bulkUpdate,
+    addMapping,
+    removeMapping,
+    invalidateAll,
+  };
 }
 
 // ---------- Propagation preview ----------

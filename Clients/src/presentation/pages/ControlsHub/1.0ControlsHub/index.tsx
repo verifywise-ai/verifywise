@@ -13,7 +13,7 @@
  * or create a master control from scratch.
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Box, Stack, Typography, Alert as MuiAlert } from "@mui/material";
 import { Plus, Library } from "lucide-react";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
@@ -22,6 +22,7 @@ import CustomizableSkeleton from "../../../components/Skeletons";
 import { useMasterControls } from "../../../../application/hooks/useMasterControls";
 import { ControlsMatrix } from "./ControlsMatrix";
 import MasterControlDrawer from "../components/MasterControlDrawer";
+import BulkEditBar from "../components/BulkEditBar";
 
 export default function ControlsHub() {
   // Placeholder state for the create-drawer toggle. "New master control"
@@ -32,7 +33,18 @@ export default function ControlsHub() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // Bulk-edit selection set, keyed by master control id.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
   const { data: masterControls, isLoading, error, refetch } = useMasterControls();
+
+  const handleSelectionChange = useCallback((next: Set<number>) => {
+    setSelectedIds(next);
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
 
   const isEmpty =
     !isLoading && !error && Array.isArray(masterControls) && masterControls.length === 0;
@@ -88,10 +100,20 @@ export default function ControlsHub() {
       ) : isEmpty ? (
         <EmptyState onCreate={() => setIsCreateOpen(true)} />
       ) : (
-        <ControlsMatrix
-          masterControls={masterControls ?? []}
-          onRowClick={handleRowClick}
-        />
+        <>
+          <ControlsMatrix
+            masterControls={masterControls ?? []}
+            onRowClick={handleRowClick}
+            selectedIds={selectedIds}
+            onSelectionChange={handleSelectionChange}
+          />
+          {selectedIds.size > 0 && (
+            <BulkEditBar
+              selectedIds={Array.from(selectedIds)}
+              onClearSelection={handleClearSelection}
+            />
+          )}
+        </>
       )}
 
       <MasterControlDrawer

@@ -35,6 +35,24 @@ export interface MasterControlCreatePayload {
 
 export type MasterControlUpdatePayload = Partial<MasterControlCreatePayload>;
 
+export interface MasterControlBulkUpdatePayload {
+  ids: number[];
+  patch: MasterControlUpdatePayload;
+}
+
+export interface BulkUpdateRowResult {
+  id: number;
+  success: boolean;
+  error?: string;
+  master?: any;
+  propagation?: PropagationResult[];
+}
+
+export interface BulkUpdateResponse {
+  results: BulkUpdateRowResult[];
+  summary: { total: number; updated: number; failed: number };
+}
+
 export interface MasterControlMappingCreatePayload {
   framework: Framework;
   framework_entity_type: FrameworkEntityType;
@@ -117,6 +135,16 @@ export async function deleteMasterControl({
 }): Promise<any> {
   const response = await apiServices.delete(`/master-controls/${id}`);
   return response.data;
+}
+
+export async function bulkUpdateMasterControls({
+  body,
+}: {
+  body: MasterControlBulkUpdatePayload;
+}): Promise<BulkUpdateResponse> {
+  const response = await apiServices.patch("/master-controls/bulk", body);
+  // apiServices.patch returns { data: { message, data } }
+  return (response.data as any).data ?? response.data;
 }
 
 // ---------- Mappings ----------

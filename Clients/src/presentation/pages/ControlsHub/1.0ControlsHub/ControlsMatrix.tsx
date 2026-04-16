@@ -15,6 +15,7 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   Box,
+  Checkbox,
   Chip as MuiChip,
   Table,
   TableBody,
@@ -123,6 +124,9 @@ function isOverdue(row: MasterControlModel): boolean {
 interface ControlsMatrixProps {
   masterControls: MasterControlModel[];
   onRowClick?: (row: MasterControlModel) => void;
+  /** Selection set for bulk-edit. Omit both props to disable checkboxes. */
+  selectedIds?: Set<number>;
+  onSelectionChange?: (nextSelection: Set<number>) => void;
 }
 
 const cellStyle = singleTheme.tableStyles.primary.body.cell;
@@ -130,8 +134,11 @@ const cellStyle = singleTheme.tableStyles.primary.body.cell;
 export function ControlsMatrix({
   masterControls,
   onRowClick,
+  selectedIds,
+  onSelectionChange,
 }: ControlsMatrixProps) {
   const theme = useTheme();
+  const selectionEnabled = Boolean(selectedIds && onSelectionChange);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -183,6 +190,40 @@ export function ControlsMatrix({
     [sortedRows, page, rowsPerPage]
   );
 
+  // ---------- Selection helpers ----------
+  const toggleRowSelection = (rowId: number) => {
+    if (!selectedIds || !onSelectionChange) return;
+    const next = new Set(selectedIds);
+    if (next.has(rowId)) {
+      next.delete(rowId);
+    } else {
+      next.add(rowId);
+    }
+    onSelectionChange(next);
+  };
+
+  const pageRowIds = useMemo(
+    () => pagedRows.map((r) => r.id).filter((id): id is number => typeof id === "number"),
+    [pagedRows]
+  );
+
+  const allPageSelected =
+    pageRowIds.length > 0 &&
+    pageRowIds.every((id) => selectedIds?.has(id));
+  const somePageSelected =
+    !allPageSelected && pageRowIds.some((id) => selectedIds?.has(id));
+
+  const toggleSelectAllOnPage = () => {
+    if (!selectedIds || !onSelectionChange) return;
+    const next = new Set(selectedIds);
+    if (allPageSelected) {
+      pageRowIds.forEach((id) => next.delete(id));
+    } else {
+      pageRowIds.forEach((id) => next.add(id));
+    }
+    onSelectionChange(next);
+  };
+
   const handleChangePage = (_: unknown, newPage: number) => setPage(newPage);
   const handleChangeRowsPerPage = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -206,6 +247,25 @@ export function ControlsMatrix({
           }}
         >
           <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+            {selectionEnabled && (
+              <TableCell
+                padding="checkbox"
+                sx={{
+                  ...singleTheme.tableStyles.primary.header.cell,
+                  width: 44,
+                }}
+              >
+                <Checkbox
+                  size="small"
+                  checked={allPageSelected}
+                  indeterminate={somePageSelected}
+                  onChange={toggleSelectAllOnPage}
+                  inputProps={{
+                    "aria-label": "Select all master controls on this page",
+                  }}
+                />
+              </TableCell>
+            )}
             {COLUMNS.map((column) => (
               <TableCell
                 key={column.id}
@@ -264,12 +324,34 @@ export function ControlsMatrix({
         <TableBody>
           {pagedRows.map((row) => {
             const statusColor = STATUS_COLORS[row.status];
+            const rowId = row.id;
+            const isSelected =
+              typeof rowId === "number" && selectedIds?.has(rowId);
             return (
               <TableRow
                 key={row.id}
                 sx={singleTheme.tableStyles.primary.body.row}
+                selected={Boolean(isSelected)}
                 onClick={() => onRowClick?.(row)}
               >
+                {selectionEnabled && (
+                  <TableCell
+                    padding="checkbox"
+                    sx={{ width: 44 }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      size="small"
+                      checked={Boolean(isSelected)}
+                      onChange={() => {
+                        if (typeof rowId === "number") toggleRowSelection(rowId);
+                      }}
+                      inputProps={{
+                        "aria-label": `Select ${row.title ?? "master control"}`,
+                      }}
+                    />
+                  </TableCell>
+                )}
                 <TableCell
                   sx={{
                     ...cellStyle,
@@ -347,7 +429,7 @@ export function ControlsMatrix({
               labelDisplayedRows={({ page: p, count }) =>
                 `Page ${p + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
               }
-              colSpan={COLUMNS.length}
+              colSpan={COLUMNS.length + (selectionEnabled ? 1 : 0)}
             />
           </TableRow>
         </TableFooter>
