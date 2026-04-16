@@ -195,6 +195,29 @@ export async function exportMasterControlsCsv({
   };
 }
 
+// ---------- Framework catalog ----------
+
+export interface FrameworkCatalogEntry {
+  id: number;
+  code: string;
+  title: string;
+  description: string | null;
+}
+
+export type FrameworkCatalog = Record<FrameworkEntityType, FrameworkCatalogEntry[]>;
+
+export async function getFrameworkCatalog({
+  signal,
+}: {
+  signal?: AbortSignal;
+} = {}): Promise<FrameworkCatalog> {
+  const response = await apiServices.get("/master-controls/framework-catalog", {
+    signal,
+  });
+  // apiServices wraps the payload in { message, data }.
+  return (response.data as any)?.data ?? (response.data as FrameworkCatalog);
+}
+
 // ---------- Mappings ----------
 
 export async function getMasterControlMappings({

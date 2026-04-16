@@ -29,12 +29,14 @@ import {
   deleteMasterControl,
   deleteMasterControlMapping,
   getAllMasterControls,
+  getFrameworkCatalog,
   getMasterControlById,
   getMasterControlMappings,
   getMasterControlPropagationPreview,
   importRecommendedMasterControls,
   updateMasterControl,
   type BulkUpdateResponse,
+  type FrameworkCatalog,
   type MasterControlBulkUpdatePayload,
   type MasterControlCreatePayload,
   type MasterControlMappingCreatePayload,
@@ -54,6 +56,7 @@ export const masterControlKeys = {
   list: () => [ROOT_KEY, "list"] as const,
   detail: (id: number) => [ROOT_KEY, "detail", id] as const,
   mappings: (id: number) => [ROOT_KEY, "mappings", id] as const,
+  frameworkCatalog: () => [ROOT_KEY, "frameworkCatalog"] as const,
 };
 
 // ---------- Queries ----------
@@ -101,6 +104,22 @@ export function useMasterControlMappings(id: number | null | undefined) {
         ? (rows as MasterControlFrameworkMapping[])
         : [];
     },
+  });
+}
+
+/**
+ * Loads the full framework struct catalog (rows from every struct table
+ * keyed by `framework_entity_type`). Cached for an hour — the struct data
+ * changes only when we ship new migrations, so re-fetching per drawer open
+ * would be wasteful.
+ */
+export function useFrameworkCatalog(enabled = true) {
+  return useQuery<FrameworkCatalog>({
+    queryKey: masterControlKeys.frameworkCatalog(),
+    queryFn: ({ signal }) => getFrameworkCatalog({ signal }),
+    enabled,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
   });
 }
 
