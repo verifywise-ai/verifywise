@@ -28,11 +28,12 @@ import { ControlsMatrix } from "./ControlsMatrix";
 import MasterControlDrawer from "../components/MasterControlDrawer";
 import BulkEditBar from "../components/BulkEditBar";
 import CsvExportModal from "../components/CsvExportModal";
+import CreateMasterControlDialog from "../components/CreateMasterControlDialog";
 
 export default function ControlsHub() {
-  // Placeholder state for the create-drawer toggle. "New master control"
-  // creation flow lands in a later task; for now it's a no-op until wired.
-  const [_isCreateOpen, setIsCreateOpen] = useState(false);
+  // Create-dialog visibility. On successful create we open the drawer on
+  // the new master's id so the user can fill in the remaining fields.
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // Drawer state: selected master control id + open flag.
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -148,6 +149,15 @@ export default function ControlsHub() {
         open={isExportOpen}
         onClose={() => setIsExportOpen(false)}
         totalControls={masterControls?.length}
+      />
+
+      <CreateMasterControlDialog
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onCreated={(id) => {
+          setSelectedId(id);
+          setIsDrawerOpen(true);
+        }}
       />
     </Stack>
   );
