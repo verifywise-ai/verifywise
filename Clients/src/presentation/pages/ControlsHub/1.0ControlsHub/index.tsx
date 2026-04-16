@@ -5,9 +5,12 @@
  * states, and top-of-page header/CTA. The actual matrix table lives in
  * `ControlsMatrix.tsx` (T-024).
  *
+ * Clicking a matrix row opens the `MasterControlDrawer` (T-029). The drawer's
+ * Details tab lets the user edit core fields; Mappings/Evidence/History tabs
+ * land in T-030–T-032.
+ *
  * Empty state invites the user to seed the recommended mappings (T-027/T-035)
- * or create a master control from scratch. Both CTAs are wired as placeholders
- * until the create drawer (T-029) is in place.
+ * or create a master control from scratch.
  */
 
 import { useState } from "react";
@@ -18,16 +21,33 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { useMasterControls } from "../../../../application/hooks/useMasterControls";
 import { ControlsMatrix } from "./ControlsMatrix";
+import MasterControlDrawer from "../components/MasterControlDrawer";
 
 export default function ControlsHub() {
-  // Placeholder state for the create-drawer toggle; wired to the real drawer
-  // in T-029.
+  // Placeholder state for the create-drawer toggle. "New master control"
+  // creation flow lands in a later task; for now it's a no-op until wired.
   const [_isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // Drawer state: selected master control id + open flag.
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const { data: masterControls, isLoading, error, refetch } = useMasterControls();
 
   const isEmpty =
     !isLoading && !error && Array.isArray(masterControls) && masterControls.length === 0;
+
+  const handleRowClick = (row: { id?: number }) => {
+    if (!row.id) return;
+    setSelectedId(row.id);
+    setIsDrawerOpen(true);
+  };
+
+  const handleDrawerClose = () => {
+    setIsDrawerOpen(false);
+    // Keep `selectedId` until the drawer finishes its close animation so the
+    // current master's data stays visible during the slide-out.
+  };
 
   return (
     <Stack gap={3} sx={{ p: 4 }}>
@@ -68,8 +88,17 @@ export default function ControlsHub() {
       ) : isEmpty ? (
         <EmptyState onCreate={() => setIsCreateOpen(true)} />
       ) : (
-        <ControlsMatrix masterControls={masterControls ?? []} />
+        <ControlsMatrix
+          masterControls={masterControls ?? []}
+          onRowClick={handleRowClick}
+        />
       )}
+
+      <MasterControlDrawer
+        open={isDrawerOpen}
+        onClose={handleDrawerClose}
+        masterControlId={selectedId}
+      />
     </Stack>
   );
 }
