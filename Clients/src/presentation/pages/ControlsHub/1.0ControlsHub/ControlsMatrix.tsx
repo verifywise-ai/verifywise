@@ -263,9 +263,20 @@ export function ControlsMatrix({
                 />
               </TableCell>
             )}
-            {COLUMNS.map((column) => (
+            {COLUMNS.map((column) => {
+              const isActiveSort = sortConfig.key === column.id;
+              const ariaSort: React.AriaAttributes["aria-sort"] =
+                !column.sortable
+                  ? undefined
+                  : !isActiveSort || !sortConfig.direction
+                  ? "none"
+                  : sortConfig.direction === "asc"
+                  ? "ascending"
+                  : "descending";
+              return (
               <TableCell
                 key={column.id}
+                aria-sort={ariaSort}
                 sx={{
                   ...singleTheme.tableStyles.primary.header.cell,
                   ...(column.minWidth
@@ -276,10 +287,31 @@ export function ControlsMatrix({
                         cursor: "pointer",
                         userSelect: "none",
                         "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
+                        "&:focus-visible": {
+                          outline: `2px solid ${theme.palette.primary.main}`,
+                          outlineOffset: "-2px",
+                        },
                       }
                     : {}),
                 }}
                 onClick={() => column.sortable && handleSort(column.id)}
+                role={column.sortable ? "button" : undefined}
+                tabIndex={column.sortable ? 0 : undefined}
+                aria-label={
+                  column.sortable
+                    ? `Sort by ${column.label.toLowerCase()}`
+                    : undefined
+                }
+                onKeyDown={
+                  column.sortable
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSort(column.id);
+                        }
+                      }
+                    : undefined
+                }
               >
                 <Box
                   sx={{
@@ -295,26 +327,23 @@ export function ControlsMatrix({
                       sx={{
                         display: "flex",
                         alignItems: "center",
-                        color:
-                          sortConfig.key === column.id
-                            ? "primary.main"
-                            : "text.disabled",
+                        color: isActiveSort ? "primary.main" : "text.disabled",
                       }}
+                      aria-hidden="true"
                     >
-                      {sortConfig.key === column.id &&
+                      {isActiveSort &&
                         sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                      {sortConfig.key === column.id &&
+                      {isActiveSort &&
                         sortConfig.direction === "desc" && (
                           <ChevronDown size={16} />
                         )}
-                      {sortConfig.key !== column.id && (
-                        <ChevronsUpDown size={16} />
-                      )}
+                      {!isActiveSort && <ChevronsUpDown size={16} />}
                     </Box>
                   )}
                 </Box>
               </TableCell>
-            ))}
+            );
+            })}
           </TableRow>
         </TableHead>
 
@@ -327,9 +356,32 @@ export function ControlsMatrix({
             return (
               <TableRow
                 key={row.id}
-                sx={singleTheme.tableStyles.primary.body.row}
+                sx={{
+                  ...singleTheme.tableStyles.primary.body.row,
+                  "&:focus-visible": {
+                    outline: `2px solid ${theme.palette.primary.main}`,
+                    outlineOffset: "-2px",
+                  },
+                }}
                 selected={Boolean(isSelected)}
                 onClick={() => onRowClick?.(row)}
+                role={onRowClick ? "button" : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                aria-label={
+                  onRowClick
+                    ? `Open ${row.title ?? "master control"} details`
+                    : undefined
+                }
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
               >
                 {selectionEnabled && (
                   <TableCell
