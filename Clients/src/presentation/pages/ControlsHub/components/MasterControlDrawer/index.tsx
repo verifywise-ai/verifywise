@@ -34,7 +34,7 @@ import MappingsTab from "./MappingsTab";
 import EvidenceTab from "./EvidenceTab";
 import HistoryTab from "./HistoryTab";
 
-const DRAWER_WIDTH = 720;
+const DRAWER_WIDTH = 800;
 
 export type MasterControlDrawerTab =
   | "details"
@@ -101,10 +101,10 @@ export default function MasterControlDrawer({
           justifyContent="space-between"
           sx={{
             padding: "15px 20px",
-            borderBottom: `1px solid ${theme.palette.border.light}`,
+            minHeight: 64,
           }}
         >
-          <Stack>
+          <Stack sx={{ minWidth: 0, paddingRight: 2 }}>
             <Typography
               fontSize={11}
               color={theme.palette.text.tertiary}
@@ -116,6 +116,11 @@ export default function MasterControlDrawer({
               id="master-control-drawer-title"
               fontSize={15}
               fontWeight={700}
+              sx={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
             >
               {title}
             </Typography>
@@ -124,6 +129,8 @@ export default function MasterControlDrawer({
             <CloseIcon size={18} color={theme.palette.text.secondary} />
           </IconButton>
         </Stack>
+
+        <Divider />
 
         {/* Tabs + body */}
         <TabContext value={activeTab}>
@@ -209,8 +216,6 @@ export default function MasterControlDrawer({
             </>
           )}
         </TabContext>
-
-        <Divider />
       </Stack>
     </Drawer>
   );
