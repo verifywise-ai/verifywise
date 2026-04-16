@@ -367,6 +367,110 @@ export const deleteMappingByTupleQuery = async (
  * Bulk update helper for the "Apply to selected" action on the Controls Hub.
  * Only the allow-listed fields may be mass-updated.
  */
+// ---------- Framework Catalog ----------
+//
+// Returns the full list of struct rows for every framework_entity_type, so the
+// Mappings tab picker can display real requirement titles instead of asking
+// the user to type raw numeric ids. Struct tables are framework metadata
+// (not tenant-scoped), so no organization filter is needed.
+
+export interface FrameworkCatalogEntry {
+  id: number;
+  code: string;
+  title: string;
+  description: string | null;
+}
+
+export type FrameworkCatalog = Record<FrameworkEntityType, FrameworkCatalogEntry[]>;
+
+export const getFrameworkCatalogQuery = async (): Promise<FrameworkCatalog> => {
+  // EU AI Act controls — no stable code column, synthesise from category + order.
+  const controlsEu = await sequelize.query<FrameworkCatalogEntry>(
+    `
+    SELECT c.id,
+           ('Control ' || COALESCE(c.order_no::text, c.id::text)) AS code,
+           c.title,
+           c.description
+      FROM controls_struct_eu c
+     ORDER BY c.control_category_id ASC NULLS LAST, c.order_no ASC NULLS LAST, c.id ASC
+    `,
+    { type: QueryTypes.SELECT }
+  );
+
+  const subcontrolsEu = await sequelize.query<FrameworkCatalogEntry>(
+    `
+    SELECT s.id,
+           ('Subcontrol ' || COALESCE(s.order_no::text, s.id::text)) AS code,
+           s.title,
+           s.description
+      FROM subcontrols_struct_eu s
+     ORDER BY s.control_id ASC NULLS LAST, s.order_no ASC NULLS LAST, s.id ASC
+    `,
+    { type: QueryTypes.SELECT }
+  );
+
+  const subclausesIso = await sequelize.query<FrameworkCatalogEntry>(
+    `
+    SELECT id, subclause_id AS code, title, description
+      FROM subclauses_struct_iso
+     ORDER BY order_no ASC NULLS LAST, id ASC
+    `,
+    { type: QueryTypes.SELECT }
+  );
+
+  const annexCategoriesIso = await sequelize.query<FrameworkCatalogEntry>(
+    `
+    SELECT id,
+           ('Annex A.' || COALESCE(sub_id::text, id::text)) AS code,
+           title,
+           description
+      FROM annexcategories_struct_iso
+     ORDER BY annex_id ASC NULLS LAST, order_no ASC NULLS LAST, id ASC
+    `,
+    { type: QueryTypes.SELECT }
+  );
+
+  const subclausesIso27001 = await sequelize.query<FrameworkCatalogEntry>(
+    `
+    SELECT id, subclause_id AS code, title, description
+      FROM subclauses_struct_iso27001
+     ORDER BY order_no ASC NULLS LAST, id ASC
+    `,
+    { type: QueryTypes.SELECT }
+  );
+
+  const annexControlsIso27001 = await sequelize.query<FrameworkCatalogEntry>(
+    `
+    SELECT id, control_id AS code, title, description
+      FROM annexcontrols_struct_iso27001
+     ORDER BY order_no ASC NULLS LAST, id ASC
+    `,
+    { type: QueryTypes.SELECT }
+  );
+
+  const subcategoriesNist = await sequelize.query<FrameworkCatalogEntry>(
+    `
+    SELECT id,
+           (function || '-' || subcategory_id::text) AS code,
+           COALESCE(description, (function || '-' || subcategory_id::text)) AS title,
+           description
+      FROM nist_ai_rmf_subcategories_struct
+     ORDER BY function ASC, subcategory_id ASC, id ASC
+    `,
+    { type: QueryTypes.SELECT }
+  );
+
+  return {
+    control_eu: controlsEu,
+    subcontrol_eu: subcontrolsEu,
+    subclause_struct_iso: subclausesIso,
+    annex_category_iso: annexCategoriesIso,
+    iso27001_subclause: subclausesIso27001,
+    iso27001_annex_category: annexControlsIso27001,
+    subcategory_nist: subcategoriesNist,
+  };
+};
+
 export const bulkUpdateMasterControlsQuery = async (
   ids: number[],
   patch: Partial<Pick<IMasterControl, "status" | "owner" | "due_date">>,

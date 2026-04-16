@@ -44,6 +44,7 @@ import {
   deleteMappingQuery,
   deleteMasterControlQuery,
   getAllMasterControlsQuery,
+  getFrameworkCatalogQuery,
   getMappingsForMasterQuery,
   getMasterControlByIdQuery,
   updateMasterControlQuery,
@@ -549,6 +550,50 @@ export async function bulkUpdateMasterControls(
       },
     })
   );
+}
+
+// ---------- Framework Catalog ----------
+
+/**
+ * GET /master-controls/framework-catalog — returns the full list of struct
+ * rows for every framework_entity_type so the Mappings tab picker can render
+ * real requirement titles instead of asking the user for raw numeric ids.
+ * Struct tables are framework metadata (not tenant-scoped).
+ */
+export async function getFrameworkCatalog(
+  req: Request,
+  res: Response
+): Promise<any> {
+  logProcessing({
+    description: "starting getFrameworkCatalog",
+    functionName: "getFrameworkCatalog",
+    fileName: FILE,
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+  try {
+    const catalog = await getFrameworkCatalogQuery();
+    await logSuccess({
+      eventType: "Read",
+      description: "Retrieved framework catalog",
+      functionName: "getFrameworkCatalog",
+      fileName: FILE,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](catalog));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to retrieve framework catalog",
+      functionName: "getFrameworkCatalog",
+      fileName: FILE,
+      error: error as Error,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
 }
 
 // ---------- Recommended Mappings Import ----------

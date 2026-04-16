@@ -17,6 +17,7 @@ import {
   deleteMasterControlMapping,
   exportMasterControlsCsv,
   getAllMasterControls,
+  getFrameworkCatalog,
   getMasterControlById,
   getMasterControlMappings,
   getMasterControlPropagationPreview,
@@ -29,6 +30,7 @@ const router = express.Router();
 // Literal segments — defined BEFORE "/:id" so they don't get matched as ids.
 router.patch("/bulk", authenticateJWT, bulkUpdateMasterControls);
 router.get("/export", authenticateJWT, exportMasterControlsCsv);
+router.get("/framework-catalog", authenticateJWT, getFrameworkCatalog);
 router.post("/seed-recommended", authenticateJWT, importRecommendedMappings);
 router.delete("/mappings/:mappingId", authenticateJWT, deleteMasterControlMapping);
 router.get("/:id/mappings", authenticateJWT, getMasterControlMappings);
