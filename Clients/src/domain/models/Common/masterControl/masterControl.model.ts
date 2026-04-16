@@ -147,6 +147,13 @@ export class MasterControlModel {
     return this.mappings.filter((m) => m.framework === framework).length;
   }
 
+  getMappingsByFramework(
+    framework: Framework
+  ): MasterControlFrameworkMapping[] {
+    if (!this.mappings) return [];
+    return this.mappings.filter((m) => m.framework === framework);
+  }
+
   getFormattedDueDate(): string {
     if (!this.due_date) return "—";
     const d = new Date(this.due_date);

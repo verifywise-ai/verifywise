@@ -5,9 +5,9 @@
  * Columns: Title • Status • Owner • EU AI Act • ISO 42001 • ISO 27001 •
  * NIST AI RMF • Due date • Actions.
  *
- * The four framework cells show a simple mapping count today. T-037 swaps
- * the count for the `FrameworkCell` chip cluster that lists mapped
- * requirement IDs.
+ * The four framework cells render a `FrameworkCell` chip cluster listing
+ * mapped requirement codes (with a "+N" overflow chip for long mapping
+ * lists).
  *
  * Row click → opens the master control drawer (wired in T-029).
  */
@@ -29,11 +29,11 @@ import {
 } from "@mui/material";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import type {
-  Framework,
   MasterControlModel,
   MasterControlStatus,
 } from "../../../../domain/models/Common/masterControl/masterControl.model";
 import { singleTheme } from "../../../themes";
+import FrameworkCell from "./FrameworkCell";
 
 // ---------- Column definitions ----------
 
@@ -232,9 +232,6 @@ export function ControlsMatrix({
     setPage(0);
   };
 
-  const getMappingCount = (row: MasterControlModel, framework: Framework) =>
-    row.getMappingCountByFramework(framework);
-
   // ---------- Render ----------
 
   return (
@@ -386,16 +383,24 @@ export function ControlsMatrix({
                   {row.owner != null ? `#${row.owner}` : "Unassigned"}
                 </TableCell>
                 <TableCell sx={cellStyle}>
-                  {getMappingCount(row, "eu_ai_act")}
+                  <FrameworkCell
+                    mappings={row.getMappingsByFramework("eu_ai_act")}
+                  />
                 </TableCell>
                 <TableCell sx={cellStyle}>
-                  {getMappingCount(row, "iso_42001")}
+                  <FrameworkCell
+                    mappings={row.getMappingsByFramework("iso_42001")}
+                  />
                 </TableCell>
                 <TableCell sx={cellStyle}>
-                  {getMappingCount(row, "iso_27001")}
+                  <FrameworkCell
+                    mappings={row.getMappingsByFramework("iso_27001")}
+                  />
                 </TableCell>
                 <TableCell sx={cellStyle}>
-                  {getMappingCount(row, "nist_ai_rmf")}
+                  <FrameworkCell
+                    mappings={row.getMappingsByFramework("nist_ai_rmf")}
+                  />
                 </TableCell>
                 <TableCell
                   sx={{
