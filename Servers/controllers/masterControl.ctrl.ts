@@ -402,6 +402,170 @@ export async function updateMasterControl(
   }
 }
 
+// ---------- Bulk Update ----------
+
+interface BulkUpdateRowResult {
+  id: number;
+  success: boolean;
+  master?: any;
+  propagation?: PropagationResult[];
+  error?: string;
+}
+
+/**
+ * PATCH /master-controls/bulk — apply the same patch to every listed master.
+ *
+ * Each master is updated inside its own transaction so a failure on one row
+ * (validation, demo-row rejection, propagation error) does not roll back the
+ * rows that already succeeded. Returns a per-row result array plus a summary.
+ */
+export async function bulkUpdateMasterControls(
+  req: Request,
+  res: Response
+): Promise<any> {
+  const body = req.body ?? {};
+  const ids: number[] = Array.isArray(body.ids) ? body.ids : [];
+  const patch = (body.patch ?? {}) as Record<string, unknown>;
+
+  logProcessing({
+    description: `starting bulkUpdateMasterControls for ${ids.length} ids`,
+    functionName: "bulkUpdateMasterControls",
+    fileName: FILE,
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+
+  if (!ids.length) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]("ids must be a non-empty array"));
+  }
+  if (!ids.every((id) => Number.isFinite(id) && id > 0)) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]("ids must all be positive integers"));
+  }
+  if (!patch || typeof patch !== "object" || Object.keys(patch).length === 0) {
+    return res.status(400).json(STATUS_CODE[400]("patch body is required"));
+  }
+
+  const results: BulkUpdateRowResult[] = [];
+
+  for (const id of ids) {
+    const transaction = await sequelize.transaction();
+    try {
+      const existing = await getMasterControlByIdQuery(id, req.organizationId!);
+      if (!existing) {
+        await transaction.rollback();
+        results.push({ id, success: false, error: "Not found" });
+        continue;
+      }
+
+      const instance = new MasterControlModel(existing);
+      instance.canBeModified();
+
+      const changes = await trackEntityChanges(
+        "master_control",
+        instance,
+        patch
+      );
+
+      await instance.updateMasterControl(patch);
+      await instance.validateMasterControlData();
+
+      const updated = await updateMasterControlQuery(
+        id,
+        {
+          title: patch.title as string | undefined,
+          description: patch.description as string | null | undefined,
+          status: patch.status as any,
+          risk_review: patch.risk_review as any,
+          owner: patch.owner as number | null | undefined,
+          reviewer: patch.reviewer as number | null | undefined,
+          approver: patch.approver as number | null | undefined,
+          due_date: patch.due_date as string | null | undefined,
+          implementation_details: patch.implementation_details as
+            | string
+            | null
+            | undefined,
+        },
+        req.organizationId!,
+        transaction
+      );
+
+      const propagationPayload: Partial<PropagationPayload> = {};
+      const trackableFields: (keyof PropagationPayload)[] = [
+        "status",
+        "owner",
+        "reviewer",
+        "approver",
+        "due_date",
+        "implementation_details",
+      ];
+      for (const field of trackableFields) {
+        if (field in patch) {
+          const next = (patch as any)[field];
+          const prev = (existing as any)[field];
+          if (next !== prev) {
+            (propagationPayload as any)[field] = next;
+          }
+        }
+      }
+
+      let propagation: PropagationResult[] = [];
+      if (hasPropagatableChanges(propagationPayload)) {
+        propagation = await propagateMasterControlUpdate(
+          id,
+          req.organizationId!,
+          propagationPayload,
+          transaction
+        );
+      }
+
+      if (req.userId && changes.length > 0) {
+        await recordMultipleFieldChanges(
+          "master_control",
+          id,
+          req.userId,
+          req.organizationId!,
+          changes,
+          transaction
+        );
+      }
+
+      await transaction.commit();
+      results.push({ id, success: true, master: updated, propagation });
+    } catch (error) {
+      await transaction.rollback();
+      const message = (error as Error).message;
+      results.push({ id, success: false, error: message });
+    }
+  }
+
+  const updatedCount = results.filter((r) => r.success).length;
+  const failedCount = results.length - updatedCount;
+
+  await logSuccess({
+    eventType: "Update",
+    description: `Bulk update: ${updatedCount}/${results.length} succeeded`,
+    functionName: "bulkUpdateMasterControls",
+    fileName: FILE,
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+
+  return res.status(200).json(
+    STATUS_CODE[200]({
+      results,
+      summary: {
+        total: results.length,
+        updated: updatedCount,
+        failed: failedCount,
+      },
+    })
+  );
+}
+
 // ---------- Propagation Preview ----------
 
 export async function getMasterControlPropagationPreview(

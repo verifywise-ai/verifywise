@@ -11,6 +11,7 @@ import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
 import {
   addMasterControlMapping,
+  bulkUpdateMasterControls,
   createMasterControl,
   deleteMasterControl,
   deleteMasterControlMapping,
@@ -23,7 +24,8 @@ import {
 
 const router = express.Router();
 
-// Mappings — defined BEFORE "/:id" so the literal "mappings" segment wins.
+// Literal segments — defined BEFORE "/:id" so they don't get matched as ids.
+router.patch("/bulk", authenticateJWT, bulkUpdateMasterControls);
 router.delete("/mappings/:mappingId", authenticateJWT, deleteMasterControlMapping);
 router.get("/:id/mappings", authenticateJWT, getMasterControlMappings);
 router.post("/:id/mappings", authenticateJWT, addMasterControlMapping);
