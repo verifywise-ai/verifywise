@@ -104,6 +104,20 @@ function formatDueDate(iso?: string | null): string {
   });
 }
 
+/**
+ * A master control is overdue when it has a due date in the past AND the
+ * work is not yet `Done`. Used to flag the due-date cell with red copy.
+ */
+function isOverdue(row: MasterControlModel): boolean {
+  if (!row.due_date || row.status === "Done") return false;
+  const d = new Date(row.due_date);
+  if (Number.isNaN(d.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime() < today.getTime();
+}
+
 // ---------- Component ----------
 
 interface ControlsMatrixProps {
@@ -256,7 +270,16 @@ export function ControlsMatrix({
                 sx={singleTheme.tableStyles.primary.body.row}
                 onClick={() => onRowClick?.(row)}
               >
-                <TableCell sx={{ ...cellStyle, fontWeight: 500 }}>
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    fontWeight: 500,
+                    maxWidth: 320,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                  title={row.title}
+                >
                   {row.title}
                 </TableCell>
                 <TableCell sx={cellStyle}>
@@ -271,8 +294,14 @@ export function ControlsMatrix({
                     }}
                   />
                 </TableCell>
-                <TableCell sx={cellStyle}>
-                  {row.owner != null ? `#${row.owner}` : "—"}
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    color: row.owner != null ? "inherit" : "text.disabled",
+                    fontStyle: row.owner != null ? "normal" : "italic",
+                  }}
+                >
+                  {row.owner != null ? `#${row.owner}` : "Unassigned"}
                 </TableCell>
                 <TableCell sx={cellStyle}>
                   {getMappingCount(row, "eu_ai_act")}
@@ -286,8 +315,19 @@ export function ControlsMatrix({
                 <TableCell sx={cellStyle}>
                   {getMappingCount(row, "nist_ai_rmf")}
                 </TableCell>
-                <TableCell sx={cellStyle}>
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    color: isOverdue(row) ? "#B42318" : "inherit",
+                    fontWeight: isOverdue(row) ? 500 : 400,
+                  }}
+                >
                   {formatDueDate(row.due_date)}
+                  {isOverdue(row) && (
+                    <Box component="span" sx={{ ml: 1, fontSize: 11 }}>
+                      · Overdue
+                    </Box>
+                  )}
                 </TableCell>
               </TableRow>
             );
