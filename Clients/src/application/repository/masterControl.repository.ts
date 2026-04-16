@@ -147,6 +147,20 @@ export async function bulkUpdateMasterControls({
   return (response.data as any).data ?? response.data;
 }
 
+export interface SeedImportResult {
+  mastersCreated: number;
+  mastersSkipped: number;
+  mappingsCreated: number;
+  mappingsSkipped: number;
+  skippedCodes: Array<{ code: string; reason: string }>;
+}
+
+export async function importRecommendedMasterControls(): Promise<SeedImportResult> {
+  const response = await apiServices.post("/master-controls/seed-recommended", {});
+  // apiServices.post returns { data: { message, data: SeedImportResult } }
+  return (response.data as any).data ?? response.data;
+}
+
 export interface MasterControlsCsvExport {
   blob: Blob;
   filename: string;

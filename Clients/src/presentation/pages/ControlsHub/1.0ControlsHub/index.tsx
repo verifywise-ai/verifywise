@@ -15,11 +15,15 @@
 
 import { useCallback, useState } from "react";
 import { Box, Stack, Typography, Alert as MuiAlert } from "@mui/material";
-import { Plus, Library, Download } from "lucide-react";
+import { Plus, Library, Download, Sparkles } from "lucide-react";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import CustomizableSkeleton from "../../../components/Skeletons";
-import { useMasterControls } from "../../../../application/hooks/useMasterControls";
+import {
+  useImportRecommendedMasterControls,
+  useMasterControls,
+} from "../../../../application/hooks/useMasterControls";
+import type { SeedImportResult } from "../../../../application/repository/masterControl.repository";
 import { ControlsMatrix } from "./ControlsMatrix";
 import MasterControlDrawer from "../components/MasterControlDrawer";
 import BulkEditBar from "../components/BulkEditBar";
@@ -113,7 +117,10 @@ export default function ControlsHub() {
           <CustomizableSkeleton variant="rectangular" height={48} />
         </Stack>
       ) : isEmpty ? (
-        <EmptyState onCreate={() => setIsCreateOpen(true)} />
+        <EmptyState
+          onCreate={() => setIsCreateOpen(true)}
+          onImported={refetch}
+        />
       ) : (
         <>
           <ControlsMatrix
@@ -148,7 +155,33 @@ export default function ControlsHub() {
 
 // ---------- Empty state ----------
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
+function EmptyState({
+  onCreate,
+  onImported,
+}: {
+  onCreate: () => void;
+  onImported: () => void;
+}) {
+  const importSeeds = useImportRecommendedMasterControls();
+  const [summary, setSummary] = useState<SeedImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const handleImport = async () => {
+    setImportError(null);
+    setSummary(null);
+    try {
+      const result = await importSeeds.mutateAsync();
+      setSummary(result);
+      onImported();
+    } catch (err) {
+      setImportError(
+        err instanceof Error
+          ? err.message
+          : "Failed to import recommended mappings."
+      );
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -169,17 +202,57 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         sx={{ color: "text.secondary", mb: 3, maxWidth: 520, mx: "auto" }}
       >
         Create a master control to unify requirements across frameworks, or
-        import the recommended mappings to bootstrap 25 common controls
-        already wired to EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF.
+        import the recommended mappings to bootstrap common controls already
+        wired to EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF.
       </Typography>
-      <Stack direction="row" gap={2} justifyContent="center">
+      <Stack direction="row" gap={2} justifyContent="center" flexWrap="wrap">
+        <CustomizableButton
+          variant="outlined"
+          text={
+            importSeeds.isPending ? "Importing…" : "Import recommended mappings"
+          }
+          icon={<Sparkles size={16} strokeWidth={2} />}
+          onClick={handleImport}
+          isDisabled={importSeeds.isPending}
+        />
         <CustomizableButton
           variant="contained"
           text="New master control"
           icon={<Plus size={16} strokeWidth={2} />}
           onClick={onCreate}
+          isDisabled={importSeeds.isPending}
         />
       </Stack>
+
+      {importError && (
+        <MuiAlert
+          severity="error"
+          sx={{ marginTop: 3, textAlign: "left", maxWidth: 560, mx: "auto" }}
+        >
+          {importError}
+        </MuiAlert>
+      )}
+
+      {summary && !importError && (
+        <MuiAlert
+          severity={summary.mappingsSkipped > 0 ? "info" : "success"}
+          sx={{ marginTop: 3, textAlign: "left", maxWidth: 560, mx: "auto" }}
+        >
+          Imported {summary.mastersCreated} master control
+          {summary.mastersCreated === 1 ? "" : "s"} and{" "}
+          {summary.mappingsCreated} framework mapping
+          {summary.mappingsCreated === 1 ? "" : "s"}.
+          {summary.mappingsSkipped > 0 && (
+            <>
+              {" "}
+              {summary.mappingsSkipped} mapping
+              {summary.mappingsSkipped === 1 ? "" : "s"} skipped (framework
+              entity codes that could not be resolved). You can wire them
+              manually from the Mappings tab.
+            </>
+          )}
+        </MuiAlert>
+      )}
     </Box>
   );
 }

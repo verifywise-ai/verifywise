@@ -32,6 +32,7 @@ import {
   getMasterControlById,
   getMasterControlMappings,
   getMasterControlPropagationPreview,
+  importRecommendedMasterControls,
   updateMasterControl,
   type BulkUpdateResponse,
   type MasterControlBulkUpdatePayload,
@@ -39,6 +40,7 @@ import {
   type MasterControlMappingCreatePayload,
   type MasterControlUpdatePayload,
   type PropagationPreviewPayload,
+  type SeedImportResult,
 } from "../repository/masterControl.repository";
 import {
   MasterControlModel,
@@ -217,6 +219,18 @@ export function useMasterControlMutations(): MasterControlMutations {
     removeMapping,
     invalidateAll,
   };
+}
+
+// ---------- Seed recommended mappings ----------
+
+export function useImportRecommendedMasterControls() {
+  const queryClient = useQueryClient();
+  return useMutation<SeedImportResult, Error, void>({
+    mutationFn: () => importRecommendedMasterControls(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterControlKeys.all });
+    },
+  });
 }
 
 // ---------- Propagation preview ----------
