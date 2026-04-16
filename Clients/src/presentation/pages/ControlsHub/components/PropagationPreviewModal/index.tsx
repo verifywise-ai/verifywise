@@ -38,6 +38,25 @@ const FRAMEWORK_LABELS: Record<Framework, string> = {
   nist_ai_rmf: "NIST AI RMF",
 };
 
+const FIELD_LABELS: Record<keyof PropagationPreviewPayload, string> = {
+  status: "Status",
+  owner: "Owner",
+  reviewer: "Reviewer",
+  approver: "Approver",
+  due_date: "Due date",
+  implementation_details: "Implementation details",
+};
+
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  control_eu: "Control",
+  subcontrol_eu: "Sub-control",
+  subclause_struct_iso: "Sub-clause",
+  annex_category_iso: "Annex category",
+  iso27001_subclause: "Sub-clause",
+  iso27001_annex_category: "Annex control",
+  subcategory_nist: "Sub-category",
+};
+
 interface PropagationPreviewModalProps {
   open: boolean;
   onClose: () => void;
@@ -146,27 +165,39 @@ export default function PropagationPreviewModal({
             what would be updated.
           </Alert>
         ) : (
-          <Stack spacing={2}>
-            <Typography fontSize={13} color={theme.palette.text.secondary}>
-              Saving will update the following fields on every mapped
-              framework row:
-            </Typography>
-            <Stack direction="row" gap={1} flexWrap="wrap">
-              {fieldsInPatch.map((field) => (
-                <Box
-                  key={field}
-                  sx={{
-                    padding: "3px 10px",
-                    borderRadius: 1,
-                    backgroundColor: theme.palette.background.alt,
-                    fontSize: 12,
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {field}
-                </Box>
-              ))}
-            </Stack>
+          <Stack spacing={2.5}>
+            <Box>
+              <Typography
+                fontSize={12}
+                fontWeight={600}
+                sx={{
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  color: theme.palette.text.tertiary,
+                  marginBottom: 1,
+                }}
+              >
+                Fields that will propagate
+              </Typography>
+              <Stack direction="row" gap={0.75} flexWrap="wrap">
+                {fieldsInPatch.map((field) => (
+                  <Box
+                    key={field}
+                    sx={{
+                      padding: "3px 10px",
+                      borderRadius: 1,
+                      backgroundColor: theme.palette.background.accent,
+                      color: theme.palette.primary.main,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      border: `1px solid ${theme.palette.border.light}`,
+                    }}
+                  >
+                    {FIELD_LABELS[field] ?? field}
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
 
             {preview.isPending && !results ? (
               <Stack alignItems="center" sx={{ padding: 3 }}>
@@ -179,7 +210,13 @@ export default function PropagationPreviewModal({
             ) : results ? (
               <>
                 <Alert
-                  severity={active.length > 0 ? "info" : "warning"}
+                  severity={
+                    active.length > 0
+                      ? "info"
+                      : skipped.length > 0
+                      ? "warning"
+                      : "info"
+                  }
                   sx={{ fontSize: 13 }}
                 >
                   {active.length === 0 && skipped.length === 0 ? (
@@ -207,80 +244,116 @@ export default function PropagationPreviewModal({
                 </Alert>
 
                 {results.length > 0 && (
-                  <Stack
-                    divider={
-                      <Box
-                        sx={{
-                          height: "1px",
-                          backgroundColor: theme.palette.border.light,
-                        }}
-                      />
-                    }
-                    sx={{
-                      border: `1px solid ${theme.palette.border.light}`,
-                      borderRadius: 1,
-                      maxHeight: 240,
-                      overflowY: "auto",
-                    }}
-                  >
-                    {results.map((row) => (
-                      <Stack
-                        key={row.mappingId}
-                        direction="row"
-                        alignItems="flex-start"
-                        justifyContent="space-between"
-                        spacing={2}
-                        sx={{ padding: "10px 14px" }}
-                      >
-                        <Box>
-                          <Typography
-                            fontSize={11}
-                            color={theme.palette.text.tertiary}
-                          >
-                            {FRAMEWORK_LABELS[row.framework] ?? row.framework}
-                          </Typography>
-                          <Typography
-                            fontSize={12}
-                            fontWeight={500}
-                            sx={{ fontFamily: "monospace" }}
-                          >
-                            {row.framework_entity_type} #
-                            {row.framework_entity_id}
-                          </Typography>
-                          {row.skipped && row.reason && (
-                            <Stack
-                              direction="row"
-                              gap={0.5}
-                              alignItems="center"
-                              sx={{ marginTop: 0.5 }}
+                  <Box>
+                    <Typography
+                      fontSize={12}
+                      fontWeight={600}
+                      sx={{
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                        color: theme.palette.text.tertiary,
+                        marginBottom: 1,
+                      }}
+                    >
+                      Affected framework rows
+                    </Typography>
+                    <Stack
+                      divider={
+                        <Box
+                          sx={{
+                            height: "1px",
+                            backgroundColor: theme.palette.border.light,
+                          }}
+                        />
+                      }
+                      sx={{
+                        border: `1px solid ${theme.palette.border.light}`,
+                        borderRadius: 1,
+                        maxHeight: 240,
+                        overflowY: "auto",
+                      }}
+                    >
+                      {results.map((row) => (
+                        <Stack
+                          key={row.mappingId}
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          spacing={2}
+                          sx={{ padding: "10px 14px" }}
+                        >
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography
+                              fontSize={11}
+                              fontWeight={600}
+                              sx={{
+                                textTransform: "uppercase",
+                                letterSpacing: "0.04em",
+                                color: theme.palette.text.tertiary,
+                              }}
                             >
-                              <AlertTriangle
-                                size={12}
-                                color={theme.palette.warning.main}
-                              />
-                              <Typography
-                                fontSize={11}
-                                color={theme.palette.warning.main}
+                              {FRAMEWORK_LABELS[row.framework] ??
+                                row.framework}
+                            </Typography>
+                            <Typography fontSize={13} fontWeight={500}>
+                              {ENTITY_TYPE_LABELS[row.framework_entity_type] ??
+                                row.framework_entity_type}{" "}
+                              #{row.framework_entity_id}
+                            </Typography>
+                            {row.skipped && row.reason && (
+                              <Stack
+                                direction="row"
+                                gap={0.5}
+                                alignItems="center"
+                                sx={{ marginTop: 0.5 }}
                               >
-                                {row.reason}
-                              </Typography>
-                            </Stack>
-                          )}
-                        </Box>
-                        <Box sx={{ textAlign: "right" }}>
-                          <Typography
-                            fontSize={11}
-                            color={theme.palette.text.tertiary}
+                                <AlertTriangle
+                                  size={12}
+                                  color={theme.palette.warning.text}
+                                />
+                                <Typography
+                                  fontSize={11}
+                                  color={theme.palette.warning.text}
+                                >
+                                  {row.reason}
+                                </Typography>
+                              </Stack>
+                            )}
+                          </Box>
+                          <Box
+                            sx={{
+                              textAlign: "right",
+                              minWidth: 72,
+                              flexShrink: 0,
+                            }}
                           >
-                            {row.skipped ? "Skipped" : "Rows"}
-                          </Typography>
-                          <Typography fontSize={13} fontWeight={600}>
-                            {row.skipped ? "—" : row.rowsUpdated}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    ))}
-                  </Stack>
+                            <Typography
+                              fontSize={10}
+                              fontWeight={600}
+                              sx={{
+                                textTransform: "uppercase",
+                                letterSpacing: "0.04em",
+                                color: theme.palette.text.tertiary,
+                              }}
+                            >
+                              {row.skipped ? "Skipped" : "Rows"}
+                            </Typography>
+                            <Typography
+                              fontSize={16}
+                              fontWeight={600}
+                              color={
+                                row.skipped
+                                  ? theme.palette.text.tertiary
+                                  : theme.palette.text.primary
+                              }
+                            >
+                              {row.skipped ? "—" : row.rowsUpdated}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  </Box>
                 )}
               </>
             ) : null}
