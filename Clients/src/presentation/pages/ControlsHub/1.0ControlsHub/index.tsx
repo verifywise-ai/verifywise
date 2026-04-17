@@ -14,11 +14,13 @@
  */
 
 import { useCallback, useState } from "react";
-import { Box, Stack, Typography, Alert as MuiAlert } from "@mui/material";
-import { Plus, Library, Download, Sparkles } from "lucide-react";
+import { Box, Stack, Alert as MuiAlert } from "@mui/material";
+import { Plus, Library, Download, Sparkles, Link2, GitBranchPlus, ShieldCheck } from "lucide-react";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import CustomizableSkeleton from "../../../components/Skeletons";
+import { EmptyState } from "../../../components/EmptyState";
+import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import {
   useImportRecommendedMasterControls,
   useMasterControls,
@@ -118,7 +120,7 @@ export default function ControlsHub() {
           <CustomizableSkeleton variant="rectangular" height={48} />
         </Stack>
       ) : isEmpty ? (
-        <EmptyState
+        <ControlsEmptyState
           onCreate={() => setIsCreateOpen(true)}
           onImported={refetch}
         />
@@ -165,7 +167,7 @@ export default function ControlsHub() {
 
 // ---------- Empty state ----------
 
-function EmptyState({
+function ControlsEmptyState({
   onCreate,
   onImported,
 }: {
@@ -193,29 +195,27 @@ function EmptyState({
   };
 
   return (
-    <Box
-      sx={{
-        border: (t) => `1px dashed ${t.palette.divider}`,
-        borderRadius: 2,
-        p: 8,
-        textAlign: "center",
-      }}
+    <EmptyState
+      icon={Library}
+      message="No master controls yet. Create one to unify requirements across frameworks, or import recommended mappings to get started."
+      showBorder
     >
-      <Box sx={{ display: "inline-flex", mb: 2, color: "text.secondary" }}>
-        <Library size={48} strokeWidth={1.5} />
-      </Box>
-      <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-        No master controls yet
-      </Typography>
-      <Typography
-        variant="body2"
-        sx={{ color: "text.secondary", mb: 3, maxWidth: 520, mx: "auto" }}
-      >
-        Create a master control to unify requirements across frameworks, or
-        import the recommended mappings to bootstrap common controls already
-        wired to EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF.
-      </Typography>
-      <Stack direction="row" gap={2} justifyContent="center" flexWrap="wrap">
+      <EmptyStateTip
+        icon={Link2}
+        title="Map across frameworks"
+        description="Each master control can be linked to requirements in EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF. Changes to status, owner, and due date propagate automatically."
+      />
+      <EmptyStateTip
+        icon={GitBranchPlus}
+        title="Import recommended mappings"
+        description="Bootstrap 25 common controls already wired to cross-framework requirements. You can customise, add, or remove mappings afterwards."
+      />
+      <EmptyStateTip
+        icon={ShieldCheck}
+        title="Track evidence and history"
+        description="Attach evidence files to each control and review a full change history so your audit trail is always complete."
+      />
+      <Box sx={{ display: "flex", gap: "8px", mt: "16px" }}>
         <CustomizableButton
           variant="outlined"
           text={
@@ -232,12 +232,12 @@ function EmptyState({
           onClick={onCreate}
           isDisabled={importSeeds.isPending}
         />
-      </Stack>
+      </Box>
 
       {importError && (
         <MuiAlert
           severity="error"
-          sx={{ marginTop: 3, textAlign: "left", maxWidth: 560, mx: "auto" }}
+          sx={{ marginTop: 2, textAlign: "left" }}
         >
           {importError}
         </MuiAlert>
@@ -246,7 +246,7 @@ function EmptyState({
       {summary && !importError && (
         <MuiAlert
           severity={summary.mappingsSkipped > 0 ? "info" : "success"}
-          sx={{ marginTop: 3, textAlign: "left", maxWidth: 560, mx: "auto" }}
+          sx={{ marginTop: 2, textAlign: "left" }}
         >
           Imported {summary.mastersCreated} master control
           {summary.mastersCreated === 1 ? "" : "s"} and{" "}
@@ -263,6 +263,6 @@ function EmptyState({
           )}
         </MuiAlert>
       )}
-    </Box>
+    </EmptyState>
   );
 }
