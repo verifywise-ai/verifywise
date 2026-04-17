@@ -1,6 +1,6 @@
 # Clients — Frontend Development Guide
 
-> **Last Updated:** 2026-04-16
+> **Last Updated:** 2026-04-17
 
 ---
 

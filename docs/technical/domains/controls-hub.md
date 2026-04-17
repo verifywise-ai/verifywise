@@ -39,6 +39,9 @@ erDiagram
     varchar framework
     varchar framework_entity_type
     int framework_entity_id
+    text rationale
+    varchar coverage
+    varchar confidence
   }
 
   master_control_change_history {
@@ -76,6 +79,14 @@ Junction table linking a master control to a concrete framework requirement row.
 
 Unique constraint `(master_control_id, framework, framework_entity_type, framework_entity_id)` prevents duplicate mappings.
 
+Additional metadata columns on each mapping:
+
+| Column | Type | Default | Description |
+|--------|------|---------|-------------|
+| `rationale` | TEXT | NULL | One-sentence explanation of why this control satisfies the requirement |
+| `coverage` | VARCHAR(10) | `'full'` | `full` or `partial` — whether the control fully covers the requirement |
+| `confidence` | VARCHAR(20) | `'direct_match'` | `direct_match`, `strong_analogy`, or `partial_overlap` — transparency about mapping quality |
+
 ### `master_control_change_history`
 
 Mirrors the shape of every other `*_change_history` table in the codebase so the generic `changeHistory.base.utils.ts` utilities apply without branching. Every create / update / delete / mapping event is recorded against the `master_control` entity type.
@@ -95,7 +106,7 @@ All routes require JWT auth. Multi-tenant scoping is enforced in the controller 
 | GET    | `/api/master-controls/export` | Stream CSV of all master controls |
 | POST   | `/api/master-controls/seed-recommended` | Import recommended seed mappings |
 | GET    | `/api/master-controls/:id/mappings` | List mappings for a master control |
-| POST   | `/api/master-controls/:id/mappings` | Add a framework mapping |
+| POST   | `/api/master-controls/:id/mappings` | Add a framework mapping (accepts rationale, coverage, confidence) |
 | DELETE | `/api/master-controls/mappings/:mappingId` | Remove a framework mapping |
 | POST   | `/api/master-controls/:id/propagation-preview` | Preview which framework rows a patch would touch |
 | GET    | `/api/master-control-change-history/:id` | Change-history timeline for a master control |
@@ -142,6 +153,8 @@ The generic `trackEntityChanges` / `recordMultipleFieldChanges` helpers work wit
 
 Default mappings for common cross-framework overlaps live in `Servers/structures/master-controls-seed/mappings.seed.ts`. The `POST /api/master-controls/seed-recommended` endpoint inserts one master control per seed entry and attaches its mappings in a single transaction. Rows are created with `is_demo = false` so they can be edited post-import.
 
+Each seed mapping includes a `confidence` value (`direct_match`, `strong_analogy`, or `partial_overlap`) reflecting how closely the mapping matches the requirement. These values are stored in the database and surfaced in the Mappings tab UI.
+
 The Controls Hub empty state surfaces an "Import recommended mappings" CTA that calls this endpoint.
 
 ## CSV Export
@@ -183,6 +196,7 @@ Data access goes through `Clients/src/application/repository/masterControl.repos
 
 - **One-way propagation only.** Edits made directly on a framework row (e.g. in the EU AI Act compliance tracker) do not flow back to the master. Two-way sync is out of scope for v1 — the assumption is that Controls Hub is the authoritative surface going forward.
 - **Orphan mapping detection.** If a framework's struct data changes (seed rerun, ID renumbering), mappings stored by `framework_entity_id` can become stale. A nightly reconciliation job is tracked as future work.
-- **No bulk mapping UI.** Mappings are added one at a time via the drawer's Mappings tab. A multi-select picker across framework requirements is a natural follow-up.
+- **No bulk mapping UI.** Mappings are added one at a time via the drawer's Mappings tab. A guided mapping flow (keyword-matching requirement suggestions) is tracked as future work.
+- **No orphan detection UI.** Unmapped master controls and uncovered framework requirements are not automatically surfaced.
 - **Status translation is lossy.** A master moving from `In progress` → `Done` translates to framework-specific terminology via `FRAMEWORK_STATUS_TRANSLATIONS`; the reverse is not attempted.
 - **Evidence tab reuses file-links** — attached evidence lives on the master control, not on individual framework rows. This is intentional (single source of truth) but means framework-scoped auditors may need to navigate to the master to see the file.
