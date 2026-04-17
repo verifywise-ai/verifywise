@@ -2,10 +2,10 @@
  * FrameworkCell — compact chip cluster for a single framework column in the
  * Controls Hub matrix.
  *
- * Renders up to `maxVisible` chips showing the framework requirement codes
- * (or a synthesized `type #id` label when a code isn't available). When more
- * mappings exist, a trailing "+N" chip shows the remainder — hovering it
- * reveals the full list. An unmapped framework renders a dimmed em-dash so
+ * Renders up to `maxVisible` chips showing the framework requirement title
+ * (truncated) as the primary label with the code in a smaller monospace font
+ * inside the tooltip. Coverage is indicated by chip border color: default for
+ * full, amber for partial. An unmapped framework renders a dimmed em-dash so
  * rows stay visually aligned.
  */
 
@@ -19,9 +19,24 @@ interface FrameworkCellProps {
   maxVisible?: number;
 }
 
-function labelForMapping(mapping: MasterControlFrameworkMapping): string {
+function chipLabel(mapping: MasterControlFrameworkMapping): string {
+  // Prefer the plain-language title, truncated
+  if (mapping.framework_entity_title) {
+    const title = mapping.framework_entity_title;
+    return title.length > 30 ? title.slice(0, 28) + "…" : title;
+  }
+  // Fallback to code
   if (mapping.framework_entity_code) return mapping.framework_entity_code;
   return `${mapping.framework_entity_type} #${mapping.framework_entity_id}`;
+}
+
+function tooltipLabel(mapping: MasterControlFrameworkMapping): string {
+  const code =
+    mapping.framework_entity_code ??
+    `${mapping.framework_entity_type} #${mapping.framework_entity_id}`;
+  const title = mapping.framework_entity_title;
+  if (title) return `${code} — ${title}`;
+  return code;
 }
 
 export default function FrameworkCell({
@@ -54,12 +69,12 @@ export default function FrameworkCell({
       }}
     >
       {visible.map((m, idx) => {
-        const label = labelForMapping(m);
-        const title = m.framework_entity_title ?? label;
+        const label = chipLabel(m);
+        const isPartial = m.coverage === "partial";
         return (
           <Tooltip
             key={m.id ?? `${m.framework_entity_type}-${m.framework_entity_id}-${idx}`}
-            title={title}
+            title={tooltipLabel(m)}
             arrow
             placement="top"
           >
@@ -67,12 +82,15 @@ export default function FrameworkCell({
               sx={{
                 padding: "2px 8px",
                 borderRadius: 1,
-                backgroundColor: theme.palette.background.alt,
-                border: `1px solid ${theme.palette.border.light}`,
+                backgroundColor: isPartial
+                  ? theme.palette.status.warning.bg
+                  : theme.palette.background.alt,
+                border: `1px solid ${isPartial
+                  ? theme.palette.status.warning.border
+                  : theme.palette.border.light}`,
                 fontSize: 11,
-                fontFamily: "monospace",
                 lineHeight: 1.4,
-                maxWidth: 140,
+                maxWidth: 180,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -98,9 +116,7 @@ export default function FrameworkCell({
                     `${m.framework_entity_type}-${m.framework_entity_id}-${idx}`
                   }
                 >
-                  {m.framework_entity_title
-                    ? `${labelForMapping(m)} — ${m.framework_entity_title}`
-                    : labelForMapping(m)}
+                  {tooltipLabel(m)}
                 </li>
               ))}
             </Box>
