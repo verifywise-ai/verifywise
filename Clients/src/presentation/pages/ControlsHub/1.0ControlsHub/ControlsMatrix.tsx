@@ -463,7 +463,7 @@ export function ControlsMatrix({
                 >
                   {formatDueDate(row.due_date)}
                   {isOverdue(row) && (
-                    <Box component="span" sx={{ ml: 1, fontSize: 11 }}>
+                    <Box component="span" sx={{ ml: 1, fontSize: 11 }} role="status" aria-label="Overdue">
                       · Overdue
                     </Box>
                   )}

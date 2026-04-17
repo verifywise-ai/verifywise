@@ -101,6 +101,7 @@ export default function ControlsHub() {
       {error ? (
         <MuiAlert
           severity="error"
+          role="alert"
           action={
             <CustomizableButton
               variant="text"
@@ -113,7 +114,7 @@ export default function ControlsHub() {
           {error instanceof Error ? error.message : "unknown error"}
         </MuiAlert>
       ) : isLoading ? (
-        <Stack gap={1}>
+        <Stack gap={1} aria-busy="true" aria-label="Loading master controls">
           <CustomizableSkeleton variant="rectangular" height={48} />
           <CustomizableSkeleton variant="rectangular" height={48} />
           <CustomizableSkeleton variant="rectangular" height={48} />
