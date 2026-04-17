@@ -32,6 +32,11 @@ vi.mock("../../../../application/hooks/useMasterControls", () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
+  useFrameworkCatalog: () => ({
+    data: null,
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 vi.mock("../../../../application/hooks/useUsers", () => ({
