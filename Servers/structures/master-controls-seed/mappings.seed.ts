@@ -24,6 +24,7 @@
 import type {
   Framework,
   FrameworkEntityType,
+  MappingConfidence,
 } from "../../domain.layer/interfaces/i.masterControlMapping";
 import type { MasterControlStatus } from "../../domain.layer/interfaces/i.masterControl";
 
@@ -42,6 +43,13 @@ export interface MasterControlSeedMapping {
    *   - "ISO 27001 Annex A.5.15"          (framework = iso_27001,  entity = iso27001_annex_category)
    */
   framework_code: string;
+  /**
+   * How closely this seed mapping matches the requirement.
+   * - direct_match: the control directly satisfies the requirement
+   * - strong_analogy: the control closely aligns but isn't an exact match
+   * - partial_overlap: the control only partially addresses the requirement
+   */
+  confidence?: MappingConfidence;
 }
 
 export interface MasterControlSeed {
@@ -58,11 +66,11 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
       "Establish, implement, document and maintain a continuous risk management process that identifies, evaluates, and mitigates risks of AI systems throughout their lifecycle.",
     status: "Waiting",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 9" },
-      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 6.1.2" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.5.2" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-1.1" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_subclause", framework_code: "ISO 27001 Clause 6.1.2" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 9", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 6.1.2", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.5.2", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-1.1", confidence: "strong_analogy" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_subclause", framework_code: "ISO 27001 Clause 6.1.2", confidence: "strong_analogy" },
     ],
   },
   {
@@ -70,10 +78,10 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Define and enforce rules for the collection, quality, labelling, retention, and use of data powering AI systems, covering bias detection and data-subject rights.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 10" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.7.3" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MAP-4.1" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.12" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 10", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.7.3", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MAP-4.1", confidence: "strong_analogy" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.12", confidence: "partial_overlap" },
     ],
   },
   {
@@ -81,10 +89,10 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Ensure only authorised individuals and services access AI systems, model artefacts, training data, and deployment infrastructure.",
     mappings: [
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.15" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.8.3" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.7.4" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-6.1" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.15", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.8.3", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.7.4", confidence: "strong_analogy" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-6.1", confidence: "strong_analogy" },
     ],
   },
   {
@@ -92,9 +100,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Design AI systems so natural persons can effectively oversee their operation, detect anomalies, and intervene or stop the system when needed.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 14" },
-      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 9.1" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-2.3" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 14", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 9.1", confidence: "strong_analogy" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-2.3", confidence: "strong_analogy" },
     ],
   },
   {
@@ -102,10 +110,10 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Provide clear, accessible information to users of AI systems about capabilities, limitations, intended purpose, and known risks.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 13" },
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 50" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.8.2" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-1.4" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 13", confidence: "direct_match" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 50", confidence: "strong_analogy" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.8.2", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-1.4", confidence: "strong_analogy" },
     ],
   },
   {
@@ -113,9 +121,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Produce and maintain technical documentation describing the design, development, testing, and deployment of high-risk AI systems.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 11" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.4" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MAP-3.1" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 11", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.4", confidence: "strong_analogy" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MAP-3.1", confidence: "partial_overlap" },
     ],
   },
   {
@@ -123,10 +131,10 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Automatically log events produced by AI systems so incidents can be reconstructed and post-market monitoring obligations met.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 12" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.8" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.8.15" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MEASURE-2.4" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 12", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.8", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.8.15", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MEASURE-2.4", confidence: "strong_analogy" },
     ],
   },
   {
@@ -134,9 +142,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Define and operate a post-market monitoring plan to proactively collect and analyse data about AI system performance once deployed.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 72" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.6" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MEASURE-2.4" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 72", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.6", confidence: "strong_analogy" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MEASURE-2.4", confidence: "strong_analogy" },
     ],
   },
   {
@@ -144,10 +152,10 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Detect, document, respond to, and — where required — notify authorities of serious incidents involving AI systems.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 73" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.24" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.25" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-4.1" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 73", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.24", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.25", confidence: "strong_analogy" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-4.1", confidence: "strong_analogy" },
     ],
   },
   {
@@ -155,10 +163,10 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Evaluate, onboard, and continuously monitor providers of AI components, datasets, models, and services to ensure contractual and regulatory alignment.",
     mappings: [
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.10.3" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.19" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.20" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-3.1" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.10.3", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.19", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.20", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-3.1", confidence: "strong_analogy" },
     ],
   },
   {
@@ -166,10 +174,10 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Publish and maintain an AI-specific policy aligned with organisational objectives, roles, and risk appetite.",
     mappings: [
-      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 5.2" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.2.2" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.1" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-1.2" },
+      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 5.2", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.2.2", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.1", confidence: "strong_analogy" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-1.2", confidence: "direct_match" },
     ],
   },
   {
@@ -177,10 +185,10 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Ensure staff, contractors, and affected parties have sufficient AI literacy — proportional to their role — to use AI systems responsibly.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 4" },
-      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 7.2" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.6.3" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-4.1" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 4", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 7.2", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.6.3", confidence: "strong_analogy" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-4.1", confidence: "strong_analogy" },
     ],
   },
   {
@@ -188,8 +196,8 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Conduct planned internal audits to verify conformance with the AI management system and identify opportunities for improvement.",
     mappings: [
-      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 9.2" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_subclause", framework_code: "ISO 27001 Clause 9.2" },
+      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 9.2", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_subclause", framework_code: "ISO 27001 Clause 9.2", confidence: "direct_match" },
     ],
   },
   {
@@ -197,8 +205,8 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Top management reviews the AI management system at planned intervals to ensure continuing suitability, adequacy, and effectiveness.",
     mappings: [
-      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 9.3" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_subclause", framework_code: "ISO 27001 Clause 9.3" },
+      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 9.3", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_subclause", framework_code: "ISO 27001 Clause 9.3", confidence: "direct_match" },
     ],
   },
   {
@@ -206,9 +214,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "React to non-conformities, analyse root causes, implement corrective actions, and continually improve the AI management system.",
     mappings: [
-      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 10.2" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_subclause", framework_code: "ISO 27001 Clause 10.1" },
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 20" },
+      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 10.2", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_subclause", framework_code: "ISO 27001 Clause 10.1", confidence: "direct_match" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 20", confidence: "strong_analogy" },
     ],
   },
   {
@@ -216,9 +224,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Classify AI systems by risk and intended purpose; perform impact assessments for high-risk or consequential systems.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 6" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.5.3" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MAP-1.1" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 6", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.5.3", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MAP-1.1", confidence: "direct_match" },
     ],
   },
   {
@@ -226,9 +234,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Design, test, and monitor AI systems for appropriate levels of accuracy, robustness to adversarial input, and cybersecurity throughout the lifecycle.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 15" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.2" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MEASURE-2.7" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 15", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.2", confidence: "strong_analogy" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MEASURE-2.7", confidence: "strong_analogy" },
     ],
   },
   {
@@ -236,9 +244,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Identify, measure, document, and mitigate potential bias in training data, models, and AI outcomes.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "subcontrol_eu", framework_code: "EU AI Act Article 10.3" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.7.2" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MEASURE-2.11" },
+      { framework: "eu_ai_act", framework_entity_type: "subcontrol_eu", framework_code: "EU AI Act Article 10.3", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.7.2", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MEASURE-2.11", confidence: "direct_match" },
     ],
   },
   {
@@ -246,8 +254,8 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Before placing a high-risk AI system on the market, carry out the conformity assessment procedures required by the applicable regulation.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 43" },
-      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 9.2" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 43", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "subclause_struct_iso", framework_code: "ISO 42001 Clause 9.2", confidence: "partial_overlap" },
     ],
   },
   {
@@ -255,8 +263,8 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Register high-risk AI systems in the EU database before placing them on the market or putting them into service.",
     mappings: [
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 49" },
-      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 71" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 49", confidence: "direct_match" },
+      { framework: "eu_ai_act", framework_entity_type: "control_eu", framework_code: "EU AI Act Article 71", confidence: "direct_match" },
     ],
   },
   {
@@ -264,8 +272,8 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Identify and manage information assets — including datasets, models, and infrastructure — associated with AI systems, with assigned owners and protection levels.",
     mappings: [
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.9" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.4.2" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.9", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.4.2", confidence: "strong_analogy" },
     ],
   },
   {
@@ -273,8 +281,8 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Protect data at rest and in transit — including model weights and inference payloads — using cryptographic controls aligned with organisational policy.",
     mappings: [
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.8.24" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-6.2" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.8.24", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-6.2", confidence: "partial_overlap" },
     ],
   },
   {
@@ -282,9 +290,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Plan, test, and control changes to AI systems, models, and supporting infrastructure to avoid unintended consequences.",
     mappings: [
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.8.32" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.5" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-2.2" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.8.32", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.6.2.5", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-2.2", confidence: "strong_analogy" },
     ],
   },
   {
@@ -292,9 +300,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Maintain recovery, redundancy, and backup capabilities so critical AI services can be restored within agreed objectives after disruption.",
     mappings: [
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.29" },
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.30" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-4.3" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.29", confidence: "direct_match" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.30", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST MANAGE-4.3", confidence: "strong_analogy" },
     ],
   },
   {
@@ -302,9 +310,9 @@ export const RECOMMENDED_MASTER_CONTROLS: MasterControlSeed[] = [
     description:
       "Process personal data used by AI systems in line with privacy principles, legal bases, and data subject rights.",
     mappings: [
-      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.34" },
-      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.7.5" },
-      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-1.6" },
+      { framework: "iso_27001", framework_entity_type: "iso27001_annex_category", framework_code: "ISO 27001 Annex A.5.34", confidence: "direct_match" },
+      { framework: "iso_42001", framework_entity_type: "annex_category_iso", framework_code: "ISO 42001 Annex A.7.5", confidence: "direct_match" },
+      { framework: "nist_ai_rmf", framework_entity_type: "subcategory_nist", framework_code: "NIST GOVERN-1.6", confidence: "strong_analogy" },
     ],
   },
 ];

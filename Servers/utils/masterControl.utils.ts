@@ -265,7 +265,7 @@ export const getMappingsForMasterQuery = async (
   const rows = await sequelize.query<IMasterControlFrameworkMapping>(
     `
     SELECT id, master_control_id, framework, framework_entity_type,
-           framework_entity_id, created_at
+           framework_entity_id, rationale, coverage, confidence, created_at
       FROM master_control_framework_mappings
      WHERE master_control_id = :masterControlId
        AND organization_id = :organizationId
@@ -287,9 +287,11 @@ export const createMappingQuery = async (
   const result = await sequelize.query(
     `
     INSERT INTO master_control_framework_mappings (
-      organization_id, master_control_id, framework, framework_entity_type, framework_entity_id
+      organization_id, master_control_id, framework, framework_entity_type, framework_entity_id,
+      rationale, coverage, confidence
     ) VALUES (
-      :organization_id, :master_control_id, :framework, :framework_entity_type, :framework_entity_id
+      :organization_id, :master_control_id, :framework, :framework_entity_type, :framework_entity_id,
+      :rationale, :coverage, :confidence
     )
     ON CONFLICT (master_control_id, framework, framework_entity_type, framework_entity_id)
       DO NOTHING
@@ -302,6 +304,9 @@ export const createMappingQuery = async (
         framework: mapping.framework,
         framework_entity_type: mapping.framework_entity_type,
         framework_entity_id: mapping.framework_entity_id,
+        rationale: (mapping as any).rationale ?? null,
+        coverage: (mapping as any).coverage ?? "full",
+        confidence: (mapping as any).confidence ?? "direct_match",
       },
       mapToModel: true,
       model: MasterControlFrameworkMappingModel,
@@ -319,7 +324,7 @@ export const deleteMappingQuery = async (
   // Fetch the row first so we can return the deleted payload for audit.
   const existing = await sequelize.query<IMasterControlFrameworkMapping>(
     `SELECT id, master_control_id, framework, framework_entity_type,
-            framework_entity_id, created_at
+            framework_entity_id, rationale, coverage, confidence, created_at
        FROM master_control_framework_mappings
       WHERE id = :mappingId AND organization_id = :organizationId
       LIMIT 1`,

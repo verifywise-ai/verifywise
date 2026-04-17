@@ -196,7 +196,10 @@ export async function importRecommendedMasterControls(
             framework: mapping.framework as Framework,
             framework_entity_type: mapping.framework_entity_type,
             framework_entity_id: entityId,
-          },
+            rationale: null,
+            coverage: "full",
+            confidence: mapping.confidence ?? "direct_match",
+          } as any,
           organizationId,
           transaction
         );

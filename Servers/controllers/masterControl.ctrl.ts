@@ -820,7 +820,10 @@ export async function addMasterControlMapping(
       masterId,
       body.framework,
       body.framework_entity_type,
-      body.framework_entity_id
+      body.framework_entity_id,
+      body.rationale,
+      body.coverage,
+      body.confidence
     );
 
     const created = await createMappingQuery(

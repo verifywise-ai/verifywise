@@ -10,6 +10,8 @@ import {
   IMasterControlFrameworkMapping,
   Framework,
   FrameworkEntityType,
+  MappingCoverage,
+  MappingConfidence,
   FRAMEWORK_ENTITY_TYPES,
 } from "../../interfaces/i.masterControlMapping";
 import { numberValidation } from "../../validations/number.valid";
@@ -63,6 +65,26 @@ export class MasterControlFrameworkMappingModel
   framework_entity_id!: number;
 
   @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+  })
+  rationale?: string | null;
+
+  @Column({
+    type: DataType.STRING(10),
+    allowNull: true,
+    defaultValue: "full",
+  })
+  coverage?: MappingCoverage;
+
+  @Column({
+    type: DataType.STRING(20),
+    allowNull: true,
+    defaultValue: "direct_match",
+  })
+  confidence?: MappingConfidence;
+
+  @Column({
     type: DataType.DATE,
     allowNull: true,
   })
@@ -76,7 +98,10 @@ export class MasterControlFrameworkMappingModel
     master_control_id: number,
     framework: Framework,
     framework_entity_type: FrameworkEntityType,
-    framework_entity_id: number
+    framework_entity_id: number,
+    rationale?: string | null,
+    coverage?: MappingCoverage,
+    confidence?: MappingConfidence
   ): Promise<MasterControlFrameworkMappingModel> {
     if (!numberValidation(master_control_id, 1)) {
       throw new ValidationException(
@@ -113,6 +138,9 @@ export class MasterControlFrameworkMappingModel
     model.framework = framework;
     model.framework_entity_type = framework_entity_type;
     model.framework_entity_id = framework_entity_id;
+    model.rationale = rationale ?? null;
+    model.coverage = coverage ?? "full";
+    model.confidence = confidence ?? "direct_match";
     model.created_at = new Date();
     return model;
   }
@@ -131,6 +159,9 @@ export class MasterControlFrameworkMappingModel
       framework: this.framework,
       framework_entity_type: this.framework_entity_type,
       framework_entity_id: this.framework_entity_id,
+      rationale: this.rationale ?? null,
+      coverage: this.coverage ?? "full",
+      confidence: this.confidence ?? "direct_match",
       created_at: (this.createdAt ?? this.created_at)?.toISOString?.() ?? null,
     };
   }

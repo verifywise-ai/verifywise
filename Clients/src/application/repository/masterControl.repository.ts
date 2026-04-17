@@ -14,6 +14,8 @@ import { apiServices } from "../../infrastructure/api/networkServices";
 import type {
   Framework,
   FrameworkEntityType,
+  MappingCoverage,
+  MappingConfidence,
   MasterControlFrameworkMapping,
   MasterControlRiskReview,
   MasterControlStatus,
@@ -57,6 +59,9 @@ export interface MasterControlMappingCreatePayload {
   framework: Framework;
   framework_entity_type: FrameworkEntityType;
   framework_entity_id: number;
+  rationale?: string | null;
+  coverage?: MappingCoverage;
+  confidence?: MappingConfidence;
 }
 
 export interface PropagationPreviewPayload {

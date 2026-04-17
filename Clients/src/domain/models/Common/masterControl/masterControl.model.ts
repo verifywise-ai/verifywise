@@ -45,6 +45,13 @@ export type FrameworkEntityType =
   | "iso27001_subclause"
   | "iso27001_annex_category";
 
+export type MappingCoverage = "full" | "partial";
+
+export type MappingConfidence =
+  | "direct_match"
+  | "strong_analogy"
+  | "partial_overlap";
+
 export interface MasterControlFrameworkMapping {
   id?: number;
   master_control_id: number;
@@ -54,6 +61,9 @@ export interface MasterControlFrameworkMapping {
   /** Optional human-readable identifier resolved server-side. */
   framework_entity_code?: string;
   framework_entity_title?: string;
+  rationale?: string | null;
+  coverage?: MappingCoverage;
+  confidence?: MappingConfidence;
   created_at?: string;
 }
 
