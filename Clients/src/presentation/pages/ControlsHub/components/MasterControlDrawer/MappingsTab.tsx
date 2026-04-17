@@ -7,16 +7,24 @@
  * catalog (real struct rows from controls_struct_eu / subclauses_struct_iso
  * / …). No more raw numeric id entry.
  *
+ * Each mapping row now shows:
+ *   - Plain-language title + code
+ *   - Coverage badge (Full / Partial)
+ *   - Confidence badge for seed-imported mappings
+ *   - Rationale text (collapsible)
+ *   - Inline requirement description preview
+ *
  * The server enforces uniqueness on (master_control_id, framework,
  * framework_entity_type, framework_entity_id), so we rely on the list
  * refetch after mutations rather than trying to dedupe in the UI.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Autocomplete,
   Box,
   CircularProgress,
+  Collapse,
   IconButton,
   SelectChangeEvent,
   Stack,
@@ -25,7 +33,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 
 import Select from "../../../../components/Inputs/Select";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
@@ -38,6 +46,8 @@ import type { FrameworkCatalogEntry } from "../../../../../application/repositor
 import type {
   Framework,
   FrameworkEntityType,
+  MappingCoverage,
+  MappingConfidence,
   MasterControlFrameworkMapping,
   MasterControlModel,
 } from "../../../../../domain/models/Common/masterControl/masterControl.model";
@@ -78,6 +88,17 @@ const ENTITY_TYPE_LABELS: Record<FrameworkEntityType, string> = {
   subcategory_nist: "Sub-category",
 };
 
+const COVERAGE_LABELS: Record<MappingCoverage, string> = {
+  full: "Full",
+  partial: "Partial",
+};
+
+const CONFIDENCE_LABELS: Record<MappingConfidence, string> = {
+  direct_match: "Direct match",
+  strong_analogy: "Strong analogy",
+  partial_overlap: "Partial overlap",
+};
+
 interface MappingsTabProps {
   master: MasterControlModel;
 }
@@ -88,6 +109,7 @@ export default function MappingsTab({ master }: MappingsTabProps) {
     master.id ?? null
   );
   const { addMapping, removeMapping } = useMasterControlMutations();
+  const { data: catalog } = useFrameworkCatalog();
 
   const grouped = useMemo(() => {
     const bucket = new Map<Framework, MasterControlFrameworkMapping[]>();
@@ -98,6 +120,18 @@ export default function MappingsTab({ master }: MappingsTabProps) {
     });
     return bucket;
   }, [mappings]);
+
+  // Build a lookup map from framework_entity_type + entity_id → catalog entry
+  const catalogLookup = useMemo(() => {
+    if (!catalog) return new Map<string, FrameworkCatalogEntry>();
+    const map = new Map<string, FrameworkCatalogEntry>();
+    for (const [entityType, entries] of Object.entries(catalog)) {
+      for (const entry of entries) {
+        map.set(`${entityType}:${entry.id}`, entry);
+      }
+    }
+    return map;
+  }, [catalog]);
 
   const handleDelete = (mapping: MasterControlFrameworkMapping) => {
     if (!mapping.id || !master.id) return;
@@ -173,6 +207,9 @@ export default function MappingsTab({ master }: MappingsTabProps) {
                 <MappingRow
                   key={row.id ?? `${row.framework_entity_type}-${row.framework_entity_id}`}
                   mapping={row}
+                  catalogEntry={catalogLookup.get(
+                    `${row.framework_entity_type}:${row.framework_entity_id}`
+                  )}
                   onDelete={handleDelete}
                   disabled={master.is_demo || removeMapping.isPending}
                 />
@@ -195,6 +232,177 @@ export default function MappingsTab({ master }: MappingsTabProps) {
   );
 }
 
+// ---------- Mapping row with rationale, coverage, confidence, requirement preview ----------
+
+interface MappingRowProps {
+  mapping: MasterControlFrameworkMapping;
+  catalogEntry?: FrameworkCatalogEntry;
+  onDelete: (m: MasterControlFrameworkMapping) => void;
+  disabled: boolean;
+}
+
+function MappingRow({ mapping, catalogEntry, onDelete, disabled }: MappingRowProps) {
+  const theme = useTheme();
+  const [expanded, setExpanded] = useState(false);
+
+  const primary =
+    mapping.framework_entity_code ??
+    `${mapping.framework_entity_type} #${mapping.framework_entity_id}`;
+  const secondary = mapping.framework_entity_title;
+  const coverage = mapping.coverage ?? "full";
+  const confidence = mapping.confidence ?? "direct_match";
+  const description = catalogEntry?.description;
+
+  const toggleExpanded = useCallback(() => setExpanded((p) => !p), []);
+
+  return (
+    <Box>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ padding: "10px 14px" }}
+      >
+        <Stack sx={{ minWidth: 0, flex: 1 }}>
+          <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
+            <Typography fontSize={13} fontWeight={500}>
+              {secondary || primary}
+            </Typography>
+            {secondary && (
+              <Typography
+                fontSize={11}
+                sx={{
+                  fontFamily: "monospace",
+                  color: theme.palette.text.tertiary,
+                  backgroundColor: theme.palette.background.alt,
+                  padding: "1px 6px",
+                  borderRadius: 0.5,
+                }}
+              >
+                {primary}
+              </Typography>
+            )}
+          </Stack>
+
+          <Stack direction="row" gap={0.75} alignItems="center" sx={{ marginTop: 0.5 }} flexWrap="wrap">
+            <Typography
+              fontSize={11}
+              color={theme.palette.text.tertiary}
+              sx={{ fontStyle: "italic" }}
+            >
+              {ENTITY_TYPE_LABELS[mapping.framework_entity_type] ?? mapping.framework_entity_type}
+            </Typography>
+
+            <Box
+              sx={{
+                padding: "1px 6px",
+                borderRadius: 0.5,
+                fontSize: 10,
+                fontWeight: 600,
+                backgroundColor: coverage === "full"
+                  ? theme.palette.status.success.bg
+                  : theme.palette.status.warning.bg,
+                color: coverage === "full"
+                  ? theme.palette.status.success.text
+                  : theme.palette.status.warning.text,
+                border: `1px solid ${coverage === "full"
+                  ? theme.palette.status.success.border
+                  : theme.palette.status.warning.border}`,
+              }}
+            >
+              {COVERAGE_LABELS[coverage]}
+            </Box>
+
+            {confidence !== "direct_match" && (
+              <Box
+                sx={{
+                  padding: "1px 6px",
+                  borderRadius: 0.5,
+                  fontSize: 10,
+                  fontWeight: 500,
+                  backgroundColor: theme.palette.background.alt,
+                  color: theme.palette.text.secondary,
+                  border: `1px solid ${theme.palette.border.light}`,
+                }}
+              >
+                {CONFIDENCE_LABELS[confidence]}
+              </Box>
+            )}
+          </Stack>
+
+          {mapping.rationale && (
+            <Typography
+              fontSize={12}
+              color={theme.palette.text.secondary}
+              sx={{ marginTop: 0.5, fontStyle: "italic" }}
+            >
+              {mapping.rationale}
+            </Typography>
+          )}
+        </Stack>
+
+        <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
+          {description && (
+            <Tooltip title={expanded ? "Hide requirement" : "Show requirement text"}>
+              <IconButton
+                size="small"
+                onClick={toggleExpanded}
+                aria-label={expanded ? "Collapse requirement preview" : "Expand requirement preview"}
+              >
+                {expanded ? (
+                  <ChevronDown size={14} color={theme.palette.text.tertiary} />
+                ) : (
+                  <ChevronRight size={14} color={theme.palette.text.tertiary} />
+                )}
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title={disabled ? "Cannot modify" : "Remove mapping"}>
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => onDelete(mapping)}
+                disabled={disabled}
+                aria-label={`Remove mapping ${primary}`}
+              >
+                <Trash2 size={16} color={theme.palette.status.error.text} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Stack>
+      </Stack>
+
+      {description && (
+        <Collapse in={expanded}>
+          <Box
+            sx={{
+              padding: "8px 14px 12px",
+              backgroundColor: theme.palette.background.alt,
+              borderTop: `1px solid ${theme.palette.border.light}`,
+            }}
+          >
+            <Typography
+              fontSize={11}
+              fontWeight={600}
+              sx={{
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                color: theme.palette.text.tertiary,
+                marginBottom: 0.5,
+              }}
+            >
+              Requirement text
+            </Typography>
+            <Typography fontSize={12} color={theme.palette.text.secondary} sx={{ lineHeight: 1.5 }}>
+              {description}
+            </Typography>
+          </Box>
+        </Collapse>
+      )}
+    </Box>
+  );
+}
+
 // ---------- Add-mapping form ----------
 
 interface AddMappingFormProps {
@@ -204,6 +412,9 @@ interface AddMappingFormProps {
     framework: Framework;
     framework_entity_type: FrameworkEntityType;
     framework_entity_id: number;
+    rationale?: string | null;
+    coverage?: MappingCoverage;
+    confidence?: MappingConfidence;
   }) => Promise<void>;
 }
 
@@ -214,6 +425,8 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
     ENTITY_TYPES_BY_FRAMEWORK.eu_ai_act[0]
   );
   const [selected, setSelected] = useState<FrameworkCatalogEntry | null>(null);
+  const [rationale, setRationale] = useState("");
+  const [coverage, setCoverage] = useState<MappingCoverage>("full");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -242,6 +455,11 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
     _id: f,
     name: FRAMEWORK_LABELS[f],
   }));
+
+  const coverageOptions = [
+    { _id: "full", name: "Full coverage" },
+    { _id: "partial", name: "Partial coverage" },
+  ];
 
   const entries: FrameworkCatalogEntry[] = catalog?.[entityType] ?? [];
 
@@ -273,8 +491,13 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
         framework,
         framework_entity_type: entityType,
         framework_entity_id: selected.id,
+        rationale: rationale.trim() || null,
+        coverage,
+        confidence: "direct_match",
       });
       setSelected(null);
+      setRationale("");
+      setCoverage("full");
       setSuccess(`Mapped to ${selected.code}.`);
       setTimeout(() => setSuccess(null), 2500);
     } catch (err) {
@@ -426,15 +649,54 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
               },
             }}
           />
-          {selected && (
+          {selected?.description && (
             <Typography
               fontSize={11}
               color={theme.palette.text.tertiary}
-              sx={{ fontStyle: "italic" }}
+              sx={{ fontStyle: "italic", lineHeight: 1.4 }}
             >
-              Will link to struct row #{selected.id}
+              {selected.description}
             </Typography>
           )}
+        </Stack>
+
+        <Stack direction="row" spacing={2} flexWrap="wrap">
+          <Select
+            id="add-mapping-coverage"
+            label="Coverage"
+            value={coverage}
+            items={coverageOptions}
+            onChange={(e) => setCoverage(e.target.value as MappingCoverage)}
+            sx={{ minWidth: 180, maxWidth: "100%", flexGrow: 1, height: 34 }}
+          />
+        </Stack>
+
+        <Stack spacing={1}>
+          <Typography
+            component="label"
+            htmlFor="add-mapping-rationale"
+            fontSize={13}
+            fontWeight={500}
+            color={theme.palette.text.secondary}
+          >
+            Rationale
+          </Typography>
+          <TextField
+            id="add-mapping-rationale"
+            size="small"
+            multiline
+            minRows={2}
+            maxRows={4}
+            placeholder="Why does this control satisfy this requirement?"
+            value={rationale}
+            onChange={(e) => setRationale(e.target.value)}
+            disabled={isPending}
+            InputProps={{
+              sx: {
+                fontSize: 13,
+              },
+            }}
+          />
         </Stack>
 
         <Stack direction="row" justifyContent="flex-end">
@@ -449,62 +711,5 @@ function AddMappingForm({ masterId: _masterId, isPending, onSubmit }: AddMapping
         </Stack>
       </Stack>
     </Box>
-  );
-}
-
-interface MappingRowProps {
-  mapping: MasterControlFrameworkMapping;
-  onDelete: (m: MasterControlFrameworkMapping) => void;
-  disabled: boolean;
-}
-
-function MappingRow({ mapping, onDelete, disabled }: MappingRowProps) {
-  const theme = useTheme();
-  const primary =
-    mapping.framework_entity_code ??
-    `${mapping.framework_entity_type} #${mapping.framework_entity_id}`;
-  const secondary = mapping.framework_entity_title;
-
-  return (
-    <Stack
-      direction="row"
-      alignItems="center"
-      justifyContent="space-between"
-      sx={{ padding: "10px 14px" }}
-    >
-      <Stack>
-        <Typography fontSize={13} fontWeight={500}>
-          {primary}
-        </Typography>
-        {secondary && (
-          <Typography
-            fontSize={12}
-            color={theme.palette.text.tertiary}
-            sx={{ marginTop: 0.25 }}
-          >
-            {secondary}
-          </Typography>
-        )}
-        <Typography
-          fontSize={11}
-          color={theme.palette.text.tertiary}
-          sx={{ marginTop: 0.25, fontStyle: "italic" }}
-        >
-          {mapping.framework_entity_type}
-        </Typography>
-      </Stack>
-      <Tooltip title={disabled ? "Cannot modify" : "Remove mapping"}>
-        <span>
-          <IconButton
-            size="small"
-            onClick={() => onDelete(mapping)}
-            disabled={disabled}
-            aria-label={`Remove mapping ${primary}`}
-          >
-            <Trash2 size={16} color={theme.palette.status.error.text} />
-          </IconButton>
-        </span>
-      </Tooltip>
-    </Stack>
   );
 }
