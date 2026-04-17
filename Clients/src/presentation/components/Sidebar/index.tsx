@@ -154,7 +154,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           id: "controls-hub",
-          label: "Controls hub",
+          label: "Controls",
           icon: <Library size={16} strokeWidth={1.5} />,
           path: "/controls-hub",
         },

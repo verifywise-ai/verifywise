@@ -73,7 +73,7 @@ export default function ControlsHub() {
   return (
     <Stack gap={3} sx={{ p: 4 }}>
       <PageHeaderExtended
-        title="Controls Hub"
+        title="Controls"
         description="Manage a single library of controls and map each one to requirements across EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF. Updates to status, owner, evidence, and due date automatically propagate to every mapped framework row."
         actionButton={
           <Stack direction="row" gap={1.5}>
