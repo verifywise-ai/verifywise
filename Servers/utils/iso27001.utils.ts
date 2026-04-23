@@ -182,7 +182,7 @@ export const getAllClausesWithSubClauseQuery = async (
 
   for (let clause of clauses[0]) {
     const subClauses = (await sequelize.query(
-      `SELECT sc.id, scs.title, scs.order_no, sc.status, sc.owner FROM subclauses_struct_iso27001 scs JOIN subclauses_iso27001 sc ON scs.id = sc.subclause_meta_id WHERE sc.organization_id = :organizationId AND scs.clause_id = :id AND sc.projects_frameworks_id = :projects_frameworks_id ORDER BY scs.id;`,
+      `SELECT sc.id, scs.title, scs.order_no, scs.subclause_id, sc.status, sc.owner FROM subclauses_struct_iso27001 scs JOIN subclauses_iso27001 sc ON scs.id = sc.subclause_meta_id WHERE sc.organization_id = :organizationId AND scs.clause_id = :id AND sc.projects_frameworks_id = :projects_frameworks_id ORDER BY scs.order_no;`,
       {
         replacements: {
           organizationId,
@@ -300,15 +300,20 @@ export const getClauseById = async (
 export const getSubClausesByClauseIdQuery = async (
   clauseId: number,
   organizationId: number,
+  projectFrameworkId: number,
   transaction: Transaction | null = null
 ) => {
   const subClauses = await sequelize.query(
-    `SELECT sc.id, scs.title, scs.order_no, scs.clause_id, scs.requirement_summary, scs.key_questions, scs.evidence_examples,
+    `SELECT sc.id, scs.title, scs.order_no, scs.subclause_id, scs.clause_id, scs.requirement_summary, scs.key_questions, scs.evidence_examples,
             sc.owner AS owner, sc.reviewer AS reviewer, sc.due_date, sc.status
     FROM subclauses_iso27001 sc JOIN subclauses_struct_iso27001 scs ON
-    sc.subclause_meta_id = scs.id WHERE sc.organization_id = :organizationId AND scs.clause_id = :id ORDER BY scs.id;`,
+    sc.subclause_meta_id = scs.id
+    WHERE sc.organization_id = :organizationId
+      AND scs.clause_id = :id
+      AND sc.projects_frameworks_id = :projectFrameworkId
+    ORDER BY scs.order_no;`,
     {
-      replacements: { organizationId, id: clauseId },
+      replacements: { organizationId, id: clauseId, projectFrameworkId },
       mapToModel: true,
       ...(transaction ? { transaction } : {}),
     }

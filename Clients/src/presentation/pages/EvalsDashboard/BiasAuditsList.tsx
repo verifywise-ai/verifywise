@@ -43,10 +43,11 @@ type SortConfig = { key: string; direction: SortDirection };
 const SORTING_KEY = "verifywise_bias_audits_sorting";
 
 const columns = [
-  { id: "framework", label: "FRAMEWORK", sortable: true, width: "25%" },
-  { id: "mode", label: "MODE", sortable: true, width: "15%" },
-  { id: "status", label: "STATUS", sortable: true, width: "15%" },
-  { id: "result", label: "RESULT", sortable: true, width: "15%" },
+  { id: "framework", label: "FRAMEWORK", sortable: true, width: "22%" },
+  { id: "mode", label: "MODE", sortable: true, width: "12%" },
+  { id: "status", label: "STATUS", sortable: true, width: "12%" },
+  { id: "result", label: "RESULT", sortable: true, width: "12%" },
+  { id: "linkedModel", label: "LINKED MODEL", sortable: false, width: "12%" },
   { id: "date", label: "DATE", sortable: true, width: "20%" },
   { id: "action", label: "ACTION", sortable: false, width: "60px" },
 ];
@@ -64,8 +65,10 @@ function getResultSummary(audit: BiasAuditSummary) {
 
 function getSortValue(audit: BiasAuditSummary, key: string): string | number {
   switch (key) {
-    case "framework":
-      return audit.presetName.toLowerCase();
+    case "framework": {
+      const systemName = (audit.config?.systemName as string | undefined) || "";
+      return (systemName || audit.presetName).toLowerCase();
+    }
     case "mode":
       return audit.mode.toLowerCase();
     case "status":
@@ -168,9 +171,13 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
   };
 
   const sortedAudits = useMemo(() => {
-    const filtered = audits.filter((a) =>
-      a.presetName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const q = searchQuery.toLowerCase();
+    const filtered = audits.filter((a) => {
+      const systemName = ((a.config?.systemName as string | undefined) || "").toLowerCase();
+      return (
+        a.presetName.toLowerCase().includes(q) || systemName.includes(q)
+      );
+    });
     if (!sortConfig.key || !sortConfig.direction) return filtered;
 
     return [...filtered].sort((a, b) => {
@@ -305,13 +312,41 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                   }}
                 >
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Typography sx={{ fontSize: 13, color: theme.palette.text.primary }}>
-                      {audit.presetName}
-                    </Typography>
+                    <Stack spacing={0.25}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.primary }}>
+                        {(audit.config?.systemName as string | undefined) || audit.presetName}
+                      </Typography>
+                      {(audit.config?.systemName as string | undefined) && (
+                        <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary }}>
+                          {audit.presetName}
+                        </Typography>
+                      )}
+                    </Stack>
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getModeChip(audit.mode)}</TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getStatusChip(audit.status)}</TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getResultSummary(audit)}</TableCell>
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    {audit.modelInventoryId ? (
+                      <Box
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          px: "8px",
+                          py: "2px",
+                          borderRadius: "4px",
+                          backgroundColor: palette.status.success.bg,
+                          color: palette.status.success.text,
+                          fontSize: "11px",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Linked
+                      </Box>
+                    ) : (
+                      <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>Unlinked</Typography>
+                    )}
+                  </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
                       {formatDate(audit.createdAt)}

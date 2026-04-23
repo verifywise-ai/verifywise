@@ -41,17 +41,19 @@ export const modalDescriptionStyle: SxProps<Theme> = {
 };
 
 export const frameworkCardStyle: SxProps<Theme> = {
-  border: `1.5px solid ${brand.primary}`,
-  borderRadius: 2,
-  background: '#e3f5e6',
-  p: 2.5,
-  transition: 'background 0.2s',
+  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+  border: '1px solid #d0d5dd',
+  borderRadius: '4px',
+  p: '24px',
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: '150px',
 };
 
 export const frameworkCardTitleStyle: SxProps<Theme> = {
+  fontSize: 13,
   fontWeight: 500,
-  color: '#232B3A',
-  fontSize: 16,
+  color: '#000000',
 };
 
 export const frameworkCardAddedStyle: SxProps<Theme> = {
@@ -63,10 +65,22 @@ export const frameworkCardAddedStyle: SxProps<Theme> = {
 };
 
 export const frameworkCardDescriptionStyle: SxProps<Theme> = {
-  color: `${status.default.text}`,
-  fontSize: 14,
-  textAlign: 'left',
-  mb: 2,
+  fontSize: 13,
+  color: '#666666',
+  mb: 'auto',
+};
+
+export const frameworkAddedBadgeStyle: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 0.5,
+  backgroundColor: '#E6F4EE',
+  borderRadius: '4px',
+  px: 1.5,
+  py: 0.5,
+  fontSize: 13,
+  fontWeight: 600,
+  color: '#13715B',
 };
 
 export const modalDoneButtonStyle: SxProps<Theme> = {

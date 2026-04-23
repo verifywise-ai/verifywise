@@ -9,6 +9,9 @@ import {
   getVendorRisksByProjectIdQuery,
   getVendorRisksByVendorIdQuery,
   updateVendorRiskByIdQuery,
+  createVendorRiskFrameworkAssociations,
+  deleteVendorRiskFrameworkAssociations,
+  getVendorRisksByFrameworkIdQuery,
 } from "../utils/vendorRisk.utils";
 import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.model";
 import { logProcessing, logSuccess, logFailure } from '../utils/logger/logHelper';
@@ -251,6 +254,7 @@ export async function createVendorRisk(
 
   try {
     const newVendorRisk: VendorRiskModel = req.body;
+    const frameworks: number[] | undefined = req.body.frameworks;
     const vendorRiskModel = await VendorRiskModel.createNewVendorRisk(newVendorRisk);
 
     const createdVendorRisk = await createNewVendorRiskQuery(
@@ -260,6 +264,20 @@ export async function createVendorRisk(
     );
 
     if (createdVendorRisk) {
+      // Create framework associations if provided
+      if (frameworks && frameworks.length > 0 && createdVendorRisk.id) {
+        try {
+          await createVendorRiskFrameworkAssociations(
+            frameworks,
+            createdVendorRisk.id,
+            req.organizationId!,
+            transaction
+          );
+        } catch (fwError) {
+          console.warn("Could not create framework associations (table may not exist yet):", (fwError as Error).message);
+        }
+      }
+
       // Record creation in change history
       const userId = req.userId;
       if (userId && createdVendorRisk.id) {
@@ -352,6 +370,7 @@ export async function updateVendorRiskById(
   const transaction = await sequelize.transaction();
   const vendorRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const updatedVendorRisk = req.body;
+  const frameworks: number[] | undefined = req.body.frameworks;
 
   logProcessing({
     description: `starting updateVendorRiskById for ID ${vendorRiskId}`,
@@ -392,6 +411,27 @@ export async function updateVendorRiskById(
     );
 
     if (vendorRisk) {
+      // Replace framework associations if provided
+      if (frameworks !== undefined) {
+        try {
+          await deleteVendorRiskFrameworkAssociations(
+            vendorRiskId,
+            req.organizationId!,
+            transaction
+          );
+          if (frameworks.length > 0) {
+            await createVendorRiskFrameworkAssociations(
+              frameworks,
+              vendorRiskId,
+              req.organizationId!,
+              transaction
+            );
+          }
+        } catch (fwError) {
+          console.warn("Could not update framework associations (table may not exist yet):", (fwError as Error).message);
+        }
+      }
+
       // Track and record changes
       const userId = req.userId;
       if (userId) {
@@ -531,6 +571,47 @@ export async function deleteVendorRiskById(
       eventType: 'Delete',
       description: 'Failed to delete vendor risk',
       functionName: 'deleteVendorRiskById',
+      fileName: 'vendorRisk.ctrl.ts',
+      error: error as Error,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function getVendorRisksByFrameworkId(
+  req: Request,
+  res: Response
+): Promise<any> {
+  const frameworkId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const filter = (req.query.filter as 'active' | 'deleted' | 'all') || 'active';
+
+  logProcessing({
+    description: `starting getVendorRisksByFrameworkId for framework ID ${frameworkId} with filter: ${filter}`,
+    functionName: 'getVendorRisksByFrameworkId',
+    fileName: 'vendorRisk.ctrl.ts',
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+
+  try {
+    const vendorRisks = await getVendorRisksByFrameworkIdQuery(frameworkId, req.organizationId!, filter);
+
+    await logSuccess({
+      eventType: 'Read',
+      description: `Retrieved vendor risks for framework ID ${frameworkId}`,
+      functionName: 'getVendorRisksByFrameworkId',
+      fileName: 'vendorRisk.ctrl.ts',
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](vendorRisks));
+  } catch (error) {
+    await logFailure({
+      eventType: 'Read',
+      description: 'Failed to retrieve vendor risks by framework ID',
+      functionName: 'getVendorRisksByFrameworkId',
       fileName: 'vendorRisk.ctrl.ts',
       error: error as Error,
       userId: req.userId!,

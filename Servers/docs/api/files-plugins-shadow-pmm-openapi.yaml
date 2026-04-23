@@ -1,0 +1,2774 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise - File Manager, Virtual Folders, Plugins, Shadow AI & Post-Market Monitoring
+  version: 1.0.0
+  description: |
+    OpenAPI specification for File Manager, Virtual Folders, Plugins, Shadow AI,
+    and Post-Market Monitoring API domains.
+
+servers:
+  - url: /
+    description: Relative to API root
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ===========================================================================
+  # FILE MANAGER
+  # ===========================================================================
+  /file-manager:
+    post:
+      tags: [File Manager]
+      summary: Upload a file
+      description: Upload a file to the organization's file manager. Max 30MB.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload (PDF, DOC, DOCX, XLS, XLSX, CSV, MD, JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF, MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)
+                model_id:
+                  type: integer
+                  description: Optional model inventory ID to associate
+                approval_workflow_id:
+                  type: integer
+                  description: Optional approval workflow ID to trigger
+                source:
+                  type: string
+                  description: File source label
+                  default: File Manager
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/FileUploadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          description: File size exceeds 30MB
+        '415':
+          description: Unsupported file type
+    get:
+      tags: [File Manager]
+      summary: List all files
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated file list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/FileListResponse'
+
+  /file-manager/search:
+    get:
+      tags: [File Manager]
+      summary: Full-text search over file contents
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Search results with snippets
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/FileSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /file-manager/with-metadata:
+    get:
+      tags: [File Manager]
+      summary: List files with full metadata
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Files with metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /file-manager/highlighted:
+    get:
+      tags: [File Manager]
+      summary: Get highlighted files (due for update, pending approval, recently modified)
+      parameters:
+        - name: daysUntilExpiry
+          in: query
+          schema:
+            type: integer
+            default: 30
+        - name: recentDays
+          in: query
+          schema:
+            type: integer
+            default: 7
+      responses:
+        '200':
+          description: Categorized file IDs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/HighlightedFiles'
+
+  /file-manager/{id}:
+    get:
+      tags: [File Manager]
+      summary: Download a file
+      description: Admin only. Returns file binary with download headers.
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: File binary content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [File Manager]
+      summary: Delete a file
+      description: Admin, Reviewer, or Editor only.
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: File deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /file-manager/{id}/metadata:
+    get:
+      tags: [File Manager]
+      summary: Get file metadata
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: File metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/FileMetadata'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [File Manager]
+      summary: Update file metadata
+      description: Admin, Reviewer, or Editor only.
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFileMetadataRequest'
+      responses:
+        '200':
+          description: Updated metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/FileMetadata'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /file-manager/{id}/versions:
+    get:
+      tags: [File Manager]
+      summary: Get file version history
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: List of file versions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /file-manager/{id}/preview:
+    get:
+      tags: [File Manager]
+      summary: Preview file content (limited to 5MB)
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: File content for inline display
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: File too large for preview
+
+  # ===========================================================================
+  # VIRTUAL FOLDERS
+  # ===========================================================================
+  /virtual-folders:
+    get:
+      tags: [Virtual Folders]
+      summary: Get all folders (flat list with file counts)
+      responses:
+        '200':
+          description: List of folders
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VirtualFolder'
+    post:
+      tags: [Virtual Folders]
+      summary: Create a new folder
+      description: Admin or Editor only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFolderRequest'
+      responses:
+        '201':
+          description: Folder created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/VirtualFolder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Duplicate folder name in same parent
+
+  /virtual-folders/tree:
+    get:
+      tags: [Virtual Folders]
+      summary: Get folder tree (hierarchical structure)
+      responses:
+        '200':
+          description: Hierarchical folder tree
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /virtual-folders/uncategorized:
+    get:
+      tags: [Virtual Folders]
+      summary: Get files not assigned to any folder
+      responses:
+        '200':
+          description: List of uncategorized files
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /virtual-folders/{id}:
+    get:
+      tags: [Virtual Folders]
+      summary: Get folder by ID
+      parameters:
+        - $ref: '#/components/parameters/FolderId'
+      responses:
+        '200':
+          description: Folder details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/VirtualFolder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Virtual Folders]
+      summary: Update a folder
+      description: Admin or Editor only. System folders cannot be modified.
+      parameters:
+        - $ref: '#/components/parameters/FolderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFolderRequest'
+      responses:
+        '200':
+          description: Folder updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/VirtualFolder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Duplicate folder name
+    delete:
+      tags: [Virtual Folders]
+      summary: Delete a folder (cascades children and mappings)
+      description: Admin or Editor only. System folders cannot be deleted.
+      parameters:
+        - $ref: '#/components/parameters/FolderId'
+      responses:
+        '200':
+          description: Folder deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          deleted:
+                            type: boolean
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /virtual-folders/{id}/path:
+    get:
+      tags: [Virtual Folders]
+      summary: Get folder breadcrumb path (root to folder)
+      parameters:
+        - $ref: '#/components/parameters/FolderId'
+      responses:
+        '200':
+          description: Array of folder path segments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /virtual-folders/{id}/files:
+    get:
+      tags: [Virtual Folders]
+      summary: Get files in a folder
+      parameters:
+        - $ref: '#/components/parameters/FolderId'
+      responses:
+        '200':
+          description: List of files in the folder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Virtual Folders]
+      summary: Assign files to a folder
+      description: Admin or Editor only.
+      parameters:
+        - $ref: '#/components/parameters/FolderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignFilesRequest'
+      responses:
+        '200':
+          description: Files assigned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          assigned:
+                            type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /virtual-folders/{id}/files/{fileId}:
+    delete:
+      tags: [Virtual Folders]
+      summary: Remove a file from a folder
+      description: Admin or Editor only.
+      parameters:
+        - $ref: '#/components/parameters/FolderId'
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: File removed from folder
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          removed:
+                            type: boolean
+
+  /files/{id}/folders:
+    get:
+      tags: [Virtual Folders]
+      summary: Get all folders a file belongs to
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: List of folders for the file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    patch:
+      tags: [Virtual Folders]
+      summary: Bulk update file folder assignments
+      description: Admin or Editor only.
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [folder_ids]
+              properties:
+                folder_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Complete set of folder IDs to assign (replaces existing)
+      responses:
+        '200':
+          description: Updated folder assignments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ===========================================================================
+  # PLUGINS
+  # ===========================================================================
+  /plugins/marketplace:
+    get:
+      tags: [Plugins]
+      summary: Get all available plugins from marketplace
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+      responses:
+        '200':
+          description: List of plugins
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Plugin'
+
+  /plugins/marketplace/search:
+    get:
+      tags: [Plugins]
+      summary: Search plugins
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+      responses:
+        '200':
+          description: Matching plugins
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Plugin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /plugins/marketplace/{key}:
+    get:
+      tags: [Plugins]
+      summary: Get plugin by key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9-]+$'
+      responses:
+        '200':
+          description: Plugin details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Plugin'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /plugins/categories:
+    get:
+      tags: [Plugins]
+      summary: Get plugin categories
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          type: string
+
+  /plugins/install:
+    post:
+      tags: [Plugins]
+      summary: Install a plugin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pluginKey]
+              properties:
+                pluginKey:
+                  type: string
+                  pattern: '^[a-z0-9-]+$'
+                  description: Plugin key to install
+      responses:
+        '201':
+          description: Plugin installed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PluginInstallation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /plugins/installations:
+    get:
+      tags: [Plugins]
+      summary: Get installed plugins for organization
+      responses:
+        '200':
+          description: List of installed plugins
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PluginInstallation'
+
+  /plugins/installations/{id}:
+    delete:
+      tags: [Plugins]
+      summary: Uninstall a plugin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Installation ID
+      responses:
+        '200':
+          description: Plugin uninstalled
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /plugins/installations/{id}/configuration:
+    put:
+      tags: [Plugins]
+      summary: Update plugin configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Installation ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [configuration]
+              properties:
+                configuration:
+                  type: object
+                  additionalProperties: true
+                  description: Plugin-specific configuration key-value pairs
+      responses:
+        '200':
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /plugins/{key}/test-connection:
+    post:
+      tags: [Plugins]
+      summary: Test plugin connection with provided configuration
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9-]+$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [configuration]
+              properties:
+                configuration:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ConnectionTestResult'
+
+  # ===========================================================================
+  # SHADOW AI
+  # ===========================================================================
+  /shadow-ai/api-keys:
+    post:
+      tags: [Shadow AI - API Keys]
+      summary: Create a new API key (Admin only)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  description: Optional label for the key
+      responses:
+        '201':
+          description: API key created (full key shown only once)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ApiKeyCreateResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    get:
+      tags: [Shadow AI - API Keys]
+      summary: List all API keys (Admin only)
+      responses:
+        '200':
+          description: List of API keys (no full key values)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ApiKeyRecord'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /shadow-ai/api-keys/{id}:
+    delete:
+      tags: [Shadow AI - API Keys]
+      summary: Revoke an API key (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Key revoked
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /shadow-ai/api-keys/{id}/permanent:
+    delete:
+      tags: [Shadow AI - API Keys]
+      summary: Permanently delete a revoked API key (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Key permanently deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /shadow-ai/insights/summary:
+    get:
+      tags: [Shadow AI - Insights]
+      summary: Get insights summary
+      parameters:
+        - $ref: '#/components/parameters/Period'
+      responses:
+        '200':
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/InsightsSummary'
+
+  /shadow-ai/insights/tools-by-events:
+    get:
+      tags: [Shadow AI - Insights]
+      summary: Get tools ranked by event count
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 6
+      responses:
+        '200':
+          description: Tools by events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /shadow-ai/insights/tools-by-users:
+    get:
+      tags: [Shadow AI - Insights]
+      summary: Get tools ranked by unique user count
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 6
+      responses:
+        '200':
+          description: Tools by users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /shadow-ai/insights/users-by-department:
+    get:
+      tags: [Shadow AI - Insights]
+      summary: Get user counts by department
+      parameters:
+        - $ref: '#/components/parameters/Period'
+      responses:
+        '200':
+          description: Users by department
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /shadow-ai/insights/trend:
+    get:
+      tags: [Shadow AI - Insights]
+      summary: Get usage trend data
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - name: granularity
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+            default: daily
+      responses:
+        '200':
+          description: Trend data points
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /shadow-ai/users:
+    get:
+      tags: [Shadow AI - Users]
+      summary: Get user activity list
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+          description: Sort field
+        - name: department
+          in: query
+          schema:
+            type: string
+          description: Filter by department
+      responses:
+        '200':
+          description: Paginated user activity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /shadow-ai/users/{email}/activity:
+    get:
+      tags: [Shadow AI - Users]
+      summary: Get detailed activity for a specific user
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+        - $ref: '#/components/parameters/Period'
+      responses:
+        '200':
+          description: User detail with tool usage
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/UserDetail'
+
+  /shadow-ai/departments:
+    get:
+      tags: [Shadow AI - Users]
+      summary: Get department activity summary
+      responses:
+        '200':
+          description: Department activity data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /shadow-ai/tools:
+    get:
+      tags: [Shadow AI - Tools]
+      summary: Get detected AI tools
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ShadowAiToolStatus'
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated tool list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /shadow-ai/tools/{id}:
+    get:
+      tags: [Shadow AI - Tools]
+      summary: Get tool details including departments and top users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tool details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ShadowAiToolDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /shadow-ai/tools/{id}/status:
+    patch:
+      tags: [Shadow AI - Tools]
+      summary: Update tool status (Admin/Editor only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/ShadowAiToolStatus'
+      responses:
+        '200':
+          description: Status updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /shadow-ai/tools/{id}/start-governance:
+    post:
+      tags: [Shadow AI - Tools]
+      summary: Start governance for a tool (create model inventory entry)
+      description: Admin/Editor only. Creates a model inventory entry and links it to the tool.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartGovernanceRequest'
+      responses:
+        '201':
+          description: Governance started
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/StartGovernanceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /shadow-ai/rules:
+    get:
+      tags: [Shadow AI - Rules]
+      summary: Get all rules
+      responses:
+        '200':
+          description: List of rules
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ShadowAiRule'
+    post:
+      tags: [Shadow AI - Rules]
+      summary: Create a rule (Admin/Editor only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleRequest'
+      responses:
+        '201':
+          description: Rule created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ShadowAiRule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /shadow-ai/rules/alert-history:
+    get:
+      tags: [Shadow AI - Rules]
+      summary: Get alert history
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: ruleId
+          in: query
+          schema:
+            type: integer
+          description: Filter by rule ID
+      responses:
+        '200':
+          description: Paginated alert history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /shadow-ai/rules/{id}:
+    patch:
+      tags: [Shadow AI - Rules]
+      summary: Update a rule (Admin/Editor only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRuleRequest'
+      responses:
+        '200':
+          description: Rule updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ShadowAiRule'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Shadow AI - Rules]
+      summary: Delete a rule (Admin/Editor only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Rule deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /shadow-ai/config/syslog:
+    get:
+      tags: [Shadow AI - Configuration]
+      summary: Get syslog configurations (Admin only)
+      responses:
+        '200':
+          description: Syslog configs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SyslogConfig'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Shadow AI - Configuration]
+      summary: Create syslog configuration (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSyslogConfigRequest'
+      responses:
+        '201':
+          description: Config created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SyslogConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /shadow-ai/config/syslog/{id}:
+    patch:
+      tags: [Shadow AI - Configuration]
+      summary: Update syslog configuration (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSyslogConfigRequest'
+      responses:
+        '200':
+          description: Config updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SyslogConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Shadow AI - Configuration]
+      summary: Delete syslog configuration (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Config deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /shadow-ai/settings:
+    get:
+      tags: [Shadow AI - Configuration]
+      summary: Get settings (rate limiting & data retention)
+      responses:
+        '200':
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ShadowAiSettings'
+    patch:
+      tags: [Shadow AI - Configuration]
+      summary: Update settings (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSettingsRequest'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ShadowAiSettings'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ===========================================================================
+  # POST-MARKET MONITORING
+  # ===========================================================================
+  /pmm/config/{projectId}:
+    get:
+      tags: [Post-Market Monitoring]
+      summary: Get PMM config for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: PMM configuration
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMConfig'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pmm/config:
+    post:
+      tags: [Post-Market Monitoring]
+      summary: Create new PMM config
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PMMConfigCreateRequest'
+      responses:
+        '201':
+          description: Config created with default questions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Configuration already exists for this project
+
+  /pmm/config/{configId}:
+    put:
+      tags: [Post-Market Monitoring]
+      summary: Update PMM config
+      parameters:
+        - name: configId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PMMConfigUpdateRequest'
+      responses:
+        '200':
+          description: Config updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMConfig'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Post-Market Monitoring]
+      summary: Delete PMM config
+      parameters:
+        - name: configId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Config deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pmm/config/{configId}/questions:
+    get:
+      tags: [Post-Market Monitoring]
+      summary: Get questions for a config
+      parameters:
+        - name: configId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PMMQuestion'
+    post:
+      tags: [Post-Market Monitoring]
+      summary: Add a question to config
+      parameters:
+        - name: configId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PMMQuestionCreate'
+      responses:
+        '201':
+          description: Question added
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMQuestion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /pmm/org/questions:
+    get:
+      tags: [Post-Market Monitoring]
+      summary: Get global organization questions (config_id = null)
+      responses:
+        '200':
+          description: Organization-level questions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PMMQuestion'
+
+  /pmm/questions/{questionId}:
+    put:
+      tags: [Post-Market Monitoring]
+      summary: Update a question
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PMMQuestionUpdate'
+      responses:
+        '200':
+          description: Question updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMQuestion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Post-Market Monitoring]
+      summary: Delete a question
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Question deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pmm/questions/reorder:
+    post:
+      tags: [Post-Market Monitoring]
+      summary: Reorder questions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orders]
+              properties:
+                orders:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, display_order]
+                    properties:
+                      id:
+                        type: integer
+                      display_order:
+                        type: integer
+      responses:
+        '200':
+          description: Questions reordered
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /pmm/active-cycle/{projectId}:
+    get:
+      tags: [Post-Market Monitoring]
+      summary: Get active cycle for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Active cycle details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMCycle'
+        '404':
+          description: No active monitoring cycle
+
+  /pmm/cycles/{cycleId}:
+    get:
+      tags: [Post-Market Monitoring]
+      summary: Get cycle details
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Cycle details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMCycle'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pmm/cycles/{cycleId}/responses:
+    get:
+      tags: [Post-Market Monitoring]
+      summary: Get saved responses for a cycle
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of responses
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PMMResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Post-Market Monitoring]
+      summary: Save responses (partial save)
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PMMSaveResponsesRequest'
+      responses:
+        '200':
+          description: Responses saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Cycle is already completed
+
+  /pmm/cycles/{cycleId}/submit:
+    post:
+      tags: [Post-Market Monitoring]
+      summary: Submit cycle (final submission, generates report)
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PMMSaveResponsesRequest'
+      responses:
+        '200':
+          description: Cycle submitted and report generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMSubmitCycleResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Cycle is already completed
+
+  /pmm/cycles/{cycleId}/flag:
+    post:
+      tags: [Post-Market Monitoring]
+      summary: Flag a concern (immediate notification)
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question_id]
+              properties:
+                question_id:
+                  type: integer
+                response_value:
+                  type: string
+      responses:
+        '200':
+          description: Concern flagged
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pmm/cycles/{cycleId}/reassign:
+    post:
+      tags: [Post-Market Monitoring]
+      summary: Reassign stakeholder for a cycle
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stakeholder_id]
+              properties:
+                stakeholder_id:
+                  type: integer
+      responses:
+        '200':
+          description: Stakeholder reassigned
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pmm/reports:
+    get:
+      tags: [Post-Market Monitoring]
+      summary: List reports with filters
+      parameters:
+        - name: project_id
+          in: query
+          schema:
+            type: integer
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: completed_by
+          in: query
+          schema:
+            type: integer
+        - name: flagged_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - $ref: '#/components/parameters/Page'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated reports
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMReportsResponse'
+
+  /pmm/reports/{reportId}/download:
+    get:
+      tags: [Post-Market Monitoring]
+      summary: Download report PDF
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '302':
+          description: Redirect to file download endpoint
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pmm/projects/{projectId}/start-cycle:
+    post:
+      tags: [Post-Market Monitoring]
+      summary: Manually start a new monitoring cycle
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: New cycle started
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PMMCycle'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    FileId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    FolderId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    Period:
+      name: period
+      in: query
+      schema:
+        type: string
+        pattern: '^\d+d$'
+        default: 30d
+      description: Time period in days (e.g., "30d", "7d", "90d")
+
+  responses:
+    BadRequest:
+      description: Validation or input error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+        data:
+          description: Response payload
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+        data:
+          type: string
+
+    # ─── File Manager Schemas ───────────────────────────────────────────────
+    FileUploadResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        size:
+          type: integer
+        mimetype:
+          type: string
+        upload_date:
+          type: string
+          format: date-time
+        uploaded_by:
+          type: integer
+        modelId:
+          type: integer
+          nullable: true
+        review_status:
+          type: string
+          enum: [draft, pending_review]
+        approval_workflow_id:
+          type: integer
+          nullable: true
+        approval_request_id:
+          type: integer
+          nullable: true
+
+    FileListResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileListItem'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    FileListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        size:
+          type: integer
+        formattedSize:
+          type: string
+        mimetype:
+          type: string
+        upload_date:
+          type: string
+          format: date-time
+        uploaded_by:
+          type: integer
+        uploader_name:
+          type: string
+        uploader_surname:
+          type: string
+        review_status:
+          type: string
+        approval_workflow_id:
+          type: integer
+          nullable: true
+
+    FileSearchResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              filename:
+                type: string
+              snippet:
+                type: string
+                description: Highlighted text snippet matching the query
+              rank:
+                type: number
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    FileMetadata:
+      type: object
+      properties:
+        id:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        review_status:
+          type: string
+          enum: [draft, pending_review, approved, rejected, expired]
+        version:
+          type: string
+        expiry_date:
+          type: string
+          format: date-time
+          nullable: true
+        description:
+          type: string
+          nullable: true
+
+    UpdateFileMetadataRequest:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 50
+          description: Each tag max 100 chars, alphanumeric/spaces/hyphens/underscores only
+        review_status:
+          type: string
+          enum: [draft, pending_review, approved, rejected, expired]
+        version:
+          type: string
+        expiry_date:
+          type: string
+          format: date-time
+        description:
+          type: string
+
+    HighlightedFiles:
+      type: object
+      properties:
+        due_for_update:
+          type: array
+          items:
+            type: integer
+        pending_approval:
+          type: array
+          items:
+            type: integer
+        recently_modified:
+          type: array
+          items:
+            type: integer
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    # ─── Virtual Folder Schemas ─────────────────────────────────────────────
+    VirtualFolder:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        parent_id:
+          type: integer
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        is_system:
+          type: boolean
+        file_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateFolderRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        parent_id:
+          type: integer
+          nullable: true
+          description: Parent folder ID (null for root)
+        color:
+          type: string
+          description: Hex color code
+        icon:
+          type: string
+          description: Icon identifier
+
+    UpdateFolderRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        parent_id:
+          type: integer
+          nullable: true
+          description: New parent (null to move to root). Cannot create circular refs.
+        color:
+          type: string
+        icon:
+          type: string
+
+    AssignFilesRequest:
+      type: object
+      required: [file_ids]
+      properties:
+        file_ids:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+
+    # ─── Plugin Schemas ─────────────────────────────────────────────────────
+    Plugin:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        version:
+          type: string
+        author:
+          type: string
+        icon_url:
+          type: string
+        documentation_url:
+          type: string
+
+    PluginInstallation:
+      type: object
+      properties:
+        id:
+          type: integer
+        plugin_key:
+          type: string
+        organization_id:
+          type: integer
+        installed_by:
+          type: integer
+        installed_at:
+          type: string
+          format: date-time
+        configuration:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+
+    ConnectionTestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        details:
+          type: object
+
+    # ─── Shadow AI Schemas ──────────────────────────────────────────────────
+    ShadowAiToolStatus:
+      type: string
+      enum: [detected, under_review, approved, restricted, blocked, dismissed]
+
+    ApiKeyCreateResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+          description: Full API key (shown only on creation)
+        key_prefix:
+          type: string
+        label:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ApiKeyRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        key_prefix:
+          type: string
+        label:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    InsightsSummary:
+      type: object
+      properties:
+        total_events:
+          type: integer
+        total_users:
+          type: integer
+        total_tools:
+          type: integer
+        total_departments:
+          type: integer
+
+    UserDetail:
+      type: object
+      properties:
+        email:
+          type: string
+        department:
+          type: string
+        tools:
+          type: array
+          items:
+            type: object
+            properties:
+              tool_name:
+                type: string
+              event_count:
+                type: integer
+        total_prompts:
+          type: integer
+
+    ShadowAiToolDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        domain:
+          type: string
+        status:
+          $ref: '#/components/schemas/ShadowAiToolStatus'
+        first_seen:
+          type: string
+          format: date-time
+        last_seen:
+          type: string
+          format: date-time
+        event_count:
+          type: integer
+        user_count:
+          type: integer
+        departments:
+          type: array
+          items:
+            type: object
+            properties:
+              department:
+                type: string
+              user_count:
+                type: integer
+        top_users:
+          type: array
+          items:
+            type: object
+            properties:
+              email:
+                type: string
+              event_count:
+                type: integer
+
+    StartGovernanceRequest:
+      type: object
+      required: [model_inventory, governance_owner_id]
+      properties:
+        model_inventory:
+          type: object
+          required: [provider, model]
+          properties:
+            provider:
+              type: string
+            model:
+              type: string
+            version:
+              type: string
+            status:
+              type: string
+              enum: [Approved, Restricted, Pending, Blocked]
+        governance_owner_id:
+          type: integer
+          minimum: 1
+        start_lifecycle:
+          type: boolean
+          default: false
+
+    StartGovernanceResponse:
+      type: object
+      properties:
+        model_inventory_id:
+          type: integer
+        tool_id:
+          type: integer
+        lifecycle_initialized:
+          type: boolean
+
+    ShadowAiRule:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        trigger_type:
+          type: string
+        trigger_config:
+          type: object
+        actions:
+          type: array
+          items:
+            type: object
+        cooldown_minutes:
+          type: integer
+          nullable: true
+        notification_user_ids:
+          type: array
+          items:
+            type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    CreateRuleRequest:
+      type: object
+      required: [name, trigger_type, actions]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+          default: true
+        trigger_type:
+          type: string
+        trigger_config:
+          type: object
+          default: {}
+        actions:
+          type: array
+          items:
+            type: object
+        cooldown_minutes:
+          type: integer
+        notification_user_ids:
+          type: array
+          items:
+            type: integer
+
+    UpdateRuleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+        trigger_type:
+          type: string
+        trigger_config:
+          type: object
+        actions:
+          type: array
+          items:
+            type: object
+        cooldown_minutes:
+          type: integer
+        notification_user_ids:
+          type: array
+          items:
+            type: integer
+
+    SyslogConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+        source_identifier:
+          type: string
+        parser_type:
+          type: string
+          enum: [zscaler, netskope, squid, generic_kv]
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateSyslogConfigRequest:
+      type: object
+      required: [source_identifier, parser_type]
+      properties:
+        source_identifier:
+          type: string
+        parser_type:
+          type: string
+          enum: [zscaler, netskope, squid, generic_kv]
+        is_active:
+          type: boolean
+          default: true
+
+    UpdateSyslogConfigRequest:
+      type: object
+      properties:
+        source_identifier:
+          type: string
+        parser_type:
+          type: string
+          enum: [zscaler, netskope, squid, generic_kv]
+        is_active:
+          type: boolean
+
+    ShadowAiSettings:
+      type: object
+      properties:
+        rate_limit_max_events_per_hour:
+          type: integer
+        retention_events_days:
+          type: integer
+        retention_daily_rollups_days:
+          type: integer
+        retention_alert_history_days:
+          type: integer
+
+    UpdateSettingsRequest:
+      type: object
+      properties:
+        rate_limit_max_events_per_hour:
+          type: integer
+        retention_events_days:
+          type: integer
+        retention_daily_rollups_days:
+          type: integer
+        retention_alert_history_days:
+          type: integer
+
+    # ─── Post-Market Monitoring Schemas ─────────────────────────────────────
+    PMMConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+        project_id:
+          type: integer
+        frequency:
+          type: string
+          description: Monitoring frequency (e.g., "monthly", "quarterly")
+        stakeholder_id:
+          type: integer
+          nullable: true
+        is_active:
+          type: boolean
+        questions_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PMMConfigCreateRequest:
+      type: object
+      required: [project_id]
+      properties:
+        project_id:
+          type: integer
+        frequency:
+          type: string
+        stakeholder_id:
+          type: integer
+        is_active:
+          type: boolean
+          default: true
+
+    PMMConfigUpdateRequest:
+      type: object
+      properties:
+        frequency:
+          type: string
+        stakeholder_id:
+          type: integer
+        is_active:
+          type: boolean
+
+    PMMQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        config_id:
+          type: integer
+          nullable: true
+        question_text:
+          type: string
+        question_type:
+          type: string
+          enum: [yes_no, multi_select, multi_line_text]
+        options:
+          type: array
+          items:
+            type: string
+          nullable: true
+        is_required:
+          type: boolean
+        is_default:
+          type: boolean
+        display_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    PMMQuestionCreate:
+      type: object
+      required: [question_text, question_type]
+      properties:
+        config_id:
+          type: integer
+          nullable: true
+        question_text:
+          type: string
+        question_type:
+          type: string
+          enum: [yes_no, multi_select, multi_line_text]
+        options:
+          type: array
+          items:
+            type: string
+        is_required:
+          type: boolean
+          default: false
+        display_order:
+          type: integer
+
+    PMMQuestionUpdate:
+      type: object
+      properties:
+        question_text:
+          type: string
+        question_type:
+          type: string
+          enum: [yes_no, multi_select, multi_line_text]
+        options:
+          type: array
+          items:
+            type: string
+        is_required:
+          type: boolean
+        display_order:
+          type: integer
+
+    PMMCycle:
+      type: object
+      properties:
+        id:
+          type: integer
+        config_id:
+          type: integer
+        project_id:
+          type: integer
+        project_title:
+          type: string
+        cycle_number:
+          type: integer
+        status:
+          type: string
+          enum: [active, completed]
+        assigned_stakeholder_id:
+          type: integer
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    PMMResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        cycle_id:
+          type: integer
+        question_id:
+          type: integer
+        response_value:
+          type: string
+        is_flagged:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    PMMSaveResponsesRequest:
+      type: object
+      required: [responses]
+      properties:
+        responses:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [question_id, response_value]
+            properties:
+              question_id:
+                type: integer
+              response_value:
+                type: string
+              is_flagged:
+                type: boolean
+                default: false
+
+    PMMSubmitCycleResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        report_generated:
+          type: boolean
+        report_filename:
+          type: string
+          nullable: true
+
+    PMMReportsResponse:
+      type: object
+      properties:
+        reports:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              cycle_id:
+                type: integer
+              file_id:
+                type: integer
+                nullable: true
+              completed_by:
+                type: integer
+              created_at:
+                type: string
+                format: date-time
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer

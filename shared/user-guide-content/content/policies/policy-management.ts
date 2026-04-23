@@ -10,11 +10,11 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Policy Manager in VerifyWise helps you create, organize, and maintain AI governance policies for your organization. Well-documented policies are the foundation of effective AI governance, demonstrating your commitment to responsible AI and ensuring consistent practices across teams.',
+      text: 'The policy manager in VerifyWise helps you create, organize and maintain AI governance policies for your organization. Well-documented policies set the groundwork for how your teams handle AI, and they show regulators and stakeholders that you take governance seriously.',
     },
     {
       type: 'paragraph',
-      text: 'Policies in VerifyWise can be created from scratch or built from pre-designed templates covering common AI governance topics. Each policy tracks its status through a defined lifecycle, from initial draft through review and approval to publication.',
+      text: 'You can create policies from scratch or start from pre-designed templates covering common AI governance topics. Each policy tracks its status through a defined lifecycle, from initial draft through review and approval to publication.',
     },
     {
       type: 'heading',
@@ -24,16 +24,16 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'AI systems introduce unique governance challenges that traditional corporate policies may not address. From algorithmic bias to data privacy, from model transparency to human oversight, organizations need clear policies that define how AI should be developed, deployed, and monitored. Without documented policies, teams make inconsistent decisions, risks go unmanaged, and regulatory compliance becomes difficult to demonstrate.',
+      text: 'AI systems bring governance challenges that traditional corporate policies don\'t cover. Things like algorithmic bias, model transparency and human oversight need clear rules. Without documented policies, teams make inconsistent decisions, risks go unmanaged and it\'s hard to prove compliance when auditors come knocking.',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Regulatory compliance', text: 'Many AI regulations require documented policies covering AI development, deployment, and monitoring' },
-        { bold: 'Consistent practices', text: 'Ensure all teams follow the same standards for AI development and use' },
-        { bold: 'Risk management', text: 'Define acceptable uses, prohibited practices, and risk thresholds for AI systems' },
-        { bold: 'Audit readiness', text: 'Demonstrate governance controls to auditors and regulators with documented policies' },
-        { bold: 'Stakeholder trust', text: 'Show customers, partners, and the public that you take AI governance seriously' },
+        { bold: 'Consistent practices', text: 'Make sure all teams follow the same standards for AI development and use' },
+        { bold: 'Risk management', text: 'Define acceptable uses, prohibited practices and risk thresholds for AI systems' },
+        { bold: 'Audit readiness', text: 'Show auditors and regulators your governance controls with documented policies' },
+        { bold: 'Stakeholder trust', text: 'Show customers and partners that you take AI governance seriously' },
         { bold: 'Training foundation', text: 'Provide clear guidance that teams can reference and learn from' },
       ],
     },
@@ -45,7 +45,7 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Policy Manager has two main tabs for organizing your work:',
+      text: 'The policy manager has two tabs for organizing your work:',
     },
     {
       type: 'icon-cards',
@@ -75,19 +75,19 @@ export const policyManagementContent: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'Draft — Policies being written or edited, not yet ready for review',
-        'Under review — Policies submitted for stakeholder review',
-        'Approved — Policies that have passed review and are ready for publication',
-        'Published — Active policies that apply to your organization',
-        'Archived — Older policies retained for reference but no longer active',
-        'Deprecated — Policies that have been superseded or are no longer relevant',
+        'Draft, policies being written or edited, not yet ready for review',
+        'Under review, policies submitted for stakeholder review',
+        'Approved, policies that have passed review and are ready for publication',
+        'Published, active policies that apply to your organization',
+        'Archived, older policies kept for reference but no longer active',
+        'Deprecated, policies that have been superseded or are no longer relevant',
       ],
     },
     {
       type: 'image',
       src: '/images/user-guide/policy-manager.png',
       alt: 'Policy Manager page showing status cards for Draft, Under Review, Approved, Published, Archived, and Deprecated policies, along with a table listing organizational policies with their status, tags, next review date, and author',
-      caption: 'The Policy Manager provides an overview of all organizational policies and their current status.',
+      caption: 'The policy manager shows all organizational policies and their current status.',
     },
     {
       type: 'heading',
@@ -148,7 +148,7 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise provides predefined tags to help categorize your policies:',
+      text: 'VerifyWise comes with predefined tags to help you categorize policies:',
     },
     {
       type: 'bullet-list',
@@ -166,7 +166,7 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The policy manager provides several ways to find specific policies:',
+      text: 'There are a few ways to find specific policies:',
     },
     {
       type: 'bullet-list',
@@ -184,17 +184,17 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To edit a policy, click on it in the table to open the detail view. Make your changes and save. The last updated timestamp and updated by fields will be automatically recorded.',
+      text: 'To edit a policy, click on it in the table to open the detail view. Make your changes and save. The last updated timestamp and updated by fields get recorded automatically.',
     },
     {
       type: 'paragraph',
-      text: 'To delete a policy, use the delete action in the policy table. Deleted policies cannot be recovered, so consider archiving policies instead if you may need to reference them later.',
+      text: 'To delete a policy, use the delete action in the policy table. Deleted policies can\'t be recovered, so consider archiving instead if you might need to reference them later.',
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',
-      text: 'Instead of deleting outdated policies, change their status to Archived or Deprecated. This preserves the historical record and helps demonstrate how your governance has evolved.',
+      text: 'Instead of deleting outdated policies, change their status to archived or deprecated. This keeps the historical record and helps show how your governance has evolved over time.',
     },
     {
       type: 'heading',
@@ -210,7 +210,7 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Yes. You can paste existing policy content into VerifyWise to centralize your AI governance documentation. Many organizations start by importing their current policies, then use VerifyWise to track their status, schedule reviews, and maintain a single source of truth for AI governance.',
+      text: 'Yes. You can paste existing policy content into VerifyWise to centralize your AI governance documentation. Many organizations start by importing what they already have, then use VerifyWise to track status, schedule reviews and keep everything in one place.',
     },
     {
       type: 'heading',
@@ -220,7 +220,7 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'AI policies should complement your existing corporate policies, not replace them. Your general data protection, information security, and ethics policies still apply. AI-specific policies address the unique challenges of AI systems, such as model transparency, algorithmic fairness, and automated decision-making. Reference your corporate policies where applicable and focus AI policies on what is different about AI.',
+      text: 'AI policies should complement your existing corporate policies, not replace them. Your general data protection, information security and ethics policies still apply. AI-specific policies cover things like model transparency, algorithmic fairness and automated decision-making. Reference your corporate policies where they apply and focus AI policies on what\'s actually different about AI.',
     },
     {
       type: 'heading',
@@ -230,7 +230,7 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Start with the policies required by your regulatory environment and add others based on your risk assessment. Most organizations need at minimum an AI ethics policy, a model development policy, and a data governance policy for AI. Use the policy templates as a guide for what topics to cover, but do not create policies just to check a box. Each policy should address a real governance need.',
+      text: 'Start with the policies your regulatory environment requires and add others based on your risk assessment. Most organizations need at least an AI ethics policy, a model development policy and a data governance policy for AI. Use the templates as a guide for what to cover, but don\'t create policies just to check a box. Each one should address a real governance need.',
     },
     {
       type: 'heading',
@@ -240,7 +240,7 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Policy development typically involves collaboration between technical teams who understand AI systems, legal and compliance teams who understand regulatory requirements, and business stakeholders who understand operational needs. Assign a policy owner responsible for drafting and maintaining each policy, with input from relevant subject matter experts.',
+      text: 'Policy development typically involves technical teams who understand the AI systems, legal and compliance teams who know the regulatory requirements and business stakeholders who understand operational needs. Assign a policy owner to draft and maintain each policy, with input from relevant subject matter experts.',
     },
     {
       type: 'heading',
@@ -250,7 +250,7 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Review policies at least annually, or more frequently for rapidly evolving areas. AI regulations and best practices are still developing, so policies may need more frequent updates than traditional corporate policies. Set review dates when you publish a policy and use VerifyWise to track when reviews are due.',
+      text: 'At least annually, or more often for fast-moving areas. AI regulations and best practices are still evolving, so your policies may need updates more often than traditional corporate ones. Set review dates when you publish a policy and use VerifyWise to track when reviews are due.',
     },
     {
       type: 'article-links',

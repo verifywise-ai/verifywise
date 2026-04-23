@@ -10,7 +10,7 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise provides notification capabilities to keep you informed about important governance activities. Notifications help ensure that team members are aware of updates, deadlines, and actions that require attention.',
+      text: 'VerifyWise sends notifications to keep you informed about governance activities. They help make sure team members know about updates, deadlines and actions that need attention.',
     },
     {
       type: 'heading',
@@ -41,7 +41,7 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The primary way to receive notifications from VerifyWise is through the Slack integration. When configured, VerifyWise can send real-time notifications directly to your Slack workspace.',
+      text: 'The main way to get notifications from VerifyWise is through the Slack integration. When it\'s set up, VerifyWise sends real-time notifications to your Slack workspace.',
     },
     {
       type: 'paragraph',
@@ -50,17 +50,17 @@ export const notificationsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to Integrations from the main menu' },
+        { text: 'Go to Integrations from the main menu' },
         { text: 'Click on the Slack integration card' },
         { text: 'Authorize VerifyWise to connect to your Slack workspace' },
-        { text: 'Configure which channels receive notifications' },
+        { text: 'Pick which channels should receive notifications' },
         { text: 'Set up notification routing for different event types' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Only administrators can configure the Slack integration. Once configured, notifications are sent to the designated channels for all team members to see.',
+      text: 'Only admins can configure the Slack integration. Once it\'s set up, notifications go to the designated channels for everyone to see.',
     },
     {
       type: 'heading',
@@ -70,11 +70,11 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When using the Slack integration, you can route different types of notifications to different channels. This helps organize notifications so relevant team members see the updates that matter to them.',
+      text: 'With the Slack integration, you can send different notification types to different channels. This keeps things organized so team members see the updates that matter to them.',
     },
     {
       type: 'paragraph',
-      text: 'Example routing configurations:',
+      text: 'Example routing setups:',
     },
     {
       type: 'bullet-list',
@@ -93,7 +93,7 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'In addition to external notifications, VerifyWise displays visual indicators within the platform to highlight items needing attention:',
+      text: 'On top of external notifications, VerifyWise shows visual indicators within the platform to flag items that need attention:',
     },
     {
       type: 'bullet-list',
@@ -112,15 +112,15 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To ensure you stay informed about your governance program:',
+      text: 'To stay on top of your governance program:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Check the dashboard regularly', text: 'The dashboard provides a real-time overview of your governance status' },
-        { bold: 'Set up Slack integration', text: 'Receive notifications in your daily workflow tool' },
-        { bold: 'Review status cards', text: 'Status breakdowns help you identify areas needing attention' },
-        { bold: 'Monitor review dates', text: 'Keep track of when policies and assessments need review' },
+        { bold: 'Check the dashboard regularly', text: 'It gives you a real-time overview of your governance status' },
+        { bold: 'Set up Slack integration', text: 'Get notifications in the tool you already use every day' },
+        { bold: 'Review status cards', text: 'Status breakdowns help you spot areas that need attention' },
+        { bold: 'Watch review dates', text: 'Keep track of when policies and assessments need review' },
       ],
     },
     {
@@ -137,7 +137,7 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Currently, VerifyWise uses Slack as the primary notification channel. Email is used for account-related communications like invitations and password resets, but not for governance notifications.',
+      text: 'Slack is the main notification channel right now. Email is used for account-related things like invitations and password resets, but not for governance notifications.',
     },
     {
       type: 'heading',
@@ -147,7 +147,7 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Notification filtering is managed through the Slack integration settings. You can configure which notification types are sent and which channels receive them. Contact your administrator to adjust notification settings.',
+      text: 'Notification filtering is handled through the Slack integration settings. You can configure which types are sent and which channels receive them. Talk to your admin to adjust notification settings.',
     },
     {
       type: 'heading',
@@ -157,7 +157,7 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Slack notifications are sent to channels, so anyone with access to those channels will see the notifications. Channel membership is managed within Slack. In-app indicators are visible to all users who can view the relevant content.',
+      text: 'Slack notifications go to channels, so anyone with access to those channels sees them. Channel membership is managed in Slack. In-app indicators are visible to all users who can view the relevant content.',
     },
     {
       type: 'article-links',

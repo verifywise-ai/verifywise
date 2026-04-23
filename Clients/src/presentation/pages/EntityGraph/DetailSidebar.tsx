@@ -274,10 +274,10 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({
                 <DetailText label="Goal" value={String(rawData.goal)} />
               )}
               {(rawData.doneSubcontrols !== undefined && rawData.totalSubcontrols !== undefined) && (
-                <DetailRow icon={<CheckCircle2 size={14} />} label="Subcontrols" value={`${rawData.doneSubcontrols}/${rawData.totalSubcontrols}`} />
+                <DetailRow icon={<CheckCircle2 size={14} />} label="Requirements" value={`${rawData.doneSubcontrols}/${rawData.totalSubcontrols}`} />
               )}
               {(rawData.answeredAssessments !== undefined && rawData.totalAssessments !== undefined) && (
-                <DetailRow icon={<FileText size={14} />} label="Assessments" value={`${rawData.answeredAssessments}/${rawData.totalAssessments}`} />
+                <DetailRow icon={<FileText size={14} />} label="Controls" value={`${rawData.answeredAssessments}/${rawData.totalAssessments}`} />
               )}
             </>
           )}

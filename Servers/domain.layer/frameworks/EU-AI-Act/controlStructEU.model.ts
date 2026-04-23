@@ -6,6 +6,7 @@ import {
   Table,
 } from "sequelize-typescript";
 import { ControlCategoryStructEUModel } from "./controlCategoryStructEU.model";
+import { Role, RiskTier } from "./euActTypes";
 
 /*
 
@@ -20,6 +21,9 @@ export type ControlStructEU = {
   order_no?: number; // gets assigned from the structure
   implementation_details?: string; // won't get any values, will be filled by user
   control_category_id: number; // when control category is created, its id will be stored and assign here as FK
+  article?: string;
+  roles?: Role[];
+  riskTiers?: RiskTier[];
 };
 
 @Table({
@@ -65,4 +69,10 @@ export class ControlStructEUModel extends Model<ControlStructEU> {
     defaultValue: false,
   })
   is_demo?: boolean;
+
+  @Column({ type: DataType.TEXT })
+  article?: string;
+
+  // roles and riskTiers inherit from the parent controlcategories_struct_eu
+  // via its junction tables; not stored on this table.
 }

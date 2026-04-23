@@ -42,6 +42,7 @@ type StylesType = {
   fileUploadButton: SxProps<Theme>;
   fileName: SxProps<Theme>;
   existingFileName: SxProps<Theme>;
+  fileErrorText: SxProps<Theme>;
   modalActionButton: SxProps<Theme>;
   modalCancelButton: SxProps<Theme>;
   successAlert: SxProps<Theme>;
@@ -234,6 +235,14 @@ export const useStyles = (theme: Theme): StylesType => ({
     mt: 1,
     ml: 1,
     fontStyle: 'italic',
+  },
+
+  fileErrorText: {
+    opacity: 0.8,
+    fontSize: theme.typography.caption.fontSize,
+    color: theme.palette.error.main,
+    mt: 1,
+    display: 'block',
   },
 
   modalActionButton: {

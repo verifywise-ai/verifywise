@@ -10,11 +10,11 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'AI incident management is the practice of detecting, documenting, responding to, and learning from problems that occur with AI systems. Unlike traditional software bugs, AI incidents can be subtle — a model may produce biased outputs, make incorrect predictions, or behave unexpectedly in edge cases without triggering obvious errors.',
+      text: 'AI incident management is the practice of detecting, documenting, responding to and learning from problems that occur with AI systems. Unlike traditional software bugs, AI incidents can be subtle. A model might produce biased outputs, make incorrect predictions or behave unexpectedly in edge cases without triggering obvious errors.',
     },
     {
       type: 'paragraph',
-      text: 'Effective incident management requires both reactive capabilities (handling problems when they occur) and proactive practices (learning from incidents to prevent recurrence). Organizations that manage AI incidents well can respond quickly to minimize harm, satisfy regulatory requirements, and continuously improve their AI systems.',
+      text: 'Good incident management needs both reactive capabilities (handling problems when they occur) and proactive practices (learning from incidents to prevent recurrence). Teams that handle AI incidents well can respond quickly, minimize harm and keep improving their systems.',
     },
     {
       type: 'heading',
@@ -25,18 +25,18 @@ export const incidentManagementContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Minimize harm', text: 'Quick response limits the impact of AI failures on users and stakeholders' },
+        { bold: 'Minimize harm', text: 'Quick response limits the impact of AI failures on users' },
         { bold: 'Regulatory compliance', text: 'Regulations require incident documentation and may mandate reporting serious incidents' },
-        { bold: 'Continuous improvement', text: 'Incident analysis reveals weaknesses and drives improvements in AI systems' },
-        { bold: 'Stakeholder trust', text: 'Transparent incident handling demonstrates responsible AI governance' },
-        { bold: 'Knowledge retention', text: 'Documented incidents preserve institutional knowledge for future reference' },
+        { bold: 'Continuous improvement', text: 'Incident analysis reveals weaknesses and drives fixes in AI systems' },
+        { bold: 'Stakeholder trust', text: 'Transparent incident handling shows you take AI governance seriously' },
+        { bold: 'Knowledge retention', text: 'Documented incidents preserve what your team learned for future reference' },
       ],
     },
     {
       type: 'callout',
       variant: 'warning',
       title: 'Regulatory requirement',
-      text: 'Under the EU AI Act, providers and deployers of high-risk AI systems must report serious incidents to relevant authorities. Maintaining thorough incident records is essential for compliance.',
+      text: 'Under the EU AI Act, providers and deployers of high-risk AI systems must report serious incidents to relevant authorities. Keep thorough incident records so you\'re ready when reporting is required.',
     },
     {
       type: 'image',
@@ -52,17 +52,17 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to **Incident management** from the sidebar and click **New incident**. You\'ll need to provide:',
+      text: 'Go to **Governance > Incident management** in the sidebar and click **New incident**. You\'ll need to provide:',
     },
     {
       type: 'ordered-list',
       items: [
-        { bold: 'AI project', text: '— Select the project or system involved in the incident' },
-        { bold: 'Model/system version', text: '— Specify which version of the model was affected' },
-        { bold: 'Description', text: '— Provide a clear description of what occurred' },
-        { bold: 'Reporter', text: '— Who is reporting the incident' },
-        { bold: 'Date occurred', text: '— When the incident actually happened' },
-        { bold: 'Date detected', text: '— When the incident was discovered (may differ from occurrence)' },
+        { bold: 'AI project', text: ',Select the project or system involved in the incident' },
+        { bold: 'Model/system version', text: ',Specify which version of the model was affected' },
+        { bold: 'Description', text: ',Provide a clear description of what occurred' },
+        { bold: 'Reporter', text: ',Who is reporting the incident' },
+        { bold: 'Date occurred', text: ',When the incident actually happened' },
+        { bold: 'Date detected', text: ',When the incident was discovered (may differ from occurrence)' },
       ],
     },
     {
@@ -208,15 +208,15 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Document which individuals or groups were affected by the incident. This information is important for:',
+      text: 'Document which individuals or groups were affected by the incident. You\'ll need this for:',
     },
     {
       type: 'bullet-list',
       items: [
         { text: 'Regulatory reporting requirements' },
         { text: 'Communication and notification obligations' },
-        { text: 'Impact assessment and remediation planning' },
-        { text: 'Lessons learned and prevention strategies' },
+        { text: 'Impact assessment and remediation' },
+        { text: 'Lessons learned and prevention' },
       ],
     },
     {

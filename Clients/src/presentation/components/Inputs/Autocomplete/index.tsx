@@ -1,205 +1,151 @@
-import { Autocomplete, TextField, Typography, useTheme, Stack } from "@mui/material";
+import {
+  Autocomplete,
+  AutocompleteProps,
+  Stack,
+  SxProps,
+  TextField,
+  Theme,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import "./index.css";
-import { AutoCompleteFieldProps } from "../../../types/widget.types";
-import { AutoCompleteOption } from "../../../../domain/interfaces/i.widget";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 
-function AutoCompleteField({
-  id,
-  type,
-  options = [],
-  placeholder = "Type to search",
-  disabled,
-  sx,
-  width,
-  autoCompleteValue,
-  setAutoCompleteValue,
-  error,
-  multiple = false,
-  value,
-  onChange,
+interface AutoCompleteFieldProps<
+  T,
+  Multiple extends boolean | undefined = undefined,
+  DisableClearable extends boolean | undefined = undefined,
+  FreeSolo extends boolean | undefined = undefined
+> extends Omit<AutocompleteProps<T, Multiple, DisableClearable, FreeSolo>, "renderInput" | "sx"> {
+  label?: string;
+  placeholder?: string;
+  error?: string;
+  isRequired?: boolean;
+  isOptional?: boolean;
+  optionalLabel?: string;
+  sx?: SxProps<Theme>;
+}
+
+function AutoCompleteField<
+  T,
+  Multiple extends boolean | undefined = undefined,
+  DisableClearable extends boolean | undefined = undefined,
+  FreeSolo extends boolean | undefined = undefined
+>({
   label,
-  isRequired = false,
-}: AutoCompleteFieldProps) {
+  placeholder,
+  error,
+  isRequired,
+  isOptional,
+  optionalLabel,
+  sx,
+  disabled,
+  ...autocompleteProps
+}: AutoCompleteFieldProps<T, Multiple, DisableClearable, FreeSolo>) {
   const theme = useTheme();
 
-  // For multiple selection with string options
-  if (multiple && options.length > 0 && typeof options[0] === 'string') {
-    const stringOptions = options as string[];
-    const stringValue = (value || []) as string[];
+  // Extract layout props from sx to apply to wrapper Stack
+  const extractedLayoutProps = (() => {
+    if (!sx || typeof sx !== "object" || Array.isArray(sx)) return {};
+    const s = sx as Record<string, unknown>;
+    return {
+      width: s.width as string | number | undefined,
+      flexGrow: s.flexGrow as number | undefined,
+      minWidth: s.minWidth as string | number | undefined,
+      maxWidth: s.maxWidth as string | number | undefined,
+    };
+  })();
 
-    return (
-      <Stack gap={theme.spacing(2)} sx={sx}>
-        {label && (
-          <Typography
-            component="p"
-            variant="body1"
-            color={theme.palette.text.secondary}
-            fontWeight={500}
-            fontSize={"13px"}
-            sx={{
-              margin: 0,
-              height: '22px',
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            {label}
-            {isRequired && (
-              <Typography
-                component="span"
-                ml={theme.spacing(1)}
-                color={theme.palette.error.text}
-              >
-                *
-              </Typography>
-            )}
-          </Typography>
-        )}
-        <Autocomplete
-          multiple
-          id={id}
-          options={stringOptions}
-          value={stringValue}
-          onChange={(_event, newValue) => {
-            onChange?.(newValue);
-          }}
-          disabled={disabled}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              size="small"
-              placeholder={placeholder}
-              error={!!error}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  minHeight: "34px",
-                  paddingTop: "2px !important",
-                  paddingBottom: "2px !important",
-                },
-                "& ::placeholder": {
-                  fontSize: "13px",
-                },
-              }}
-            />
-          )}
-          sx={{
-            ...getAutocompleteStyles(theme, { hasError: !!error }),
-            width: "100%",
-            backgroundColor: theme.palette.background.main,
-            "& .MuiOutlinedInput-root": {
-              borderRadius: theme.shape.borderRadius,
-            },
-            "& .MuiChip-root": {
-              borderRadius: theme.shape.borderRadius,
-              height: "22px",
-              margin: "1px 2px",
-              fontSize: "13px",
-            },
-          }}
-          slotProps={{
-            popper: {
-              sx: {
-                "& ul": { p: 0 },
-                "& li": {
-                  fontSize: 13,
-                  borderRadius: theme.shape.borderRadius,
-                  transition: "color 0.2s ease, background-color 0.2s ease",
-                  "&:hover": {
-                    color: theme.palette.primary.main,
-                    backgroundColor: theme.palette.background.accent,
-                  },
-                },
-              },
-            },
-            paper: {
-              sx: {
-                p: 2,
-                fontSize: 13,
-                borderRadius: theme.shape.borderRadius,
-                boxShadow: theme.boxShadow,
-              },
-            },
-          }}
-        />
-        {error && (
-          <Typography
-            className="input-error"
-            color={theme.palette.status.error.text}
-            sx={{
-              opacity: 0.8,
-              fontSize: 11,
-            }}
-          >
-            {error}
-          </Typography>
-        )}
-      </Stack>
+  // Pass remaining sx props to the Autocomplete (excluding layout props already on wrapper)
+  const sxWithoutLayoutProps = (() => {
+    if (!sx || typeof sx !== "object" || Array.isArray(sx)) return sx;
+    const s = sx as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(s).filter(
+        ([key]) => !["width", "flexGrow", "minWidth", "maxWidth"].includes(key)
+      )
     );
-  }
+  })();
 
-  // Original single selection with object options
   return (
-    <>
-      <Autocomplete
-        sx={{
-          ...getAutocompleteStyles(theme, { hasError: !!error }),
-          cursor: 'pointer',
-          ...sx,
-        }}
-        className="auto-complete-field"
-        id={id}
-        value={autoCompleteValue}
-        onChange={(_, newValue) => {
-          setAutoCompleteValue?.(newValue);
-        }}
-        options={options as AutoCompleteOption[]}
-        getOptionLabel={(option) => (option && option.name ? option.name : "")}
-        disableClearable
+    <Stack gap={theme.spacing(2)} sx={extractedLayoutProps}>
+      {label && (
+        <Typography
+          component="p"
+          variant="body1"
+          color={theme.palette.text.secondary}
+          fontWeight={500}
+          fontSize={"13px"}
+          sx={{ margin: 0, height: "22px" }}
+        >
+          {label}
+          {isRequired && (
+            <Typography
+              component="span"
+              ml={theme.spacing(1)}
+              color={theme.palette.error.text}
+            >
+              *
+            </Typography>
+          )}
+          {isOptional && (
+            <Typography
+              component="span"
+              fontSize="inherit"
+              fontWeight={400}
+              ml={theme.spacing(2)}
+              sx={{ opacity: 0.6 }}
+            >
+              {optionalLabel || "(optional)"}
+            </Typography>
+          )}
+        </Typography>
+      )}
+      <Autocomplete<T, Multiple, DisableClearable, FreeSolo>
         disabled={disabled}
-        isOptionEqualToValue={(option, value) => option._id === value._id}
         renderInput={(params) => (
           <TextField
-            error={!!error}
             {...params}
-            type={type}
+            size="small"
             placeholder={placeholder}
-            InputProps={{
-              ...params.InputProps,
-              readOnly: true,
-              sx: {
-                width: width,
-                height: 34,
-                fontSize: 13,
-                p: 0,
-                borderRadius: theme.shape.borderRadius,
-                "& input": {
-                  p: 0,
-                },
-                "&.Mui-disabled input": {
-                  cursor: "default",
-                },
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                minHeight: "34px",
+                paddingTop: "2px !important",
+                paddingBottom: "2px !important",
+              },
+              "& ::placeholder": {
+                fontSize: "13px",
               },
             }}
           />
         )}
-        renderOption={(props, option) => {
-          const { key: _key, ...optionProps } = props;
-          return (
-            <li key={option._id} {...optionProps}>
-              <div>{<span>{option.name}</span>}</div>
-            </li>
-          );
+        sx={{
+          ...getAutocompleteStyles(theme, { hasError: !!error }),
+          backgroundColor: theme.palette.background.main,
+          "& .MuiOutlinedInput-root": {
+            ...getAutocompleteStyles(theme, { hasError: !!error })["& .MuiOutlinedInput-root"],
+            borderRadius: theme.shape.borderRadius,
+          },
+          "& .MuiChip-root": {
+            borderRadius: theme.shape.borderRadius,
+            height: "22px",
+            margin: "1px 2px",
+            fontSize: "13px",
+          },
+          ...sxWithoutLayoutProps,
         }}
         slotProps={{
           popper: {
             sx: {
               "& ul": { p: 0 },
               "& li": {
+                fontSize: 13,
                 borderRadius: theme.shape.borderRadius,
                 transition: "color 0.2s ease, background-color 0.2s ease",
                 "&:hover": {
                   color: theme.palette.primary.main,
+                  backgroundColor: theme.palette.background.accent,
                 },
               },
             },
@@ -208,25 +154,28 @@ function AutoCompleteField({
             sx: {
               p: 2,
               fontSize: 13,
+              borderRadius: theme.shape.borderRadius,
+              boxShadow: theme.boxShadow,
             },
           },
         }}
+        {...autocompleteProps}
       />
       {error && (
         <Typography
           component="span"
           className="input-error"
-          color={theme.palette.error.main}
+          color={theme.palette.status.error.text}
           mt={theme.spacing(2)}
           sx={{
             opacity: 0.8,
-            fontSize: 13,
+            fontSize: 11,
           }}
         >
           {error}
         </Typography>
       )}
-    </>
+    </Stack>
   );
 }
 

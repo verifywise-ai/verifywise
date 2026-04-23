@@ -958,7 +958,7 @@ const NewControlPane = ({
 
         handleAlert({
           variant: "success",
-          body: "Control saved successfully",
+          body: "Requirement saved successfully",
           setAlert,
         });
 
@@ -1036,7 +1036,7 @@ const NewControlPane = ({
       )}
 
       {isSubmitting && (
-        <CustomizableToast title="Saving control. Please wait..." />
+        <CustomizableToast title="Saving requirement. Please wait..." />
       )}
 
       <Drawer

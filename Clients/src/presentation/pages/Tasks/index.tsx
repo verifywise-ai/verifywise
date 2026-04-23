@@ -42,6 +42,7 @@ import { TaskPriority, TaskStatus } from "../../../domain/enums/task.enum";
 import PageTour from "../../components/PageTour";
 import TasksSteps from "./TasksSteps";
 import { TaskModel } from "../../../domain/models/Common/task/task.model";
+import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import { GroupBy } from "../../components/Table/GroupBy";
 import {
   useTableGrouping,
@@ -91,6 +92,7 @@ const TASKS_TABLE_COLUMNS: ColumnConfig<TaskColumnKey>[] = [
 const Tasks: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [tasks, setTasks] = useState<TaskModel[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
@@ -186,7 +188,22 @@ const Tasks: React.FC = () => {
       }
     };
     fetchTasks();
-  }, [includeArchived]);
+  }, [includeArchived, refreshKey]);
+
+  // Listen for AI action approvals (e.g. agent_create_task). When an
+  // approval is granted in the RequestorApprovalModal, the executor runs
+  // inside the approve transaction so the new task row already exists by
+  // the time the event fires — bumping refreshKey is enough to pull it in.
+  useEffect(() => {
+    return onAiActionCompleted((detail) => {
+      if (
+        detail?.status === 'approved' &&
+        detail?.toolName === 'agent_create_task'
+      ) {
+        setRefreshKey((k) => k + 1);
+      }
+    });
+  }, []);
 
   // Handle taskId URL param to open edit modal from Wise Search
   useEffect(() => {
@@ -837,8 +854,14 @@ const Tasks: React.FC = () => {
           direction="row"
           justifyContent="space-between"
           alignItems="center"
+          sx={{ flexWrap: "wrap", rowGap: "8px" }}
         >
-          <Stack direction="row" gap="8px" alignItems="center">
+          <Stack
+            direction="row"
+            gap="8px"
+            alignItems="center"
+            sx={{ flexWrap: "wrap", rowGap: "8px" }}
+          >
             {/* FilterBy */}
             <Box data-joyride-id="task-filters">
               <FilterBy
@@ -926,6 +949,7 @@ const Tasks: React.FC = () => {
             gap="8px"
             alignItems="center"
             data-joyride-id="add-task-button"
+            sx={{ flexShrink: 0 }}
           >
             <ExportMenu
               data={exportData}
@@ -940,6 +964,8 @@ const Tasks: React.FC = () => {
                 backgroundColor: "brand.primary",
                 border: "1px solid brand.primary",
                 gap: 2,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
               icon={<AddCircleIcon size={16} />}
               onClick={handleCreateTask}

@@ -10,7 +10,7 @@ export const logsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Logs page records every request through the AI Gateway, whether it came from the Playground or a virtual key. Each row shows the endpoint, model, cost, tokens, latency, status, and who sent it. Click any row to see the full prompt and response.',
+      text: 'The Logs page records every request through the AI Gateway, whether it came from the Playground or a virtual key. Each row shows the endpoint, model, cost, tokens, latency, status and who sent it. Click any row to see the full prompt and response.',
     },
     {
       type: 'heading',
@@ -30,7 +30,7 @@ export const logsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The search box matches against endpoint name, model, user name, and virtual key name. It\'s case-insensitive and matches partial strings. There\'s a short debounce so it doesn\'t hammer the server on every keystroke.',
+      text: 'The search box matches against endpoint name, model, user name and virtual key name. It\'s case-insensitive and matches partial strings. There\'s a short debounce so it doesn\'t hammer the server on every keystroke.',
     },
     {
       type: 'heading',
@@ -135,7 +135,7 @@ export const logsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A footer row below these sections shows latency in milliseconds, prompt tokens, and completion tokens.',
+      text: 'A footer row below these sections shows latency in milliseconds, prompt tokens and completion tokens.',
     },
     {
       type: 'callout',
@@ -167,7 +167,7 @@ export const logsContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Compliance audit trail',
-      text: 'Every gateway request is logged with timestamp, model, cost, tokens, and status. That\'s your evidence for EU AI Act Article 12 (record-keeping) and ISO 42001 Clause 9 (performance evaluation). The source filter is especially useful here: you can pull just the programmatic traffic and ignore test requests from the Playground.',
+      text: 'Every gateway request is logged with timestamp, model, cost, tokens and status. That\'s your evidence for EU AI Act Article 12 (record-keeping) and ISO 42001 Clause 9 (performance evaluation). The source filter is especially useful here: you can pull just the programmatic traffic and ignore test requests from the Playground.',
     },
     {
       type: 'article-links',

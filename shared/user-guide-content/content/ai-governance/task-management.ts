@@ -10,11 +10,11 @@ export const taskManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Task management in VerifyWise helps you coordinate AI governance activities and compliance tasks across your teams. From implementation milestones to audit preparation, the task system ensures accountability and visibility into your governance program.',
+      text: 'Task management in VerifyWise helps you coordinate AI governance activities and compliance tasks across your teams. Whether it\'s implementation milestones or audit prep, the task system keeps things visible and accountable.',
     },
     {
       type: 'paragraph',
-      text: 'Effective task management prevents compliance gaps by ensuring nothing falls through the cracks. Each task can be assigned, prioritized, and tracked through completion, with clear ownership and deadlines.',
+      text: 'It prevents compliance gaps by making sure nothing falls through the cracks. Each task can be assigned, prioritized and tracked through completion with clear ownership and deadlines.',
     },
     {
       type: 'heading',
@@ -24,7 +24,7 @@ export const taskManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to **Tasks** from the main sidebar. The task management page displays summary cards showing task counts by status, followed by a searchable and filterable table of all tasks.',
+      text: 'Go to **Tasks** from the main sidebar. The page shows summary cards with task counts by status, followed by a searchable and filterable table of all tasks.',
     },
     {
       type: 'heading',
@@ -53,11 +53,11 @@ export const taskManagementContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { bold: 'Title', text: '— A clear, descriptive name for the task' },
-        { bold: 'Description', text: '— Detailed information about what needs to be done' },
-        { bold: 'Assignee', text: '— The team member responsible for completing the task' },
-        { bold: 'Priority', text: '— Low, medium, or high priority level' },
-        { bold: 'Due date', text: '— When the task should be completed' },
+        { bold: 'Title', text: ',A clear, descriptive name for the task' },
+        { bold: 'Description', text: ',Detailed information about what needs to be done' },
+        { bold: 'Assignee', text: ',The team member responsible for completing the task' },
+        { bold: 'Priority', text: ',Low, medium, or high priority level' },
+        { bold: 'Due date', text: ',When the task should be completed' },
       ],
     },
     {
@@ -78,11 +78,11 @@ export const taskManagementContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Filter tasks', text: 'Use the filter options to view tasks by status, assignee, priority, or due date' },
+        { bold: 'Filter tasks', text: 'Use the filter options to view tasks by status, assignee, priority or due date' },
         { bold: 'Search tasks', text: 'Use the search box to find tasks by title or description' },
         { bold: 'Update status', text: 'Change task status as work progresses' },
         { bold: 'Edit details', text: 'Modify task information, reassign, or update deadlines' },
-        { bold: 'Archive tasks', text: 'Archive tasks to declutter your list — use "Include archived" to view them later, or restore and delete as needed' },
+        { bold: 'Archive tasks', text: 'Archive tasks to declutter your list, use "Include archived" to view them later, or restore and delete as needed' },
       ],
     },
     {

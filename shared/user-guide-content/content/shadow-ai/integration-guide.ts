@@ -10,7 +10,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'This guide walks you through connecting your network infrastructure to VerifyWise Shadow AI detection, from creating your first API key to verifying that events are flowing into the dashboard. There are two integration paths: the REST API (for custom integrations, browser extensions, and SIEM webhooks) and syslog forwarding (for network proxies and firewalls).',
+      text: 'This guide walks you through connecting your network infrastructure to VerifyWise Shadow AI detection, from creating your first API key to verifying that events are flowing into the dashboard. There are two integration paths: the REST API (for custom integrations, browser extensions and SIEM webhooks) and syslog forwarding (for network proxies and firewalls).',
     },
     {
       type: 'time-estimate',
@@ -41,7 +41,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The REST API is the most flexible integration method. Use it when your data source can make HTTP requests — for example, a SIEM webhook action, a custom script, or a browser extension.',
+      text: 'The REST API is the most flexible integration method. Use it when your data source can make HTTP requests, for example a SIEM webhook action, a custom script or a browser extension.',
     },
 
     {
@@ -55,16 +55,16 @@ export const integrationGuideContent: ArticleContent = {
       items: [
         { text: 'Navigate to Shadow AI → Settings' },
         { text: 'In the "API keys" section, click "Create API key"' },
-        { text: 'Enter a label that identifies the data source (e.g., "Zscaler webhook", "Browser extension prod")' },
+        { text: 'Enter a label that identifies the data source (e.g., "Zscaler webhook" or "Browser extension prod")' },
         { text: 'Click "Create"' },
-        { text: 'Copy the full key immediately and store it securely — it will not be shown again' },
+        { text: 'Copy the full key immediately and store it securely, it won\'t be shown again' },
       ],
     },
     {
       type: 'callout',
       variant: 'warning',
       title: 'Key security',
-      text: 'Treat the API key like a password. Store it in a secrets manager or environment variable — never commit it to source control.',
+      text: 'Treat the API key like a password. Store it in a secrets manager or environment variable. Never commit it to source control.',
     },
 
     {
@@ -177,7 +177,7 @@ export const integrationGuideContent: ArticleContent = {
         { key: 'fix', label: 'How to fix', width: '50%' },
       ],
       rows: [
-        { status: '400', cause: 'Missing required field or invalid email', fix: 'Check that every event has user_email, destination, and timestamp. Verify the email format.' },
+        { status: '400', cause: 'Missing required field or invalid email', fix: 'Check that every event has user_email, destination and timestamp. Verify the email format.' },
         { status: '401', cause: 'Missing or invalid API key', fix: 'Ensure the X-API-Key header is set with a valid, non-revoked key.' },
         { status: '413', cause: 'Batch too large', fix: 'Reduce to 10,000 or fewer events per request.' },
         { status: '429', cause: 'Rate limit exceeded', fix: 'Wait until the next hour window, or increase the rate limit in Settings → Rate limiting.' },
@@ -194,7 +194,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Syslog integration is ideal for network proxies and firewalls that natively support syslog forwarding (Zscaler Internet Access, Netskope, Squid proxy). The VerifyWise server runs a TCP syslog listener that receives log lines, parses them using the configured parser, and feeds them into the same event pipeline as the REST API.',
+      text: 'Syslog integration is ideal for network proxies and firewalls that natively support syslog forwarding (Zscaler Internet Access, Netskope, Squid proxy). The VerifyWise server runs a TCP syslog listener that receives log lines, parses them using the configured parser and feeds them into the same event pipeline as the REST API.',
     },
 
     {
@@ -223,7 +223,7 @@ export const integrationGuideContent: ArticleContent = {
       items: [
         { text: 'Navigate to Shadow AI → Settings' },
         { text: 'In the "Syslog sources" section, click "Add source"' },
-        { text: 'Enter the **source identifier** — this must be the IP address of the machine that will send syslog messages (e.g., `10.0.1.50`). The syslog listener matches incoming connections by source IP.' },
+        { text: 'Enter the **source identifier**, which must be the IP address of the machine that will send syslog messages (e.g., `10.0.1.50`). The syslog listener matches incoming connections by source IP.' },
         { text: 'Select the **parser type** that matches your data source (Zscaler, Netskope, Squid proxy, or Generic key-value)' },
         { text: 'Click "Add"' },
       ],
@@ -314,7 +314,7 @@ export const integrationGuideContent: ArticleContent = {
       items: [
         { text: 'Edit your Squid configuration file (`squid.conf`)' },
         { text: 'Add or modify the `access_log` directive to forward to a syslog destination via TCP: `access_log tcp://VERIFYWISE_IP:5514`' },
-        { text: 'Ensure the log format includes the user identity field (`%un`) — Squid must be configured with authentication (LDAP, Kerberos, or basic) for user emails to be captured' },
+        { text: 'Ensure the log format includes the user identity field (`%un`). Squid must be configured with authentication (LDAP, Kerberos or basic) for user emails to be captured' },
         { text: 'Reload the Squid configuration: `squid -k reconfigure`' },
       ],
     },
@@ -343,7 +343,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The generic key-value parser handles CEF-style log lines and any source that outputs `key=value` pairs. Use this for firewalls, DLP systems, or custom log forwarders that do not match the Zscaler, Netskope, or Squid formats.',
+      text: 'The generic key-value parser handles CEF-style log lines and any source that outputs `key=value` pairs. Use this for firewalls, DLP systems or custom log forwarders that don\'t match the Zscaler, Netskope or Squid formats.',
     },
     {
       type: 'paragraph',
@@ -422,7 +422,7 @@ export const integrationGuideContent: ArticleContent = {
         {
           symptom: 'Events sent but nothing in dashboard',
           cause: 'Tool not matched to a known domain',
-          fix: 'The destination domain must resolve to a known AI tool. Check AI tools page — if the tool shows as "Detected", events are being processed. Insights metrics may need a page refresh.',
+          fix: 'The destination domain must resolve to a known AI tool. Check the AI tools page. If the tool shows as "Detected", events are being processed. Insights metrics may need a page refresh.',
         },
         {
           symptom: 'Syslog events not appearing',
@@ -463,12 +463,12 @@ export const integrationGuideContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Use descriptive API key labels', text: 'Label each key with the source system and environment (e.g., "Zscaler prod", "Browser ext staging") so you can quickly identify and rotate keys' },
-        { bold: 'Include optional fields', text: 'The department, job_title, and manager_email fields are not required but significantly improve risk scoring accuracy and enable department-level alerts' },
+        { bold: 'Use descriptive API key labels', text: 'Label each key with the source system and environment (e.g., "Zscaler prod" or "Browser ext staging") so you can quickly identify and rotate keys' },
+        { bold: 'Include optional fields', text: 'The department, job_title and manager_email fields aren\'t required but they significantly improve risk scoring accuracy and enable department-level alerts' },
         { bold: 'Start with a single source', text: 'Integrate one data source first, verify events are flowing, then add additional sources' },
         { bold: 'Set up alert rules early', text: 'Create at least a "New tool detected" rule immediately after integration so you are notified when new AI tools appear in your network' },
         { bold: 'Monitor the rate limit', text: 'If you are ingesting from a high-volume proxy, configure the rate limit in Settings to prevent accidental overload during initial rollout' },
-        { bold: 'Rotate API keys regularly', text: 'Revoke and recreate API keys periodically. When rotating, create the new key first, update the data source configuration, then revoke the old key' },
+        { bold: 'Rotate API keys regularly', text: 'Revoke and recreate API keys periodically. When rotating, create the new key first, update the data source config, then revoke the old key' },
       ],
     },
 
@@ -480,7 +480,7 @@ export const integrationGuideContent: ArticleContent = {
           collectionId: 'shadow-ai',
           articleId: 'settings',
           title: 'Settings',
-          description: 'API keys, syslog sources, data formats, and rate limiting',
+          description: 'API keys, syslog sources, data formats and rate limiting',
         },
         {
           collectionId: 'shadow-ai',

@@ -51,8 +51,8 @@ interface TableProps {
   table: string;
   onRowClick?: (id: string | number) => void;
   label?: string;
-  setSelectedRow: (row: TableRow) => void;
-  setAnchorEl: (element: HTMLElement | null) => void;
+  setSelectedRow?: (row: TableRow) => void;
+  setAnchorEl?: (element: HTMLElement | null) => void;
 }
 
 
@@ -114,9 +114,9 @@ const CustomizableBasicTable = ({
     event: React.MouseEvent<HTMLTableRowElement>,
     rowData: TableRow
   ) => {
-    setSelectedRow(rowData);
+    setSelectedRow?.(rowData);
     setInputValues(rowData as InputValues);
-    setAnchorEl(event.currentTarget);
+    setAnchorEl?.(event.currentTarget);
     onRowClick?.(rowData.id);
   };
 

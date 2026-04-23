@@ -1,4 +1,4 @@
-import { Box, Divider, Stack, Typography, useTheme, Autocomplete, TextField, Button } from "@mui/material";
+import { Box, Divider, Stack, Typography, useTheme, Button } from "@mui/material";
 import { FC, useEffect, useState } from "react";
 import StandardModal from "../StandardModal";
 import Field from "../../Inputs/Field";
@@ -17,10 +17,10 @@ import {
     removeStepButtonStyle,
     verticalStepDividerStyle,
     stepFieldsContainer,
-    approverAutocompleteStyle,
     conditionsSelectStyle,
     descriptionFieldStyle,
 } from "./style";
+import AutoCompleteField from "../../Inputs/Autocomplete";
 import { ApprovalWorkflowStepModel } from "../../../../domain/models/Common/approvalWorkflow/approvalWorkflowStepModel";
 import { entities, conditions } from "./arrays";
 import { ICreateApprovalWorkflowProps, NewApprovalWorkflowFormErrors } from "src/domain/interfaces/i.approvalForkflow";
@@ -240,117 +240,40 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
                                         }}
                                     />
                                     <Stack direction="row" spacing={6}>
-                                        <Stack gap={theme.spacing(2)} sx={{ width: "50%" }}>
-                                            <Typography
-                                                component="p"
-                                                variant="body1"
-                                                color={theme.palette.text.secondary}
-                                                fontWeight={500}
-                                                fontSize={"13px"}
-                                                sx={{
-                                                    margin: 0,
-                                                    height: '22px',
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                }}
-                                            >
-                                                Approvers
-                                                <Typography
-                                                    component="span"
-                                                    ml={theme.spacing(1)}
-                                                    color={theme.palette.error.text}
-                                                >
-                                                    *
-                                                </Typography>
-                                            </Typography>
-                                            <Autocomplete
-                                                multiple
-                                                id={`approver-${stepIndex}`}
-                                                size="small"
-                                                value={users.filter(u => (step.approver_ids || []).includes(u._id))}
-                                                options={users}
-                                                onChange={(_event, newValue) => {
-                                                    const newSteps = [...workflowSteps];
-                                                    newSteps[stepIndex].approver_ids = newValue.map(u => u._id);
-                                                    setWorkflowSteps(newSteps);
-                                                }}
-                                                getOptionLabel={(user) => `${user.name}${user.surname ? ` ${user.surname}` : ""}`}
-                                                renderOption={(props, option) => {
-                                                    const { key, ...otherProps } = props;
-                                                    return (
-                                                        <Box component="li" key={key} {...otherProps}>
-                                                            <Typography sx={{ fontSize: "13px", color: "#1c2130" }}>
-                                                                {option.name}{option.surname ? ` ${option.surname}` : ""}
-                                                            </Typography>
-                                                        </Box>
-                                                    );
-                                                }}
-                                                filterSelectedOptions
-                                                noOptionsText={
-                                                    (step.approver_ids || []).length === users.length
-                                                        ? "All approvers selected"
-                                                        : "No options"
-                                                }
-                                                popupIcon={<ChevronDown size={20} />}
-                                                renderInput={(params) => (
-                                                    <TextField
-                                                        {...params}
-                                                        placeholder="Select approvers"
-                                                        error={!!errors.steps[stepIndex]?.approver}
-                                                        sx={{
-                                                            "& .MuiOutlinedInput-root": {
-                                                                paddingTop: "3.8px !important",
-                                                                paddingBottom: "3.8px !important",
-                                                            },
-                                                            "& ::placeholder": {
-                                                                fontSize: "13px",
-                                                            },
-                                                            // Override MUI's default error border color to match other fields
-                                                            "& .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline": {
-                                                                borderColor: theme.palette.status.error.border,
-                                                            },
-                                                        }}
-                                                    />
-                                                )}
-                                                slotProps={{
-                                                    paper: {
-                                                        sx: {
-                                                            "& .MuiAutocomplete-listbox": {
-                                                                "& .MuiAutocomplete-option": {
-                                                                    fontSize: "13px",
-                                                                    color: "#1c2130",
-                                                                    paddingLeft: "9px",
-                                                                    paddingRight: "9px",
-                                                                },
-                                                                "& .MuiAutocomplete-option.Mui-focused": {
-                                                                    background: "background.accent",
-                                                                },
-                                                            },
-                                                            "& .MuiAutocomplete-noOptions": {
-                                                                fontSize: "13px",
-                                                                paddingLeft: "9px",
-                                                                paddingRight: "9px",
-                                                            },
-                                                        },
-                                                    },
-                                                }}
-                                                sx={{
-                                                    ...approverAutocompleteStyle(theme),
-                                                }}
-                                            />
-                                            {errors.steps[stepIndex]?.approver && (
-                                                <Typography
-                                                    component="span"
-                                                    sx={{
-                                                        color: theme.palette.status.error.text,
-                                                        opacity: 0.8,
-                                                        fontSize: 11,
-                                                    }}
-                                                >
-                                                    {errors.steps[stepIndex]?.approver}
-                                                </Typography>
-                                            )}
-                                        </Stack>
+                                        <AutoCompleteField
+                                            multiple
+                                            id={`approver-${stepIndex}`}
+                                            label="Approvers"
+                                            isRequired
+                                            placeholder="Select approvers"
+                                            error={errors.steps[stepIndex]?.approver}
+                                            value={users.filter(u => (step.approver_ids || []).includes(u._id))}
+                                            options={users}
+                                            onChange={(_event, newValue) => {
+                                                const newSteps = [...workflowSteps];
+                                                newSteps[stepIndex].approver_ids = newValue.map(u => u._id);
+                                                setWorkflowSteps(newSteps);
+                                            }}
+                                            getOptionLabel={(user) => `${user.name}${user.surname ? ` ${user.surname}` : ""}`}
+                                            renderOption={(props, option) => {
+                                                const { key, ...otherProps } = props;
+                                                return (
+                                                    <Box component="li" key={key} {...otherProps}>
+                                                        <Typography sx={{ fontSize: "13px", color: "#1c2130" }}>
+                                                            {option.name}{option.surname ? ` ${option.surname}` : ""}
+                                                        </Typography>
+                                                    </Box>
+                                                );
+                                            }}
+                                            filterSelectedOptions
+                                            noOptionsText={
+                                                (step.approver_ids || []).length === users.length
+                                                    ? "All approvers selected"
+                                                    : "No options"
+                                            }
+                                            popupIcon={<ChevronDown size={20} />}
+                                            sx={{ width: "50%" }}
+                                        />
                                         <Box sx={{ width: "50%" }}>
                                             <SelectComponent
                                                 items={conditions}

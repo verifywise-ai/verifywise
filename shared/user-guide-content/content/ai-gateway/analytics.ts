@@ -10,7 +10,7 @@ export const analyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Analytics page shows LLM usage, costs, and guardrail activity across your organization. Every request through the AI Gateway is tracked with cost, token count, latency, and model.',
+      text: 'The Analytics page shows LLM usage, costs and guardrail activity across your organization. Every request through the AI Gateway is tracked with cost, token count, latency and model.',
     },
     {
       type: 'heading',
@@ -69,7 +69,7 @@ export const analyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A ranked list showing spend and request volume per endpoint. Each entry shows the endpoint name, request count, and total cost.',
+      text: 'A ranked list showing spend and request volume per endpoint. Each entry shows the endpoint name, request count and total cost.',
     },
     {
       type: 'heading',
@@ -79,7 +79,7 @@ export const analyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The top 10 users ranked by spend, with request count, token usage, and cost per user.',
+      text: 'The top 10 users ranked by spend, with request count, token usage and cost per user.',
     },
     {
       type: 'heading',
@@ -107,7 +107,7 @@ export const analyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click "Load logs" at the bottom of the page to view recent requests with full details. Each row shows the endpoint, model, user, tokens, cost, and status code. Click a row to expand it and see:',
+      text: 'Click "Load logs" at the bottom of the page to view recent requests with full details. Each row shows the endpoint, model, user, tokens, cost and status code. Click a row to expand it and see:',
     },
     {
       type: 'bullet-list',
@@ -116,7 +116,7 @@ export const analyticsContent: ArticleContent = {
         { bold: 'Response', text: 'The model\'s response text' },
         { bold: 'Error', text: 'Error message if the request failed' },
         { bold: 'Metadata', text: 'Custom tags attached to the request (e.g., department, project)' },
-        { text: 'Latency, prompt tokens, and completion tokens' },
+        { text: 'Latency, prompt tokens and completion tokens' },
       ],
     },
     {
@@ -139,7 +139,7 @@ export const analyticsContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Compliance evidence',
-      text: 'Analytics data can be used as compliance evidence for EU AI Act Article 12 (record-keeping) and ISO 42001 Clause 9 (performance evaluation). Every request is logged with timestamps, model, cost, and guardrail results.',
+      text: 'Analytics data can be used as compliance evidence for EU AI Act Article 12 (record-keeping) and ISO 42001 Clause 9 (performance evaluation). Every request is logged with timestamps, model, cost and guardrail results.',
     },
     {
       type: 'article-links',

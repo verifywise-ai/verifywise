@@ -10,11 +10,11 @@ export const policyApprovalContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise includes a library of pre-built policy templates covering common AI governance topics. These templates provide a starting point for creating your own organizational policies, saving time and ensuring you address key governance areas.',
+      text: 'VerifyWise comes with a library of pre-built policy templates covering common AI governance topics. They give you a starting point for creating your own organizational policies, saving time and helping you cover the governance areas that matter.',
     },
     {
       type: 'paragraph',
-      text: 'Templates are organized by category and cover topics from AI ethics and fairness to regulatory compliance and vendor management. You can use templates as-is or customize them to fit your organization\'s specific needs.',
+      text: 'Templates are organized by category, covering everything from AI ethics and fairness to regulatory compliance and vendor management. You can use them as-is or customize them to fit your needs.',
     },
     {
       type: 'heading',
@@ -24,14 +24,14 @@ export const policyApprovalContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Writing AI governance policies from scratch requires significant expertise in both AI technology and regulatory requirements. Policy templates provide a foundation built on industry best practices, regulatory frameworks, and governance standards. They help ensure you address important topics that might otherwise be overlooked and provide language that has been refined through real-world use.',
+      text: 'Writing AI governance policies from scratch takes real expertise in both AI technology and regulatory requirements. Templates give you a foundation built on industry best practices and governance standards. They help you cover topics you might otherwise miss and provide language that\'s been refined through real-world use.',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Save time', text: 'Start with professionally written content rather than a blank page' },
-        { bold: 'Cover key topics', text: 'Templates address important governance areas you might otherwise overlook' },
-        { bold: 'Industry alignment', text: 'Templates incorporate best practices from AI governance frameworks and regulations' },
+        { bold: 'Cover key topics', text: 'Templates cover governance areas you might otherwise miss' },
+        { bold: 'Industry alignment', text: 'Templates reflect best practices from AI governance frameworks and regulations' },
         { bold: 'Consistency', text: 'Multiple policies built from templates share a consistent structure and tone' },
         { bold: 'Customizable', text: 'Adapt template content to your organization\'s specific context and requirements' },
       ],
@@ -52,32 +52,32 @@ export const policyApprovalContent: ArticleContent = {
         {
           icon: 'Shield',
           title: 'Core AI governance policies',
-          description: 'Foundational policies covering AI principles, ethics, accountability, and organizational governance structures.',
+          description: 'Foundational policies covering AI principles, ethics, accountability and organizational governance structures.',
         },
         {
           icon: 'Repeat',
           title: 'Model lifecycle policies',
-          description: 'Policies for model development, testing, deployment, monitoring, and retirement.',
+          description: 'Policies for model development, testing, deployment, monitoring and retirement.',
         },
         {
           icon: 'Lock',
           title: 'Data and security AI policies',
-          description: 'Data governance, privacy, security controls, and access management for AI systems.',
+          description: 'Data governance, privacy, security controls and access management for AI systems.',
         },
         {
           icon: 'Scale',
           title: 'Legal and compliance',
-          description: 'Regulatory compliance, contractual requirements, and legal considerations for AI.',
+          description: 'Regulatory compliance, contractual requirements and legal considerations for AI.',
         },
         {
           icon: 'Users',
           title: 'People and organization',
-          description: 'Roles, responsibilities, training requirements, and organizational structures for AI governance.',
+          description: 'Roles, responsibilities, training requirements and organizational structures for AI governance.',
         },
         {
           icon: 'Building',
           title: 'Industry packs',
-          description: 'Sector-specific policies for healthcare, finance, and other regulated industries.',
+          description: 'Sector-specific policies for healthcare, finance and other regulated industries.',
         },
       ],
     },
@@ -105,7 +105,7 @@ export const policyApprovalContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/policy-templates.png',
       alt: 'Policy Templates tab showing a list of pre-built templates with columns for ID, Title, Tags, and Description covering topics like AI safety, governance, transparency, and security',
-      caption: 'The policy templates library provides ready-to-use policies covering common AI governance topics.',
+      caption: 'The policy templates library has ready-to-use policies covering common AI governance topics.',
     },
     {
       type: 'heading',
@@ -168,14 +168,14 @@ export const policyApprovalContent: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'AI Ethics Policy — Principles for responsible AI development and use',
-        'AI Risk Management Policy — Framework for identifying and managing AI risks',
-        'Model Development Policy — Standards for building and testing AI models',
-        'Data Governance Policy — Rules for data collection, storage, and use in AI',
-        'AI Security Policy — Security controls specific to AI systems',
-        'Vendor AI Assessment Policy — Requirements for evaluating third-party AI',
-        'Human Oversight Policy — When and how humans review AI decisions',
-        'AI Incident Response Policy — Procedures for handling AI-related incidents',
+        'AI ethics policy, principles for responsible AI development and use',
+        'AI risk management policy, framework for identifying and managing AI risks',
+        'Model development policy, standards for building and testing AI models',
+        'Data governance policy, rules for data collection, storage and use in AI',
+        'AI security policy, security controls specific to AI systems',
+        'Vendor AI assessment policy, requirements for evaluating third-party AI',
+        'Human oversight policy, when and how humans review AI decisions',
+        'AI incident response policy, procedures for handling AI-related incidents',
       ],
     },
     {
@@ -186,7 +186,7 @@ export const policyApprovalContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Templates are tagged with relevant topics to help you find policies that address specific governance areas. Common tags include:',
+      text: 'Templates are tagged with relevant topics so you can find policies for specific governance areas. Common tags include:',
     },
     {
       type: 'bullet-list',

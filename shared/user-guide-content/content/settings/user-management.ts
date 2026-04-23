@@ -10,7 +10,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'User management in VerifyWise allows administrators to control who has access to the platform and what they can do. From the Settings page, you can manage your own profile, update security credentials, and administer team members.',
+      text: 'User management lets administrators control who has access to the platform and what they can do. From the Settings page, you can manage your own profile, update security credentials and administer team members.',
     },
     {
       type: 'heading',
@@ -20,7 +20,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Settings page contains several tabs for different configuration areas:',
+      text: 'The Settings page has several tabs for different configuration areas:',
     },
     {
       type: 'icon-cards',
@@ -38,7 +38,7 @@ export const userManagementContent: ArticleContent = {
         {
           icon: 'Users',
           title: 'Team',
-          description: 'Manage team members, roles, and invitations.',
+          description: 'Manage team members, roles and invitations.',
         },
         {
           icon: 'Building2',
@@ -52,7 +52,7 @@ export const userManagementContent: ArticleContent = {
         },
         {
           icon: 'Key',
-          title: 'API Keys',
+          title: 'API keys',
           description: 'Manage API tokens for programmatic access.',
         },
       ],
@@ -65,7 +65,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Profile tab allows you to manage your personal account information.',
+      text: 'The Profile tab is where you manage your personal account information.',
     },
     {
       type: 'heading',
@@ -75,14 +75,14 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can update the following information:',
+      text: 'You can update the following:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Name', text: 'Your first name (2-50 characters)' },
         { bold: 'Surname', text: 'Your last name (2-50 characters)' },
-        { bold: 'Email', text: 'Your email address (read-only, cannot be changed)' },
+        { bold: 'Email', text: 'Your email address (read-only, can\'t be changed)' },
       ],
     },
     {
@@ -115,12 +115,12 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can permanently delete your account from the Profile tab. This action removes all your data from the system and cannot be undone.',
+      text: 'You can permanently delete your account from the Profile tab. This removes all your data from the system and can\'t be undone.',
     },
     {
       type: 'callout',
       variant: 'warning',
-      text: 'Administrators cannot delete their own accounts while they are the only admin. Ensure another admin exists before attempting to delete an admin account.',
+      text: 'Admins can\'t delete their own account while they\'re the only admin. Make sure another admin exists before trying to delete an admin account.',
     },
     {
       type: 'heading',
@@ -130,12 +130,12 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Password tab allows you to update your account password for security purposes.',
+      text: 'The Password tab lets you update your account password.',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to Settings and select the Password tab' },
+        { text: 'Go to Settings and select the Password tab' },
         { text: 'Enter your current password' },
         { text: 'Enter your new password' },
         { text: 'Confirm your new password' },
@@ -146,7 +146,7 @@ export const userManagementContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Password best practices',
-      text: 'Use a strong password with a mix of uppercase, lowercase, numbers, and special characters. Change your password periodically for enhanced security.',
+      text: 'Use a strong password with a mix of uppercase, lowercase, numbers and special characters. Change your password from time to time.',
     },
     {
       type: 'heading',
@@ -156,7 +156,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Team tab allows administrators and editors to manage the users in your organization.',
+      text: 'The Team tab lets admins and editors manage users in your organization.',
     },
     {
       type: 'heading',
@@ -166,14 +166,14 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The team table displays all users with the following information:',
+      text: 'The team table lists all users with the following information:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Name', text: 'The user\'s full name' },
         { bold: 'Email', text: 'The user\'s email address' },
-        { bold: 'Role', text: 'The user\'s assigned role (Admin, Editor, or Viewer)' },
+        { bold: 'Role', text: 'The user\'s assigned role (Admin, Reviewer, Editor or Auditor)' },
         { bold: 'Action', text: 'Delete button to remove the user' },
       ],
     },
@@ -181,7 +181,7 @@ export const userManagementContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/team-members.png',
       alt: 'Team members table showing users with their names, email addresses, roles, and action buttons, with filter tabs for All, Admin, Reviewer, Editor, and Auditor',
-      caption: 'The Team tab displays all team members with role filters and an option to invite new members.',
+      caption: 'The Team tab shows all team members with role filters and an option to invite new members.',
     },
     {
       type: 'paragraph',
@@ -200,9 +200,9 @@ export const userManagementContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click "Invite team member" button' },
+        { text: 'Click "Invite team member"' },
         { text: 'Enter the user\'s email address' },
-        { text: 'Select the role to assign (Admin, Editor, or Viewer)' },
+        { text: 'Select the role to assign (Admin, Reviewer, Editor or Auditor)' },
         { text: 'Click Send invitation' },
       ],
     },
@@ -214,7 +214,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The user receives an email with a link to create their account and join your organization.',
+      text: 'The user gets an email with a link to create their account and join your organization.',
     },
     {
       type: 'heading',
@@ -232,13 +232,13 @@ export const userManagementContent: ArticleContent = {
         { text: 'Find the user in the team table' },
         { text: 'Click on the role dropdown in their row' },
         { text: 'Select the new role' },
-        { text: 'The change is saved automatically' },
+        { text: 'The change saves automatically' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'You cannot change your own role. Another administrator must update your role if needed.',
+      text: 'You can\'t change your own role. Another admin has to update it for you.',
     },
     {
       type: 'heading',
@@ -260,7 +260,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Removed users immediately lose access to the platform. You cannot delete your own account from the Team tab.',
+      text: 'Removed users lose access to the platform right away. You can\'t delete your own account from the Team tab.',
     },
     {
       type: 'heading',
@@ -270,12 +270,12 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Preferences tab allows you to customize how information is displayed for your account.',
+      text: 'The Preferences tab lets you customize how information is displayed for your account.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Date format', text: 'Choose how dates are displayed throughout the platform (e.g., DD-MM-YYYY, MM-DD-YYYY, YYYY-MM-DD)' },
+        { bold: 'Date format', text: 'Choose how dates appear throughout the platform (e.g., DD-MM-YYYY, MM-DD-YYYY, YYYY-MM-DD)' },
       ],
     },
     {
@@ -296,7 +296,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Email addresses are used as unique identifiers for accounts and cannot be changed after registration. If you need to use a different email, you\'ll need to create a new account with the new email address.',
+      text: 'Email addresses are used as unique identifiers and can\'t be changed after registration. If you need a different email, you\'ll have to create a new account.',
     },
     {
       type: 'heading',
@@ -306,7 +306,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Ask the user to check their spam or junk folder. If the email is not there, you can send a new invitation. Some organizations may have email filtering that blocks invitation emails.',
+      text: 'Ask them to check their spam or junk folder. If it\'s not there, send a new invitation. Some organizations have email filtering that may block invitation emails.',
     },
     {
       type: 'heading',
@@ -316,7 +316,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Users with Admin or Editor roles can invite new team members. Viewers cannot send invitations.',
+      text: 'Users with Admin or Editor roles can invite new team members. Reviewers and Auditors can\'t send invitations.',
     },
     {
       type: 'article-links',

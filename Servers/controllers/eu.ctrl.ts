@@ -22,6 +22,7 @@ import {
   getControlByIdForProjectQuery,
   getControlStructByControlCategoryIdForAProjectQuery,
   getTopicByIdForProjectQuery,
+  getVisibleEuCategoryIdsForProject,
   updateQuestionEUByIdQuery,
   updateSubcontrolEUByIdQuery,
 } from "../utils/eu.utils";
@@ -1271,8 +1272,11 @@ export async function getAllControlCategories(
   req: Request,
   res: Response
 ): Promise<any> {
+  const projectFrameworkIdRaw = req.query.projectFrameworkId as string | undefined;
+  const projectFrameworkId = projectFrameworkIdRaw ? parseInt(projectFrameworkIdRaw) : undefined;
+
   logProcessing({
-    description: "starting getAllControlCategories",
+    description: `starting getAllControlCategories${projectFrameworkId ? ` (filtered by projectFrameworkId=${projectFrameworkId})` : ''}`,
     functionName: "getAllControlCategories",
     fileName: "eu.ctrl.ts",
     userId: req.userId!,
@@ -1281,7 +1285,18 @@ export async function getAllControlCategories(
   logger.debug("🔍 Fetching all control categories");
 
   try {
-    const controlCategories = await getAllControlCategoriesQuery(req.organizationId!);
+    let controlCategories = await getAllControlCategoriesQuery(req.organizationId!);
+
+    if (projectFrameworkId && !isNaN(projectFrameworkId)) {
+      const visibleIds = await getVisibleEuCategoryIdsForProject(
+        projectFrameworkId,
+        req.organizationId!
+      );
+      const allowed = new Set(visibleIds);
+      controlCategories = (controlCategories as any[]).filter((cc: any) =>
+        allowed.has(cc.id)
+      ) as typeof controlCategories;
+    }
 
     await logSuccess({
       eventType: "Read",

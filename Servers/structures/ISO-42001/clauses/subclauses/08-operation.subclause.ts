@@ -59,7 +59,7 @@ export const Operation: Partial<SubClauseStructISO & SubClauseISO>[] = [
       "Implementation is traceable. Recommend adding automated control verification for higher-risk systems.",
   },
   {
-    title: "AI System Lifecycle",
+    title: "AI system lifecycle",
     order_no: 4,
     summary:
       "Define and implement processes for managing the entire AI system lifecycle consistent with policy, objectives, and impact assessments.",
@@ -86,26 +86,8 @@ export const Operation: Partial<SubClauseStructISO & SubClauseISO>[] = [
     auditor_feedback:
       "Lifecycle approach is well-structured. Suggest more emphasis on bias mitigation during model training and validation.",
   },
-  {
-    title: "Third-party relationships",
-    order_no: 5,
-    summary:
-      "Manage risks associated with third-party suppliers/partners involved in the AI lifecycle.",
-    questions: [
-      "How do we identify and assess risks related to third-party AI components or services?",
-      "Are AI-specific requirements included in contracts?",
-      "How do we monitor third-party performance and compliance?",
-    ],
-    evidence_examples: [
-      "Third-party risk management procedure",
-      "Supplier assessment questionnaires/reports",
-      "Contracts with AI clauses",
-      "Supplier audit reports",
-      "Service Level Agreements (SLAs)",
-    ],
-    implementation_description:
-      "Third-party risks are assessed during onboarding and annually thereafter. Contracts include AI-specific obligations and audit clauses.",
-    auditor_feedback:
-      "Good supplier oversight. Recommend periodic spot checks to ensure compliance with contractual AI clauses.",
-  },
+  // NOTE: 8.5 "Third-party relationships" was removed — it does not exist in
+  // ISO 42001 clause 8 (which only goes to 8.4). The same content is covered by
+  // Annex A.11 (VW A.11 / ISO A.8). See migration
+  // 20260420105043-iso42001-remove-phantom-8-5.js
 ];

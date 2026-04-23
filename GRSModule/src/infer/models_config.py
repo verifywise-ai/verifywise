@@ -8,6 +8,7 @@ class ModelSpec(BaseModel):
     provider: str
     model_id: str
     region: str | None = None
+    profile: str | None = None
 
 
 class ModelsConfig(BaseModel):

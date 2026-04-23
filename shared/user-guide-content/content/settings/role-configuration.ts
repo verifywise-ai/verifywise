@@ -10,11 +10,11 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise uses role-based access control (RBAC) to manage what users can see and do within the platform. Each user is assigned a role that determines their permissions across all features.',
+      text: 'VerifyWise uses role-based access control (RBAC) to manage what users can see and do. Each user gets a role that sets their permissions across all features.',
     },
     {
       type: 'paragraph',
-      text: 'Understanding roles helps you ensure that team members have appropriate access levels for their responsibilities while maintaining security and governance controls.',
+      text: 'Understanding roles helps you make sure team members have the right access level for their responsibilities while keeping security tight.',
     },
     {
       type: 'heading',
@@ -24,7 +24,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise provides three predefined roles to cover common organizational needs:',
+      text: 'VerifyWise has four predefined roles:',
     },
     {
       type: 'icon-cards',
@@ -32,17 +32,22 @@ export const roleConfigurationContent: ArticleContent = {
         {
           icon: 'Shield',
           title: 'Admin',
-          description: 'Full access to all features including user management, organization settings, and integrations.',
+          description: 'Full access to all features including user management, organization settings and integrations.',
+        },
+        {
+          icon: 'CheckCircle',
+          title: 'Reviewer',
+          description: 'Read access plus the ability to approve or reject items. Can\'t create or edit content.',
         },
         {
           icon: 'Edit',
           title: 'Editor',
-          description: 'Can create, edit, and manage most content but has limited access to administrative functions.',
+          description: 'Can create, edit and manage most content but has limited access to admin functions.',
         },
         {
           icon: 'Eye',
-          title: 'Viewer',
-          description: 'Read-only access to view content and reports but cannot make changes.',
+          title: 'Auditor',
+          description: 'Read-only access for audit and review purposes.',
         },
       ],
     },
@@ -54,18 +59,18 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Administrators have complete control over the VerifyWise platform. This role should be assigned to users responsible for platform governance and user management.',
+      text: 'Admins have full control over the platform. This role is for users responsible for platform governance and user management.',
     },
     {
       type: 'paragraph',
-      text: 'Admin capabilities include:',
+      text: 'Admin capabilities:',
     },
     {
       type: 'checklist',
       items: [
         'Full access to all platform features',
-        'Create, edit, and delete use cases and assessments',
-        'Manage models, vendors, policies, and training records',
+        'Create, edit and delete use cases and assessments',
+        'Manage models, vendors, policies and training records',
         'Invite new users and change user roles',
         'Configure organization settings and branding',
         'Set up and manage integrations (Slack, MLflow)',
@@ -77,7 +82,46 @@ export const roleConfigurationContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'warning',
-      text: 'Admins cannot delete their own account if they are the only administrator. Ensure at least one other admin exists before removing an admin user.',
+      text: 'Admins can\'t delete their own account if they\'re the only administrator. Make sure at least one other admin exists before removing an admin user.',
+    },
+    {
+      type: 'heading',
+      id: 'reviewer-role',
+      level: 2,
+      text: 'Reviewer role',
+    },
+    {
+      type: 'paragraph',
+      text: 'Reviewers can view content and approve or reject items, but they can\'t create or edit content. This role works well for people who need to sign off on governance activities without authoring them.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Reviewer capabilities:',
+    },
+    {
+      type: 'checklist',
+      items: [
+        'View use cases, assessments and compliance status',
+        'Approve or reject items in approval workflows',
+        'View models, vendors, policies and training records',
+        'View reports',
+        'Access dashboard',
+        'Update personal profile and preferences',
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Reviewers can\'t:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'Create, edit or delete content' },
+        { text: 'Invite users or manage team members' },
+        { text: 'Access organization settings' },
+        { text: 'Generate reports' },
+        { text: 'Access integrations or API keys' },
+      ],
     },
     {
       type: 'heading',
@@ -87,17 +131,17 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Editors can work with most platform content but have restricted access to administrative functions. This role is appropriate for team members who need to contribute to governance activities without full system control.',
+      text: 'Editors can work with most platform content but have limited access to admin functions. This role fits team members who contribute to governance activities without needing full system control.',
     },
     {
       type: 'paragraph',
-      text: 'Editor capabilities include:',
+      text: 'Editor capabilities:',
     },
     {
       type: 'checklist',
       items: [
-        'Create, edit, and delete use cases and assessments',
-        'Manage models, vendors, policies, and training records',
+        'Create, edit and delete use cases and assessments',
+        'Manage models, vendors, policies and training records',
         'Invite new team members',
         'Update organization settings (name and logo)',
         'Generate reports',
@@ -106,7 +150,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Editors cannot:',
+      text: 'Editors can\'t:',
     },
     {
       type: 'bullet-list',
@@ -118,36 +162,36 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'heading',
-      id: 'viewer-role',
+      id: 'auditor-role',
       level: 2,
-      text: 'Viewer role',
+      text: 'Auditor role',
     },
     {
       type: 'paragraph',
-      text: 'Viewers have read-only access to the platform. This role is appropriate for stakeholders who need to review governance information without making changes, such as auditors or executives.',
+      text: 'Auditors have read-only access to the platform. This role is meant for people who need to review governance information without changing anything, like external auditors or compliance reviewers.',
     },
     {
       type: 'paragraph',
-      text: 'Viewer capabilities include:',
+      text: 'Auditor capabilities:',
     },
     {
       type: 'checklist',
       items: [
-        'View use cases, assessments, and compliance status',
-        'View models, vendors, policies, and training records',
-        'View reports (cannot generate new reports)',
-        'Access dashboard and analytics',
+        'View use cases, assessments and compliance status',
+        'View models, vendors, policies and training records',
+        'View reports (can\'t generate new ones)',
+        'Access dashboard',
         'Update personal profile and preferences',
       ],
     },
     {
       type: 'paragraph',
-      text: 'Viewers cannot:',
+      text: 'Auditors can\'t:',
     },
     {
       type: 'bullet-list',
       items: [
-        { text: 'Create, edit, or delete any content' },
+        { text: 'Create, edit or delete any content' },
         { text: 'Invite users or manage team members' },
         { text: 'Access organization settings' },
         { text: 'Generate reports' },
@@ -182,16 +226,16 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To change a user\'s role after they have joined:',
+      text: 'To change a user\'s role after they\'ve joined:',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to Settings > Team' },
+        { text: 'Go to Settings > Team' },
         { text: 'Find the user in the team table' },
         { text: 'Click on the role dropdown in their row' },
         { text: 'Select the new role' },
-        { text: 'The change takes effect immediately' },
+        { text: 'The change takes effect right away' },
       ],
     },
     {
@@ -202,27 +246,28 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The following table summarizes key permissions by role:',
+      text: 'Here\'s a summary of key permissions by role:',
     },
     {
       type: 'table',
       columns: [
         { key: 'feature', label: 'Feature', width: '2fr' },
         { key: 'admin', label: 'Admin', width: '1fr' },
+        { key: 'reviewer', label: 'Reviewer', width: '1fr' },
         { key: 'editor', label: 'Editor', width: '1fr' },
-        { key: 'viewer', label: 'Viewer', width: '1fr' },
+        { key: 'auditor', label: 'Auditor', width: '1fr' },
       ],
       rows: [
-        { feature: 'Use cases', admin: 'Full access', editor: 'Full access', viewer: 'View only' },
-        { feature: 'Models', admin: 'Full access', editor: 'Full access', viewer: 'View only' },
-        { feature: 'Vendors', admin: 'Full access', editor: 'Full access', viewer: 'View only' },
-        { feature: 'Policies', admin: 'Full access', editor: 'Full access', viewer: 'View only' },
-        { feature: 'Training', admin: 'Full access', editor: 'Full access', viewer: 'View only' },
-        { feature: 'Reports', admin: 'Generate', editor: 'Generate', viewer: 'View only' },
-        { feature: 'Team management', admin: 'Full access', editor: 'Invite only', viewer: '—' },
-        { feature: 'Organization settings', admin: 'Full access', editor: 'Edit', viewer: 'View only' },
-        { feature: 'Integrations', admin: 'Full access', editor: '—', viewer: '—' },
-        { feature: 'API keys', admin: 'Full access', editor: '—', viewer: '—' },
+        { feature: 'Use cases', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Models', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Vendors', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Policies', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Training', admin: 'Full access', reviewer: 'View only', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Reports', admin: 'Generate', reviewer: 'View only', editor: 'Generate', auditor: 'View only' },
+        { feature: 'Team management', admin: 'Full access', reviewer: 'None', editor: 'Invite only', auditor: 'None' },
+        { feature: 'Organization settings', admin: 'Full access', reviewer: 'View only', editor: 'Edit', auditor: 'View only' },
+        { feature: 'Integrations', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
+        { feature: 'API keys', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
       ],
     },
     {
@@ -234,9 +279,9 @@ export const roleConfigurationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Limit admin accounts', text: 'Assign the Admin role only to users who need full platform control. Most users should be Editors or Viewers.' },
-        { bold: 'Review roles regularly', text: 'Periodically review user roles to ensure they match current responsibilities.' },
-        { bold: 'Use Viewer for external access', text: 'For auditors or external stakeholders who need to review your governance, use the Viewer role.' },
+        { bold: 'Limit admin accounts', text: 'Only give the Admin role to users who need full platform control. Most users should be Editors, Reviewers or Auditors.' },
+        { bold: 'Review roles regularly', text: 'Check user roles from time to time to make sure they still match current responsibilities.' },
+        { bold: 'Use Auditor for external access', text: 'For external auditors or stakeholders who need to review your governance, use the Auditor role.' },
         { bold: 'Document role decisions', text: 'Keep a record of why users were assigned specific roles for audit purposes.' },
       ],
     },
@@ -254,7 +299,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Currently, VerifyWise provides three predefined roles (Admin, Editor, Viewer). Custom role configuration is not available in this version. The predefined roles cover most organizational needs.',
+      text: 'Not right now. VerifyWise has four predefined roles (Admin, Reviewer, Editor, Auditor). Custom role configuration isn\'t available in this version.',
     },
     {
       type: 'heading',
@@ -264,7 +309,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'No, users cannot change their own role. Another administrator must update your role if a change is needed. This prevents accidental loss of admin access.',
+      text: 'No. Another administrator has to update your role. This prevents accidental loss of admin access.',
     },
     {
       type: 'heading',
@@ -274,7 +319,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'We recommend having at least two administrators to ensure continuity. If one admin is unavailable, another can manage the platform. However, limit the number of admins to those who truly need full access.',
+      text: 'At least two is a good idea, so there\'s always a backup if one admin is unavailable. But keep the total number low and limited to people who truly need full access.',
     },
     {
       type: 'article-links',

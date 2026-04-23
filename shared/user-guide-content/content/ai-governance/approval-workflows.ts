@@ -10,7 +10,7 @@ export const approvalWorkflowsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Approval workflows let you require sign-off before certain changes take effect. You define who needs to approve, whether all approvers or just one must agree, and set an optional deadline. When someone submits a request, the designated approvers are notified and can approve or reject it.',
+      text: 'Approval workflows let you require sign-off before certain changes take effect. You define who needs to approve, whether all approvers or just one must agree and set an optional deadline. When someone submits a request, the designated approvers are notified and can approve or reject it.',
     },
     {
       type: 'heading',

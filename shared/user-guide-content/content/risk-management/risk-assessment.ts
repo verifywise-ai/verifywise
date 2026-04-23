@@ -10,11 +10,11 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Risk assessment is the systematic process of identifying what could go wrong with your AI systems, how likely it is to happen, and how severe the consequences would be. This foundational practice helps organizations make informed decisions about which risks require immediate attention and which can be monitored over time.',
+      text: 'Risk assessment is about figuring out what could go wrong with your AI systems, how likely it is to happen and how bad the consequences would be. It helps you decide which risks need immediate attention and which ones you can monitor over time.',
     },
     {
       type: 'paragraph',
-      text: 'In AI governance, risk assessment is particularly important because AI systems can introduce unique risks that traditional software does not — from biased decision-making to unexpected model behaviors. By proactively identifying these risks, you can implement controls before problems occur rather than reacting after harm has been done.',
+      text: 'AI systems bring risks that traditional software doesn\'t, like biased decision-making or unexpected model behaviors. Identifying these risks early lets you put controls in place before problems happen rather than reacting after the fact.',
     },
     {
       type: 'heading',
@@ -24,28 +24,28 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'AI systems present distinct challenges that make formal risk assessment essential:',
+      text: 'AI systems present challenges that make formal risk assessment worth the effort:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Regulatory compliance', text: 'Regulations like the EU AI Act require documented risk assessments for AI systems' },
-        { bold: 'Stakeholder protection', text: 'Identifying risks helps protect users, customers, and affected communities' },
-        { bold: 'Business continuity', text: 'Understanding risks prevents costly failures and reputational damage' },
-        { bold: 'Informed decision-making', text: 'Risk data helps prioritize resources and mitigation efforts' },
-        { bold: 'Accountability', text: 'Documented assessments demonstrate due diligence to auditors and regulators' },
+        { bold: 'Stakeholder protection', text: 'Spotting risks helps protect users, customers and affected communities' },
+        { bold: 'Business continuity', text: 'Knowing your risks prevents costly failures and reputation damage' },
+        { bold: 'Informed decision-making', text: 'Risk data helps you prioritize resources and mitigation efforts' },
+        { bold: 'Accountability', text: 'Documented assessments show auditors and regulators you\'ve done your homework' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Risks in VerifyWise can be linked to both use cases and compliance frameworks, allowing you to track risks across different contexts and regulatory requirements.',
+      text: 'You can link risks in VerifyWise to both use cases and compliance frameworks, so you can track them across different contexts and regulatory requirements.',
     },
     {
       type: 'image',
       src: '/images/user-guide/risk-management.png',
       alt: 'Risk Management page showing risk level summary cards and a table of risks with severity, likelihood, mitigation status, and risk level columns',
-      caption: 'The Risk Management page provides an overview of all identified risks across your AI use cases.',
+      caption: 'The risk management page shows all identified risks across your AI use cases.',
     },
     {
       type: 'heading',
@@ -55,7 +55,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To create a new risk in VerifyWise, navigate to the Risk Management section and provide the following information:',
+      text: 'To create a new risk, head to the risk management section and fill in these details:',
     },
     {
       type: 'ordered-list',
@@ -71,7 +71,7 @@ export const riskAssessmentContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/add-new-risk.png',
       alt: 'Add a new risk modal showing fields for applicable use cases, frameworks, risk name, action owner, AI lifecycle phase, risk description, risk categories, potential impact, likelihood, severity, and calculated risk level',
-      caption: 'The risk creation form captures all the information needed to document and assess a new risk.',
+      caption: 'The risk creation form captures everything you need to document and assess a new risk.',
     },
     {
       type: 'heading',
@@ -81,7 +81,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise tracks risks across the complete AI system lifecycle:',
+      text: 'VerifyWise tracks risks across the full AI system lifecycle:',
     },
     {
       type: 'icon-cards',
@@ -126,7 +126,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each risk is analyzed using likelihood and severity assessments. VerifyWise automatically calculates the overall risk level based on these inputs.',
+      text: 'Each risk gets analyzed using likelihood and severity. VerifyWise calculates the overall risk level automatically from these inputs.',
     },
     {
       type: 'heading',
@@ -184,7 +184,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Based on likelihood and severity, VerifyWise automatically calculates the risk level:',
+      text: 'VerifyWise calculates the risk level from your likelihood and severity ratings:',
     },
     {
       type: 'table',
@@ -223,7 +223,7 @@ export const riskAssessmentContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',
-      text: 'Link each risk to both the relevant use case and any applicable compliance frameworks. This ensures risks are visible in use case reviews and compliance assessments.',
+      text: 'Link each risk to its relevant use case and any applicable compliance frameworks. That way, risks show up in both use case reviews and compliance assessments.',
     },
     {
       type: 'heading',
@@ -233,7 +233,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise provides several views for monitoring your risks:',
+      text: 'VerifyWise gives you a few ways to monitor your risks:',
     },
     {
       type: 'bullet-list',

@@ -193,14 +193,14 @@ router.get("/highlighted", fileOperationsLimiter, authenticateJWT, getHighlighte
 /**
  * @route   GET /file-manager/:id
  * @desc    Download a file by ID
- * @access  Admin only
+ * @access  All authenticated users
  * @param   id - File ID
  * @returns {200} File content with download headers
  * @returns {403} Access denied (unauthorized role or file from different organization)
  * @returns {404} File not found
  * @returns {500} Server error
  */
-router.get("/:id", fileOperationsLimiter, authenticateJWT, authorize(["Admin"]), downloadFile);
+router.get("/:id", fileOperationsLimiter, authenticateJWT, downloadFile);
 
 /**
  * @route   GET /file-manager/:id/metadata

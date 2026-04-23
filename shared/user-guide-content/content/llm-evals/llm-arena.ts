@@ -10,7 +10,7 @@ export const llmArenaContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'LLM Arena lets you compare two models side by side on the same prompt. You send a question to both models simultaneously and see their responses together, making it easy to spot differences in quality, style, and accuracy.',
+      text: 'LLM Arena lets you compare two models side by side on the same prompt. You send a question to both models at once and see their responses together, making it easy to spot differences in quality, style and accuracy.',
     },
     {
       type: 'heading',
@@ -44,7 +44,7 @@ export const llmArenaContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'After both models respond, you can optionally run an automated evaluation using a judge LLM. The judge scores each response on metrics like relevancy, helpfulness, and accuracy, giving you objective data alongside your subjective assessment.',
+      text: 'After both models respond, you can optionally run an automated evaluation using a judge LLM. The judge scores each response on metrics like relevancy, helpfulness and accuracy, giving you objective data alongside your subjective assessment.',
     },
     {
       type: 'heading',
@@ -54,7 +54,7 @@ export const llmArenaContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Arena results are saved and can be reviewed later. Each result shows the prompt, both model responses, and any evaluation scores. Use this to build evidence for model selection decisions.',
+      text: 'Arena results are saved and can be reviewed later. Each result shows the prompt, both model responses and any evaluation scores. Use this to build evidence for model selection decisions.',
     },
     {
       type: 'callout',

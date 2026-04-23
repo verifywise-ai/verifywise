@@ -10,17 +10,17 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The VerifyWise dashboard is the first screen you see after logging in. It provides a real-time overview of your AI governance program, showing key metrics across all areas of the platform in a customizable layout.',
+      text: 'The dashboard is the first screen you see after logging in. It gives you a real-time overview of your AI governance program, showing key metrics across all areas of the platform in a customizable layout.',
     },
     {
       type: 'paragraph',
-      text: 'The dashboard gives you immediate visibility into your governance status, helping you quickly identify areas that need attention and track progress over time. Each widget links directly to its corresponding section, allowing you to navigate efficiently to any part of the platform.',
+      text: 'You can quickly spot areas that need attention, track progress over time and jump directly to any section by clicking a widget.',
     },
     {
       type: 'image',
       src: '/images/user-guide/dashboard-overview.png',
       alt: 'VerifyWise dashboard showing widget cards with status charts for models, vendors, policies, trainings, and incidents',
-      caption: 'The VerifyWise dashboard provides an at-a-glance view of your AI governance program.',
+      caption: 'The dashboard gives you an at-a-glance view of your governance program.',
     },
     {
       type: 'heading',
@@ -30,7 +30,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dashboard welcomes you with a personalized greeting based on the time of day. Morning, afternoon, and evening greetings adapt automatically. On special occasions like international observance days, you may see themed greetings to mark the occasion.',
+      text: 'The dashboard greets you based on the time of day. Morning, afternoon and evening greetings change automatically. On special occasions like international observance days, you may see themed greetings.',
     },
     {
       type: 'heading',
@@ -40,7 +40,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dashboard displays widget cards that provide at-a-glance metrics for different areas of your governance program. Each card shows the total count for that category and, where applicable, a visual breakdown of status distribution.',
+      text: 'Widget cards display at-a-glance metrics for different parts of your governance program. Each card shows the total count for that category and, where applicable, a visual breakdown of how items are distributed by status.',
     },
     {
       type: 'icon-cards',
@@ -105,17 +105,17 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Widgets for entities with status workflows display a donut chart showing how items are distributed across different statuses. This visual breakdown helps you quickly understand the health of each area:',
+      text: 'Widgets that have status workflows show a donut chart breaking down how items are distributed. This makes it easy to see the health of each area at a glance:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Models', text: 'Shows distribution across lifecycle stages like Development, Testing, Production, and Retired' },
-        { bold: 'Vendors', text: 'Displays vendor assessment status such as Pending review, Approved, Requires attention' },
-        { bold: 'Vendor risks', text: 'Shows risk severity levels including Critical, High, Medium, Low' },
-        { bold: 'Policies', text: 'Displays lifecycle status like Draft, Under review, Published, Archived' },
-        { bold: 'Trainings', text: 'Shows completion status: Planned, In progress, Completed' },
-        { bold: 'Incidents', text: 'Displays resolution status such as Open, Investigating, Resolved' },
+        { bold: 'Models', text: 'Shows distribution across lifecycle stages like Development, Testing, Production and Retired' },
+        { bold: 'Vendors', text: 'Displays vendor assessment status such as Pending review, Approved and Requires attention' },
+        { bold: 'Vendor risks', text: 'Shows risk severity levels including Critical, High, Medium and Low' },
+        { bold: 'Policies', text: 'Displays lifecycle status like Draft, Under review, Published and Archived' },
+        { bold: 'Trainings', text: 'Shows completion status: Planned, In progress and Completed' },
+        { bold: 'Incidents', text: 'Displays resolution status such as Open, Investigating and Resolved' },
       ],
     },
     {
@@ -126,14 +126,14 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Widgets automatically highlight items that may need immediate attention. Visual cues help you prioritize your work:',
+      text: 'Widgets automatically highlight items that may need immediate attention. Visual cues help you prioritize:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'High priority', text: 'Red highlight indicates critical items requiring immediate attention, such as critical vendor risks or overdue policies' },
-        { bold: 'Medium priority', text: 'Amber highlight indicates items that need attention soon but are not urgent' },
-        { bold: 'Quick actions', text: 'Some widgets display action buttons to help you address priority items directly from the dashboard' },
+        { bold: 'High priority', text: 'Red highlight for critical items like critical vendor risks or overdue policies' },
+        { bold: 'Medium priority', text: 'Amber highlight for items that need attention soon but aren\'t urgent' },
+        { bold: 'Quick actions', text: 'Some widgets show action buttons so you can address priority items right from the dashboard' },
       ],
     },
     {
@@ -160,9 +160,9 @@ export const dashboardAnalyticsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click the lock icon in the top right corner of the dashboard' },
-        { text: 'The icon changes to an unlocked state, indicating edit mode is active' },
+        { text: 'The icon changes to an unlocked state, meaning edit mode is active' },
         { text: 'A "Show/hide cards" selector appears next to the lock icon' },
-        { text: 'Make your changes (drag, resize, or hide widgets)' },
+        { text: 'Make your changes (drag, resize or hide widgets)' },
         { text: 'Click the lock icon again to save your layout and exit edit mode' },
       ],
     },
@@ -185,9 +185,9 @@ export const dashboardAnalyticsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Click and hold the widget header (the grip icon appears when in edit mode)' },
+        { text: 'Click and hold the widget header (a grip icon appears when in edit mode)' },
         { text: 'Drag the widget to your desired position' },
-        { text: 'Other widgets automatically rearrange to accommodate the new position' },
+        { text: 'Other widgets rearrange automatically to make room' },
         { text: 'Release to drop the widget in place' },
       ],
     },
@@ -206,7 +206,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
       items: [
         { text: 'Drag any edge or corner of a widget to resize it' },
         { text: 'Widgets snap to a grid for consistent alignment' },
-        { text: 'Some widgets have fixed sizes and cannot be resized (Use cases, Users, Evidence, Reports)' },
+        { text: 'Some widgets have fixed sizes and can\'t be resized (Use cases, Users, Evidence, Reports)' },
         { text: 'Widgets with status charts can be made larger to show more detail' },
       ],
     },
@@ -232,7 +232,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Your dashboard layout is automatically saved and will be restored when you return. Each user has their own personalized layout.',
+      text: 'Your dashboard layout saves automatically and will be restored when you return. Each user has their own layout.',
     },
     {
       type: 'heading',
@@ -242,7 +242,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each widget is clickable and takes you directly to the corresponding section of the platform:',
+      text: 'Each widget is clickable and takes you to the matching section of the platform:',
     },
     {
       type: 'bullet-list',
@@ -267,7 +267,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The "Add new" dropdown in the top right corner provides quick access to create new items without leaving the dashboard. Use this to quickly add new use cases, models, vendors, policies, or other entities.',
+      text: 'The "Add new" dropdown in the top right corner lets you create new items without leaving the dashboard. Use it to quickly add use cases, models, vendors, policies and more.',
     },
     {
       type: 'heading',
@@ -277,7 +277,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When you first log in to VerifyWise, you may be prompted to confirm or update your organization name. This ensures your governance documentation and reports display the correct organization identifier.',
+      text: 'When you first log in, you may be asked to confirm or update your organization name. This makes sure your governance docs and reports show the right organization identifier.',
     },
     {
       type: 'heading',
@@ -293,7 +293,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To reset your dashboard, enter edit mode and use the "Show/hide cards" selector to hide all widgets. Then click the link to restore all cards, which resets them to the default layout. Alternatively, you can clear your browser\'s local storage for the VerifyWise site.',
+      text: 'Enter edit mode and use the "Show/hide cards" selector to hide all widgets. Then click the link to restore all cards, which resets them to the default layout. You can also clear your browser\'s local storage for the VerifyWise site.',
     },
     {
       type: 'heading',
@@ -303,7 +303,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'No, each user has their own personalized dashboard layout. Changes you make only affect your view and are saved in your browser. Other team members see their own customized layout.',
+      text: 'No. Each user has their own dashboard layout. Changes you make only affect your view and are saved in your browser. Other team members see their own customized layout.',
     },
     {
       type: 'heading',
@@ -313,7 +313,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Dashboard data is fetched when you load the page and reflects the current state of your governance program. To see the latest data, refresh the page. Changes you make elsewhere in the platform will appear on the dashboard when you next visit or refresh it.',
+      text: 'Dashboard data loads when you open the page and reflects the current state of your governance program. To see the latest data, refresh the page. Changes you make elsewhere in the platform show up when you next visit or refresh the dashboard.',
     },
     {
       type: 'heading',
@@ -323,7 +323,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dashboard is responsive and adapts to different screen sizes. On smaller screens, widgets automatically rearrange into a single-column layout for easier viewing. Full customization features are best accessed on larger screens.',
+      text: 'The dashboard is responsive and adapts to different screen sizes. On smaller screens, widgets rearrange into a single-column layout. Full customization features work best on larger screens.',
     },
     {
       type: 'article-links',

@@ -1,0 +1,2553 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise - AI Detection, Trust Centre & Incident Management APIs
+  description: |
+    OpenAPI specification for three API domains:
+    1. AI Detection - Repository scanning for AI/ML components
+    2. AI Trust Centre - Public trust page management
+    3. AI Incident Management - Incident lifecycle management
+  version: 1.0.0
+
+servers:
+  - url: /ai-detection
+    description: AI Detection endpoints
+  - url: /ai-trust-centre
+    description: AI Trust Centre endpoints
+  - url: /ai-incident-management
+    description: AI Incident Management endpoints
+
+tags:
+  - name: AI Detection - Scans
+  - name: AI Detection - Repositories
+  - name: AI Detection - Risk Scoring
+  - name: AI Trust Centre
+  - name: AI Incident Management
+
+paths:
+  # ===========================================================================
+  # AI DETECTION - SCANS
+  # ===========================================================================
+
+  /ai-detection/scans:
+    post:
+      tags: [AI Detection - Scans]
+      summary: Start a new repository scan
+      description: |
+        Starts a new AI detection scan for the given repository URL.
+        Rate limited to 30 requests per 15 minutes per IP.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartScanRequest'
+      responses:
+        '201':
+          description: Scan created and queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Validation error (missing/invalid fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Business logic error (e.g., scan already in progress)
+        '502':
+          description: External service error (e.g., GitHub unreachable)
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get scan history list
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ScanStatus'
+      responses:
+        '200':
+          description: Paginated scan list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScansResponse'
+
+  /ai-detection/scans/active:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get the most recent active scan
+      description: Returns the most recent scan with status pending, cloning, or scanning. Returns null data if none active.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active scan or null
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /ai-detection/scans/{scanId}:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get scan details with summary
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Scan details with findings summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScanResponse'
+        '404':
+          description: Scan not found
+    delete:
+      tags: [AI Detection - Scans]
+      summary: Delete a completed/failed/cancelled scan
+      description: Admin only. Cascades to findings.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Scan deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DeleteScanResponse'
+        '404':
+          description: Scan not found
+
+  /ai-detection/scans/{scanId}/status:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get scan status for polling
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Scan status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScanStatusResponse'
+
+  /ai-detection/scans/{scanId}/findings:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get findings for a scan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: confidence
+          in: query
+          schema:
+            $ref: '#/components/schemas/ConfidenceLevel'
+        - name: finding_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/FindingType'
+      responses:
+        '200':
+          description: Paginated findings
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FindingsResponse'
+
+  /ai-detection/scans/{scanId}/security-findings:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get security findings for a scan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [critical, high, medium, low]
+      responses:
+        '200':
+          description: Paginated security findings
+
+  /ai-detection/scans/{scanId}/security-summary:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get security summary for a scan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Security summary
+
+  /ai-detection/scans/{scanId}/cancel:
+    post:
+      tags: [AI Detection - Scans]
+      summary: Cancel an in-progress scan
+      description: Admin or Editor. Ownership check in service layer.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Scan cancelled
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CancelScanResponse'
+        '404':
+          description: Scan not found
+        '422':
+          description: Scan not in cancellable state
+
+  /ai-detection/scans/{scanId}/findings/{findingId}/governance:
+    patch:
+      tags: [AI Detection - Scans]
+      summary: Update governance status for a finding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+        - name: findingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGovernanceStatusRequest'
+      responses:
+        '200':
+          description: Governance status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UpdateGovernanceStatusResponse'
+
+  /ai-detection/scans/{scanId}/governance-summary:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get governance summary for a scan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Governance summary
+
+  /ai-detection/stats:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get overall AI Detection statistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Statistics object
+
+  /ai-detection/scans/{scanId}/export/ai-bom:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Export scan results as AI Bill of Materials
+      description: Returns JSON file attachment with AI-BOM format.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: AI-BOM JSON file
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="ai-bom-owner-repo-1.json"'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /ai-detection/scans/{scanId}/dependency-graph:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get dependency graph data for visualization
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Graph nodes, edges, and metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DependencyGraphResponse'
+
+  /ai-detection/scans/{scanId}/compliance:
+    get:
+      tags: [AI Detection - Scans]
+      summary: Get EU AI Act compliance mapping for scan findings
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Compliance mappings, checklist, and summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ComplianceMappingResponse'
+
+  # ===========================================================================
+  # AI DETECTION - RISK SCORING
+  # ===========================================================================
+
+  /ai-detection/scans/{scanId}/risk-score:
+    get:
+      tags: [AI Detection - Risk Scoring]
+      summary: Get risk score with dimension breakdown
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Risk score data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RiskScoreResponse'
+
+  /ai-detection/scans/{scanId}/risk-score/recalculate:
+    post:
+      tags: [AI Detection - Risk Scoring]
+      summary: Recalculate risk score for a completed scan
+      description: Admin or Editor only. Scan must be in completed status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scanId'
+      responses:
+        '200':
+          description: Recalculated risk score
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RiskScoreResponse'
+        '422':
+          description: Scan not in completed status
+
+  /ai-detection/risk-scoring/config:
+    get:
+      tags: [AI Detection - Risk Scoring]
+      summary: Get risk scoring configuration
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Risk scoring config (or defaults if none set)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RiskScoringConfig'
+    patch:
+      tags: [AI Detection - Risk Scoring]
+      summary: Update risk scoring configuration
+      description: Admin only.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRiskScoringConfigRequest'
+      responses:
+        '200':
+          description: Updated config
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RiskScoringConfig'
+        '400':
+          description: Validation error (invalid weights, unknown keys)
+
+  # ===========================================================================
+  # AI DETECTION - REPOSITORIES
+  # ===========================================================================
+
+  /ai-detection/repositories:
+    get:
+      tags: [AI Detection - Repositories]
+      summary: List all registered repositories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated repository list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RepositoryListResponse'
+    post:
+      tags: [AI Detection - Repositories]
+      summary: Register a new repository
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRepositoryRequest'
+      responses:
+        '201':
+          description: Repository registered
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Repository'
+        '400':
+          description: Validation error
+        '409':
+          description: Repository already registered
+
+  /ai-detection/repositories/{id}:
+    get:
+      tags: [AI Detection - Repositories]
+      summary: Get a single repository by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/repositoryId'
+      responses:
+        '200':
+          description: Repository details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Repository'
+        '404':
+          description: Repository not found
+    patch:
+      tags: [AI Detection - Repositories]
+      summary: Update a repository
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/repositoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRepositoryRequest'
+      responses:
+        '200':
+          description: Repository updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Repository'
+        '404':
+          description: Repository not found
+    delete:
+      tags: [AI Detection - Repositories]
+      summary: Remove a repository from registry
+      description: Admin only. Blocked if a scan is in progress.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/repositoryId'
+      responses:
+        '200':
+          description: Repository deleted
+        '404':
+          description: Repository not found
+        '409':
+          description: Scan in progress, cannot delete
+
+  /ai-detection/repositories/{id}/scan:
+    post:
+      tags: [AI Detection - Repositories]
+      summary: Trigger a manual scan for a registered repository
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/repositoryId'
+      responses:
+        '201':
+          description: Scan triggered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Repository not found
+        '409':
+          description: Scan already in progress for this repository
+
+  /ai-detection/repositories/{id}/webhook-secret:
+    post:
+      tags: [AI Detection - Repositories]
+      summary: Generate a new webhook secret for CI/CD integration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/repositoryId'
+      responses:
+        '200':
+          description: New webhook secret generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          webhook_secret:
+                            type: string
+        '404':
+          description: Repository not found
+
+  /ai-detection/repositories/{id}/scans:
+    get:
+      tags: [AI Detection - Repositories]
+      summary: Get scan history for a specific repository
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/repositoryId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated scan history for this repository
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScansResponse'
+
+  # ===========================================================================
+  # AI TRUST CENTRE
+  # ===========================================================================
+
+  /ai-trust-centre/overview:
+    get:
+      tags: [AI Trust Centre]
+      summary: Get AI Trust Centre overview (all sections)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Full overview object with intro, compliance_badges, company_description, terms_and_contact, info
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                          overview:
+                            $ref: '#/components/schemas/AITrustCentreOverview'
+    put:
+      tags: [AI Trust Centre]
+      summary: Update AI Trust Centre overview
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AITrustCentreOverview'
+      responses:
+        '200':
+          description: Overview updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                          overview:
+                            $ref: '#/components/schemas/AITrustCentreOverview'
+        '503':
+          description: Database operation failed
+
+  /ai-trust-centre/resources:
+    get:
+      tags: [AI Trust Centre]
+      summary: Get all AI Trust Centre resources
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of resources with file info
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                          resources:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AITrustCentreResource'
+    post:
+      tags: [AI Trust Centre]
+      summary: Create an AI Trust Centre resource
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, name]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                name:
+                  type: string
+                description:
+                  type: string
+                visible:
+                  type: string
+                  enum: ['true', 'false']
+      responses:
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                          resource:
+                            $ref: '#/components/schemas/AITrustCentreResource'
+        '400':
+          description: File upload failed
+
+  /ai-trust-centre/resources/{id}:
+    put:
+      tags: [AI Trust Centre]
+      summary: Update an AI Trust Centre resource
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                name:
+                  type: string
+                description:
+                  type: string
+                visible:
+                  type: string
+                  enum: ['true', 'false']
+                delete:
+                  type: string
+                  description: File ID to delete (required when uploading replacement)
+      responses:
+        '200':
+          description: Resource updated
+        '400':
+          description: File validation error
+    delete:
+      tags: [AI Trust Centre]
+      summary: Delete an AI Trust Centre resource
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Resource deleted
+        '503':
+          description: Deletion failed
+
+  /ai-trust-centre/subprocessors:
+    get:
+      tags: [AI Trust Centre]
+      summary: Get all AI Trust Centre subprocessors
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subprocessor list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                          subprocessors:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AITrustCentreSubprocessor'
+    post:
+      tags: [AI Trust Centre]
+      summary: Create an AI Trust Centre subprocessor
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubprocessorRequest'
+      responses:
+        '201':
+          description: Subprocessor created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                          subprocessor:
+                            $ref: '#/components/schemas/AITrustCentreSubprocessor'
+
+  /ai-trust-centre/subprocessors/{id}:
+    put:
+      tags: [AI Trust Centre]
+      summary: Update an AI Trust Centre subprocessor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubprocessorRequest'
+      responses:
+        '200':
+          description: Subprocessor updated
+    delete:
+      tags: [AI Trust Centre]
+      summary: Delete an AI Trust Centre subprocessor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subprocessor deleted
+        '503':
+          description: Deletion failed
+
+  /ai-trust-centre/logo:
+    post:
+      tags: [AI Trust Centre]
+      summary: Upload company logo
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Logo uploaded
+        '400':
+          description: File upload failed
+    delete:
+      tags: [AI Trust Centre]
+      summary: Delete company logo
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logo deleted
+        '503':
+          description: Deletion failed
+
+  /ai-trust-centre/{hash}:
+    get:
+      tags: [AI Trust Centre]
+      summary: Get public trust centre page by organization hash
+      description: No authentication required. Validated by visibility middleware.
+      parameters:
+        - name: hash
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Organization tenant hash
+      responses:
+        '200':
+          description: Public trust centre page data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                          trustCentre:
+                            $ref: '#/components/schemas/AITrustCentrePublicPage'
+        '404':
+          description: Organization not found
+
+  /ai-trust-centre/{hash}/logo:
+    get:
+      tags: [AI Trust Centre]
+      summary: Get company logo for public page
+      parameters:
+        - name: hash
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Logo data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                          logo:
+                            type: object
+                            properties:
+                              content:
+                                type: string
+                                format: byte
+                              type:
+                                type: string
+        '404':
+          description: Logo not found
+
+  /ai-trust-centre/{hash}/resources/{id}:
+    get:
+      tags: [AI Trust Centre]
+      summary: Download a public resource file
+      description: Returns the file binary with appropriate Content-Type and Content-Disposition headers.
+      parameters:
+        - name: hash
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: File binary
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Resource not found
+
+  # ===========================================================================
+  # AI INCIDENT MANAGEMENT
+  # ===========================================================================
+
+  /ai-incident-management:
+    get:
+      tags: [AI Incident Management]
+      summary: Get all incidents
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of incidents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Incident'
+    post:
+      tags: [AI Incident Management]
+      summary: Create a new incident
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIncidentRequest'
+      responses:
+        '201':
+          description: Incident created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Incident'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                        message:
+                          type: string
+                        code:
+                          type: string
+
+  /ai-incident-management/{id}:
+    get:
+      tags: [AI Incident Management]
+      summary: Get incident by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/incidentId'
+      responses:
+        '200':
+          description: Incident details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Incident'
+        '204':
+          description: Incident not found (no content)
+        '400':
+          description: Invalid ID parameter
+    patch:
+      tags: [AI Incident Management]
+      summary: Update incident by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/incidentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIncidentRequest'
+      responses:
+        '200':
+          description: Incident updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Incident'
+        '400':
+          description: Validation error
+        '404':
+          description: Incident not found
+    delete:
+      tags: [AI Incident Management]
+      summary: Delete incident by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/incidentId'
+      responses:
+        '200':
+          description: Incident deleted
+        '400':
+          description: Invalid ID parameter
+        '404':
+          description: Incident not found
+
+  /ai-incident-management/{id}/archive:
+    patch:
+      tags: [AI Incident Management]
+      summary: Archive incident by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/incidentId'
+      responses:
+        '200':
+          description: Incident archived
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Incident'
+        '400':
+          description: Invalid ID parameter
+        '404':
+          description: Incident not found
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    scanId:
+      name: scanId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Scan ID
+    repositoryId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Repository ID
+    incidentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Incident ID
+
+  schemas:
+    # =========================================================================
+    # Common
+    # =========================================================================
+
+    ApiResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        data:
+          description: Response payload (varies by endpoint)
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        data:
+          type: string
+          description: Error message
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        total_pages:
+          type: integer
+
+    # =========================================================================
+    # AI Detection - Enums
+    # =========================================================================
+
+    ScanStatus:
+      type: string
+      enum: [pending, cloning, scanning, completed, failed, cancelled]
+
+    ScanMode:
+      type: string
+      enum: [full, incremental]
+
+    FindingStatus:
+      type: string
+      enum: [active, fixed, carried_forward]
+
+    FindingType:
+      type: string
+      enum:
+        - library
+        - dependency
+        - api_call
+        - secret
+        - model_ref
+        - rag_component
+        - agent
+        - prompt_injection
+        - pii_exposure
+        - excessive_agency
+        - jailbreak_risk
+        - training_data_poisoning
+        - model_dos
+        - supply_chain
+        - insecure_plugin
+        - overreliance
+        - model_theft
+
+    ConfidenceLevel:
+      type: string
+      enum: [high, medium, low]
+
+    RiskLevel:
+      type: string
+      enum: [high, medium, low]
+
+    GovernanceStatus:
+      type: string
+      enum: [reviewed, approved, flagged]
+      nullable: true
+
+    LicenseRiskLevel:
+      type: string
+      enum: [high, medium, low, unknown]
+
+    # =========================================================================
+    # AI Detection - Scan Schemas
+    # =========================================================================
+
+    StartScanRequest:
+      type: object
+      required: [repository_url]
+      properties:
+        repository_url:
+          type: string
+          description: GitHub repository URL
+          example: https://github.com/owner/repo
+        scan_mode:
+          $ref: '#/components/schemas/ScanMode'
+        base_commit_sha:
+          type: string
+          pattern: '^[0-9a-fA-F]{7,40}$'
+          description: Required for incremental scans
+        head_commit_sha:
+          type: string
+          pattern: '^[0-9a-fA-F]{7,40}$'
+          description: Required for incremental scans
+
+    ScanStatusResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          $ref: '#/components/schemas/ScanStatus'
+        progress:
+          type: number
+          format: float
+        current_file:
+          type: string
+        files_scanned:
+          type: integer
+        total_files:
+          type: integer
+          nullable: true
+        findings_count:
+          type: integer
+        error_message:
+          type: string
+          nullable: true
+
+    TriggeredByUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        surname:
+          type: string
+
+    ScanResponse:
+      type: object
+      properties:
+        scan:
+          type: object
+          properties:
+            id:
+              type: integer
+            repository_url:
+              type: string
+            repository_owner:
+              type: string
+            repository_name:
+              type: string
+            status:
+              $ref: '#/components/schemas/ScanStatus'
+            findings_count:
+              type: integer
+            files_scanned:
+              type: integer
+            started_at:
+              type: string
+              format: date-time
+              nullable: true
+            completed_at:
+              type: string
+              format: date-time
+              nullable: true
+            duration_ms:
+              type: integer
+              nullable: true
+            error_message:
+              type: string
+              nullable: true
+            triggered_by:
+              $ref: '#/components/schemas/TriggeredByUser'
+            risk_score:
+              type: number
+              nullable: true
+            risk_score_grade:
+              type: string
+              nullable: true
+            risk_score_details:
+              type: object
+              nullable: true
+            risk_score_calculated_at:
+              type: string
+              format: date-time
+              nullable: true
+            scan_mode:
+              $ref: '#/components/schemas/ScanMode'
+            base_commit_sha:
+              type: string
+              nullable: true
+            head_commit_sha:
+              type: string
+              nullable: true
+            baseline_scan_id:
+              type: integer
+              nullable: true
+            changed_files_count:
+              type: integer
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+        summary:
+          $ref: '#/components/schemas/ScanSummary'
+
+    ScanSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        by_confidence:
+          type: object
+          properties:
+            high:
+              type: integer
+            medium:
+              type: integer
+            low:
+              type: integer
+        by_provider:
+          type: object
+          additionalProperties:
+            type: integer
+
+    ScanListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        repository_url:
+          type: string
+        repository_owner:
+          type: string
+        repository_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/ScanStatus'
+        findings_count:
+          type: integer
+        files_scanned:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_ms:
+          type: integer
+          nullable: true
+        triggered_by:
+          $ref: '#/components/schemas/TriggeredByUser'
+        risk_score:
+          type: number
+          nullable: true
+        risk_score_grade:
+          type: string
+          nullable: true
+        scan_mode:
+          $ref: '#/components/schemas/ScanMode'
+        baseline_scan_id:
+          type: integer
+          nullable: true
+        changed_files_count:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ScansResponse:
+      type: object
+      properties:
+        scans:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScanListItem'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CancelScanResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [cancelled]
+        message:
+          type: string
+
+    DeleteScanResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    # =========================================================================
+    # AI Detection - Finding Schemas
+    # =========================================================================
+
+    FilePath:
+      type: object
+      properties:
+        path:
+          type: string
+        line_number:
+          type: integer
+          nullable: true
+        matched_text:
+          type: string
+
+    Finding:
+      type: object
+      properties:
+        id:
+          type: integer
+        finding_type:
+          $ref: '#/components/schemas/FindingType'
+        category:
+          type: string
+        name:
+          type: string
+        provider:
+          type: string
+        confidence:
+          $ref: '#/components/schemas/ConfidenceLevel'
+        risk_level:
+          $ref: '#/components/schemas/RiskLevel'
+        description:
+          type: string
+          nullable: true
+        documentation_url:
+          type: string
+          nullable: true
+        file_count:
+          type: integer
+        file_paths:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilePath'
+        governance_status:
+          $ref: '#/components/schemas/GovernanceStatus'
+        governance_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        governance_updated_by:
+          type: integer
+          nullable: true
+        license_id:
+          type: string
+          nullable: true
+        license_name:
+          type: string
+          nullable: true
+        license_risk:
+          $ref: '#/components/schemas/LicenseRiskLevel'
+        license_source:
+          type: string
+          enum: [package, huggingface, pypi, npm, manual]
+          nullable: true
+        mitigation:
+          type: string
+          nullable: true
+        data_flow_summary:
+          type: string
+          nullable: true
+        vulnerability_details:
+          type: object
+          nullable: true
+        finding_status:
+          $ref: '#/components/schemas/FindingStatus'
+
+    FindingsResponse:
+      type: object
+      properties:
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    UpdateGovernanceStatusRequest:
+      type: object
+      properties:
+        governance_status:
+          type: string
+          enum: [reviewed, approved, flagged]
+          nullable: true
+          description: Set to null to clear governance status
+
+    UpdateGovernanceStatusResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        governance_status:
+          type: string
+          nullable: true
+        governance_updated_at:
+          type: string
+          format: date-time
+        governance_updated_by:
+          type: integer
+
+    # =========================================================================
+    # AI Detection - Risk Scoring
+    # =========================================================================
+
+    RiskScoreResponse:
+      type: object
+      properties:
+        score:
+          type: number
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+        details:
+          type: object
+          nullable: true
+        calculated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    DimensionWeights:
+      type: object
+      properties:
+        data_sovereignty:
+          type: number
+          minimum: 0
+          maximum: 1
+        transparency:
+          type: number
+          minimum: 0
+          maximum: 1
+        security:
+          type: number
+          minimum: 0
+          maximum: 1
+        autonomy:
+          type: number
+          minimum: 0
+          maximum: 1
+        supply_chain:
+          type: number
+          minimum: 0
+          maximum: 1
+      description: All values must sum to 1.0
+
+    VulnerabilityTypesEnabled:
+      type: object
+      properties:
+        prompt_injection:
+          type: boolean
+        pii_exposure:
+          type: boolean
+        excessive_agency:
+          type: boolean
+        jailbreak_risk:
+          type: boolean
+        training_data_poisoning:
+          type: boolean
+        model_dos:
+          type: boolean
+        supply_chain:
+          type: boolean
+        insecure_plugin:
+          type: boolean
+        overreliance:
+          type: boolean
+        model_theft:
+          type: boolean
+
+    RiskScoringConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+          nullable: true
+        llm_enabled:
+          type: boolean
+        llm_key_id:
+          type: integer
+          nullable: true
+        dimension_weights:
+          $ref: '#/components/schemas/DimensionWeights'
+        vulnerability_scan_enabled:
+          type: boolean
+        vulnerability_types_enabled:
+          $ref: '#/components/schemas/VulnerabilityTypesEnabled'
+        updated_by:
+          type: integer
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    UpdateRiskScoringConfigRequest:
+      type: object
+      properties:
+        llm_enabled:
+          type: boolean
+        llm_key_id:
+          type: integer
+          nullable: true
+        dimension_weights:
+          $ref: '#/components/schemas/DimensionWeights'
+        vulnerability_scan_enabled:
+          type: boolean
+        vulnerability_types_enabled:
+          $ref: '#/components/schemas/VulnerabilityTypesEnabled'
+
+    # =========================================================================
+    # AI Detection - Dependency Graph & Compliance
+    # =========================================================================
+
+    DependencyGraphResponse:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              type:
+                type: string
+              metadata:
+                type: object
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+              target:
+                type: string
+              relationship:
+                type: string
+        metadata:
+          type: object
+
+    ComplianceMappingResponse:
+      type: object
+      properties:
+        mappings:
+          type: array
+          items:
+            type: object
+        checklist:
+          type: array
+          items:
+            type: object
+        summary:
+          type: object
+
+    # =========================================================================
+    # AI Detection - Repository Schemas
+    # =========================================================================
+
+    Repository:
+      type: object
+      properties:
+        id:
+          type: integer
+        repository_url:
+          type: string
+        repository_owner:
+          type: string
+        repository_name:
+          type: string
+        display_name:
+          type: string
+          nullable: true
+        default_branch:
+          type: string
+        github_token_id:
+          type: integer
+          nullable: true
+        schedule_enabled:
+          type: boolean
+        schedule_frequency:
+          type: string
+          enum: [daily, weekly, monthly]
+          nullable: true
+        schedule_day_of_week:
+          type: integer
+          minimum: 0
+          maximum: 6
+          nullable: true
+        schedule_day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+          nullable: true
+        schedule_hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        schedule_minute:
+          type: integer
+          minimum: 0
+          maximum: 59
+        webhook_secret:
+          type: string
+          nullable: true
+        ci_enabled:
+          type: boolean
+        ci_min_score:
+          type: number
+        ci_max_critical:
+          type: integer
+        ci_post_comments:
+          type: boolean
+        ci_status_checks:
+          type: boolean
+        last_scan_id:
+          type: integer
+          nullable: true
+        last_scan_status:
+          type: string
+          nullable: true
+        last_scan_at:
+          type: string
+          format: date-time
+          nullable: true
+        next_scan_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_enabled:
+          type: boolean
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateRepositoryRequest:
+      type: object
+      required: [repository_url]
+      properties:
+        repository_url:
+          type: string
+          description: GitHub repository URL
+          example: https://github.com/owner/repo
+        display_name:
+          type: string
+          nullable: true
+        default_branch:
+          type: string
+          default: main
+        github_token_id:
+          type: integer
+          nullable: true
+        schedule_enabled:
+          type: boolean
+          default: false
+        schedule_frequency:
+          type: string
+          enum: [daily, weekly, monthly]
+          description: Required when schedule_enabled is true
+        schedule_day_of_week:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: Required for weekly schedule (0=Sunday)
+        schedule_day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: Required for monthly schedule
+        schedule_hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+          default: 2
+        schedule_minute:
+          type: integer
+          minimum: 0
+          maximum: 59
+          default: 0
+
+    UpdateRepositoryRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          nullable: true
+        default_branch:
+          type: string
+        github_token_id:
+          type: integer
+          nullable: true
+        schedule_enabled:
+          type: boolean
+        schedule_frequency:
+          type: string
+          enum: [daily, weekly, monthly]
+        schedule_day_of_week:
+          type: integer
+          minimum: 0
+          maximum: 6
+        schedule_day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+        schedule_hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        schedule_minute:
+          type: integer
+          minimum: 0
+          maximum: 59
+        is_enabled:
+          type: boolean
+        ci_enabled:
+          type: boolean
+        ci_min_score:
+          type: number
+        ci_max_critical:
+          type: integer
+        ci_post_comments:
+          type: boolean
+        ci_status_checks:
+          type: boolean
+
+    RepositoryListResponse:
+      type: object
+      properties:
+        repositories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Repository'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # =========================================================================
+    # AI Trust Centre Schemas
+    # =========================================================================
+
+    AITrustCentreOverview:
+      type: object
+      description: Full overview with all sections
+      properties:
+        intro:
+          type: object
+          properties:
+            id:
+              type: integer
+            purpose_visible:
+              type: boolean
+            purpose_text:
+              type: string
+            our_statement_visible:
+              type: boolean
+            our_statement_text:
+              type: string
+            our_mission_visible:
+              type: boolean
+            our_mission_text:
+              type: string
+        compliance_badges:
+          type: object
+          properties:
+            id:
+              type: integer
+            soc2_type_i:
+              type: boolean
+            soc2_type_ii:
+              type: boolean
+            iso_27001:
+              type: boolean
+            iso_42001:
+              type: boolean
+            ccpa:
+              type: boolean
+            gdpr:
+              type: boolean
+            hipaa:
+              type: boolean
+            eu_ai_act:
+              type: boolean
+        company_description:
+          type: object
+          properties:
+            id:
+              type: integer
+            background_visible:
+              type: boolean
+            background_text:
+              type: string
+            core_benefits_visible:
+              type: boolean
+            core_benefits_text:
+              type: string
+            compliance_doc_visible:
+              type: boolean
+            compliance_doc_text:
+              type: string
+        terms_and_contact:
+          type: object
+          properties:
+            id:
+              type: integer
+            terms_visible:
+              type: boolean
+            terms_text:
+              type: string
+            privacy_visible:
+              type: boolean
+            privacy_text:
+              type: string
+            email_visible:
+              type: boolean
+            email_text:
+              type: string
+        info:
+          type: object
+          properties:
+            id:
+              type: integer
+            title:
+              type: string
+            header_color:
+              type: string
+            visible:
+              type: boolean
+            intro_visible:
+              type: boolean
+            compliance_badges_visible:
+              type: boolean
+            company_description_visible:
+              type: boolean
+            terms_and_contact_visible:
+              type: boolean
+            resources_visible:
+              type: boolean
+            subprocessor_visible:
+              type: boolean
+            updated_at:
+              type: string
+              format: date-time
+
+    AITrustCentreResource:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        file_id:
+          type: integer
+        visible:
+          type: boolean
+        filename:
+          type: string
+
+    AITrustCentreSubprocessor:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        name:
+          type: string
+        purpose:
+          type: string
+        location:
+          type: string
+        url:
+          type: string
+
+    CreateSubprocessorRequest:
+      type: object
+      required: [name, purpose, location]
+      properties:
+        name:
+          type: string
+        purpose:
+          type: string
+        location:
+          type: string
+        url:
+          type: string
+
+    UpdateSubprocessorRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        purpose:
+          type: string
+        location:
+          type: string
+        url:
+          type: string
+
+    AITrustCentrePublicPage:
+      type: object
+      description: Conditionally includes sections based on visibility settings
+      properties:
+        info:
+          type: object
+          properties:
+            title:
+              type: string
+            header_color:
+              type: string
+            logo:
+              type: integer
+              nullable: true
+        intro:
+          type: object
+          nullable: true
+          properties:
+            purpose:
+              type: string
+              nullable: true
+            statement:
+              type: string
+              nullable: true
+            mission:
+              type: string
+              nullable: true
+        compliance_badges:
+          type: object
+          nullable: true
+          properties:
+            soc2_type_i:
+              type: boolean
+            soc2_type_ii:
+              type: boolean
+            iso_27001:
+              type: boolean
+            iso_42001:
+              type: boolean
+            ccpa:
+              type: boolean
+            gdpr:
+              type: boolean
+            hipaa:
+              type: boolean
+            eu_ai_act:
+              type: boolean
+        company_description:
+          type: object
+          nullable: true
+          properties:
+            background:
+              type: string
+              nullable: true
+            core_benefits:
+              type: string
+              nullable: true
+            compliance_doc:
+              type: string
+              nullable: true
+        terms_and_contact:
+          type: object
+          nullable: true
+          properties:
+            terms:
+              type: string
+              nullable: true
+            privacy:
+              type: string
+              nullable: true
+            email:
+              type: string
+              nullable: true
+        resources:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              description:
+                type: string
+              file_id:
+                type: integer
+              visible:
+                type: boolean
+        subprocessors:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              purpose:
+                type: string
+              location:
+                type: string
+              url:
+                type: string
+
+    # =========================================================================
+    # AI Incident Management Schemas
+    # =========================================================================
+
+    IncidentType:
+      type: string
+      enum:
+        - Malfunction
+        - Unexpected behavior
+        - Model drift
+        - Misuse
+        - Data corruption
+        - Security breach
+        - Performance degradation
+
+    IncidentSeverity:
+      type: string
+      enum:
+        - Minor
+        - Serious
+        - Very serious
+
+    IncidentStatus:
+      type: string
+      enum:
+        - Open
+        - Investigating
+        - Mitigated
+        - Closed
+
+    IncidentApprovalStatus:
+      type: string
+      enum:
+        - Approved
+        - Rejected
+        - Pending
+        - Not required
+
+    Incident:
+      type: object
+      properties:
+        id:
+          type: integer
+        incident_id:
+          type: string
+          nullable: true
+        ai_project:
+          type: string
+        type:
+          $ref: '#/components/schemas/IncidentType'
+        severity:
+          $ref: '#/components/schemas/IncidentSeverity'
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        occurred_date:
+          type: string
+          format: date-time
+        date_detected:
+          type: string
+          format: date-time
+        reporter:
+          type: string
+        categories_of_harm:
+          type: array
+          items:
+            type: string
+        affected_persons_groups:
+          type: string
+          nullable: true
+        description:
+          type: string
+        relationship_causality:
+          type: string
+          nullable: true
+        immediate_mitigations:
+          type: string
+          nullable: true
+        planned_corrective_actions:
+          type: string
+          nullable: true
+        model_system_version:
+          type: string
+          nullable: true
+        interim_report:
+          type: boolean
+        archived:
+          type: boolean
+        approval_status:
+          $ref: '#/components/schemas/IncidentApprovalStatus'
+        approved_by:
+          type: string
+          nullable: true
+        approval_date:
+          type: string
+          format: date-time
+          nullable: true
+        approval_notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateIncidentRequest:
+      type: object
+      required:
+        - ai_project
+        - type
+        - severity
+        - status
+        - occurred_date
+        - date_detected
+        - reporter
+        - approval_status
+        - categories_of_harm
+        - description
+        - relationship_causality
+      properties:
+        ai_project:
+          type: string
+        type:
+          $ref: '#/components/schemas/IncidentType'
+        severity:
+          $ref: '#/components/schemas/IncidentSeverity'
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        occurred_date:
+          type: string
+          format: date-time
+        date_detected:
+          type: string
+          format: date-time
+        reporter:
+          type: string
+        approval_status:
+          $ref: '#/components/schemas/IncidentApprovalStatus'
+        approved_by:
+          type: string
+        categories_of_harm:
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: string
+              description: Comma-separated string (will be split)
+        affected_persons_groups:
+          type: string
+        description:
+          type: string
+        relationship_causality:
+          type: string
+        immediate_mitigations:
+          type: string
+        planned_corrective_actions:
+          type: string
+        model_system_version:
+          type: string
+        interim_report:
+          type: boolean
+          default: false
+        archived:
+          type: boolean
+          default: false
+        approval_date:
+          type: string
+          format: date-time
+        approval_notes:
+          type: string
+
+    UpdateIncidentRequest:
+      type: object
+      description: All fields are optional; only provided fields are updated.
+      properties:
+        ai_project:
+          type: string
+        type:
+          $ref: '#/components/schemas/IncidentType'
+        severity:
+          $ref: '#/components/schemas/IncidentSeverity'
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        occurred_date:
+          type: string
+          format: date-time
+        date_detected:
+          type: string
+          format: date-time
+        reporter:
+          type: string
+        approval_status:
+          $ref: '#/components/schemas/IncidentApprovalStatus'
+        approved_by:
+          type: string
+        categories_of_harm:
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: string
+        affected_persons_groups:
+          type: string
+        description:
+          type: string
+        relationship_causality:
+          type: string
+        immediate_mitigations:
+          type: string
+        planned_corrective_actions:
+          type: string
+        model_system_version:
+          type: string
+        interim_report:
+          type: boolean
+        archived:
+          type: boolean
+        approval_date:
+          type: string
+          format: date-time
+        approval_notes:
+          type: string

@@ -14,7 +14,7 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Scores show up on the scan details page after a scan finishes. You can calculate the score manually, or turn on LLM-enhanced analysis for written summaries, recommendations, and suggested risks.',
+      text: 'Scores show up on the scan details page after a scan finishes. You can calculate the score manually, or turn on LLM-enhanced analysis for written summaries, recommendations and suggested risks.',
     },
     {
       type: 'heading',
@@ -48,10 +48,10 @@ export const riskScoringContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Data sovereignty', text: 'Penalized when data goes to external cloud APIs. High-risk library imports, calls to external providers, and hardcoded secrets all count.' },
-        { bold: 'Transparency', text: 'Penalized when AI usage is poorly documented or hard to audit. Undocumented model references, missing licenses, and low-confidence findings add up.' },
-        { bold: 'Security', text: 'Penalized by model file vulnerabilities, hardcoded credentials, and security findings. Severity (Critical, High, Medium, Low) determines penalty weight.' },
-        { bold: 'Autonomy', text: 'Penalized when autonomous AI agents show up. Agent frameworks, MCP servers, and tool-using agents increase this dimension\'s risk.' },
+        { bold: 'Data sovereignty', text: 'Penalized when data goes to external cloud APIs. High-risk library imports, calls to external providers and hardcoded secrets all count.' },
+        { bold: 'Transparency', text: 'Penalized when AI usage is poorly documented or hard to audit. Undocumented model references, missing licenses and low-confidence findings add up.' },
+        { bold: 'Security', text: 'Penalized by model file vulnerabilities, hardcoded credentials and security findings. Severity (Critical, High, Medium, Low) determines penalty weight.' },
+        { bold: 'Autonomy', text: 'Penalized when autonomous AI agents show up. Agent frameworks, MCP servers and tool-using agents increase this dimension\'s risk.' },
         { bold: 'Supply chain', text: 'Penalized by external dependencies and 3rd-party AI components. Libraries with restrictive licenses, many external providers, and RAG components add to it.' },
       ],
     },
@@ -154,7 +154,7 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click **Add to risk register** on any suggestion to open the risk form with pre-filled values (name, description, category, lifecycle phase, likelihood, severity, impact, and mitigation plan). Adjust as needed, then save.',
+      text: 'Click **Add to risk register** on any suggestion to open the risk form with pre-filled values (name, description, category, lifecycle phase, likelihood, severity, impact and mitigation plan). Adjust as needed, then save.',
     },
     {
       type: 'paragraph',

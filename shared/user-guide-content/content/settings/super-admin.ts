@@ -10,13 +10,13 @@ export const superAdminContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The super admin panel is a separate interface for managing the entire VerifyWise installation. It\'s only visible to users with the super admin role and is accessed at /super-admin after login.',
+      text: 'The super admin panel is a separate interface for managing the entire VerifyWise installation. It\'s only visible to super admin users and is accessed at /super-admin/settings after login.',
     },
     {
       type: 'callout',
       variant: 'warning',
       title: 'Super admin only',
-      text: 'This section only applies to super admins. Regular users (Admin, Editor, Reviewer, Auditor) do not have access to this panel.',
+      text: 'This section only applies to super admins. Regular users (Admin, Reviewer, Editor, Auditor) don\'t have access to this panel.',
     },
     {
       type: 'heading',
@@ -26,7 +26,7 @@ export const superAdminContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Organizations page lists all organizations in the system. For each organization, you can see the name, number of users, and creation date. Click "View users" to see all users in that organization.',
+      text: 'The Organizations page lists all organizations in the system. For each one, you can see the name, number of users and creation date. Click "View users" to see everyone in that organization.',
     },
     {
       type: 'heading',
@@ -42,8 +42,8 @@ export const superAdminContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Search', text: 'Find users by name or email.' },
-        { bold: 'Invite', text: 'Click "Invite user" to add a new user to a specific organization with a role.' },
-        { bold: 'Edit', text: 'Click any user row to change their name, email, role, or organization.' },
+        { bold: 'Invite', text: 'Click "Invite user" to add someone to a specific organization with a role.' },
+        { bold: 'Edit', text: 'Click any user row to change their name, email, role or organization.' },
         { bold: 'Remove', text: 'Remove a user from the system.' },
       ],
     },
@@ -57,9 +57,9 @@ export const superAdminContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click **Invite user** on the Users page.' },
-        { text: 'Enter the user\'s name, surname, and email.' },
+        { text: 'Enter the user\'s name, surname and email.' },
         { text: 'Select the organization they belong to.' },
-        { text: 'Choose a role: Admin, Reviewer, Editor, or Auditor.' },
+        { text: 'Choose a role: Admin, Reviewer, Editor or Auditor.' },
         { text: 'Set a temporary password.' },
         { text: 'Click **Invite**.' },
       ],
@@ -72,7 +72,7 @@ export const superAdminContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Settings page lets the super admin update their own profile and password. It uses the same layout as the regular settings page but is scoped to the super admin account.',
+      text: 'The Settings page at /super-admin/settings lets the super admin update their own profile and password. It uses the same layout as the regular settings page but is scoped to the super admin account.',
     },
     {
       type: 'heading',
@@ -87,10 +87,10 @@ export const superAdminContent: ArticleContent = {
         { key: 'scope', label: 'Scope', width: '75%' },
       ],
       rows: [
-        { role: 'Super admin', scope: 'Full access to all organizations, users, and system settings' },
+        { role: 'Super admin', scope: 'Full access to all organizations, users and system settings' },
         { role: 'Admin', scope: 'Full access within their own organization' },
+        { role: 'Reviewer', scope: 'Read access plus approve/reject actions within their organization' },
         { role: 'Editor', scope: 'Read and write access within their organization' },
-        { role: 'Reviewer', scope: 'Read access plus approve/reject actions' },
         { role: 'Auditor', scope: 'Read-only access for audit purposes' },
       ],
     },

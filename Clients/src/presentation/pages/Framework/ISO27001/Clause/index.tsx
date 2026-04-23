@@ -179,7 +179,7 @@ const ISO27001Clause = ({
       setLoadingSubClauses((prev) => ({ ...prev, [clauseId]: true }));
       try {
         const response = await ISO27001GetSubClauseByClauseId({
-          routeUrl: `/iso-27001/subClauses/byClauseId/${clauseId}`,
+          routeUrl: `/iso-27001/subClauses/byClauseId/${clauseId}?projectFrameworkId=${projectFrameworkId}`,
         });
         const detailedSubClauses = response.data;
 
@@ -333,19 +333,100 @@ const ISO27001Clause = ({
             <CircularProgress size={24} />
           </Stack>
         ) : filteredSubClauses.length > 0 ? (
-          filteredSubClauses.map((subClause: any, index: number) => (
+          // Enrich the list with synthetic parent-header rows for any group
+          // of 3-level subclauses (e.g. 6.1.1-6.1.3 gets a "6.1" header above
+          // it). Parent titles come from the well-known ISO standard names —
+          // headers are display-only, not fillable.
+          (() => {
+            const PARENT_TITLES: Record<string, string> = {
+              "6.1": "Actions to address risks and opportunities",
+            };
+            const enriched: any[] = [];
+            let currentPrefix: string | null = null;
+            for (const sc of filteredSubClauses) {
+              const id = sc.subclause_id;
+              const isThreeLevel =
+                typeof id === "string" &&
+                (id.match(/\./g) || []).length >= 2;
+              if (isThreeLevel) {
+                const prefix = id.split(".").slice(0, 2).join(".");
+                if (prefix !== currentPrefix) {
+                  enriched.push({
+                    __isParent: true,
+                    subclause_id: prefix,
+                    title: PARENT_TITLES[prefix] ?? prefix,
+                  });
+                  currentPrefix = prefix;
+                }
+              } else {
+                currentPrefix = null;
+              }
+              enriched.push(sc);
+            }
+            return enriched;
+          })().map((subClause: any, index: number, arr: any[]) => {
+            const isNested =
+              !subClause.__isParent &&
+              typeof subClause.subclause_id === "string" &&
+              (subClause.subclause_id.match(/\./g) || []).length >= 2;
+            const isLast = arr.length - 1 === index;
+
+            if (subClause.__isParent) {
+              return (
+                <Stack
+                  key={`parent-${subClause.subclause_id}`}
+                  sx={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    padding: "10px 16px",
+                    backgroundColor: "#fafbfc",
+                    borderBottom: "1px solid #eaecf0",
+                  }}
+                >
+                  <Typography
+                    fontSize={11}
+                    fontWeight={600}
+                    sx={{
+                      color: "#57606a",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    {subClause.subclause_id} · {subClause.title}
+                  </Typography>
+                </Stack>
+              );
+            }
+
+            return (
             <Stack
               key={subClause.id}
               onClick={() => {
                 handleSubClauseClick(clause, subClause, index);
               }}
-              sx={styles.subClauseRow(
-                filteredSubClauses.length - 1 === index,
-                flashingRowId === subClause.id,
-              )}
+              sx={{
+                ...styles.subClauseRow(isLast, flashingRowId === subClause.id),
+                // Subtle indent + hairline tree-tick to mark nested children.
+                ...(isNested
+                  ? {
+                      padding: "16px 16px 16px 40px",
+                      position: "relative",
+                      "&::before": {
+                        content: '""',
+                        position: "absolute",
+                        left: "20px",
+                        top: "50%",
+                        width: "12px",
+                        height: "1px",
+                        backgroundColor: "#c9d1d9",
+                      },
+                    }
+                  : {}),
+              }}
             >
               <Typography fontSize={13}>
-                {clause.order_no + "." + (index + 1)}{" "}
+                {subClause.subclause_id ?? `${clause.order_no}.${index + 1}`}{" "}
                 {subClause.title ?? "Untitled"}
               </Typography>
               <StatusDropdown
@@ -358,7 +439,8 @@ const ISO27001Clause = ({
                 userRole={userRoleName}
               />
             </Stack>
-          ))
+            );
+          })
         ) : (
           <Stack sx={styles.noSubClausesContainer}>
             No matching subclauses

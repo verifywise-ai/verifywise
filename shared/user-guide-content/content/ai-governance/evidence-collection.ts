@@ -10,11 +10,11 @@ export const evidenceCollectionContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Evidence collection is the practice of gathering and organizing documentation that proves your AI governance activities are actually happening. Good governance is not just about having policies — it is about demonstrating that those policies are being followed through tangible artifacts like test results, approval records, audit logs, and compliance assessments.',
+      text: 'Evidence collection is the practice of gathering and organizing documentation that proves your AI governance activities are actually happening. Good governance isn\'t just about having policies, it\'s about demonstrating that those policies are being followed through tangible artifacts like test results, approval records, audit logs and compliance assessments.',
     },
     {
       type: 'paragraph',
-      text: 'When auditors, regulators, or internal stakeholders ask how you govern AI, evidence is what transforms your answer from "we have a process" to "here is the documented proof." Without organized evidence, even well-governed AI programs struggle to demonstrate their practices, creating unnecessary compliance risk and audit friction.',
+      text: 'When auditors, regulators or internal stakeholders ask how you govern AI, evidence is what transforms your answer from "we have a process" to "here\'s the documented proof." Without organized evidence, even well-governed AI programs struggle to show their practices. That creates unnecessary compliance risk and audit friction.',
     },
     {
       type: 'heading',
@@ -25,17 +25,17 @@ export const evidenceCollectionContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Audit readiness', text: 'Respond quickly and confidently to audit requests with organized documentation' },
-        { bold: 'Regulatory compliance', text: 'Satisfy documentation requirements from EU AI Act, ISO 42001, and other frameworks' },
-        { bold: 'Accountability', text: 'Create clear records of who approved what, when, and why' },
-        { bold: 'Institutional memory', text: 'Preserve knowledge about how decisions were made as teams change over time' },
-        { bold: 'Continuous improvement', text: 'Evidence of past practices helps identify what is working and what needs improvement' },
+        { bold: 'Audit readiness', text: 'Respond quickly to audit requests with organized documentation' },
+        { bold: 'Regulatory compliance', text: 'Satisfy documentation requirements from EU AI Act, ISO 42001 and other frameworks' },
+        { bold: 'Accountability', text: 'Create clear records of who approved what, when and why' },
+        { bold: 'Institutional memory', text: 'Preserve knowledge about how decisions were made as teams change' },
+        { bold: 'Continuous improvement', text: 'Evidence of past practices helps you see what\'s working and what needs fixing' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Well-organized evidence is essential for demonstrating compliance with frameworks like ISO 42001, EU AI Act, and NIST AI RMF. Start collecting evidence early in your AI projects to avoid last-minute scrambles before audits.',
+      text: 'Start collecting evidence early in your AI projects. You\'ll thank yourself later when an audit comes up and you don\'t have to scramble for documentation across ISO 42001, EU AI Act or NIST AI RMF.',
     },
     {
       type: 'heading',
@@ -45,7 +45,7 @@ export const evidenceCollectionContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Evidence Hub is your central repository for all governance documentation. Access it from the sidebar or through linked records in your model inventory. The hub provides:',
+      text: 'The evidence hub is your central place for all governance documentation. You can access it from Assurance > Evidence in the sidebar, or through linked records in your model inventory. It provides:',
     },
     {
       type: 'checklist',
@@ -61,7 +61,7 @@ export const evidenceCollectionContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/evidence-hub.png',
       alt: 'Evidence and documents page showing a table of uploaded files with columns for file name, use case, upload date, uploader, source, and actions',
-      caption: 'The evidence hub provides centralized storage for all governance documentation.',
+      caption: 'The evidence hub stores all your governance documentation in one place.',
     },
     {
       type: 'heading',
@@ -76,12 +76,12 @@ export const evidenceCollectionContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { bold: 'Evidence name', text: '— A descriptive name for easy identification' },
-        { bold: 'Evidence type', text: '— Category of documentation (see types below)' },
-        { bold: 'Description', text: '— Optional details about the evidence content' },
-        { bold: 'Files', text: '— Upload one or more supporting documents' },
-        { bold: 'Linked models', text: '— Associate with relevant AI models in your inventory' },
-        { bold: 'Expiry date', text: '— Optional date when the evidence needs renewal' },
+        { bold: 'Evidence name', text: ',A descriptive name for easy identification' },
+        { bold: 'Evidence type', text: ',Category of documentation (see types below)' },
+        { bold: 'Description', text: ',Optional details about the evidence content' },
+        { bold: 'Files', text: ',Upload one or more supporting documents' },
+        { bold: 'Linked models', text: ',Associate with relevant AI models in your inventory' },
+        { bold: 'Expiry date', text: ',Optional date when the evidence needs renewal' },
       ],
     },
     {
@@ -143,7 +143,7 @@ export const evidenceCollectionContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Evidence can be linked to one or more AI models in your inventory. This creates a traceable connection between your documentation and the systems it relates to. When auditors review a specific model, all associated evidence is readily accessible.',
+      text: 'You can link evidence to one or more AI models in your inventory. This creates a traceable connection between your documentation and the systems it covers. When auditors review a specific model, they can pull up all the associated evidence right away.',
     },
     {
       type: 'paragraph',
@@ -157,7 +157,7 @@ export const evidenceCollectionContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise supports various file formats for evidence documentation. Each uploaded file tracks:',
+      text: 'VerifyWise supports various file formats for evidence. Each uploaded file tracks:',
     },
     {
       type: 'bullet-list',
@@ -172,7 +172,7 @@ export const evidenceCollectionContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',
-      text: 'Use consistent naming conventions for your evidence files. Include the date, document type, and relevant model or project name to make files easy to identify.',
+      text: 'Use consistent naming for your evidence files. Include the date, document type and relevant model or project name so they\'re easy to find later.',
     },
     {
       type: 'heading',
@@ -243,7 +243,7 @@ export const evidenceCollectionContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Beyond the Evidence Hub, VerifyWise allows you to attach evidence directly to compliance assessments. This creates a clear link between specific assessment questions and the documentation that demonstrates compliance.',
+      text: 'Beyond the evidence hub, you can attach evidence directly to compliance assessments. This links specific assessment questions to the documentation that backs up your compliance.',
     },
     {
       type: 'paragraph',

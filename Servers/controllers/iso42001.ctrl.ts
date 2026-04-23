@@ -313,20 +313,28 @@ export async function getSubClausesByClauseId(
   res: Response
 ): Promise<any> {
   const clauseId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectFrameworkId = parseInt(req.query.projectFrameworkId as string);
+
+  if (!projectFrameworkId || isNaN(projectFrameworkId)) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]("projectFrameworkId query param is required"));
+  }
 
   logProcessing({
-    description: `starting getSubClausesByClauseId for clause ID ${clauseId}`,
+    description: `starting getSubClausesByClauseId for clause ID ${clauseId} and project framework ID ${projectFrameworkId}`,
     functionName: "getSubClausesByClauseId",
     fileName: "iso42001.ctrl.ts",
     userId: req.userId!,
     tenantId: req.organizationId!,
   });
-  logger.debug(`🔍 Fetching sub-clauses for clause ID ${clauseId}`);
+  logger.debug(`🔍 Fetching sub-clauses for clause ID ${clauseId} (pf=${projectFrameworkId})`);
 
   try {
     const subClauses = await getSubClausesByClauseIdQuery(
       clauseId,
-      req.organizationId!
+      req.organizationId!,
+      projectFrameworkId
     );
     if (subClauses) {
       await logSuccess({

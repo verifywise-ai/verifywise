@@ -725,9 +725,10 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
             padding="15px 20px"
           >
             <Typography fontSize={15} fontWeight={700}>
-              {clause?.clause_no
-                ? `${clause.clause_no}.${subclause?.order_no || 1}`
-                : "Clause"}{" "}
+              {subclause?.subclause_id
+                ?? (clause?.clause_no
+                  ? `${clause.clause_no}.${subclause?.order_no || 1}`
+                  : "Clause")}{" "}
               {subclause?.title}
             </Typography>
             <Button

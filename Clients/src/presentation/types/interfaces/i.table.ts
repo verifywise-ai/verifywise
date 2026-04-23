@@ -64,6 +64,7 @@ export interface IEvaluationRow {
   judge?: string;
   dataset: string;
   prompts?: number;
+  linkedModel?: number | null;
   date?: string;
   status:
   | "In Progress"

@@ -1,0 +1,1270 @@
+# Risk Management API — OpenAPI 3.0 Path Definitions
+# Ready to paste into swagger.yaml under the `paths:` section.
+# Covers: Project Risks, Vendor Risks, Model Risks
+
+# ─────────────────────────────────────────────────────
+# SCHEMAS (paste under components.schemas)
+# ─────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ── Shared envelope ──
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: OK
+        data: {}
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Internal Server Error
+        error:
+          type: string
+
+    # ── Project Risk ──
+    ProjectRiskInput:
+      type: object
+      required:
+        - risk_name
+        - risk_owner
+        - risk_description
+      properties:
+        risk_name:
+          type: string
+          description: Name/title of the risk.
+        risk_owner:
+          type: integer
+          description: User ID of the risk owner (must be >= 1).
+        ai_lifecycle_phase:
+          type: string
+          enum:
+            - Problem definition & planning
+            - Data collection & processing
+            - Model development & training
+            - Model validation & testing
+            - Deployment & integration
+            - Monitoring & maintenance
+            - Decommissioning & retirement
+        risk_description:
+          type: string
+          description: Detailed description of the risk.
+        risk_category:
+          type: array
+          items:
+            type: string
+          description: Array of category labels.
+        impact:
+          type: string
+        assessment_mapping:
+          type: string
+        controls_mapping:
+          type: string
+        likelihood:
+          type: string
+          enum: [Rare, Unlikely, Possible, Likely, Almost Certain]
+        severity:
+          type: string
+          enum: [Negligible, Minor, Moderate, Major, Catastrophic]
+        risk_level_autocalculated:
+          type: string
+          enum: [No risk, Very low risk, Low risk, Medium risk, High risk, Very high risk]
+        review_notes:
+          type: string
+        mitigation_status:
+          type: string
+          enum: [Not Started, In Progress, Completed, On Hold, Deferred, Canceled, Requires review]
+        current_risk_level:
+          type: string
+          enum: [Very Low risk, Low risk, Medium risk, High risk, Very high risk]
+        deadline:
+          type: string
+          format: date-time
+        mitigation_plan:
+          type: string
+        implementation_strategy:
+          type: string
+        mitigation_evidence_document:
+          type: string
+        likelihood_mitigation:
+          type: string
+          enum: [Rare, Unlikely, Possible, Likely, Almost Certain]
+        risk_severity:
+          type: string
+          enum: [Negligible, Minor, Moderate, Major, Critical]
+        final_risk_level:
+          type: string
+        risk_approval:
+          type: integer
+          description: User ID of the approver.
+        approval_status:
+          type: string
+        date_of_assessment:
+          type: string
+          format: date-time
+        is_demo:
+          type: boolean
+          default: false
+        projects:
+          type: array
+          items:
+            type: integer
+          description: Array of project IDs to link this risk to.
+        frameworks:
+          type: array
+          items:
+            type: integer
+          description: Array of framework IDs to link this risk to.
+        # FAIR Quantitative fields (all optional)
+        event_frequency_min:
+          type: number
+          nullable: true
+        event_frequency_likely:
+          type: number
+          nullable: true
+        event_frequency_max:
+          type: number
+          nullable: true
+        loss_regulatory_min:
+          type: number
+          nullable: true
+        loss_regulatory_likely:
+          type: number
+          nullable: true
+        loss_regulatory_max:
+          type: number
+          nullable: true
+        loss_operational_min:
+          type: number
+          nullable: true
+        loss_operational_likely:
+          type: number
+          nullable: true
+        loss_operational_max:
+          type: number
+          nullable: true
+        loss_litigation_min:
+          type: number
+          nullable: true
+        loss_litigation_likely:
+          type: number
+          nullable: true
+        loss_litigation_max:
+          type: number
+          nullable: true
+        loss_reputational_min:
+          type: number
+          nullable: true
+        loss_reputational_likely:
+          type: number
+          nullable: true
+        loss_reputational_max:
+          type: number
+          nullable: true
+        control_effectiveness:
+          type: number
+          nullable: true
+          description: Percentage 0-100.
+        mitigation_cost_annual:
+          type: number
+          nullable: true
+        benchmark_id:
+          type: integer
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+          default: USD
+          maxLength: 3
+
+    ProjectRiskResponse:
+      allOf:
+        - $ref: '#/components/schemas/ProjectRiskInput'
+        - type: object
+          properties:
+            id:
+              type: integer
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            # Computed FAIR fields (server-derived)
+            total_loss_likely:
+              type: number
+              nullable: true
+            ale_estimate:
+              type: number
+              nullable: true
+            residual_ale:
+              type: number
+              nullable: true
+            roi_percentage:
+              type: number
+              nullable: true
+            # Relationship arrays (populated on list endpoints)
+            projects:
+              type: array
+              items:
+                type: integer
+            frameworks:
+              type: array
+              items:
+                type: integer
+            # Relationship arrays (populated only on single-risk GET)
+            subClauses:
+              type: array
+              items:
+                type: object
+            annexCategories:
+              type: array
+              items:
+                type: object
+            controls:
+              type: array
+              items:
+                type: object
+            assessments:
+              type: array
+              items:
+                type: object
+            annexControls_27001:
+              type: array
+              items:
+                type: object
+            subClauses_27001:
+              type: array
+              items:
+                type: object
+
+    # ── Vendor Risk ──
+    VendorRiskInput:
+      type: object
+      required:
+        - vendor_id
+        - risk_description
+        - impact_description
+        - likelihood
+        - risk_severity
+        - action_plan
+        - action_owner
+        - risk_level
+      properties:
+        vendor_id:
+          type: integer
+          description: ID of the vendor this risk belongs to.
+        order_no:
+          type: integer
+          nullable: true
+          description: Optional ordering number.
+        risk_description:
+          type: string
+        impact_description:
+          type: string
+        likelihood:
+          type: string
+          enum: [Rare, Unlikely, Possible, Likely, Almost certain]
+        risk_severity:
+          type: string
+          enum: [Negligible, Minor, Moderate, Major, Catastrophic]
+        action_plan:
+          type: string
+        action_owner:
+          type: integer
+          description: User ID of the action owner.
+        risk_level:
+          type: string
+          description: Free-text risk level.
+        is_demo:
+          type: boolean
+          default: false
+
+    VendorRiskResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        vendor_id:
+          type: integer
+        order_no:
+          type: integer
+          nullable: true
+        risk_description:
+          type: string
+        impact_description:
+          type: string
+        impact:
+          type: string
+          nullable: true
+        likelihood:
+          type: string
+          enum: [Rare, Unlikely, Possible, Likely, Almost certain]
+        risk_severity:
+          type: string
+          enum: [Negligible, Minor, Moderate, Major, Catastrophic]
+        action_plan:
+          type: string
+        action_owner:
+          type: integer
+        risk_level:
+          type: string
+        is_demo:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    VendorRiskAllProjectsResponse:
+      description: Extended vendor risk with joined vendor/project info.
+      type: object
+      properties:
+        risk_id:
+          type: integer
+        vendor_id:
+          type: integer
+        order_no:
+          type: integer
+          nullable: true
+        risk_description:
+          type: string
+        impact_description:
+          type: string
+        likelihood:
+          type: string
+        risk_severity:
+          type: string
+        action_plan:
+          type: string
+        action_owner:
+          type: integer
+        risk_level:
+          type: string
+        is_demo:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_deleted:
+          type: boolean
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        vendor_name:
+          type: string
+        project_id:
+          type: integer
+          nullable: true
+        project_title:
+          type: string
+          nullable: true
+
+    # ── Model Risk ──
+    ModelRiskInput:
+      type: object
+      required:
+        - risk_name
+        - risk_category
+        - risk_level
+        - owner
+        - target_date
+      properties:
+        risk_name:
+          type: string
+        risk_category:
+          type: string
+          enum: [Performance, Bias & Fairness, Security, Data Quality, Compliance]
+        risk_level:
+          type: string
+          enum: [Low, Medium, High, Critical]
+        status:
+          type: string
+          enum: [Open, In Progress, Resolved, Accepted]
+          default: Open
+        owner:
+          type: string
+          description: Name or identifier of the risk owner.
+        target_date:
+          type: string
+          format: date
+          description: Next review / target date.
+        description:
+          type: string
+        mitigation_plan:
+          type: string
+        impact:
+          type: string
+        likelihood:
+          type: string
+        key_metrics:
+          type: string
+        current_values:
+          type: string
+        threshold:
+          type: string
+        model_id:
+          type: integer
+          nullable: true
+          description: ID of the model inventory entry this risk is linked to.
+        is_demo:
+          type: boolean
+          default: false
+
+    ModelRiskResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        risk_name:
+          type: string
+        risk_category:
+          type: string
+          enum: [Performance, Bias & Fairness, Security, Data Quality, Compliance]
+        risk_level:
+          type: string
+          enum: [Low, Medium, High, Critical]
+        status:
+          type: string
+          enum: [Open, In Progress, Resolved, Accepted]
+        owner:
+          type: string
+        target_date:
+          type: string
+          format: date
+        description:
+          type: string
+        mitigation_plan:
+          type: string
+        impact:
+          type: string
+        likelihood:
+          type: string
+        key_metrics:
+          type: string
+        current_values:
+          type: string
+        threshold:
+          type: string
+        model_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+# ─────────────────────────────────────────────────────
+# PATHS (paste under paths:)
+# ─────────────────────────────────────────────────────
+paths:
+
+  # ═══════════════════════════════════════════════════
+  # PROJECT RISKS  (mounted at /api/projectRisks)
+  # ═══════════════════════════════════════════════════
+
+  /api/projectRisks:
+    get:
+      tags: [Project Risks]
+      summary: Get all project risks
+      description: Returns all project risks for the authenticated user's organization. Includes linked project and framework IDs. Relationship arrays (subClauses, assessments, etc.) are empty on the list endpoint for performance — use the single-risk GET for full relationships.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, deleted, all]
+            default: active
+          description: Filter by soft-delete state.
+      responses:
+        '200':
+          description: Array of project risks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectRiskResponse'
+        '204':
+          description: No project risks found.
+        '401':
+          description: Unauthorized — missing or invalid JWT.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags: [Project Risks]
+      summary: Create a new project risk
+      description: Creates a project risk. Requires `risk_name`, `risk_owner` (user ID >= 1), and `risk_description`. Optionally accepts FAIR quantitative fields (event_frequency_*, loss_*_*, control_effectiveness, mitigation_cost_annual) which trigger server-side auto-computation of derived fields (total_loss_likely, ale_estimate, residual_ale, roi_percentage). Pass `projects` and `frameworks` arrays to link the risk to projects/frameworks.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectRiskInput'
+      responses:
+        '201':
+          description: Project risk created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Created
+                  data:
+                    $ref: '#/components/schemas/ProjectRiskResponse'
+        '400':
+          description: Validation error or quantitative risk validation failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Bad Request
+                  data:
+                    oneOf:
+                      - type: string
+                      - type: object
+                        properties:
+                          message:
+                            type: string
+                          errors:
+                            type: array
+                            items:
+                              type: string
+        '401':
+          description: Unauthorized.
+        '403':
+          description: Business logic violation.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/projectRisks/by-projid/{id}:
+    get:
+      tags: [Project Risks]
+      summary: Get project risks by project ID
+      description: Returns project risks linked to a specific project. Non-numeric IDs (e.g. plugin-sourced) return an empty array.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Project ID (integer). Non-numeric values return `[]`.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, deleted, all]
+            default: active
+      responses:
+        '200':
+          description: Array of project risks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectRiskResponse'
+        '204':
+          description: No risks found for this project.
+        '401':
+          description: Unauthorized.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/projectRisks/by-frameworkid/{id}:
+    get:
+      tags: [Project Risks]
+      summary: Get project risks by framework ID
+      description: Returns project risks linked to a specific framework.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Framework ID.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, deleted, all]
+            default: active
+      responses:
+        '200':
+          description: Array of project risks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectRiskResponse'
+        '204':
+          description: No risks found for this framework.
+        '401':
+          description: Unauthorized.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/projectRisks/{id}:
+    get:
+      tags: [Project Risks]
+      summary: Get a project risk by ID
+      description: Returns a single project risk with full relationship data (subClauses, annexCategories, controls, assessments, annexControls_27001, subClauses_27001).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project risk ID.
+      responses:
+        '200':
+          description: Project risk found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: '#/components/schemas/ProjectRiskResponse'
+        '204':
+          description: Project risk not found.
+        '401':
+          description: Unauthorized.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags: [Project Risks]
+      summary: Update a project risk by ID
+      description: Partially updates a project risk. Any field in ProjectRiskInput can be sent; only provided fields are updated. FAIR fields trigger auto-recomputation merged with existing values. Pass `projects` and `frameworks` arrays to update linked entities.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project risk ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectRiskInput'
+      responses:
+        '200':
+          description: Project risk updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: '#/components/schemas/ProjectRiskResponse'
+        '400':
+          description: Validation error.
+        '401':
+          description: Unauthorized.
+        '403':
+          description: Business logic violation.
+        '404':
+          description: Project risk not found.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [Project Risks]
+      summary: Soft-delete a project risk
+      description: Sets `is_deleted = true` and `deleted_at = NOW()` on the risk. Returns the deleted risk object.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project risk ID.
+      responses:
+        '200':
+          description: Project risk soft-deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: '#/components/schemas/ProjectRiskResponse'
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Project risk not found.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ═══════════════════════════════════════════════════
+  # VENDOR RISKS  (mounted at /api/vendorRisks)
+  # ═══════════════════════════════════════════════════
+
+  /api/vendorRisks:
+    post:
+      tags: [Vendor Risks]
+      summary: Create a new vendor risk
+      description: Creates a vendor risk. Sends an in-app notification to the `action_owner` if assigned.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorRiskInput'
+      responses:
+        '201':
+          description: Vendor risk created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Created
+                  data:
+                    $ref: '#/components/schemas/VendorRiskResponse'
+        '401':
+          description: Unauthorized.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service unavailable — creation returned null.
+
+  /api/vendorRisks/all:
+    get:
+      tags: [Vendor Risks]
+      summary: Get all vendor risks across all projects
+      description: Returns vendor risks joined with vendor name, project ID, and project title.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, deleted, all]
+            default: active
+      responses:
+        '200':
+          description: Array of vendor risks with vendor/project metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VendorRiskAllProjectsResponse'
+        '401':
+          description: Unauthorized.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/vendorRisks/by-projid/{id}:
+    get:
+      tags: [Vendor Risks]
+      summary: Get vendor risks by project ID
+      description: Returns vendor risks for vendors linked to the given project. Non-numeric IDs return an empty array.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Project ID (integer). Non-numeric values return `[]`.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, deleted, all]
+            default: active
+      responses:
+        '200':
+          description: Array of vendor risks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VendorRiskResponse'
+        '204':
+          description: No vendor risks found.
+        '401':
+          description: Unauthorized.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/vendorRisks/by-vendorid/{id}:
+    get:
+      tags: [Vendor Risks]
+      summary: Get vendor risks by vendor ID
+      description: Returns all risks for a specific vendor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Vendor ID.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, deleted, all]
+            default: active
+      responses:
+        '200':
+          description: Array of vendor risks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VendorRiskResponse'
+        '204':
+          description: No vendor risks found.
+        '401':
+          description: Unauthorized.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/vendorRisks/{id}:
+    get:
+      tags: [Vendor Risks]
+      summary: Get a vendor risk by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Vendor risk ID.
+      responses:
+        '200':
+          description: Vendor risk found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: '#/components/schemas/VendorRiskResponse'
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Vendor risk not found.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags: [Vendor Risks]
+      summary: Update a vendor risk by ID
+      description: Partially updates a vendor risk. Only non-null/non-undefined fields in the body are applied. Updatable fields are vendor_id, risk_description, impact_description, likelihood, risk_severity, action_plan, action_owner, risk_level. Notifies new action_owner if changed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Vendor risk ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vendor_id:
+                  type: integer
+                risk_description:
+                  type: string
+                impact_description:
+                  type: string
+                likelihood:
+                  type: string
+                  enum: [Rare, Unlikely, Possible, Likely, Almost certain]
+                risk_severity:
+                  type: string
+                  enum: [Negligible, Minor, Moderate, Major, Catastrophic]
+                action_plan:
+                  type: string
+                action_owner:
+                  type: integer
+                risk_level:
+                  type: string
+      responses:
+        '202':
+          description: Vendor risk updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Accepted
+                  data:
+                    $ref: '#/components/schemas/VendorRiskResponse'
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Vendor risk not found.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [Vendor Risks]
+      summary: Soft-delete a vendor risk
+      description: Sets `is_deleted = true` and `deleted_at = NOW()`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Vendor risk ID.
+      responses:
+        '202':
+          description: Vendor risk soft-deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Accepted
+                  data:
+                    $ref: '#/components/schemas/VendorRiskResponse'
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Vendor risk not found.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  # ═══════════════════════════════════════════════════
+  # MODEL RISKS  (mounted at /api/modelRisks)
+  # ═══════════════════════════════════════════════════
+
+  /api/modelRisks:
+    get:
+      tags: [Model Risks]
+      summary: Get all model risks
+      description: Returns all model risks for the authenticated user's organization.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, deleted, all]
+            default: active
+      responses:
+        '200':
+          description: Array of model risks (empty array if none found).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelRiskResponse'
+        '401':
+          description: Unauthorized.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags: [Model Risks]
+      summary: Create a new model risk
+      description: Creates a model risk entry. Required fields are risk_name, risk_category, risk_level, owner, and target_date. Status defaults to "Open".
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelRiskInput'
+      responses:
+        '201':
+          description: Model risk created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Created
+                  data:
+                    $ref: '#/components/schemas/ModelRiskResponse'
+        '400':
+          description: Validation error.
+        '401':
+          description: Unauthorized.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /api/modelRisks/{id}:
+    get:
+      tags: [Model Risks]
+      summary: Get a model risk by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Model risk ID.
+      responses:
+        '200':
+          description: Model risk found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: '#/components/schemas/ModelRiskResponse'
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Model risk not found.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags: [Model Risks]
+      summary: Update a model risk by ID
+      description: Partially updates a model risk. Only provided fields are updated. Updatable fields are risk_name, risk_category, risk_level, status, owner, target_date, description, mitigation_plan, impact, likelihood, key_metrics, current_values, threshold, model_id. If no fields are provided, the current state is returned unchanged.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Model risk ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelRiskInput'
+      responses:
+        '200':
+          description: Model risk updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: '#/components/schemas/ModelRiskResponse'
+        '400':
+          description: Validation error.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Model risk not found.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags: [Model Risks]
+      summary: Update a model risk by ID (alternative)
+      description: Identical to PUT. Both methods route to the same handler.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Model risk ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelRiskInput'
+      responses:
+        '200':
+          description: Model risk updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: '#/components/schemas/ModelRiskResponse'
+        '400':
+          description: Validation error.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Model risk not found.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [Model Risks]
+      summary: Soft-delete a model risk
+      description: Sets `is_deleted = true` and `deleted_at = NOW()`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Model risk ID.
+      responses:
+        '200':
+          description: Model risk deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: string
+                    example: Model risk deleted successfully.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Model risk not found.
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'

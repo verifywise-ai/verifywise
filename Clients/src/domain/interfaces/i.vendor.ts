@@ -12,6 +12,7 @@ export interface ExistingRisk {
   risk_level: string;
   action_plan: string;
   vendor_id: string;
+  frameworks?: number[];
 }
 export interface IVendorRisk {
   id: number;

@@ -23,7 +23,7 @@ export const linkedModelsContent: ArticleContent = {
       items: [
         { text: 'Open a project from your dashboard.' },
         { text: 'Click the **Linked models** tab.' },
-        { text: 'You\'ll see a list of all models that have been linked to this project, with their name, provider, version, and status.' },
+        { text: 'You\'ll see a list of all models that have been linked to this project, with their name, provider, version and status.' },
       ],
     },
     {

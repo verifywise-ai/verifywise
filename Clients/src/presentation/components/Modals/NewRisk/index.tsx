@@ -14,17 +14,20 @@
 
 import TabContext from "@mui/lab/TabContext";
 import {
+  Autocomplete,
   Box,
   Stack,
+  TextField,
   Typography,
   Divider,
 } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
-import { Suspense, useEffect, useState, lazy, useCallback } from "react";
+import { Suspense, useEffect, useState, useMemo, lazy, useCallback } from "react";
 import Alert from "../../Alert";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import useUsers from "../../../../application/hooks/useUsers";
+import useFrameworks from "../../../../application/hooks/useFrameworks";
 import CustomizableToast from "../../Toast";
 import { logEngine } from "../../../../application/tools/log.engine";
 import StandardModal from "../StandardModal";
@@ -42,6 +45,7 @@ import { HistorySidebar } from "../../Common/HistorySidebar";
 import { useVendorRiskChangeHistory } from "../../../../application/hooks/useVendorRiskChangeHistory";
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
 import { ExistingRisk } from "../../../../domain/interfaces/i.vendor";
+import { Framework } from "../../../../domain/types/Framework";
 const RiskLevel = lazy(() => import("../../RiskLevel"));
 
 interface FormErrors {
@@ -130,6 +134,13 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
     body: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState("details");
+  const [selectedFrameworks, setSelectedFrameworks] = useState<number[]>([]);
+
+  const { allFrameworks: frameworks, loading: frameworksLoading } = useFrameworks({ listOfFrameworks: [] });
+  const organizationalFrameworks = useMemo(
+    () => (frameworks || []).filter((fw: Framework) => fw.is_organizational),
+    [frameworks]
+  );
 
   // Prefetch history data when modal opens in edit mode
   useVendorRiskChangeHistory(
@@ -149,12 +160,14 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
     if (!isOpen) {
       setValues(initialState);
       setErrors({} as FormErrors);
+      setSelectedFrameworks([]);
     }
   }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && !existingRisk) {
       setValues(initialState);
+      setSelectedFrameworks([]);
     } else if (existingRisk) {
       setValues((prevValues) => ({
         ...prevValues,
@@ -177,6 +190,9 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         action_plan: existingRisk.action_plan,
         vendor_id: existingRisk.vendor_id,
       }));
+      setSelectedFrameworks(
+        Array.isArray(existingRisk.frameworks) ? existingRisk.frameworks.map(Number) : []
+      );
     }
   }, [existingRisk, isOpen]);
 
@@ -292,6 +308,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       risk_severity: selectedSeverity.name,
       risk_level: risk_risklevel.level,
       likelihood: selectedLikelihood.name,
+      frameworks: selectedFrameworks,
     };
     if (existingRisk) {
       await updateRisk(existingRisk.id!, _riskDetails);
@@ -500,6 +517,72 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             </Box>
           </Stack>
         </Stack>
+
+        {/* Applicable Frameworks */}
+        <Stack>
+          <Typography fontWeight={600} fontSize={16} mb={2}>
+            Applicable frameworks
+          </Typography>
+          <Typography fontSize={13} color="text.secondary" mb={2}>
+            Select the compliance frameworks this vendor risk applies to.
+          </Typography>
+          <Autocomplete
+            multiple
+            id="vendor-risk-frameworks-input"
+            size="small"
+            value={
+              frameworksLoading || !organizationalFrameworks.length
+                ? []
+                : organizationalFrameworks.filter((fw) =>
+                    selectedFrameworks.includes(Number(fw.id))
+                  )
+            }
+            options={organizationalFrameworks}
+            getOptionLabel={(fw) => fw.name}
+            renderOption={(props, option) => {
+              const { key, ...optionProps } = props;
+              return (
+                <Box key={key} component="li" {...optionProps}>
+                  <Typography fontSize={13}>
+                    {option.name}
+                  </Typography>
+                </Box>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder={
+                  frameworksLoading
+                    ? "Loading frameworks..."
+                    : selectedFrameworks.length > 0
+                    ? ""
+                    : "Select applicable frameworks"
+                }
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    paddingTop: "4px !important",
+                    paddingBottom: "4px !important",
+                  },
+                  "& ::placeholder": {
+                    fontSize: 13,
+                  },
+                }}
+              />
+            )}
+            onChange={(_event, newValue) => {
+              setSelectedFrameworks(newValue.map((fw) => Number(fw.id)));
+            }}
+            sx={{
+              width: "100%",
+              "& .MuiChip-root": {
+                borderRadius: "4px",
+              },
+            }}
+            disabled={frameworksLoading || isEditingDisabled}
+          />
+        </Stack>
+
         <Stack>
           <Divider sx={{ mb: 4 }} />
           <Box>

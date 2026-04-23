@@ -38,12 +38,47 @@ export default defineConfig({
   build: {
     // Generate manifest for cache busting
     manifest: true,
+    chunkSizeWarningLimit: 600,
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
         // Add hash to filenames for cache busting
         entryFileNames: "assets/[name]-[hash].js",
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash].[ext]",
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (
+              id.includes("react-dom") ||
+              id.includes("react-router-dom") ||
+              (id.includes("/react/") && !id.includes("react-"))
+            ) {
+              return "vendor-react";
+            }
+            if (
+              id.includes("@mui/material") ||
+              id.includes("@mui/lab") ||
+              id.includes("@mui/x-charts") ||
+              id.includes("@mui/x-date-pickers")
+            ) {
+              return "vendor-mui";
+            }
+            if (
+              id.includes("@reduxjs/toolkit") ||
+              id.includes("react-redux") ||
+              id.includes("redux-persist") ||
+              id.includes("@tanstack/react-query")
+            ) {
+              return "vendor-state";
+            }
+            if (id.includes("@tiptap")) {
+              return "vendor-editor";
+            }
+            if (id.includes("recharts") || id.includes("html2canvas")) {
+              return "vendor-charts";
+            }
+          }
+        },
       },
     },
   },

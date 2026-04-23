@@ -196,7 +196,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
     assessmentProgress?.totalQuestions ?? 0,
   ];
 
-  const titleEuAct = ["Subcontrols", "Assessments"];
+  const titleEuAct = ["Requirements", "Controls"];
 
   const completedIso42001Numbers = [
     clausesProgress?.doneSubclauses ?? 0,

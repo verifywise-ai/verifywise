@@ -1,4 +1,5 @@
-// Auto-generated from swagger.yaml for version 1.7.0
+// Auto-generated from swagger.yaml for version 2.0.0
+// DO NOT EDIT MANUALLY — run: cd Servers && npx ts-node scripts/generateEndpointsTs.ts
 // This file contains all API endpoint definitions
 
 export interface Parameter {
@@ -26,1599 +27,1716 @@ export interface Endpoint {
   tag: string;
 }
 
-// Authentication endpoints
-export const authenticationEndpoints: Endpoint[] = [
+// Agent Discovery endpoints
+export const agentDiscoveryEndpoints: Endpoint[] = [
   {
-    method: 'POST',
-    path: '/users/register',
-    summary: 'Register a new user',
-    description: 'Creates a new user account in the system.',
-    requiresAuth: false,
-    requestBody: {
-      name: 'string (required)',
-      surname: 'string (required)',
-      email: 'string (required)',
-      password: 'string (required, min 8 chars)',
-    },
-    responses: [{ status: 201, description: 'User registered successfully' }],
-    tag: 'Authentication',
-  },
-  {
-    method: 'POST',
-    path: '/users/login',
-    summary: 'User login',
-    description: 'Authenticates a user and returns a JWT token.',
-    requiresAuth: false,
-    requestBody: {
-      email: 'string (required)',
-      password: 'string (required)',
-    },
-    responses: [{ status: 200, description: 'Login successful, returns user data and token' }],
-    tag: 'Authentication',
-  },
-  {
-    method: 'POST',
-    path: '/users/refresh-token',
-    summary: 'Refresh authentication token',
-    description: 'Generates a new access token using a refresh token.',
+    method: 'GET',
+    path: '/agent-primitives',
+    summary: "Get All Agent Primitives",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Token refreshed successfully' }],
-    tag: 'Authentication',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
+  },
+  {
+    method: 'POST',
+    path: '/agent-primitives',
+    summary: "Create Agent Primitive",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
   },
   {
     method: 'GET',
-    path: '/users/check/exists',
-    summary: 'Check if user exists',
-    description: 'Checks if any user exists in the system.',
-    requiresAuth: false,
-    responses: [{ status: 200, description: 'User existence status returned' }],
-    tag: 'Authentication',
+    path: '/agent-primitives/stats',
+    summary: "Get Agent Stats",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
   },
-];
-
-// User endpoints
-export const userEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/agent-primitives/sync',
+    summary: "Trigger Sync",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
+  },
   {
     method: 'GET',
-    path: '/users/{userId}',
-    summary: 'Get user by ID',
-    description: 'Retrieves detailed information about a specific user.',
+    path: '/agent-primitives/sync/logs',
+    summary: "Get Sync Logs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
+  },
+  {
+    method: 'GET',
+    path: '/agent-primitives/sync/status',
+    summary: "Get Sync Status",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
+  },
+  {
+    method: 'GET',
+    path: '/agent-primitives/{id}',
+    summary: "Get Agent Primitive By Id",
     requiresAuth: true,
     parameters: [
-      { name: 'userId', in: 'path', type: 'integer', required: true, description: 'The unique identifier of the user' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
-      { status: 200, description: 'User details returned successfully' },
-      { status: 404, description: 'User not found' },
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    tag: 'Users',
+    tag: "Agent Discovery",
   },
   {
     method: 'PATCH',
-    path: '/users/{userId}',
-    summary: 'Update user by ID',
-    description: 'Updates user information for the specified user.',
+    path: '/agent-primitives/{id}',
+    summary: "Update Agent Primitive",
     requiresAuth: true,
     parameters: [
-      { name: 'userId', in: 'path', type: 'integer', required: true, description: 'The unique identifier of the user' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    requestBody: {
-      name: 'string (optional)',
-      surname: 'string (optional)',
-      email: 'string (optional)',
-      role_id: 'integer (optional)',
-    },
-    responses: [{ status: 200, description: 'User updated successfully' }],
-    tag: 'Users',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
   },
   {
     method: 'DELETE',
-    path: '/users/{userId}',
-    summary: 'Delete user by ID',
-    description: 'Permanently deletes a user from the system.',
+    path: '/agent-primitives/{id}',
+    summary: "Delete Agent Primitive By Id",
     requiresAuth: true,
     parameters: [
-      { name: 'userId', in: 'path', type: 'integer', required: true, description: 'The unique identifier of the user' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'User deleted successfully' }],
-    tag: 'Users',
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
+  },
+  {
+    method: 'GET',
+    path: '/agent-primitives/{id}/audit-logs',
+    summary: "Get Agent Audit Logs",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
   },
   {
     method: 'PATCH',
-    path: '/users/chng-pass/{userId}',
-    summary: 'Change user password',
-    description: 'Changes the password for a specific user.',
+    path: '/agent-primitives/{id}/link-model',
+    summary: "Link Model To Agent",
     requiresAuth: true,
     parameters: [
-      { name: 'userId', in: 'path', type: 'integer', required: true, description: 'The unique identifier of the user' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    requestBody: {
-      id: 'integer (required)',
-      currentPassword: 'string (required)',
-      newPassword: 'string (required)',
-    },
-    responses: [{ status: 200, description: 'Password changed successfully' }],
-    tag: 'Users',
-  },
-];
-
-// Organization endpoints
-export const organizationEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/organizations/{id}',
-    summary: 'Get organization by ID',
-    description: 'Retrieves detailed information about a specific organization.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Organization ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Organization details returned' }],
-    tag: 'Organizations',
-  },
-  {
-    method: 'POST',
-    path: '/organizations/{id}',
-    summary: 'Create organization',
-    description: 'Creates a new organization.',
-    requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      description: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Organization created successfully' }],
-    tag: 'Organizations',
+    tag: "Agent Discovery",
   },
   {
     method: 'PATCH',
-    path: '/organizations/{id}',
-    summary: 'Update organization',
-    description: 'Updates an existing organization.',
-    requiresAuth: true,
-    requestBody: {
-      name: 'string (optional)',
-      description: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Organization updated successfully' }],
-    tag: 'Organizations',
-  },
-];
-
-// Project endpoints
-export const projectEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/projects',
-    summary: 'Get all projects',
-    description: 'Retrieves a list of all projects for the authenticated user\'s organization.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'List of projects returned successfully' }],
-    tag: 'Projects',
-  },
-  {
-    method: 'POST',
-    path: '/projects',
-    summary: 'Create a new project',
-    description: 'Creates a new compliance project.',
-    requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      description: 'string (optional)',
-      status: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Project created successfully' }],
-    tag: 'Projects',
-  },
-  {
-    method: 'GET',
-    path: '/projects/{id}',
-    summary: 'Get project by ID',
-    description: 'Retrieves detailed information about a specific project.',
+    path: '/agent-primitives/{id}/review',
+    summary: "Review Agent Primitive",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'string', required: true, description: 'Project ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
-      { status: 200, description: 'Project details returned successfully' },
-      { status: 404, description: 'Project not found' },
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    tag: 'Projects',
+    tag: "Agent Discovery",
   },
   {
     method: 'PATCH',
-    path: '/projects/{id}',
-    summary: 'Update project',
-    description: 'Updates an existing project.',
+    path: '/agent-primitives/{id}/unlink-model',
+    summary: "Unlink Model From Agent",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Project ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    requestBody: {
-      name: 'string (optional)',
-      description: 'string (optional)',
-      status: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Project updated successfully' }],
-    tag: 'Projects',
-  },
-  {
-    method: 'DELETE',
-    path: '/projects/{id}',
-    summary: 'Delete project',
-    description: 'Permanently deletes a project and all associated data.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Project ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Project deleted successfully' }],
-    tag: 'Projects',
+    tag: "Agent Discovery",
   },
 ];
 
-// Project Risk endpoints
-export const projectRiskEndpoints: Endpoint[] = [
+// AI Advisor endpoints
+export const aiAdvisorEndpoints: Endpoint[] = [
   {
     method: 'POST',
-    path: '/projectRisks',
-    summary: 'Create project risk',
-    description: 'Creates a new risk entry for a project.',
+    path: '/advisor',
+    summary: "Run Advisor",
     requiresAuth: true,
-    requestBody: {
-      project_id: 'integer (required)',
-      risk_name: 'string (required)',
-      likelihood: 'very_low | low | medium | high | very_high',
-      severity: 'very_low | low | medium | high | very_high',
-    },
-    responses: [{ status: 201, description: 'Project risk created successfully' }],
-    tag: 'Project Risks',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Advisor",
+  },
+  {
+    method: 'POST',
+    path: '/advisor/chat',
+    summary: "Stream Advisor V2",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Advisor",
   },
   {
     method: 'GET',
-    path: '/projectRisks/{id}',
-    summary: 'Get project risk by ID',
-    description: 'Retrieves detailed information about a specific project risk.',
+    path: '/advisor/conversations/{domain}',
+    summary: "Get Conversation",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Project risk ID' },
+      { name: 'domain', in: 'path', type: 'string', required: true, description: "The domain" },
     ],
-    responses: [{ status: 200, description: 'Project risk details returned' }],
-    tag: 'Project Risks',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Advisor",
   },
   {
-    method: 'PUT',
-    path: '/projectRisks/{id}',
-    summary: 'Update project risk',
-    description: 'Updates an existing project risk.',
+    method: 'POST',
+    path: '/advisor/conversations/{domain}',
+    summary: "Save Conversation",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Project risk ID' },
+      { name: 'domain', in: 'path', type: 'string', required: true, description: "The domain" },
     ],
-    requestBody: {
-      risk_name: 'string (optional)',
-      likelihood: 'very_low | low | medium | high | very_high',
-      severity: 'very_low | low | medium | high | very_high',
-      mitigation_status: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Project risk updated successfully' }],
-    tag: 'Project Risks',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Advisor",
   },
   {
-    method: 'DELETE',
-    path: '/projectRisks/{id}',
-    summary: 'Delete project risk',
-    description: 'Permanently deletes a project risk.',
+    method: 'POST',
+    path: '/advisor/stream',
+    summary: "Stream Advisor",
     requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Project risk ID' },
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Project risk deleted successfully' }],
-    tag: 'Project Risks',
-  },
-  {
-    method: 'GET',
-    path: '/projectRisks/by-projid/{projectId}',
-    summary: 'Get project risks by project ID',
-    description: 'Retrieves all risks associated with a specific project.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectId', in: 'path', type: 'integer', required: true, description: 'Project ID' },
-    ],
-    responses: [{ status: 200, description: 'Project risks returned successfully' }],
-    tag: 'Project Risks',
-  },
-  {
-    method: 'GET',
-    path: '/projectRisks/by-projid/non-mitigated/{projectId}',
-    summary: 'Get non-mitigated project risks',
-    description: 'Retrieves all non-mitigated risks for a specific project.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectId', in: 'path', type: 'integer', required: true, description: 'Project ID' },
-    ],
-    responses: [{ status: 200, description: 'Non-mitigated project risks returned' }],
-    tag: 'Project Risks',
+    tag: "AI Advisor",
   },
 ];
 
-// Vendor endpoints
-export const vendorEndpoints: Endpoint[] = [
+// AI Detection endpoints
+export const aiDetectionEndpoints: Endpoint[] = [
   {
     method: 'GET',
-    path: '/vendors',
-    summary: 'Get all vendors',
-    description: 'Retrieves a list of all vendors in the organization.',
+    path: '/ai-detection/repositories',
+    summary: "List Repositories",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'List of vendors returned successfully' }],
-    tag: 'Vendors',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
   {
     method: 'POST',
-    path: '/vendors',
-    summary: 'Create a new vendor',
-    description: 'Creates a new vendor entry.',
+    path: '/ai-detection/repositories',
+    summary: "Create Repository",
     requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      email: 'string (required)',
-      website: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Vendor created successfully' }],
-    tag: 'Vendors',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
   {
     method: 'GET',
-    path: '/vendors/{id}',
-    summary: 'Get vendor by ID',
-    description: 'Retrieves detailed information about a specific vendor.',
+    path: '/ai-detection/repositories/{id}',
+    summary: "Get Repository",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Vendor ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Vendor details returned successfully' }],
-    tag: 'Vendors',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
   {
     method: 'PATCH',
-    path: '/vendors/{id}',
-    summary: 'Update vendor',
-    description: 'Updates an existing vendor.',
+    path: '/ai-detection/repositories/{id}',
+    summary: "Update Repository",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Vendor ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    requestBody: {
-      name: 'string (optional)',
-      email: 'string (optional)',
-      website: 'string (optional)',
-      status: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Vendor updated successfully' }],
-    tag: 'Vendors',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
   {
     method: 'DELETE',
-    path: '/vendors/{id}',
-    summary: 'Delete vendor',
-    description: 'Permanently deletes a vendor.',
+    path: '/ai-detection/repositories/{id}',
+    summary: "Delete Repository",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Vendor ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Vendor deleted successfully' }],
-    tag: 'Vendors',
-  },
-  {
-    method: 'GET',
-    path: '/vendors/project-id/{projectId}',
-    summary: 'Get vendors by project ID',
-    description: 'Retrieves all vendors associated with a specific project.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectId', in: 'path', type: 'integer', required: true, description: 'Project ID' },
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Vendors for the project returned successfully' }],
-    tag: 'Vendors',
-  },
-];
-
-// Vendor Risk endpoints
-export const vendorRiskEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/vendorRisks/all',
-    summary: 'Get all vendor risks',
-    description: 'Retrieves all vendor risks across the organization.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'List of all vendor risks' }],
-    tag: 'Vendor Risks',
+    tag: "AI Detection",
   },
   {
     method: 'POST',
-    path: '/vendorRisks',
-    summary: 'Create vendor risk',
-    description: 'Creates a new vendor risk entry.',
+    path: '/ai-detection/repositories/{id}/scan',
+    summary: "Trigger Repository Scan",
     requiresAuth: true,
-    requestBody: {
-      vendor_id: 'integer (required)',
-      project_id: 'integer (required)',
-      risk_description: 'string (required)',
-      likelihood: 'very_low | low | medium | high | very_high',
-      severity: 'very_low | low | medium | high | very_high',
-    },
-    responses: [{ status: 201, description: 'Vendor risk created successfully' }],
-    tag: 'Vendor Risks',
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
   {
     method: 'GET',
-    path: '/vendorRisks/{id}',
-    summary: 'Get vendor risk by ID',
-    description: 'Retrieves detailed information about a specific vendor risk.',
+    path: '/ai-detection/repositories/{id}/scans',
+    summary: "Get Repository Scans",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Vendor risk ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Vendor risk details returned' }],
-    tag: 'Vendor Risks',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'POST',
+    path: '/ai-detection/repositories/{id}/webhook-secret',
+    summary: "Generate Webhook Secret Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/risk-scoring/config',
+    summary: "Get Risk Scoring Config Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
   {
     method: 'PATCH',
-    path: '/vendorRisks/{id}',
-    summary: 'Update vendor risk',
-    description: 'Updates an existing vendor risk.',
+    path: '/ai-detection/risk-scoring/config',
+    summary: "Update Risk Scoring Config Controller",
     requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Vendor risk ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    requestBody: {
-      risk_description: 'string (optional)',
-      likelihood: 'very_low | low | medium | high | very_high',
-      severity: 'very_low | low | medium | high | very_high',
-    },
-    responses: [{ status: 200, description: 'Vendor risk updated successfully' }],
-    tag: 'Vendor Risks',
-  },
-  {
-    method: 'DELETE',
-    path: '/vendorRisks/{id}',
-    summary: 'Delete vendor risk',
-    description: 'Permanently deletes a vendor risk.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Vendor risk ID' },
-    ],
-    responses: [{ status: 200, description: 'Vendor risk deleted successfully' }],
-    tag: 'Vendor Risks',
+    tag: "AI Detection",
   },
   {
     method: 'GET',
-    path: '/vendorRisks/by-projid/{projectId}',
-    summary: 'Get vendor risks by project ID',
-    description: 'Retrieves all vendor risks for a specific project.',
+    path: '/ai-detection/scans',
+    summary: "Get Scans Controller",
     requiresAuth: true,
-    parameters: [
-      { name: 'projectId', in: 'path', type: 'integer', required: true, description: 'Project ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Vendor risks for the project returned' }],
-    tag: 'Vendor Risks',
+    tag: "AI Detection",
   },
-];
-
-// Assessment endpoints
-export const assessmentEndpoints: Endpoint[] = [
   {
     method: 'POST',
-    path: '/assessments',
-    summary: 'Create assessment',
-    description: 'Creates a new assessment for a project.',
+    path: '/ai-detection/scans',
+    summary: "Start Scan Controller",
     requiresAuth: true,
-    requestBody: {
-      project_id: 'integer (required)',
-      assessment_type: 'string (required)',
-    },
-    responses: [{ status: 201, description: 'Assessment created successfully' }],
-    tag: 'Assessments',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/scans/active',
+    summary: "Get Active Scan Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/scans/{scanId}',
+    summary: "Get Scan Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'DELETE',
+    path: '/ai-detection/scans/{scanId}',
+    summary: "Delete Scan Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'POST',
+    path: '/ai-detection/scans/{scanId}/cancel',
+    summary: "Cancel Scan Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/scans/{scanId}/compliance',
+    summary: "Get Compliance Mapping Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/scans/{scanId}/dependency-graph',
+    summary: "Get Dependency Graph Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/scans/{scanId}/export/ai-bom',
+    summary: "Export A I B O M Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/scans/{scanId}/findings',
+    summary: "Get Scan Findings Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
   {
     method: 'PATCH',
-    path: '/assessments/{id}',
-    summary: 'Update assessment',
-    description: 'Updates an existing assessment.',
+    path: '/ai-detection/scans/{scanId}/findings/{findingId}/governance',
+    summary: "Update Governance Status Controller",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Assessment ID' },
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+      { name: 'findingId', in: 'path', type: 'integer', required: true, description: "The findingId" },
     ],
-    requestBody: {
-      status: 'string (optional)',
-      assessment_type: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Assessment updated successfully' }],
-    tag: 'Assessments',
-  },
-  {
-    method: 'DELETE',
-    path: '/assessments/{id}',
-    summary: 'Delete assessment',
-    description: 'Permanently deletes an assessment.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Assessment ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Assessment deleted successfully' }],
-    tag: 'Assessments',
+    tag: "AI Detection",
   },
   {
     method: 'GET',
-    path: '/assessments/project/byid/{id}',
-    summary: 'Get assessment by ID',
-    description: 'Retrieves detailed information about a specific assessment.',
+    path: '/ai-detection/scans/{scanId}/governance-summary',
+    summary: "Get Governance Summary Controller",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Assessment ID' },
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
     ],
-    responses: [{ status: 200, description: 'Assessment details returned' }],
-    tag: 'Assessments',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
   {
     method: 'GET',
-    path: '/assessments/getAnswers/{assessmentId}',
-    summary: 'Get assessment answers',
-    description: 'Retrieves all answers for a specific assessment.',
+    path: '/ai-detection/scans/{scanId}/risk-score',
+    summary: "Get Risk Score Controller",
     requiresAuth: true,
     parameters: [
-      { name: 'assessmentId', in: 'path', type: 'integer', required: true, description: 'Assessment ID' },
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
     ],
-    responses: [{ status: 200, description: 'Assessment answers returned' }],
-    tag: 'Assessments',
-  },
-];
-
-// Policy endpoints
-export const policyEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/policies',
-    summary: 'Get all policies',
-    description: 'Retrieves a list of all policies in the organization.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'List of policies returned' }],
-    tag: 'Policies',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
   {
     method: 'POST',
-    path: '/policies',
-    summary: 'Create policy',
-    description: 'Creates a new policy.',
-    requiresAuth: true,
-    requestBody: {
-      title: 'string (required)',
-      content: 'string (required)',
-      status: 'string (optional)',
-      tags: 'string[] (optional)',
-    },
-    responses: [{ status: 201, description: 'Policy created successfully' }],
-    tag: 'Policies',
-  },
-  {
-    method: 'PUT',
-    path: '/policies/{id}',
-    summary: 'Update policy',
-    description: 'Updates an existing policy.',
+    path: '/ai-detection/scans/{scanId}/risk-score/recalculate',
+    summary: "Recalculate Risk Score Controller",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Policy ID' },
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
     ],
-    requestBody: {
-      title: 'string (optional)',
-      content: 'string (optional)',
-      status: 'string (optional)',
-      tags: 'string[] (optional)',
-    },
-    responses: [{ status: 200, description: 'Policy updated successfully' }],
-    tag: 'Policies',
-  },
-  {
-    method: 'DELETE',
-    path: '/policies/{id}',
-    summary: 'Delete policy',
-    description: 'Permanently deletes a policy.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Policy ID' },
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Policy deleted successfully' }],
-    tag: 'Policies',
+    tag: "AI Detection",
   },
   {
     method: 'GET',
-    path: '/policies/tags',
-    summary: 'Get all policy tags',
-    description: 'Retrieves all unique tags used across policies.',
+    path: '/ai-detection/scans/{scanId}/security-findings',
+    summary: "Get Security Findings Controller",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'List of policy tags returned' }],
-    tag: 'Policies',
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/scans/{scanId}/security-summary',
+    summary: "Get Security Summary Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/scans/{scanId}/status',
+    summary: "Get Scan Status Controller",
+    requiresAuth: true,
+    parameters: [
+      { name: 'scanId', in: 'path', type: 'integer', required: true, description: "The scanId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
+  },
+  {
+    method: 'GET',
+    path: '/ai-detection/stats',
+    summary: "Get A I Detection Stats Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Detection",
   },
 ];
 
-// Model Inventory endpoints
-export const modelInventoryEndpoints: Endpoint[] = [
+// Incidents endpoints
+export const aiIncidentEndpoints: Endpoint[] = [
   {
     method: 'GET',
-    path: '/model-inventory',
-    summary: 'Get all model inventory entries',
-    description: 'Retrieves all AI models in the inventory.',
+    path: '/ai-incident-managements',
+    summary: "Get All Incidents",
     requiresAuth: true,
     responses: [
-      { status: 200, description: 'List of model inventory entries' },
-      { status: 204, description: 'No entries found' },
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    tag: 'Model Inventory',
+    tag: "Incidents",
   },
   {
     method: 'POST',
-    path: '/model-inventory',
-    summary: 'Create model inventory entry',
-    description: 'Adds a new AI model to the inventory.',
+    path: '/ai-incident-managements',
+    summary: "Create New Incident",
     requiresAuth: true,
-    requestBody: {
-      provider: 'string (required)',
-      model: 'string (required)',
-      version: 'string (optional)',
-      approver: 'string (optional)',
-      capabilities: 'string[] (optional)',
-      security_assessment: 'boolean (optional)',
-      status: 'Approved | Restricted | Pending | Blocked',
-    },
-    responses: [{ status: 201, description: 'Model inventory entry created' }],
-    tag: 'Model Inventory',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Incidents",
   },
   {
     method: 'GET',
-    path: '/model-inventory/{id}',
-    summary: 'Get model inventory entry by ID',
-    description: 'Retrieves detailed information about a specific AI model.',
+    path: '/ai-incident-managements/{id}',
+    summary: "Get Incident By Id",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Model inventory ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
-      { status: 200, description: 'Model inventory entry found' },
-      { status: 204, description: 'Entry not found' },
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    tag: 'Model Inventory',
+    tag: "Incidents",
   },
   {
     method: 'PATCH',
-    path: '/model-inventory/{id}',
-    summary: 'Update model inventory entry',
-    description: 'Updates an existing AI model in the inventory.',
+    path: '/ai-incident-managements/{id}',
+    summary: "Update Incident By Id",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Model inventory ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    requestBody: {
-      provider: 'string (optional)',
-      model: 'string (optional)',
-      version: 'string (optional)',
-      status: 'Approved | Restricted | Pending | Blocked',
-    },
     responses: [
-      { status: 200, description: 'Model inventory entry updated' },
-      { status: 404, description: 'Entry not found' },
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    tag: 'Model Inventory',
+    tag: "Incidents",
   },
   {
     method: 'DELETE',
-    path: '/model-inventory/{id}',
-    summary: 'Delete model inventory entry',
-    description: 'Removes an AI model from the inventory.',
+    path: '/ai-incident-managements/{id}',
+    summary: "Delete Incident By Id",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Model inventory ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
-      { status: 200, description: 'Model inventory entry deleted' },
-      { status: 404, description: 'Entry not found' },
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    tag: 'Model Inventory',
-  },
-];
-
-// Model Risk endpoints
-export const modelRiskEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/modelRisks',
-    summary: 'Get all model risks',
-    description: 'Retrieves all AI model risks.',
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: 'List of model risks' },
-      { status: 204, description: 'No model risks found' },
-    ],
-    tag: 'Model Risks',
-  },
-  {
-    method: 'POST',
-    path: '/modelRisks',
-    summary: 'Create model risk',
-    description: 'Creates a new AI model risk entry.',
-    requiresAuth: true,
-    requestBody: {
-      riskName: 'string (required)',
-      riskCategory: 'Performance | Bias & Fairness | Security | Data Quality | Compliance',
-      riskLevel: 'Low | Medium | High | Critical',
-      status: 'Open | In Progress | Resolved | Accepted',
-      owner: 'string (required)',
-      targetDate: 'date (required)',
-      description: 'string (optional)',
-      mitigationPlan: 'string (optional)',
-      modelId: 'integer (optional)',
-    },
-    responses: [
-      { status: 201, description: 'Model risk created successfully' },
-      { status: 400, description: 'Validation error' },
-    ],
-    tag: 'Model Risks',
-  },
-  {
-    method: 'GET',
-    path: '/modelRisks/{id}',
-    summary: 'Get model risk by ID',
-    description: 'Retrieves detailed information about a specific model risk.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Model risk ID' },
-    ],
-    responses: [
-      { status: 200, description: 'Model risk found' },
-      { status: 404, description: 'Model risk not found' },
-    ],
-    tag: 'Model Risks',
-  },
-  {
-    method: 'PUT',
-    path: '/modelRisks/{id}',
-    summary: 'Update model risk',
-    description: 'Fully updates an existing model risk.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Model risk ID' },
-    ],
-    requestBody: {
-      riskName: 'string (required)',
-      riskCategory: 'Performance | Bias & Fairness | Security | Data Quality | Compliance',
-      riskLevel: 'Low | Medium | High | Critical',
-      status: 'Open | In Progress | Resolved | Accepted',
-    },
-    responses: [
-      { status: 200, description: 'Model risk updated' },
-      { status: 404, description: 'Model risk not found' },
-    ],
-    tag: 'Model Risks',
-  },
-  {
-    method: 'DELETE',
-    path: '/modelRisks/{id}',
-    summary: 'Delete model risk',
-    description: 'Permanently deletes a model risk.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Model risk ID' },
-    ],
-    responses: [
-      { status: 200, description: 'Model risk deleted' },
-      { status: 404, description: 'Model risk not found' },
-    ],
-    tag: 'Model Risks',
-  },
-];
-
-// EU AI Act endpoints
-export const euAiActEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/eu-ai-act/topics',
-    summary: 'Get all assessment topics',
-    description: 'Retrieves all EU AI Act assessment topics.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'List of assessment topics' }],
-    tag: 'EU AI Act',
-  },
-  {
-    method: 'GET',
-    path: '/eu-ai-act/topicById',
-    summary: 'Get assessment topic by ID',
-    description: 'Retrieves a specific assessment topic with project context.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'topicId', in: 'query', type: 'integer', required: true, description: 'Topic ID' },
-      { name: 'projectFrameworkId', in: 'query', type: 'integer', required: true, description: 'Project framework ID' },
-    ],
-    responses: [{ status: 200, description: 'Assessment topic details' }],
-    tag: 'EU AI Act',
-  },
-  {
-    method: 'GET',
-    path: '/eu-ai-act/assessments/progress/{projectFrameworkId}',
-    summary: 'Get assessment progress',
-    description: 'Retrieves assessment completion progress for a project.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectFrameworkId', in: 'path', type: 'integer', required: true, description: 'Project framework ID' },
-    ],
-    responses: [{ status: 200, description: 'Assessment progress details' }],
-    tag: 'EU AI Act',
-  },
-  {
-    method: 'GET',
-    path: '/eu-ai-act/controlCategories',
-    summary: 'Get control categories',
-    description: 'Retrieves EU AI Act control categories for a project.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectFrameworkId', in: 'query', type: 'integer', required: true, description: 'Project framework ID' },
-    ],
-    responses: [{ status: 200, description: 'Control categories' }],
-    tag: 'EU AI Act',
-  },
-  {
-    method: 'GET',
-    path: '/eu-ai-act/compliances/progress/{projectFrameworkId}',
-    summary: 'Get compliance progress',
-    description: 'Retrieves compliance completion progress for a project.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectFrameworkId', in: 'path', type: 'integer', required: true, description: 'Project framework ID' },
-    ],
-    responses: [{ status: 200, description: 'Compliance progress details' }],
-    tag: 'EU AI Act',
+    tag: "Incidents",
   },
   {
     method: 'PATCH',
-    path: '/eu-ai-act/saveAnswer/{answerId}',
-    summary: 'Update EU AI Act answer',
-    description: 'Updates an assessment answer.',
+    path: '/ai-incident-managements/{id}/archive',
+    summary: "Archive Incident By Id",
     requiresAuth: true,
     parameters: [
-      { name: 'answerId', in: 'path', type: 'integer', required: true, description: 'Answer ID' },
-    ],
-    requestBody: {
-      answer_text: 'string (optional)',
-      evidence: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Answer updated successfully' }],
-    tag: 'EU AI Act',
-  },
-  {
-    method: 'PATCH',
-    path: '/eu-ai-act/saveControls/{controlId}',
-    summary: 'Update control',
-    description: 'Updates a control implementation.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'controlId', in: 'path', type: 'integer', required: true, description: 'Control ID' },
-    ],
-    requestBody: {
-      implementation_status: 'string (optional)',
-      evidence: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Control updated successfully' }],
-    tag: 'EU AI Act',
-  },
-];
-
-// ISO 27001 endpoints
-export const iso27001Endpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/iso-27001/clauses/struct/byProjectId/{projectId}',
-    summary: 'Get ISO 27001 clause structure',
-    description: 'Retrieves the clause structure for ISO 27001 implementation.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectId', in: 'path', type: 'integer', required: true, description: 'Project ID' },
-    ],
-    responses: [{ status: 200, description: 'ISO 27001 clause structure' }],
-    tag: 'ISO 27001',
-  },
-  {
-    method: 'GET',
-    path: '/iso-27001/subClauses/byClauseId/{clauseId}',
-    summary: 'Get sub-clauses by clause ID',
-    description: 'Retrieves sub-clauses for a specific clause.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'clauseId', in: 'path', type: 'integer', required: true, description: 'Clause ID' },
-    ],
-    responses: [{ status: 200, description: 'Sub-clauses for the clause' }],
-    tag: 'ISO 27001',
-  },
-  {
-    method: 'GET',
-    path: '/iso-27001/subClause/byId/{id}',
-    summary: 'Get sub-clause by ID',
-    description: 'Retrieves detailed sub-clause information.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Sub-clause ID' },
-      { name: 'projectFrameworkId', in: 'query', type: 'integer', required: true, description: 'Project framework ID' },
-    ],
-    responses: [{ status: 200, description: 'Sub-clause details' }],
-    tag: 'ISO 27001',
-  },
-  {
-    method: 'POST',
-    path: '/iso-27001/saveClauses/{id}',
-    summary: 'Save ISO 27001 clauses',
-    description: 'Saves or updates ISO 27001 clause implementation.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Clause ID' },
-    ],
-    requestBody: {
-      clause_text: 'string (optional)',
-      implementation_guidance: 'string (optional)',
-      evidence: 'string (optional)',
-      status: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Clauses saved successfully' }],
-    tag: 'ISO 27001',
-  },
-  {
-    method: 'POST',
-    path: '/iso-27001/saveAnnexes/{id}',
-    summary: 'Save ISO 27001 annexes',
-    description: 'Saves or updates ISO 27001 annex implementation.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Annex ID' },
-    ],
-    requestBody: {
-      control_objective: 'string (optional)',
-      implementation_guidance: 'string (optional)',
-      evidence: 'string (optional)',
-      status: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Annexes saved successfully' }],
-    tag: 'ISO 27001',
-  },
-];
-
-// ISO 42001 endpoints
-export const iso42001Endpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/iso-42001/subClause/byId/{id}',
-    summary: 'Get ISO 42001 sub-clause by ID',
-    description: 'Retrieves detailed ISO 42001 sub-clause information.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Sub-clause ID' },
-      { name: 'projectFrameworkId', in: 'query', type: 'integer', required: true, description: 'Project framework ID' },
-    ],
-    responses: [{ status: 200, description: 'ISO 42001 sub-clause details' }],
-    tag: 'ISO 42001',
-  },
-  {
-    method: 'GET',
-    path: '/iso-42001/annexCategory/byId/{id}',
-    summary: 'Get ISO 42001 annex category',
-    description: 'Retrieves annex category details.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Annex category ID' },
-      { name: 'projectFrameworkId', in: 'query', type: 'integer', required: true, description: 'Project framework ID' },
-    ],
-    responses: [{ status: 200, description: 'Annex category details' }],
-    tag: 'ISO 42001',
-  },
-  {
-    method: 'POST',
-    path: '/iso-42001/saveClauses/{id}',
-    summary: 'Save ISO 42001 clauses',
-    description: 'Saves or updates ISO 42001 clause implementation.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Clause ID' },
-    ],
-    requestBody: {
-      clause_text: 'string (optional)',
-      implementation_guidance: 'string (optional)',
-      evidence: 'string (optional)',
-      status: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Clauses saved successfully' }],
-    tag: 'ISO 42001',
-  },
-  {
-    method: 'POST',
-    path: '/iso-42001/saveAnnexes/{id}',
-    summary: 'Save ISO 42001 annexes',
-    description: 'Saves or updates ISO 42001 annex implementation.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Annex ID' },
-    ],
-    requestBody: {
-      annex_text: 'string (optional)',
-      implementation_guidance: 'string (optional)',
-      evidence: 'string (optional)',
-      status: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Annexes saved successfully' }],
-    tag: 'ISO 42001',
-  },
-];
-
-// Bias and Fairness endpoints
-export const biasAndFairnessEndpoints: Endpoint[] = [
-  {
-    method: 'POST',
-    path: '/bias_and_fairness/upload',
-    summary: 'Upload model for fairness analysis',
-    description: 'Uploads a model and dataset for bias and fairness analysis.',
-    requiresAuth: true,
-    requestBody: {
-      model: 'file (required, gzip)',
-      data: 'file (required, gzip)',
-      target_column: 'string (required)',
-      sensitive_column: 'string (required)',
-    },
-    responses: [{ status: 200, description: 'Upload initiated, returns job_id' }],
-    tag: 'Bias and Fairness',
-  },
-  {
-    method: 'GET',
-    path: '/bias_and_fairness/upload/status/{jobId}',
-    summary: 'Get fairness upload status',
-    description: 'Retrieves the status of a fairness analysis job.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'jobId', in: 'path', type: 'string', required: true, description: 'Job ID' },
-    ],
-    responses: [{ status: 200, description: 'Upload status: In Progress | Completed | Failed' }],
-    tag: 'Bias and Fairness',
-  },
-  {
-    method: 'GET',
-    path: '/bias_and_fairness/metrics/all',
-    summary: 'Get all fairness metrics',
-    description: 'Retrieves all fairness metrics metadata.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'List of fairness metrics' }],
-    tag: 'Bias and Fairness',
-  },
-  {
-    method: 'GET',
-    path: '/bias_and_fairness/metrics/{id}',
-    summary: 'Get fairness metrics by ID',
-    description: 'Retrieves detailed fairness metrics for a specific analysis.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'string', required: true, description: 'Metrics ID' },
-    ],
-    responses: [{ status: 200, description: 'Fairness metrics details' }],
-    tag: 'Bias and Fairness',
-  },
-  {
-    method: 'DELETE',
-    path: '/bias_and_fairness/metrics/{id}',
-    summary: 'Delete fairness check',
-    description: 'Deletes a fairness analysis result.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Metrics ID' },
-    ],
-    responses: [{ status: 200, description: 'Fairness check deleted' }],
-    tag: 'Bias and Fairness',
-  },
-];
-
-// Training endpoints
-export const trainingEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/training',
-    summary: 'Get all training records',
-    description: 'Retrieves all AI-related training records.',
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: 'List of training records' },
-      { status: 204, description: 'No training records found' },
-    ],
-    tag: 'Training',
-  },
-  {
-    method: 'POST',
-    path: '/training',
-    summary: 'Create training record',
-    description: 'Creates a new training registry entry.',
-    requiresAuth: true,
-    requestBody: {
-      training_name: 'string (required)',
-      duration: 'string (required)',
-      provider: 'string (required)',
-      department: 'string (required)',
-      status: 'Planned | In Progress | Completed',
-      numberOfPeople: 'integer (required)',
-      description: 'string (optional)',
-    },
-    responses: [
-      { status: 201, description: 'Training record created' },
-      { status: 400, description: 'Missing required fields' },
-    ],
-    tag: 'Training',
-  },
-  {
-    method: 'GET',
-    path: '/training/training-id/{id}',
-    summary: 'Get training record by ID',
-    description: 'Retrieves detailed information about a specific training record.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Training record ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
-      { status: 200, description: 'Training record details' },
-      { status: 404, description: 'Training record not found' },
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    tag: 'Training',
-  },
-  {
-    method: 'PATCH',
-    path: '/training/{id}',
-    summary: 'Update training record',
-    description: 'Updates an existing training record.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Training record ID' },
-    ],
-    requestBody: {
-      training_name: 'string (optional)',
-      duration: 'string (optional)',
-      status: 'Planned | In Progress | Completed',
-    },
-    responses: [
-      { status: 202, description: 'Training record updated' },
-      { status: 404, description: 'Training record not found' },
-    ],
-    tag: 'Training',
-  },
-  {
-    method: 'DELETE',
-    path: '/training/{id}',
-    summary: 'Delete training record',
-    description: 'Permanently deletes a training record.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Training record ID' },
-    ],
-    responses: [
-      { status: 202, description: 'Training record deleted' },
-      { status: 404, description: 'Training record not found' },
-    ],
-    tag: 'Training',
-  },
-];
-
-// Roles endpoints
-export const roleEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/roles',
-    summary: 'Get all roles',
-    description: 'Retrieves all user roles in the system.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'List of roles' }],
-    tag: 'Roles',
-  },
-  {
-    method: 'POST',
-    path: '/roles',
-    summary: 'Create role',
-    description: 'Creates a new user role.',
-    requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      description: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Role created successfully' }],
-    tag: 'Roles',
-  },
-  {
-    method: 'GET',
-    path: '/roles/{id}',
-    summary: 'Get role by ID',
-    description: 'Retrieves detailed information about a specific role.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Role ID' },
-    ],
-    responses: [{ status: 200, description: 'Role details' }],
-    tag: 'Roles',
-  },
-  {
-    method: 'PUT',
-    path: '/roles/{id}',
-    summary: 'Update role',
-    description: 'Updates an existing role.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Role ID' },
-    ],
-    requestBody: {
-      name: 'string (optional)',
-      description: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Role updated successfully' }],
-    tag: 'Roles',
-  },
-  {
-    method: 'DELETE',
-    path: '/roles/{id}',
-    summary: 'Delete role',
-    description: 'Permanently deletes a role.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Role ID' },
-    ],
-    responses: [{ status: 200, description: 'Role deleted successfully' }],
-    tag: 'Roles',
-  },
-];
-
-// Controls endpoints
-export const controlEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/controls/{id}',
-    summary: 'Get control by ID',
-    description: 'Retrieves detailed information about a specific control.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Control ID' },
-    ],
-    responses: [{ status: 200, description: 'Control details' }],
-    tag: 'Controls',
-  },
-  {
-    method: 'POST',
-    path: '/controls',
-    summary: 'Create control',
-    description: 'Creates a new control.',
-    requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      description: 'string (optional)',
-      control_category_id: 'integer (required)',
-    },
-    responses: [{ status: 201, description: 'Control created successfully' }],
-    tag: 'Controls',
-  },
-  {
-    method: 'DELETE',
-    path: '/controls/{id}',
-    summary: 'Delete control',
-    description: 'Permanently deletes a control.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Control ID' },
-    ],
-    responses: [{ status: 200, description: 'Control deleted successfully' }],
-    tag: 'Controls',
-  },
-];
-
-// Control Category endpoints
-export const controlCategoryEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/controlCategory',
-    summary: 'Get all control categories',
-    description: 'Retrieves all control categories.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'List of control categories' }],
-    tag: 'Control Categories',
-  },
-  {
-    method: 'POST',
-    path: '/controlCategory',
-    summary: 'Create control category',
-    description: 'Creates a new control category.',
-    requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      description: 'string (optional)',
-      framework_id: 'integer (optional)',
-    },
-    responses: [{ status: 201, description: 'Control category created' }],
-    tag: 'Control Categories',
-  },
-  {
-    method: 'GET',
-    path: '/controlCategory/{id}',
-    summary: 'Get control category by ID',
-    description: 'Retrieves a specific control category.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Control category ID' },
-    ],
-    responses: [{ status: 200, description: 'Control category details' }],
-    tag: 'Control Categories',
-  },
-  {
-    method: 'PATCH',
-    path: '/controlCategory/{id}',
-    summary: 'Update control category',
-    description: 'Updates an existing control category.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Control category ID' },
-    ],
-    requestBody: {
-      name: 'string (optional)',
-      description: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Control category updated' }],
-    tag: 'Control Categories',
-  },
-  {
-    method: 'DELETE',
-    path: '/controlCategory/{id}',
-    summary: 'Delete control category',
-    description: 'Permanently deletes a control category.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Control category ID' },
-    ],
-    responses: [{ status: 200, description: 'Control category deleted' }],
-    tag: 'Control Categories',
-  },
-  {
-    method: 'GET',
-    path: '/controlCategory/byprojectid/{projectId}',
-    summary: 'Get control categories by project',
-    description: 'Retrieves control categories for a specific project.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectId', in: 'path', type: 'integer', required: true, description: 'Project ID' },
-    ],
-    responses: [{ status: 200, description: 'Control categories for the project' }],
-    tag: 'Control Categories',
-  },
-];
-
-// Framework endpoints
-export const frameworkEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/frameworks',
-    summary: 'Get all frameworks',
-    description: 'Retrieves all available compliance frameworks.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'List of frameworks' }],
-    tag: 'Frameworks',
-  },
-  {
-    method: 'POST',
-    path: '/frameworks/toProject',
-    summary: 'Assign framework to project',
-    description: 'Assigns a compliance framework to a project.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'frameworkId', in: 'query', type: 'integer', required: true, description: 'Framework ID' },
-      { name: 'projectId', in: 'query', type: 'integer', required: true, description: 'Project ID' },
-    ],
-    responses: [{ status: 201, description: 'Framework assigned to project' }],
-    tag: 'Frameworks',
+    tag: "Incidents",
   },
 ];
 
 // AI Trust Centre endpoints
 export const aiTrustCentreEndpoints: Endpoint[] = [
   {
-    method: 'GET',
-    path: '/aiTrustCentre/overview',
-    summary: 'Get AI Trust Centre overview',
-    description: 'Retrieves the AI Trust Centre overview configuration.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'AI Trust Centre overview' }],
-    tag: 'AI Trust Centre',
-  },
-  {
-    method: 'PUT',
-    path: '/aiTrustCentre/overview',
-    summary: 'Update AI Trust Centre overview',
-    description: 'Updates the AI Trust Centre overview configuration.',
-    requiresAuth: true,
-    requestBody: {
-      company_name: 'string (optional)',
-      description: 'string (optional)',
-      introduction: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Overview updated successfully' }],
-    tag: 'AI Trust Centre',
-  },
-  {
     method: 'POST',
     path: '/aiTrustCentre/logo',
-    summary: 'Upload AI Trust Centre logo',
-    description: 'Uploads a logo for the AI Trust Centre.',
+    summary: "Upload company logo",
     requiresAuth: true,
-    requestBody: {
-      logo: 'file (required)',
-    },
-    responses: [{ status: 200, description: 'Logo uploaded successfully' }],
-    tag: 'AI Trust Centre',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'DELETE',
     path: '/aiTrustCentre/logo',
-    summary: 'Delete AI Trust Centre logo',
-    description: 'Removes the AI Trust Centre logo.',
+    summary: "Delete Company Logo",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Logo deleted successfully' }],
-    tag: 'AI Trust Centre',
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
+  },
+  {
+    method: 'GET',
+    path: '/aiTrustCentre/overview',
+    summary: "Get A I Trust Centre Overview",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
+  },
+  {
+    method: 'PUT',
+    path: '/aiTrustCentre/overview',
+    summary: "Update A I Trust Overview",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'GET',
     path: '/aiTrustCentre/resources',
-    summary: 'Get AI Trust Centre resources',
-    description: 'Retrieves all AI Trust Centre resources.',
+    summary: "Get A I Trust Centre Resources",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'List of resources' }],
-    tag: 'AI Trust Centre',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'POST',
     path: '/aiTrustCentre/resources',
-    summary: 'Create AI Trust Centre resource',
-    description: 'Creates a new AI Trust Centre resource.',
+    summary: "Create A I Trust Resource",
     requiresAuth: true,
-    requestBody: {
-      file: 'file (optional)',
-      title: 'string (required)',
-      description: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Resource created successfully' }],
-    tag: 'AI Trust Centre',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'PUT',
-    path: '/aiTrustCentre/resources/{resourceId}',
-    summary: 'Update AI Trust Centre resource',
-    description: 'Updates an existing AI Trust Centre resource.',
+    path: '/aiTrustCentre/resources/{id}',
+    summary: "Update A I Trust Resource",
     requiresAuth: true,
     parameters: [
-      { name: 'resourceId', in: 'path', type: 'integer', required: true, description: 'Resource ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    requestBody: {
-      file: 'file (optional)',
-      title: 'string (optional)',
-      description: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Resource updated successfully' }],
-    tag: 'AI Trust Centre',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'DELETE',
-    path: '/aiTrustCentre/resources/{resourceId}',
-    summary: 'Delete AI Trust Centre resource',
-    description: 'Deletes an AI Trust Centre resource.',
+    path: '/aiTrustCentre/resources/{id}',
+    summary: "Delete A I Trust Resource",
     requiresAuth: true,
     parameters: [
-      { name: 'resourceId', in: 'path', type: 'integer', required: true, description: 'Resource ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Resource deleted successfully' }],
-    tag: 'AI Trust Centre',
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'GET',
     path: '/aiTrustCentre/subprocessors',
-    summary: 'Get AI Trust Centre subprocessors',
-    description: 'Retrieves all subprocessors.',
+    summary: "Get A I Trust Centre Subprocessors",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'List of subprocessors' }],
-    tag: 'AI Trust Centre',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'POST',
     path: '/aiTrustCentre/subprocessors',
-    summary: 'Create subprocessor',
-    description: 'Creates a new subprocessor entry.',
+    summary: "Create A I Trust Subprocessor",
     requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      purpose: 'string (optional)',
-      location: 'string (optional)',
-      processing_activities: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Subprocessor created successfully' }],
-    tag: 'AI Trust Centre',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'PUT',
-    path: '/aiTrustCentre/subprocessors/{subprocessorId}',
-    summary: 'Update subprocessor',
-    description: 'Updates an existing subprocessor.',
+    path: '/aiTrustCentre/subprocessors/{id}',
+    summary: "Update A I Trust Subprocessor",
     requiresAuth: true,
     parameters: [
-      { name: 'subprocessorId', in: 'path', type: 'integer', required: true, description: 'Subprocessor ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    requestBody: {
-      name: 'string (optional)',
-      purpose: 'string (optional)',
-      location: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Subprocessor updated successfully' }],
-    tag: 'AI Trust Centre',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'DELETE',
-    path: '/aiTrustCentre/subprocessors/{subprocessorId}',
-    summary: 'Delete subprocessor',
-    description: 'Deletes a subprocessor entry.',
+    path: '/aiTrustCentre/subprocessors/{id}',
+    summary: "Delete A I Trust Subprocessor",
     requiresAuth: true,
     parameters: [
-      { name: 'subprocessorId', in: 'path', type: 'integer', required: true, description: 'Subprocessor ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Subprocessor deleted successfully' }],
-    tag: 'AI Trust Centre',
-  },
-];
-
-// Files endpoints
-export const fileEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/files',
-    summary: 'Get user files metadata',
-    description: 'Retrieves metadata for all files uploaded by the user.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'List of files' }],
-    tag: 'Files',
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
   {
     method: 'GET',
-    path: '/files/{id}',
-    summary: 'Get file by ID',
-    description: 'Retrieves a specific file by its ID.',
-    requiresAuth: true,
+    path: '/aiTrustCentre/{hash}',
+    summary: "Get A I Trust Centre Public Page",
+    requiresAuth: false,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'File ID' },
+      { name: 'hash', in: 'path', type: 'string', required: true, description: "The hash" },
     ],
-    responses: [{ status: 200, description: 'File details' }],
-    tag: 'Files',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
+  },
+  {
+    method: 'GET',
+    path: '/aiTrustCentre/{hash}/logo',
+    summary: "Get Company Logo",
+    requiresAuth: false,
+    parameters: [
+      { name: 'hash', in: 'path', type: 'string', required: true, description: "The hash" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
+  },
+  {
+    method: 'GET',
+    path: '/aiTrustCentre/{hash}/resources/{id}',
+    summary: "Get A I Trust Centre Public Resource",
+    requiresAuth: false,
+    parameters: [
+      { name: 'hash', in: 'path', type: 'string', required: true, description: "The hash" },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Trust Centre",
   },
 ];
 
-// Email Services endpoints
-export const emailEndpoints: Endpoint[] = [
+// Approval Workflows endpoints
+export const approvalWorkflowEndpoints: Endpoint[] = [
   {
     method: 'POST',
-    path: '/mail/invite',
-    summary: 'Send user invitation email',
-    description: 'Sends an invitation email to a new user.',
+    path: '/approval-requests',
+    summary: "Create Approval Request",
     requiresAuth: true,
-    requestBody: {
-      email: 'string (required)',
-      invitationMessage: 'string (optional)',
-    },
-    responses: [{ status: 200, description: 'Invitation email sent successfully' }],
-    tag: 'Email Services',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'GET',
+    path: '/approval-requests/all',
+    summary: "Get All Approval Requests",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'GET',
+    path: '/approval-requests/my-requests',
+    summary: "Get My Approval Requests",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'GET',
+    path: '/approval-requests/pending-approvals',
+    summary: "Get Pending Approvals",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'GET',
+    path: '/approval-requests/{id}',
+    summary: "Get Approval Request By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
   },
   {
     method: 'POST',
-    path: '/mail/reset-password',
-    summary: 'Send password reset email',
-    description: 'Sends a password reset email to a user.',
+    path: '/approval-requests/{id}/approve',
+    summary: "Approve Request",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'POST',
+    path: '/approval-requests/{id}/reject',
+    summary: "Reject Request",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'POST',
+    path: '/approval-requests/{id}/withdraw',
+    summary: "Withdraw approval request",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'GET',
+    path: '/approval-workflows',
+    summary: "Get All Approval Workflows",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'POST',
+    path: '/approval-workflows',
+    summary: "Create Approval Workflow",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'GET',
+    path: '/approval-workflows/{id}',
+    summary: "Get Approval Workflow By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'PUT',
+    path: '/approval-workflows/{id}',
+    summary: "Update Approval Workflow",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+  {
+    method: 'DELETE',
+    path: '/approval-workflows/{id}',
+    summary: "Delete Approval Workflow",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Approval Workflows",
+  },
+];
+
+// Assessments endpoints
+export const assessmentEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/assessments',
+    summary: "Get All Assessments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/assessments/getAnswers/{id}',
+    summary: "Get Answers",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/assessments/project/byid/{id}',
+    summary: "Get Assessment By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/assessments/{id}',
+    summary: "Get Assessment By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/questions',
+    summary: "Get All Questions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/questions/bysubtopic/{id}',
+    summary: "Get Questions By Subtopic Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/questions/bytopic/{id}',
+    summary: "Get Questions By Topic Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/questions/{id}',
+    summary: "Get Question By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Assessments",
+  },
+];
+
+// Audit endpoints
+export const auditEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/audit-ledger',
+    summary: "Get Audit Ledger",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Audit",
+  },
+  {
+    method: 'GET',
+    path: '/audit-ledger/verify',
+    summary: "Verify Audit Ledger",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Audit",
+  },
+];
+
+// Authentication endpoints
+export const authenticationEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/users/login',
+    summary: "Authenticate user",
+    description: "Validates email/password credentials via bcrypt. Returns a JWT access token in the response body and sets a refresh token in an HTTP-only cookie. Rate-limited to 5 requests per minute per IP.",
     requiresAuth: false,
     requestBody: {
-      email: 'string (required)',
+      "email": "string (required)",
+      "password": "string (required)",
     },
-    responses: [{ status: 200, description: 'Password reset email sent' }],
-    tag: 'Email Services',
+    responses: [
+      { status: 202, description: "Authentication successful" },
+      { status: 401, description: "Invalid email or password" },
+      { status: 429, description: "Too many login attempts" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Authentication",
+  },
+  {
+    method: 'POST',
+    path: '/users/refresh-token',
+    summary: "Refresh access token",
+    description: "Reads the refresh_token from an HTTP-only cookie and issues a new JWT access token if the refresh token is still valid.",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "New access token issued" },
+      { status: 400, description: "Refresh token missing from cookie" },
+      { status: 401, description: "Invalid refresh token" },
+      { status: 406, description: "Refresh token expired" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Authentication",
+  },
+];
+
+// Automations endpoints
+export const automationEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/automations',
+    summary: "Get All Automations",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Automations",
+  },
+  {
+    method: 'POST',
+    path: '/automations',
+    summary: "Create Automation",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Automations",
+  },
+  {
+    method: 'GET',
+    path: '/automations/actions/by-triggerId/{triggerId}',
+    summary: "Get All Automation Actions By Trigger Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'triggerId', in: 'path', type: 'integer', required: true, description: "The triggerId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Automations",
+  },
+  {
+    method: 'GET',
+    path: '/automations/triggers',
+    summary: "Get All Automation Triggers",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Automations",
+  },
+  {
+    method: 'GET',
+    path: '/automations/{id}',
+    summary: "Get Automation By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Automations",
+  },
+  {
+    method: 'PUT',
+    path: '/automations/{id}',
+    summary: "Update Automation",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Automations",
+  },
+  {
+    method: 'DELETE',
+    path: '/automations/{id}',
+    summary: "Delete Automation By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Automations",
+  },
+  {
+    method: 'GET',
+    path: '/automations/{id}/history',
+    summary: "Get Automation History",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Automations",
+  },
+  {
+    method: 'GET',
+    path: '/automations/{id}/stats',
+    summary: "Get Automation Stats",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Automations",
+  },
+];
+
+// CE Marking endpoints
+export const ceMarkingEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/ce-marking/{projectId}',
+    summary: "Get C E Marking",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "CE Marking",
+  },
+  {
+    method: 'PUT',
+    path: '/ce-marking/{projectId}',
+    summary: "Update C E Marking",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "CE Marking",
+  },
+];
+
+// Change History endpoints
+export const changeHistoryEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/dataset-change-history/{id}',
+    summary: "Get Dataset Change History By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/file-change-history/{id}',
+    summary: "Get File Change History By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/incident-change-history/{incidentId}',
+    summary: "Get Incident History",
+    requiresAuth: true,
+    parameters: [
+      { name: 'incidentId', in: 'path', type: 'integer', required: true, description: "The incidentId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/model-risk-change-history/{id}',
+    summary: "Get Model Risk Change History By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/model-inventory-change-history/{id}',
+    summary: "Get Model Inventory Change History By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/policy-change-history/{id}',
+    summary: "Get Policy Change History By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/risk-change-history/{projectRiskId}',
+    summary: "Get Project Risk Change History By Risk Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectRiskId', in: 'path', type: 'integer', required: true, description: "The projectRiskId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/task-change-history/{id}',
+    summary: "Get Task Change History By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/training-change-history/{id}',
+    summary: "Get Training Change History By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/use-case-change-history/{useCaseId}',
+    summary: "Get Use Case History",
+    requiresAuth: true,
+    parameters: [
+      { name: 'useCaseId', in: 'path', type: 'integer', required: true, description: "The useCaseId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/vendor-change-history/{id}',
+    summary: "Get Vendor Change History By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/vendor-risk-change-history/{id}',
+    summary: "Get Vendor Risk Change History By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+];
+
+// Compliance endpoints
+export const complianceEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/compliance/details/{organizationId}',
+    summary: "Get Compliance Details",
+    requiresAuth: true,
+    parameters: [
+      { name: 'organizationId', in: 'path', type: 'integer', required: true, description: "The organizationId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Compliance",
+  },
+  {
+    method: 'GET',
+    path: '/compliance/score',
+    summary: "Get Compliance Score",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Compliance",
+  },
+  {
+    method: 'GET',
+    path: '/compliance/score/{organizationId}',
+    summary: "Get Compliance Score By Organization",
+    requiresAuth: true,
+    parameters: [
+      { name: 'organizationId', in: 'path', type: 'integer', required: true, description: "The organizationId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Compliance",
   },
 ];
 
@@ -1627,11 +1745,4778 @@ export const dashboardEndpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/dashboard',
-    summary: 'Get dashboard data',
-    description: 'Retrieves dashboard statistics and summary data.',
+    summary: "Get Dashboard Data",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Dashboard data returned' }],
-    tag: 'Dashboard',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Dashboard",
+  },
+];
+
+// Datasets endpoints
+export const datasetEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/dataset-bulk-upload/upload',
+    summary: "Handle Multer Error",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Datasets",
+  },
+  {
+    method: 'GET',
+    path: '/datasets',
+    summary: "Get All Datasets",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Datasets",
+  },
+  {
+    method: 'POST',
+    path: '/datasets',
+    summary: "Create New Dataset",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Datasets",
+  },
+  {
+    method: 'GET',
+    path: '/datasets/by-model/{modelId}',
+    summary: "Get Datasets By Model Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'modelId', in: 'path', type: 'integer', required: true, description: "The modelId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Datasets",
+  },
+  {
+    method: 'GET',
+    path: '/datasets/by-project/{projectId}',
+    summary: "Get Datasets By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Datasets",
+  },
+  {
+    method: 'GET',
+    path: '/datasets/{id}',
+    summary: "Get Dataset By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Datasets",
+  },
+  {
+    method: 'PATCH',
+    path: '/datasets/{id}',
+    summary: "Update Dataset By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Datasets",
+  },
+  {
+    method: 'DELETE',
+    path: '/datasets/{id}',
+    summary: "Delete Dataset By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Datasets",
+  },
+  {
+    method: 'GET',
+    path: '/datasets/{id}/history',
+    summary: "Get Dataset History",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Datasets",
+  },
+];
+
+// Demo Data endpoints
+export const demoDataEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/autoDrivers',
+    summary: "Post Auto Driver",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Demo Data",
+  },
+  {
+    method: 'DELETE',
+    path: '/autoDrivers',
+    summary: "Delete Auto Driver",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Demo Data",
+  },
+];
+
+// Mail endpoints
+export const emailEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/mail/invite',
+    summary: "Invite Limiter",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mail",
+  },
+  {
+    method: 'POST',
+    path: '/mail/reset-password',
+    summary: "Email",
+    requiresAuth: false,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mail",
+  },
+];
+
+// Entity Graph endpoints
+export const entityGraphEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/entity-graph/annotations',
+    summary: "Get Annotations",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'POST',
+    path: '/entity-graph/annotations',
+    summary: "Save Annotation",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'DELETE',
+    path: '/entity-graph/annotations/entity/{entityType}/{entityId}',
+    summary: "Delete Annotation By Entity",
+    requiresAuth: true,
+    parameters: [
+      { name: 'entityType', in: 'path', type: 'string', required: true, description: "The entityType" },
+      { name: 'entityId', in: 'path', type: 'integer', required: true, description: "The entityId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'GET',
+    path: '/entity-graph/annotations/{entityType}/{entityId}',
+    summary: "Get Annotation By Entity",
+    requiresAuth: true,
+    parameters: [
+      { name: 'entityType', in: 'path', type: 'string', required: true, description: "The entityType" },
+      { name: 'entityId', in: 'path', type: 'integer', required: true, description: "The entityId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'DELETE',
+    path: '/entity-graph/annotations/{id}',
+    summary: "Delete Annotation",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'GET',
+    path: '/entity-graph/gap-rules',
+    summary: "Get Gap Rules",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'POST',
+    path: '/entity-graph/gap-rules',
+    summary: "Save Gap Rules",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'DELETE',
+    path: '/entity-graph/gap-rules',
+    summary: "Reset Gap Rules",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'GET',
+    path: '/entity-graph/gap-rules/defaults',
+    summary: "Get Default Gap Rules",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'GET',
+    path: '/entity-graph/views',
+    summary: "Get Views",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'POST',
+    path: '/entity-graph/views',
+    summary: "Create View",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'GET',
+    path: '/entity-graph/views/{id}',
+    summary: "Get View By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'PUT',
+    path: '/entity-graph/views/{id}',
+    summary: "Update View",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+  {
+    method: 'DELETE',
+    path: '/entity-graph/views/{id}',
+    summary: "Delete View",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Entity Graph",
+  },
+];
+
+// EU AI Act endpoints
+export const euAiActEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/eu-ai-act/all/assessments/progress',
+    summary: "Get All Projects Assessment Progress",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/all/compliances/progress',
+    summary: "Get All Projects Compliance Progress",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/assessments/byProjectId/{id}',
+    summary: "Get Assessments By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'DELETE',
+    path: '/eu-ai-act/assessments/byProjectId/{id}',
+    summary: "Delete Assessments By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/assessments/progress/{id}',
+    summary: "Get Project Assessment Progress",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/compliances/byProjectId/{id}',
+    summary: "Get Compliances By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'DELETE',
+    path: '/eu-ai-act/compliances/byProjectId/{id}',
+    summary: "Delete Compliances By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/compliances/progress/{id}',
+    summary: "Get Project Compliance Progress",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/controlById',
+    summary: "Get Control By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/controlCategories',
+    summary: "Get All Control Categories",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/controls/byControlCategoryId/{id}',
+    summary: "Get Controls By Control Category Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'PATCH',
+    path: '/eu-ai-act/saveAnswer/{id}',
+    summary: "Update Question By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'PATCH',
+    path: '/eu-ai-act/saveControls/{id}',
+    summary: "Save Controls",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/topicById',
+    summary: "Get Topic By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+  {
+    method: 'GET',
+    path: '/eu-ai-act/topics',
+    summary: "Get All Topics",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "EU AI Act",
+  },
+];
+
+// Evidence endpoints
+export const evidenceHubEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/evidenceHub',
+    summary: "Get All Evidences",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Evidence",
+  },
+  {
+    method: 'POST',
+    path: '/evidenceHub',
+    summary: "Create New Evidence",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Evidence",
+  },
+  {
+    method: 'GET',
+    path: '/evidenceHub/{id}',
+    summary: "Get Evidence By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Evidence",
+  },
+  {
+    method: 'PATCH',
+    path: '/evidenceHub/{id}',
+    summary: "Update Evidence By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Evidence",
+  },
+  {
+    method: 'DELETE',
+    path: '/evidenceHub/{id}',
+    summary: "Delete Evidence By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Evidence",
+  },
+];
+
+// Files endpoints
+export const fileEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/file-manager',
+    summary: "List Files",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'POST',
+    path: '/file-manager',
+    summary: "Upload File",
+    description: "Requires role: Admin or Reviewer or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/file-manager/highlighted',
+    summary: "Get Highlighted",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/file-manager/search',
+    summary: "Search Files",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/file-manager/with-metadata',
+    summary: "List Files With Metadata",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/file-manager/{id}',
+    summary: "Download File",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'DELETE',
+    path: '/file-manager/{id}',
+    summary: "Remove File",
+    description: "Requires role: Admin or Reviewer or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/file-manager/{id}/metadata',
+    summary: "Get File Metadata",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'PATCH',
+    path: '/file-manager/{id}/metadata',
+    summary: "Update Metadata",
+    description: "Requires role: Admin or Reviewer or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/file-manager/{id}/preview',
+    summary: "Preview File",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/file-manager/{id}/versions',
+    summary: "Get File Version History",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/files',
+    summary: "Get User Files Meta Data",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'POST',
+    path: '/files',
+    summary: "Post File Content",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'POST',
+    path: '/files/attach',
+    summary: "Attach File To Entity",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'POST',
+    path: '/files/attach-bulk',
+    summary: "Attach Files To Entity",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/files/by-projid/{id}',
+    summary: "Get File Meta By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'DELETE',
+    path: '/files/detach',
+    summary: "Detach File From Entity",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/files/entity/{framework_type}/{entity_type}/{entity_id}',
+    summary: "Get Entity Files",
+    requiresAuth: true,
+    parameters: [
+      { name: 'framework_type', in: 'path', type: 'string', required: true, description: "The framework_type" },
+      { name: 'entity_type', in: 'path', type: 'string', required: true, description: "The entity_type" },
+      { name: 'entity_id', in: 'path', type: 'integer', required: true, description: "The entity_id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/files/tree',
+    summary: "Get Folder Tree",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/files/uncategorized',
+    summary: "Get Uncategorized Files",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/files/{id}',
+    summary: "Get File Content By Id",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'PATCH',
+    path: '/files/{id}',
+    summary: "Update Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'DELETE',
+    path: '/files/{id}',
+    summary: "Delete Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/files/{id}/files',
+    summary: "Get Files In Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'POST',
+    path: '/files/{id}/files',
+    summary: "Assign Files To Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'DELETE',
+    path: '/files/{id}/files/{fileId}',
+    summary: "Remove File From Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+      { name: 'fileId', in: 'path', type: 'integer', required: true, description: "The fileId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/files/{id}/path',
+    summary: "Get Folder Path",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/virtual-folders',
+    summary: "Get All Folders",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'POST',
+    path: '/virtual-folders',
+    summary: "Create Folder",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/virtual-folders/tree',
+    summary: "Get Folder Tree",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/virtual-folders/uncategorized',
+    summary: "Get Uncategorized Files",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/virtual-folders/{id}',
+    summary: "Get Folder By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'PATCH',
+    path: '/virtual-folders/{id}',
+    summary: "Update Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'DELETE',
+    path: '/virtual-folders/{id}',
+    summary: "Delete Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/virtual-folders/{id}/files',
+    summary: "Get Files In Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'POST',
+    path: '/virtual-folders/{id}/files',
+    summary: "Assign Files To Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'DELETE',
+    path: '/virtual-folders/{id}/files/{fileId}',
+    summary: "Remove File From Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+      { name: 'fileId', in: 'path', type: 'integer', required: true, description: "The fileId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/virtual-folders/{id}/path',
+    summary: "Get Folder Path",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+];
+
+// Frameworks endpoints
+export const frameworkEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/frameworks',
+    summary: "Get All Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'DELETE',
+    path: '/frameworks/fromProject',
+    summary: "Delete Framework From Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'POST',
+    path: '/frameworks/toProject',
+    summary: "Add Framework To Project",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{id}',
+    summary: "Get Framework By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+];
+
+// FRIA endpoints
+export const friaEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/fria/{friaId}/evidence',
+    summary: "Get Fria Evidence",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'POST',
+    path: '/fria/{friaId}/evidence',
+    summary: "Link Fria Evidence",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'DELETE',
+    path: '/fria/{friaId}/evidence/{linkId}',
+    summary: "Unlink Fria Evidence",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+      { name: 'linkId', in: 'path', type: 'integer', required: true, description: "The linkId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'GET',
+    path: '/fria/{friaId}/models',
+    summary: "Get Model Links",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'POST',
+    path: '/fria/{friaId}/models/{modelId}',
+    summary: "Link Model",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+      { name: 'modelId', in: 'path', type: 'integer', required: true, description: "The modelId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'DELETE',
+    path: '/fria/{friaId}/models/{modelId}',
+    summary: "Unlink Model",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+      { name: 'modelId', in: 'path', type: 'integer', required: true, description: "The modelId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'PUT',
+    path: '/fria/{friaId}/rights',
+    summary: "Update Fria Rights",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'GET',
+    path: '/fria/{friaId}/risk-items',
+    summary: "Get Risk Items",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'POST',
+    path: '/fria/{friaId}/risk-items',
+    summary: "Add Risk Item",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'PATCH',
+    path: '/fria/{friaId}/risk-items/{itemId}',
+    summary: "Update Risk Item",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+      { name: 'itemId', in: 'path', type: 'integer', required: true, description: "The itemId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'DELETE',
+    path: '/fria/{friaId}/risk-items/{itemId}',
+    summary: "Delete Risk Item",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+      { name: 'itemId', in: 'path', type: 'integer', required: true, description: "The itemId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'POST',
+    path: '/fria/{friaId}/submit',
+    summary: "Submit Fria",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'GET',
+    path: '/fria/{friaId}/versions',
+    summary: "Get Versions",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'GET',
+    path: '/fria/{friaId}/versions/{version}',
+    summary: "Get Version",
+    requiresAuth: true,
+    parameters: [
+      { name: 'friaId', in: 'path', type: 'integer', required: true, description: "The friaId" },
+      { name: 'version', in: 'path', type: 'integer', required: true, description: "The version" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'GET',
+    path: '/fria/{projectId}',
+    summary: "Get Fria",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+  {
+    method: 'PUT',
+    path: '/fria/{projectId}',
+    summary: "Update Fria",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "FRIA",
+  },
+];
+
+// Intake Forms endpoints
+export const intakeFormEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/intake/forms',
+    summary: "Get All Intake Forms",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/forms',
+    summary: "Create Intake Form",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/forms/field-guidance',
+    summary: "Get Field Guidance",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/forms/suggested-questions',
+    summary: "Get L L M Suggested Questions",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/forms/{id}',
+    summary: "Get Intake Form By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'PATCH',
+    path: '/intake/forms/{id}',
+    summary: "Update Intake Form",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'DELETE',
+    path: '/intake/forms/{id}',
+    summary: "Delete Intake Form",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/forms/{id}/archive',
+    summary: "Archive Intake Form",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/forms/{id}/preview',
+    summary: "Preview Form",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/forms/{id}/submissions',
+    summary: "Get Form Submissions",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/public/by-id/{publicId}',
+    summary: "Get Public Form By Public Id",
+    requiresAuth: false,
+    parameters: [
+      { name: 'publicId', in: 'path', type: 'integer', required: true, description: "The publicId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/by-id/{publicId}',
+    summary: "Submit Public Form By Public Id",
+    requiresAuth: false,
+    parameters: [
+      { name: 'publicId', in: 'path', type: 'integer', required: true, description: "The publicId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/public/captcha',
+    summary: "Get Captcha",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/public/{tenantSlug}/{formSlug}',
+    summary: "Get Public Form",
+    requiresAuth: false,
+    parameters: [
+      { name: 'tenantSlug', in: 'path', type: 'string', required: true, description: "The tenantSlug" },
+      { name: 'formSlug', in: 'path', type: 'string', required: true, description: "The formSlug" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/{tenantSlug}/{formSlug}',
+    summary: "Submit Public Form",
+    requiresAuth: false,
+    parameters: [
+      { name: 'tenantSlug', in: 'path', type: 'string', required: true, description: "The tenantSlug" },
+      { name: 'formSlug', in: 'path', type: 'string', required: true, description: "The formSlug" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/submissions',
+    summary: "Get Pending Submissions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/submissions/by-entity/{entityType}/{entityId}',
+    summary: "Get Submission By Entity",
+    requiresAuth: true,
+    parameters: [
+      { name: 'entityType', in: 'path', type: 'string', required: true, description: "The entityType" },
+      { name: 'entityId', in: 'path', type: 'integer', required: true, description: "The entityId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/submissions/stats',
+    summary: "Get Submission Stats",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/submissions/{id}',
+    summary: "Get Submission By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/submissions/{id}/approve',
+    summary: "Approve Submission",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/intake/submissions/{id}/preview',
+    summary: "Get Submission Preview",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/submissions/{id}/reject',
+    summary: "Reject Submission",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'PATCH',
+    path: '/intake/submissions/{id}/risk-override',
+    summary: "Override Submission Risk",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+];
+
+// Integrations endpoints
+export const integrationEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/integrations/github/token',
+    summary: "Get Git Hub Token Status Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+  {
+    method: 'POST',
+    path: '/integrations/github/token',
+    summary: "Save Git Hub Token Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+  {
+    method: 'DELETE',
+    path: '/integrations/github/token',
+    summary: "Delete Git Hub Token Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+  {
+    method: 'POST',
+    path: '/integrations/github/token/test',
+    summary: "Test Git Hub Token Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+];
+
+// Internal endpoints
+export const internalEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/internal/ai-gateway/notify',
+    summary: "AI Gateway notification callback",
+    requiresAuth: false,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Internal",
+  },
+];
+
+// Invitations endpoints
+export const invitationEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/invitations',
+    summary: "Get Invitations",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Invitations",
+  },
+  {
+    method: 'DELETE',
+    path: '/invitations/{id}',
+    summary: "Revoke Invitation",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Invitations",
+  },
+  {
+    method: 'POST',
+    path: '/invitations/{id}/resend',
+    summary: "Resend Invitation",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Invitations",
+  },
+];
+
+// ISO 27001 endpoints
+export const iso27001Endpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/iso-27001/all/annexes/progress',
+    summary: "Get All Projects Annxes Progress",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/all/clauses/progress',
+    summary: "Get All Projects Clauses Progress",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/annexControl/byId/{id}',
+    summary: "Get Annex Control By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/annexControls/byAnnexId/{id}',
+    summary: "Get Annex Controls By Annex Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/annexes',
+    summary: "Get All Annexes",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/annexes/assignments/{id}',
+    summary: "Get Project Annexes Assignments",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/annexes/byProjectId/{id}',
+    summary: "Get Annexes By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'DELETE',
+    path: '/iso-27001/annexes/byProjectId/{id}',
+    summary: "Delete Reference Controls",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/annexes/progress/{id}',
+    summary: "Get Project Annxes Progress",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/annexes/struct/byProjectId/{id}',
+    summary: "Get All Annexes Struct For Project",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/clauses',
+    summary: "Get All Clauses",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/clauses/assignments/{id}',
+    summary: "Get Project Clauses Assignments",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/clauses/byProjectId/{id}',
+    summary: "Get Clauses By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'DELETE',
+    path: '/iso-27001/clauses/byProjectId/{id}',
+    summary: "Delete Management System Clauses",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/clauses/progress/{id}',
+    summary: "Get Project Clauses Progress",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/clauses/struct/byProjectId/{id}',
+    summary: "Get All Clauses Struct For Project",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'PATCH',
+    path: '/iso-27001/saveAnnexes/{id}',
+    summary: "Save Annexes",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'PATCH',
+    path: '/iso-27001/saveClauses/{id}',
+    summary: "Save Clauses",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/subClause/byId/{id}',
+    summary: "Get Sub Clause By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-27001/subClauses/byClauseId/{id}',
+    summary: "Get Sub Clauses By Clause Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 27001",
+  },
+];
+
+// ISO 42001 endpoints
+export const iso42001Endpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/iso-42001/all/annexes/progress',
+    summary: "Get All Projects Annxes Progress",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/all/clauses/progress',
+    summary: "Get All Projects Clauses Progress",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/annexCategories/byAnnexId/{id}',
+    summary: "Get Annex Categories By Annex Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/annexCategories/{id}/risks',
+    summary: "Get Annex Category Risks",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/annexCategory/byId/{id}',
+    summary: "Get Annex Category By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/annexes',
+    summary: "Get All Annexes",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/annexes/assignments/{id}',
+    summary: "Get Project Annexes Assignments",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/annexes/byProjectId/{id}',
+    summary: "Get Annexes By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'DELETE',
+    path: '/iso-42001/annexes/byProjectId/{id}',
+    summary: "Delete Reference Controls",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/annexes/progress/{id}',
+    summary: "Get Project Annxes Progress",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/annexes/struct/byProjectId/{id}',
+    summary: "Get All Annexes Struct For Project",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/clauses',
+    summary: "Get All Clauses",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/clauses/assignments/{id}',
+    summary: "Get Project Clauses Assignments",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/clauses/byProjectId/{id}',
+    summary: "Get Clauses By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'DELETE',
+    path: '/iso-42001/clauses/byProjectId/{id}',
+    summary: "Delete Management System Clauses",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/clauses/progress/{id}',
+    summary: "Get Project Clauses Progress",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/clauses/struct/byProjectId/{id}',
+    summary: "Get All Clauses Struct For Project",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'PATCH',
+    path: '/iso-42001/saveAnnexes/{id}',
+    summary: "Save Annexes",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'PATCH',
+    path: '/iso-42001/saveClauses/{id}',
+    summary: "Save Clauses",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/subClause/byId/{id}',
+    summary: "Get Sub Clause By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/subClauses/byClauseId/{id}',
+    summary: "Get Sub Clauses By Clause Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+  {
+    method: 'GET',
+    path: '/iso-42001/subclauses/{id}/risks',
+    summary: "Get Sub Clause Risks",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "ISO 42001",
+  },
+];
+
+// LLM Keys endpoints
+export const llmKeyEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/evaluation-llm-keys',
+    summary: "Get All Evaluation LLM Keys",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+  {
+    method: 'POST',
+    path: '/evaluation-llm-keys',
+    summary: "Add Evaluation LLM Key",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    requestBody: {
+      "provider": "openai | anthropic | google | xai | mistral | huggingface (required)",
+      "apiKey": "string (required)",
+    },
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+  {
+    method: 'POST',
+    path: '/evaluation-llm-keys/verify',
+    summary: "Verify Evaluation LLM Key",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    requestBody: {
+      "provider": "openai | anthropic | google | xai | mistral | huggingface | openrouter (required)",
+      "apiKey": "string (required)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+  {
+    method: 'DELETE',
+    path: '/evaluation-llm-keys/{provider}',
+    summary: "Delete Evaluation LLM Key",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'provider', in: 'path', type: 'string', required: true, description: "The provider" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+  {
+    method: 'GET',
+    path: '/llm-keys',
+    summary: "Get L L M Keys",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+  {
+    method: 'POST',
+    path: '/llm-keys',
+    summary: "Create L L M Key",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+  {
+    method: 'GET',
+    path: '/llm-keys/status',
+    summary: "Get L L M Key Status",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+  {
+    method: 'PATCH',
+    path: '/llm-keys/{id}',
+    summary: "Update L L M Key",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+  {
+    method: 'DELETE',
+    path: '/llm-keys/{id}',
+    summary: "Delete L L M Key",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+  {
+    method: 'GET',
+    path: '/llm-keys/{name}',
+    summary: "Get L L M Key",
+    requiresAuth: true,
+    parameters: [
+      { name: 'name', in: 'path', type: 'string', required: true, description: "The name" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "LLM Keys",
+  },
+];
+
+// Model Inventory endpoints
+export const modelInventoryEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/modelInventory',
+    summary: "Get all model inventories",
+    description: "Returns every model inventory record belonging to the caller's organization, ordered by created_at DESC, id ASC. Each record includes its associated project and framework IDs.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "List of model inventories (may be empty)" },
+      { status: 401, description: "Missing or invalid JWT" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'POST',
+    path: '/modelInventory',
+    summary: "Create a new model inventory",
+    description: "Creates a model inventory record, links it to the supplied project and framework IDs, records a change-history entry, fires any \"model_added\" automations, and notifies the approver (if set).",
+    requiresAuth: true,
+    requestBody: {
+      "(schema)": "ModelInventoryCreateRequest",
+    },
+    responses: [
+      { status: 201, description: "Model inventory created" },
+      { status: 401, description: "Missing or invalid JWT" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'GET',
+    path: '/modelInventory/evaluations',
+    summary: "Get All Model Evaluations",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'GET',
+    path: '/modelInventory/{id}/evaluations',
+    summary: "Get Model Evaluations",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'GET',
+    path: '/modelInventory/by-frameworkId/{frameworkId}',
+    summary: "Get model inventories by framework ID",
+    description: "Returns all model inventories associated with a framework (via the model_inventories_projects_frameworks join table where framework_id matches).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework ID" },
+    ],
+    responses: [
+      { status: 200, description: "List of model inventories for the framework (may be empty)" },
+      { status: 401, description: "Missing or invalid JWT" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'GET',
+    path: '/modelInventory/by-projectId/{projectId}',
+    summary: "Get model inventories by project ID",
+    description: "Returns all model inventories associated with a project (via the model_inventories_projects_frameworks join table where framework_id IS NULL). Non-numeric project IDs (e.g. plugin-sourced) return an empty array.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "Project ID (integer). Non-numeric values return an empty array." },
+    ],
+    responses: [
+      { status: 200, description: "List of model inventories for the project (may be empty)" },
+      { status: 401, description: "Missing or invalid JWT" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'GET',
+    path: '/modelInventory/{id}',
+    summary: "Get a model inventory by ID",
+    description: "Returns a single model inventory record with its associated project and framework IDs. Returns 204 if the record does not exist.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "Model inventory ID" },
+    ],
+    responses: [
+      { status: 200, description: "Model inventory found" },
+      { status: 204, description: "No model inventory found for the given ID" },
+      { status: 401, description: "Missing or invalid JWT" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'PATCH',
+    path: '/modelInventory/{id}',
+    summary: "Update a model inventory by ID",
+    description: "Partially updates a model inventory record. All body fields are optional; only provided fields are changed. Project and framework associations can be replaced or cleared. Fires \"model_updated\" automations and notifies a new approver if changed.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "Model inventory ID" },
+    ],
+    requestBody: {
+      "(schema)": "ModelInventoryUpdateRequest",
+    },
+    responses: [
+      { status: 200, description: "Model inventory updated" },
+      { status: 401, description: "Missing or invalid JWT" },
+      { status: 404, description: "Model inventory not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'DELETE',
+    path: '/modelInventory/{id}',
+    summary: "Delete a model inventory by ID",
+    description: "Deletes a model inventory record and its project/framework associations. Optionally deletes linked model risks when deleteRisks=true. Records deletion in change history and fires \"model_deleted\" automations.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "Model inventory ID" },
+      { name: 'deleteRisks', in: 'query', type: 'string', required: false, description: "When \"true\", also deletes associated rows from the model_risks table.\n" },
+    ],
+    responses: [
+      { status: 200, description: "Model inventory deleted" },
+      { status: 401, description: "Missing or invalid JWT" },
+      { status: 404, description: "Model inventory not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'GET',
+    path: '/modelInventoryHistory/current-counts',
+    summary: "Get Current Counts",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'POST',
+    path: '/modelInventoryHistory/snapshot',
+    summary: "Create Snapshot",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+  {
+    method: 'GET',
+    path: '/modelInventoryHistory/timeseries',
+    summary: "Get Timeseries",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Inventory",
+  },
+];
+
+// Model Risks endpoints
+export const modelRiskEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/modelRisks',
+    summary: "Get All Model Risks",
+    requiresAuth: true,
+    parameters: [
+      { name: 'filter', in: 'query', type: 'string', required: false, description: "The filter" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Risks",
+  },
+  {
+    method: 'POST',
+    path: '/modelRisks',
+    summary: "Create New Model Risk",
+    requiresAuth: true,
+    requestBody: {
+      "(schema)": "ModelRiskInput",
+    },
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Risks",
+  },
+  {
+    method: 'GET',
+    path: '/modelRisks/{id}',
+    summary: "Get Model Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Risks",
+  },
+  {
+    method: 'PUT',
+    path: '/modelRisks/{id}',
+    summary: "Update Model Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "(schema)": "ModelRiskInput",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Risks",
+  },
+  {
+    method: 'PATCH',
+    path: '/modelRisks/{id}',
+    summary: "Update Model Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "(schema)": "ModelRiskInput",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Risks",
+  },
+  {
+    method: 'DELETE',
+    path: '/modelRisks/{id}',
+    summary: "Delete Model Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Model Risks",
+  },
+];
+
+// NIST AI RMF endpoints
+export const nistAiRmfEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/assignments',
+    summary: "Get N I S T A I R M F Assignments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/assignments-by-function',
+    summary: "Get N I S T A I R M F Assignments By Function",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/categories/{title}',
+    summary: "Get All N I S T A I R M F Categories Byfunction Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'title', in: 'path', type: 'string', required: true, description: "The title" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/functions',
+    summary: "Get All N I S T A I R M Ffunctions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/functions/{id}',
+    summary: "Get N I S T A I R M Ffunction By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/overview',
+    summary: "Get N I S T A I R M F Overview",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/progress',
+    summary: "Get N I S T A I R M F Progress",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/progress-by-function',
+    summary: "Get N I S T A I R M F Progress By Function",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/status-breakdown',
+    summary: "Get N I S T A I R M F Status Breakdown",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/subcategories/byId/{id}',
+    summary: "Get N I S T A I R M F Subcategory By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/subcategories/{categoryId}/{title}',
+    summary: "Get All N I S T A I R M F Subcategories Bycategory Id Andtitle",
+    requiresAuth: true,
+    parameters: [
+      { name: 'categoryId', in: 'path', type: 'integer', required: true, description: "The categoryId" },
+      { name: 'title', in: 'path', type: 'string', required: true, description: "The title" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'PATCH',
+    path: '/nist-ai-rmf/subcategories/{id}',
+    summary: "Update N I S T A I R M F Subcategory By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'GET',
+    path: '/nist-ai-rmf/subcategories/{id}/risks',
+    summary: "Get N I S T A I R M F Subcategory Risks",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+  {
+    method: 'PATCH',
+    path: '/nist-ai-rmf/subcategories/{id}/status',
+    summary: "Update N I S T A I R M F Subcategory Status",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "NIST AI RMF",
+  },
+];
+
+// Notes endpoints
+export const noteEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/notes',
+    summary: "Get Notes",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notes",
+  },
+  {
+    method: 'POST',
+    path: '/notes',
+    summary: "Create Note",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notes",
+  },
+  {
+    method: 'PUT',
+    path: '/notes/{id}',
+    summary: "Update Note",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notes",
+  },
+  {
+    method: 'DELETE',
+    path: '/notes/{id}',
+    summary: "Delete Note",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notes",
+  },
+];
+
+// Notifications endpoints
+export const notificationEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/notifications',
+    summary: "Get Notifications",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notifications",
+  },
+  {
+    method: 'PATCH',
+    path: '/notifications/read-all',
+    summary: "Mark All As Read",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notifications",
+  },
+  {
+    method: 'GET',
+    path: '/notifications/stream',
+    summary: "Stream Notifications",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notifications",
+  },
+  {
+    method: 'GET',
+    path: '/notifications/summary',
+    summary: "Get Notification Summary",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notifications",
+  },
+  {
+    method: 'GET',
+    path: '/notifications/unread-count',
+    summary: "Get Unread Count",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notifications",
+  },
+  {
+    method: 'DELETE',
+    path: '/notifications/{id}',
+    summary: "Delete Notification",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notifications",
+  },
+  {
+    method: 'PATCH',
+    path: '/notifications/{id}/read',
+    summary: "Mark As Read",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Notifications",
+  },
+];
+
+// Organizations endpoints
+export const organizationEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/organizations',
+    summary: "Create Organization",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Organizations",
+  },
+  {
+    method: 'GET',
+    path: '/organizations/exists',
+    summary: "Get Organizations Exists",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Organizations",
+  },
+  {
+    method: 'GET',
+    path: '/organizations/{id}',
+    summary: "Get Organization By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Organizations",
+  },
+  {
+    method: 'PATCH',
+    path: '/organizations/{id}',
+    summary: "Update Organization By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Organizations",
+  },
+  {
+    method: 'PATCH',
+    path: '/organizations/{id}/onboarding-status',
+    summary: "Update Onboarding Status",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Organizations",
+  },
+];
+
+// Plugins endpoints
+export const pluginEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/plugins/categories',
+    summary: "Get Categories",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+  {
+    method: 'POST',
+    path: '/plugins/install',
+    summary: "Install Plugin",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+  {
+    method: 'GET',
+    path: '/plugins/installations',
+    summary: "Get Installed Plugins",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+  {
+    method: 'DELETE',
+    path: '/plugins/installations/{id}',
+    summary: "Uninstall Plugin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+  {
+    method: 'PUT',
+    path: '/plugins/installations/{id}/configuration',
+    summary: "Update Plugin Configuration",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+  {
+    method: 'GET',
+    path: '/plugins/marketplace',
+    summary: "Get All Plugins",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+  {
+    method: 'GET',
+    path: '/plugins/marketplace/search',
+    summary: "Search Plugins",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+  {
+    method: 'GET',
+    path: '/plugins/marketplace/{key}',
+    summary: "Get Plugin By Key",
+    requiresAuth: true,
+    parameters: [
+      { name: 'key', in: 'path', type: 'string', required: true, description: "The key" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+  {
+    method: 'POST',
+    path: '/plugins/{key}/test-connection',
+    summary: "Test Plugin Connection",
+    requiresAuth: true,
+    parameters: [
+      { name: 'key', in: 'path', type: 'string', required: true, description: "The key" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+  {
+    method: 'GET',
+    path: '/plugins/{key}/ui/dist/{filename}',
+    summary: "Serve plugin UI assets",
+    requiresAuth: true,
+    parameters: [
+      { name: 'key', in: 'path', type: 'string', required: true, description: "The key" },
+      { name: 'filename', in: 'path', type: 'string', required: true, description: "The filename" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Plugins",
+  },
+];
+
+// Policies endpoints
+export const policyEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/policies',
+    summary: "Get all policies",
+    description: "Returns all policies for the authenticated user's organization, including assigned reviewer IDs.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "List of policies retrieved successfully" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'POST',
+    path: '/policies',
+    summary: "Create a new policy",
+    description: "Creates a new policy. The author_id and last_updated_by are set from the JWT token automatically.",
+    requiresAuth: true,
+    requestBody: {
+      "(schema)": "PolicyCreateRequest",
+    },
+    responses: [
+      { status: 201, description: "Policy created successfully" },
+      { status: 500, description: "No description" },
+      { status: 503, description: "Service unavailable — policy creation failed" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'GET',
+    path: '/policies/tags',
+    summary: "Get available policy tags",
+    description: "Returns the static list of allowed policy tags.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "List of available tags" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'POST',
+    path: '/policies/import/docx',
+    summary: "Import DOCX and convert to HTML",
+    description: "Uploads a .docx file (max 10 MB) and converts it to HTML suitable for the policy content editor. Returns the converted HTML and any conversion warnings.",
+    requiresAuth: true,
+    requestBody: {
+      "file": "string (required)",
+    },
+    responses: [
+      { status: 200, description: "DOCX converted to HTML successfully" },
+      { status: 400, description: "Bad request — no file uploaded or invalid file type" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'GET',
+    path: '/policies/{id}',
+    summary: "Get policy by ID",
+    description: "Returns a single policy by its ID, including assigned reviewer IDs.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Policy retrieved successfully" },
+      { status: 404, description: "No description" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'PUT',
+    path: '/policies/{id}',
+    summary: "Update a policy",
+    description: "Updates an existing policy. Only provided fields are updated. The last_updated_by and last_updated_at are set automatically from the JWT token. If assigned_reviewer_ids is provided, the reviewer list is fully replaced.",
+    requiresAuth: true,
+    requestBody: {
+      "(schema)": "PolicyUpdateRequest",
+    },
+    responses: [
+      { status: 202, description: "Policy updated successfully" },
+      { status: 404, description: "No description" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'DELETE',
+    path: '/policies/{id}',
+    summary: "Delete a policy by ID",
+    description: "Permanently deletes a policy and its associated reviewer mappings (via CASCADE).",
+    requiresAuth: true,
+    responses: [
+      { status: 202, description: "Policy deleted successfully" },
+      { status: 404, description: "No description" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'GET',
+    path: '/policies/{id}/export/pdf',
+    summary: "Export policy as PDF",
+    description: "Generates and downloads the policy as a PDF file.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "PDF file stream" },
+      { status: 400, description: "Invalid policy ID" },
+      { status: 404, description: "No description" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'GET',
+    path: '/policies/{id}/export/docx',
+    summary: "Export policy as DOCX",
+    description: "Generates and downloads the policy as a DOCX file.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "DOCX file stream" },
+      { status: 400, description: "Invalid policy ID" },
+      { status: 404, description: "No description" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'POST',
+    path: '/policies/{id}/review/request',
+    summary: "Request review for a policy",
+    description: "Sets the policy review status to pending_review and sends in-app notifications to each specified reviewer.",
+    requiresAuth: true,
+    requestBody: {
+      "reviewer_ids": "array (required)",
+      "message": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "Review requested successfully; returns the updated policy" },
+      { status: 400, description: "Invalid policy ID or missing reviewer_ids" },
+      { status: 404, description: "No description" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'PUT',
+    path: '/policies/{id}/review/approve',
+    summary: "Approve a policy review",
+    description: "Sets the policy review status to approved and sends an in-app notification to the policy author.",
+    requiresAuth: true,
+    requestBody: {
+      "comment": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "Policy review approved; returns the updated policy" },
+      { status: 400, description: "Invalid policy ID" },
+      { status: 404, description: "No description" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'PUT',
+    path: '/policies/{id}/review/reject',
+    summary: "Reject a policy review (request changes)",
+    description: "Sets the policy review status to changes_requested and sends an in-app notification to the policy author. A comment is required.",
+    requiresAuth: true,
+    requestBody: {
+      "comment": "string (required)",
+    },
+    responses: [
+      { status: 200, description: "Policy review rejected; returns the updated policy" },
+      { status: 400, description: "Invalid policy ID or missing comment" },
+      { status: 404, description: "No description" },
+      { status: 500, description: "No description" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'GET',
+    path: '/policies/folders/{folderId}/policies',
+    summary: "Get Policies In Folder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'folderId', in: 'path', type: 'integer', required: true, description: "The folderId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'GET',
+    path: '/policies/{id}/folders',
+    summary: "Get Policy Folders",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'PATCH',
+    path: '/policies/{id}/folders',
+    summary: "Update Policy Folders",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'GET',
+    path: '/policy-linked',
+    summary: "Get All Linked Objects",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'GET',
+    path: '/policy-linked/{policyId}/linked-objects',
+    summary: "Get Linked Objects For Policy",
+    requiresAuth: true,
+    parameters: [
+      { name: 'policyId', in: 'path', type: 'integer', required: true, description: "The policyId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'POST',
+    path: '/policy-linked/{policyId}/linked-objects',
+    summary: "Create Linked Object For Policy",
+    requiresAuth: true,
+    parameters: [
+      { name: 'policyId', in: 'path', type: 'integer', required: true, description: "The policyId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'DELETE',
+    path: '/policy-linked/{policyId}/linked-objects',
+    summary: "Delete Linked Object For Policy",
+    requiresAuth: true,
+    parameters: [
+      { name: 'policyId', in: 'path', type: 'integer', required: true, description: "The policyId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'DELETE',
+    path: '/policy-linked/risk/{riskId}/unlink-all',
+    summary: "Unlink Risk From All Policies",
+    requiresAuth: true,
+    parameters: [
+      { name: 'riskId', in: 'path', type: 'integer', required: true, description: "The riskId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Policies",
+  },
+  {
+    method: 'DELETE',
+    path: '/policy-linked/evidence/{evidenceId}/unlink-all',
+    summary: "Unlink Evidence From All Policies",
+    requiresAuth: true,
+    parameters: [
+      { name: 'evidenceId', in: 'path', type: 'integer', required: true, description: "The evidenceId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Policies",
+  },
+];
+
+// Post-Market Monitoring endpoints
+export const postMarketMonitoringEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/pmm/active-cycle/{projectId}',
+    summary: "Get Active Cycle",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'POST',
+    path: '/pmm/config',
+    summary: "Create Config",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'PUT',
+    path: '/pmm/config/{configId}',
+    summary: "Update Config",
+    requiresAuth: true,
+    parameters: [
+      { name: 'configId', in: 'path', type: 'integer', required: true, description: "The configId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'DELETE',
+    path: '/pmm/config/{configId}',
+    summary: "Delete Config",
+    requiresAuth: true,
+    parameters: [
+      { name: 'configId', in: 'path', type: 'integer', required: true, description: "The configId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'GET',
+    path: '/pmm/config/{configId}/questions',
+    summary: "Get Questions",
+    requiresAuth: true,
+    parameters: [
+      { name: 'configId', in: 'path', type: 'integer', required: true, description: "The configId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'POST',
+    path: '/pmm/config/{configId}/questions',
+    summary: "Add Question",
+    requiresAuth: true,
+    parameters: [
+      { name: 'configId', in: 'path', type: 'integer', required: true, description: "The configId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'GET',
+    path: '/pmm/config/{projectId}',
+    summary: "Get Config By Project Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'GET',
+    path: '/pmm/cycles/{cycleId}',
+    summary: "Get Cycle By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'cycleId', in: 'path', type: 'integer', required: true, description: "The cycleId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'POST',
+    path: '/pmm/cycles/{cycleId}/flag',
+    summary: "Flag Concern",
+    requiresAuth: true,
+    parameters: [
+      { name: 'cycleId', in: 'path', type: 'integer', required: true, description: "The cycleId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'POST',
+    path: '/pmm/cycles/{cycleId}/reassign',
+    summary: "Reassign Stakeholder",
+    requiresAuth: true,
+    parameters: [
+      { name: 'cycleId', in: 'path', type: 'integer', required: true, description: "The cycleId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'GET',
+    path: '/pmm/cycles/{cycleId}/responses',
+    summary: "Get Responses",
+    requiresAuth: true,
+    parameters: [
+      { name: 'cycleId', in: 'path', type: 'integer', required: true, description: "The cycleId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'POST',
+    path: '/pmm/cycles/{cycleId}/responses',
+    summary: "Save Responses",
+    requiresAuth: true,
+    parameters: [
+      { name: 'cycleId', in: 'path', type: 'integer', required: true, description: "The cycleId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'POST',
+    path: '/pmm/cycles/{cycleId}/submit',
+    summary: "Submit Cycle",
+    requiresAuth: true,
+    parameters: [
+      { name: 'cycleId', in: 'path', type: 'integer', required: true, description: "The cycleId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'GET',
+    path: '/pmm/org/questions',
+    summary: "Get Questions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'POST',
+    path: '/pmm/projects/{projectId}/start-cycle',
+    summary: "Start New Cycle",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'POST',
+    path: '/pmm/questions/reorder',
+    summary: "Reorder Questions",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'PUT',
+    path: '/pmm/questions/{questionId}',
+    summary: "Update Question",
+    requiresAuth: true,
+    parameters: [
+      { name: 'questionId', in: 'path', type: 'integer', required: true, description: "The questionId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'DELETE',
+    path: '/pmm/questions/{questionId}',
+    summary: "Delete Question",
+    requiresAuth: true,
+    parameters: [
+      { name: 'questionId', in: 'path', type: 'integer', required: true, description: "The questionId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'GET',
+    path: '/pmm/reports',
+    summary: "Get Reports",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+  {
+    method: 'GET',
+    path: '/pmm/reports/{reportId}/download',
+    summary: "Download Report",
+    requiresAuth: true,
+    parameters: [
+      { name: 'reportId', in: 'path', type: 'integer', required: true, description: "The reportId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Post-Market Monitoring",
+  },
+];
+
+// Projects endpoints
+export const projectEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/projects',
+    summary: "Get all projects",
+    description: "Returns all projects visible to the authenticated user. Admins and SuperAdmins see all projects in the organization; other roles see only projects they own or are members of.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "List of projects retrieved successfully" },
+      { status: 401, description: "Unauthorized — missing or invalid JWT" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'POST',
+    path: '/projects',
+    summary: "Create a new project (use case)",
+    description: "Creates a new project with associated members and frameworks. If an approval_workflow_id is provided, framework creation is deferred until the approval request is approved.",
+    requiresAuth: true,
+    requestBody: {
+      "(schema)": "CreateProjectRequest",
+    },
+    responses: [
+      { status: 201, description: "Project created successfully" },
+      { status: 400, description: "Validation error" },
+      { status: 403, description: "Business logic error (e.g. framework not allowed)" },
+      { status: 500, description: "Internal server error" },
+      { status: 503, description: "Service unavailable — project creation returned null" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
+    path: '/projects/all/assessment/progress',
+    summary: "Get assessment progress across all projects",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Aggregated assessment progress returned" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "No projects found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
+    path: '/projects/all/compliance/progress',
+    summary: "Get compliance progress across all projects",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Aggregated compliance progress returned" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "No projects found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
+    path: '/projects/assessment/progress/{id}',
+    summary: "Get assessment progress for a single project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Assessment progress returned" },
+      { status: 404, description: "Project not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
+    path: '/projects/calculateProjectRisks/{id}',
+    summary: "Calculate project risk distribution",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Risk calculations returned" },
+      { status: 204, description: "No risk data available" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
+    path: '/projects/calculateVendorRisks/{id}',
+    summary: "Calculate vendor risk distribution",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Vendor risk calculations returned" },
+      { status: 204, description: "No vendor risk data available" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
+    path: '/projects/complainces/{projid}',
+    summary: "Get compliance data for a project",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projid', in: 'path', type: 'integer', required: true, description: "The project ID" },
+    ],
+    responses: [
+      { status: 200, description: "Compliance data returned" },
+      { status: 404, description: "Project not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
+    path: '/projects/compliance/progress/{id}',
+    summary: "Get compliance progress for a single project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Compliance progress returned" },
+      { status: 404, description: "Project not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'POST',
+    path: '/projects/saveControls',
+    summary: "Save Controls",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
+    path: '/projects/stats/{id}',
+    summary: "Get project statistics by ID",
+    requiresAuth: true,
+    responses: [
+      { status: 202, description: "Project stats retrieved" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
+    path: '/projects/{id}',
+    summary: "Get a project by ID",
+    description: "Returns a single project with its frameworks, owner name, members, and approval status.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Project found" },
+      { status: 404, description: "Project not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'PATCH',
+    path: '/projects/{id}',
+    summary: "Update a project by ID",
+    description: "Partially updates a project and its member list. Only provided fields are updated.",
+    requiresAuth: true,
+    requestBody: {
+      "(schema)": "UpdateProjectRequest",
+    },
+    responses: [
+      { status: 202, description: "Project updated successfully" },
+      { status: 400, description: "Validation error" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Business logic error" },
+      { status: 404, description: "Project not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'DELETE',
+    path: '/projects/{id}',
+    summary: "Delete a project by ID",
+    description: "Deletes a project and all dependent entities (files, risks, members, framework data).",
+    requiresAuth: true,
+    responses: [
+      { status: 202, description: "Project deleted successfully" },
+      { status: 404, description: "Project not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'PATCH',
+    path: '/projects/{id}/status',
+    summary: "Update project status",
+    requiresAuth: true,
+    requestBody: {
+      "status": "ProjectStatus (required)",
+    },
+    responses: [
+      { status: 200, description: "Project status updated successfully" },
+      { status: 404, description: "Project not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+];
+
+// Project Risks endpoints
+export const projectRiskEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/projectRisks',
+    summary: "Get All Risks",
+    requiresAuth: true,
+    parameters: [
+      { name: 'filter', in: 'query', type: 'string', required: false, description: "Filter by soft-delete state." },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Project Risks",
+  },
+  {
+    method: 'POST',
+    path: '/projectRisks',
+    summary: "Create Risk",
+    requiresAuth: true,
+    requestBody: {
+      "(schema)": "ProjectRiskInput",
+    },
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Project Risks",
+  },
+  {
+    method: 'GET',
+    path: '/projectRisks/by-frameworkid/{id}',
+    summary: "Get Risks By Framework",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+      { name: 'filter', in: 'query', type: 'string', required: false, description: "The filter" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Project Risks",
+  },
+  {
+    method: 'GET',
+    path: '/projectRisks/by-projid/{id}',
+    summary: "Get Risks By Project",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'string', required: true, description: "The id" },
+      { name: 'filter', in: 'query', type: 'string', required: false, description: "The filter" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Project Risks",
+  },
+  {
+    method: 'GET',
+    path: '/projectRisks/{id}',
+    summary: "Get Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Project Risks",
+  },
+  {
+    method: 'PUT',
+    path: '/projectRisks/{id}',
+    summary: "Update Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "(schema)": "ProjectRiskInput",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Project Risks",
+  },
+  {
+    method: 'DELETE',
+    path: '/projectRisks/{id}',
+    summary: "Delete Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Project Risks",
+  },
+];
+
+// Quantitative Risks endpoints
+export const quantitativeRiskEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/quantitative-risks/assessment-mode',
+    summary: "Get Risk Assessment Mode",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Quantitative Risks",
+  },
+  {
+    method: 'PUT',
+    path: '/quantitative-risks/assessment-mode',
+    summary: "Update Risk Assessment Mode",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Quantitative Risks",
+  },
+  {
+    method: 'GET',
+    path: '/quantitative-risks/portfolio/org',
+    summary: "Get Org Portfolio",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Quantitative Risks",
+  },
+  {
+    method: 'GET',
+    path: '/quantitative-risks/portfolio/project/{projectId}',
+    summary: "Get Project Portfolio",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Quantitative Risks",
+  },
+  {
+    method: 'GET',
+    path: '/quantitative-risks/portfolio/trend',
+    summary: "Get Portfolio Trend Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Quantitative Risks",
+  },
+  {
+    method: 'POST',
+    path: '/quantitative-risks/{riskId}/apply-benchmark/{benchmarkId}',
+    summary: "Apply Benchmark",
+    requiresAuth: true,
+    parameters: [
+      { name: 'riskId', in: 'path', type: 'integer', required: true, description: "The riskId" },
+      { name: 'benchmarkId', in: 'path', type: 'integer', required: true, description: "The benchmarkId" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Quantitative Risks",
+  },
+];
+
+// Reporting endpoints
+export const reportingEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/reporting/generate-report',
+    summary: "Get All Generated Reports",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/generate-report',
+    summary: "Generate Reports",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/v2/generate-report',
+    summary: "Generate Reports V2",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting",
+  },
+  {
+    method: 'DELETE',
+    path: '/reporting/{id}',
+    summary: "Delete Generated Report By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting",
+  },
+];
+
+// Risk Benchmarks endpoints
+export const riskBenchmarkEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/risk-benchmarks',
+    summary: "Get All Benchmarks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Risk Benchmarks",
+  },
+  {
+    method: 'GET',
+    path: '/risk-benchmarks/filters',
+    summary: "Get Benchmark Filters",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Risk Benchmarks",
+  },
+  {
+    method: 'GET',
+    path: '/risk-benchmarks/{id}',
+    summary: "Get Benchmark By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Risk Benchmarks",
+  },
+];
+
+// Risk History endpoints
+export const riskHistoryEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/riskHistory/current-counts',
+    summary: "Get Current Counts",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Risk History",
+  },
+  {
+    method: 'POST',
+    path: '/riskHistory/snapshot',
+    summary: "Create Snapshot",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Risk History",
+  },
+  {
+    method: 'GET',
+    path: '/riskHistory/timeseries',
+    summary: "Get Timeseries",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Risk History",
+  },
+];
+
+// Roles endpoints
+export const roleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/roles',
+    summary: "Get All Roles",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Roles",
+  },
+  {
+    method: 'GET',
+    path: '/roles/{id}',
+    summary: "Get Role By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Roles",
   },
 ];
 
@@ -1640,665 +6525,411 @@ export const searchEndpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/search',
-    summary: 'Global search',
-    description: 'Searches across all resources in the system.',
+    summary: "Search",
     requiresAuth: true,
-    parameters: [
-      { name: 'q', in: 'query', type: 'string', required: true, description: 'Search query' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Search results returned' }],
-    tag: 'Search',
+    tag: "Search",
   },
 ];
 
-// Logger endpoints
-export const loggerEndpoints: Endpoint[] = [
+// Settings endpoints
+export const settingEndpoints: Endpoint[] = [
   {
     method: 'GET',
-    path: '/logger/events',
-    summary: 'Get logged events',
-    description: 'Retrieves system events log.',
+    path: '/feature-settings',
+    summary: "Get Feature Settings",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Events list returned' }],
-    tag: 'Logger',
-  },
-  {
-    method: 'GET',
-    path: '/logger/logs',
-    summary: 'Get system logs',
-    description: 'Retrieves system activity logs.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Logs list returned' }],
-    tag: 'Logger',
-  },
-];
-
-// Tasks endpoints
-export const taskEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/tasks',
-    summary: 'Get all tasks',
-    description: 'Retrieves all tasks.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Tasks list returned' }],
-    tag: 'Tasks',
-  },
-  {
-    method: 'POST',
-    path: '/tasks',
-    summary: 'Create task',
-    description: 'Creates a new task.',
-    requiresAuth: true,
-    requestBody: {
-      title: 'string (required)',
-      description: 'string (optional)',
-      priority: 'string (optional)',
-      due_date: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Task created' }],
-    tag: 'Tasks',
-  },
-  {
-    method: 'GET',
-    path: '/tasks/{id}',
-    summary: 'Get task by ID',
-    description: 'Retrieves a specific task.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Task ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Task details' }],
-    tag: 'Tasks',
-  },
-  {
-    method: 'PUT',
-    path: '/tasks/{id}',
-    summary: 'Update task',
-    description: 'Updates an existing task.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Task ID' },
-    ],
-    responses: [{ status: 200, description: 'Task updated' }],
-    tag: 'Tasks',
-  },
-  {
-    method: 'DELETE',
-    path: '/tasks/{id}',
-    summary: 'Delete task',
-    description: 'Soft deletes a task.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Task ID' },
-    ],
-    responses: [{ status: 200, description: 'Task deleted' }],
-    tag: 'Tasks',
-  },
-  {
-    method: 'PUT',
-    path: '/tasks/{id}/restore',
-    summary: 'Restore task',
-    description: 'Restores a soft-deleted task.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Task ID' },
-    ],
-    responses: [{ status: 200, description: 'Task restored' }],
-    tag: 'Tasks',
-  },
-  {
-    method: 'DELETE',
-    path: '/tasks/{id}/hard',
-    summary: 'Permanently delete task',
-    description: 'Permanently deletes a task.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Task ID' },
-    ],
-    responses: [{ status: 200, description: 'Task permanently deleted' }],
-    tag: 'Tasks',
-  },
-];
-
-// Tokens endpoints
-export const tokenEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/tokens',
-    summary: 'Get all API tokens',
-    description: 'Retrieves all API tokens for the user.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Tokens list returned' }],
-    tag: 'Tokens',
-  },
-  {
-    method: 'POST',
-    path: '/tokens',
-    summary: 'Create API token',
-    description: 'Creates a new API token.',
-    requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      expiration: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Token created' }],
-    tag: 'Tokens',
-  },
-  {
-    method: 'DELETE',
-    path: '/tokens/{id}',
-    summary: 'Revoke API token',
-    description: 'Revokes an API token.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Token ID' },
-    ],
-    responses: [{ status: 200, description: 'Token revoked' }],
-    tag: 'Tokens',
-  },
-];
-
-// User Preferences endpoints
-export const userPreferenceEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/userPreferences/{userId}',
-    summary: 'Get user preferences',
-    description: 'Retrieves preferences for a user.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'userId', in: 'path', type: 'integer', required: true, description: 'User ID' },
-    ],
-    responses: [{ status: 200, description: 'User preferences returned' }],
-    tag: 'User Preferences',
-  },
-  {
-    method: 'POST',
-    path: '/userPreferences',
-    summary: 'Create user preferences',
-    description: 'Creates preferences for a user.',
-    requiresAuth: true,
-    requestBody: {
-      theme: 'string (optional)',
-      language: 'string (optional)',
-      notifications_enabled: 'boolean (optional)',
-    },
-    responses: [{ status: 201, description: 'Preferences created' }],
-    tag: 'User Preferences',
+    tag: "Settings",
   },
   {
     method: 'PATCH',
-    path: '/userPreferences/{userId}',
-    summary: 'Update user preferences',
-    description: 'Updates preferences for a user.',
+    path: '/feature-settings',
+    summary: "Update Feature Settings",
     requiresAuth: true,
-    parameters: [
-      { name: 'userId', in: 'path', type: 'integer', required: true, description: 'User ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Preferences updated' }],
-    tag: 'User Preferences',
+    tag: "Settings",
   },
 ];
 
-// Evidence Hub endpoints
-export const evidenceHubEndpoints: Endpoint[] = [
+// Shadow AI endpoints
+export const shadowAiEndpoints: Endpoint[] = [
   {
     method: 'GET',
-    path: '/evidenceHub',
-    summary: 'Get all evidence items',
-    description: 'Retrieves all evidence items.',
+    path: '/shadow-ai/api-keys',
+    summary: "List Api Keys",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Evidence list returned' }],
-    tag: 'Evidence Hub',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
   },
   {
     method: 'POST',
-    path: '/evidenceHub',
-    summary: 'Create evidence item',
-    description: 'Creates a new evidence item.',
+    path: '/shadow-ai/api-keys',
+    summary: "Create Api Key",
     requiresAuth: true,
-    requestBody: {
-      title: 'string (required)',
-      description: 'string (optional)',
-      type: 'string (required)',
-    },
-    responses: [{ status: 201, description: 'Evidence created' }],
-    tag: 'Evidence Hub',
-  },
-  {
-    method: 'GET',
-    path: '/evidenceHub/{id}',
-    summary: 'Get evidence by ID',
-    description: 'Retrieves a specific evidence item.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Evidence ID' },
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Evidence details' }],
-    tag: 'Evidence Hub',
-  },
-  {
-    method: 'PATCH',
-    path: '/evidenceHub/{id}',
-    summary: 'Update evidence',
-    description: 'Updates an evidence item.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Evidence ID' },
-    ],
-    responses: [{ status: 200, description: 'Evidence updated' }],
-    tag: 'Evidence Hub',
+    tag: "Shadow AI",
   },
   {
     method: 'DELETE',
-    path: '/evidenceHub/{id}',
-    summary: 'Delete evidence',
-    description: 'Deletes an evidence item.',
+    path: '/shadow-ai/api-keys/{id}',
+    summary: "Revoke Api Key",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Evidence ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Evidence deleted' }],
-    tag: 'Evidence Hub',
-  },
-];
-
-// AI Incident Management endpoints
-export const aiIncidentEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/aiIncidentManagement',
-    summary: 'Get all AI incidents',
-    description: 'Retrieves all AI incidents.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'AI incidents list returned' }],
-    tag: 'AI Incident Management',
-  },
-  {
-    method: 'POST',
-    path: '/aiIncidentManagement',
-    summary: 'Report AI incident',
-    description: 'Reports a new AI incident.',
-    requiresAuth: true,
-    requestBody: {
-      title: 'string (required)',
-      description: 'string (required)',
-      severity: 'string (required)',
-    },
-    responses: [{ status: 201, description: 'Incident reported' }],
-    tag: 'AI Incident Management',
-  },
-  {
-    method: 'GET',
-    path: '/aiIncidentManagement/{id}',
-    summary: 'Get AI incident by ID',
-    description: 'Retrieves a specific AI incident.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Incident ID' },
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Incident details' }],
-    tag: 'AI Incident Management',
-  },
-  {
-    method: 'PATCH',
-    path: '/aiIncidentManagement/{id}',
-    summary: 'Update AI incident',
-    description: 'Updates an AI incident.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Incident ID' },
-    ],
-    responses: [{ status: 200, description: 'Incident updated' }],
-    tag: 'AI Incident Management',
-  },
-  {
-    method: 'PATCH',
-    path: '/aiIncidentManagement/{id}/archive',
-    summary: 'Archive AI incident',
-    description: 'Archives an AI incident.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Incident ID' },
-    ],
-    responses: [{ status: 200, description: 'Incident archived' }],
-    tag: 'AI Incident Management',
+    tag: "Shadow AI",
   },
   {
     method: 'DELETE',
-    path: '/aiIncidentManagement/{id}',
-    summary: 'Delete AI incident',
-    description: 'Deletes an AI incident.',
+    path: '/shadow-ai/api-keys/{id}/permanent',
+    summary: "Delete Api Key",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Incident ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Incident deleted' }],
-    tag: 'AI Incident Management',
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
   },
-];
-
-// CE Marking endpoints
-export const ceMarkingEndpoints: Endpoint[] = [
   {
     method: 'GET',
-    path: '/ceMarking/{projectId}',
-    summary: 'Get CE marking status',
-    description: 'Retrieves CE marking status for a project.',
+    path: '/shadow-ai/config/syslog',
+    summary: "Get Syslog Configs",
     requiresAuth: true,
-    parameters: [
-      { name: 'projectId', in: 'path', type: 'integer', required: true, description: 'Project ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'CE marking status' }],
-    tag: 'CE Marking',
-  },
-  {
-    method: 'PUT',
-    path: '/ceMarking/{projectId}',
-    summary: 'Update CE marking status',
-    description: 'Updates CE marking status for a project.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectId', in: 'path', type: 'integer', required: true, description: 'Project ID' },
-    ],
-    responses: [{ status: 200, description: 'CE marking updated' }],
-    tag: 'CE Marking',
-  },
-];
-
-// Automation endpoints
-export const automationEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/automation',
-    summary: 'Get all automation rules',
-    description: 'Retrieves all automation rules.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Automation rules list' }],
-    tag: 'Automation',
+    tag: "Shadow AI",
   },
   {
     method: 'POST',
-    path: '/automation',
-    summary: 'Create automation rule',
-    description: 'Creates a new automation rule.',
+    path: '/shadow-ai/config/syslog',
+    summary: "Create Syslog Config",
     requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      trigger_type: 'string (required)',
-      action_type: 'string (required)',
-    },
-    responses: [{ status: 201, description: 'Automation rule created' }],
-    tag: 'Automation',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
   },
   {
-    method: 'GET',
-    path: '/automation/triggers',
-    summary: 'Get automation triggers',
-    description: 'Retrieves available automation triggers.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Triggers list' }],
-    tag: 'Automation',
-  },
-  {
-    method: 'GET',
-    path: '/automation/actions/by-triggerId/{triggerId}',
-    summary: 'Get actions for trigger',
-    description: 'Retrieves actions for a specific trigger.',
+    method: 'PATCH',
+    path: '/shadow-ai/config/syslog/{id}',
+    summary: "Update Syslog Config",
     requiresAuth: true,
     parameters: [
-      { name: 'triggerId', in: 'path', type: 'integer', required: true, description: 'Trigger ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Actions list' }],
-    tag: 'Automation',
-  },
-  {
-    method: 'GET',
-    path: '/automation/{id}',
-    summary: 'Get automation rule by ID',
-    description: 'Retrieves a specific automation rule.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Rule ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Automation rule details' }],
-    tag: 'Automation',
-  },
-  {
-    method: 'PUT',
-    path: '/automation/{id}',
-    summary: 'Update automation rule',
-    description: 'Updates an automation rule.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Rule ID' },
-    ],
-    responses: [{ status: 200, description: 'Automation rule updated' }],
-    tag: 'Automation',
+    tag: "Shadow AI",
   },
   {
     method: 'DELETE',
-    path: '/automation/{id}',
-    summary: 'Delete automation rule',
-    description: 'Deletes an automation rule.',
+    path: '/shadow-ai/config/syslog/{id}',
+    summary: "Delete Syslog Config",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Rule ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Automation rule deleted' }],
-    tag: 'Automation',
-  },
-  {
-    method: 'GET',
-    path: '/automation/{id}/history',
-    summary: 'Get automation history',
-    description: 'Retrieves execution history for an automation rule.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Rule ID' },
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Execution history' }],
-    tag: 'Automation',
+    tag: "Shadow AI",
   },
   {
     method: 'GET',
-    path: '/automation/{id}/stats',
-    summary: 'Get automation stats',
-    description: 'Retrieves statistics for an automation rule.',
+    path: '/shadow-ai/departments',
+    summary: "Get Department Activity",
     requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Rule ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Automation statistics' }],
-    tag: 'Automation',
-  },
-];
-
-// NIST AI RMF endpoints
-export const nistAiRmfEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/nist-ai-rmf/functions',
-    summary: 'Get NIST AI RMF functions',
-    description: 'Retrieves all NIST AI RMF functions.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Functions list' }],
-    tag: 'NIST AI RMF',
+    tag: "Shadow AI",
   },
   {
     method: 'GET',
-    path: '/nist-ai-rmf/functions/{id}',
-    summary: 'Get function by ID',
-    description: 'Retrieves a specific NIST AI RMF function.',
+    path: '/shadow-ai/insights/summary',
+    summary: "Get Insights Summary",
     requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Function ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Function details' }],
-    tag: 'NIST AI RMF',
+    tag: "Shadow AI",
   },
   {
     method: 'GET',
-    path: '/nist-ai-rmf/categories/{title}',
-    summary: 'Get category by title',
-    description: 'Retrieves a category by its title.',
+    path: '/shadow-ai/insights/tools-by-events',
+    summary: "Get Tools By Events",
     requiresAuth: true,
-    parameters: [
-      { name: 'title', in: 'path', type: 'string', required: true, description: 'Category title' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Category details' }],
-    tag: 'NIST AI RMF',
+    tag: "Shadow AI",
   },
   {
     method: 'GET',
-    path: '/nist-ai-rmf/subcategories/byId/{id}',
-    summary: 'Get subcategory by ID',
-    description: 'Retrieves a specific subcategory.',
+    path: '/shadow-ai/insights/tools-by-users',
+    summary: "Get Tools By Users",
     requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Subcategory ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Subcategory details' }],
-    tag: 'NIST AI RMF',
+    tag: "Shadow AI",
   },
   {
     method: 'GET',
-    path: '/nist-ai-rmf/subcategories/{id}/risks',
-    summary: 'Get risks for subcategory',
-    description: 'Retrieves risks associated with a subcategory.',
+    path: '/shadow-ai/insights/trend',
+    summary: "Get Trend",
     requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Subcategory ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Risks list' }],
-    tag: 'NIST AI RMF',
+    tag: "Shadow AI",
   },
   {
-    method: 'PATCH',
-    path: '/nist-ai-rmf/subcategories/{id}',
-    summary: 'Update subcategory',
-    description: 'Updates a NIST AI RMF subcategory.',
+    method: 'GET',
+    path: '/shadow-ai/insights/users-by-department',
+    summary: "Get Users By Department",
     requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Subcategory ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Subcategory updated' }],
-    tag: 'NIST AI RMF',
+    tag: "Shadow AI",
   },
   {
-    method: 'PATCH',
-    path: '/nist-ai-rmf/subcategories/{id}/status',
-    summary: 'Update subcategory status',
-    description: 'Updates the status of a subcategory.',
+    method: 'GET',
+    path: '/shadow-ai/rules',
+    summary: "Get Rules",
     requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Subcategory ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Status updated' }],
-    tag: 'NIST AI RMF',
-  },
-  {
-    method: 'GET',
-    path: '/nist-ai-rmf/progress',
-    summary: 'Get overall progress',
-    description: 'Retrieves overall NIST AI RMF progress.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Progress data' }],
-    tag: 'NIST AI RMF',
-  },
-  {
-    method: 'GET',
-    path: '/nist-ai-rmf/progress-by-function',
-    summary: 'Get progress by function',
-    description: 'Retrieves progress broken down by function.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Progress by function' }],
-    tag: 'NIST AI RMF',
-  },
-  {
-    method: 'GET',
-    path: '/nist-ai-rmf/assignments',
-    summary: 'Get assignments',
-    description: 'Retrieves NIST AI RMF assignments.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Assignments data' }],
-    tag: 'NIST AI RMF',
-  },
-  {
-    method: 'GET',
-    path: '/nist-ai-rmf/overview',
-    summary: 'Get overview',
-    description: 'Retrieves NIST AI RMF overview.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Overview data' }],
-    tag: 'NIST AI RMF',
-  },
-];
-
-// Integrations endpoints
-export const integrationEndpoints: Endpoint[] = [
-  {
-    method: 'POST',
-    path: '/integrations/test',
-    summary: 'Test integration',
-    description: 'Tests an integration connection.',
-    requiresAuth: true,
-    requestBody: {
-      type: 'string (required)',
-      config: 'object (required)',
-    },
-    responses: [{ status: 200, description: 'Integration test result' }],
-    tag: 'Integrations',
-  },
-  {
-    method: 'GET',
-    path: '/integrations/config',
-    summary: 'Get integration config',
-    description: 'Retrieves integration configuration.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Integration configuration' }],
-    tag: 'Integrations',
+    tag: "Shadow AI",
   },
   {
     method: 'POST',
-    path: '/integrations/configure',
-    summary: 'Configure integration',
-    description: 'Configures an integration.',
+    path: '/shadow-ai/rules',
+    summary: "Create Rule",
     requiresAuth: true,
-    requestBody: {
-      type: 'string (required)',
-      config: 'object (required)',
-    },
-    responses: [{ status: 200, description: 'Integration configured' }],
-    tag: 'Integrations',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
   },
   {
     method: 'GET',
-    path: '/integrations/models',
-    summary: 'Get integration models',
-    description: 'Retrieves available integration models.',
+    path: '/shadow-ai/rules/alert-history',
+    summary: "Get Alert History",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Integration models list' }],
-    tag: 'Integrations',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'PATCH',
+    path: '/shadow-ai/rules/{id}',
+    summary: "Update Rule",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'DELETE',
+    path: '/shadow-ai/rules/{id}',
+    summary: "Delete Rule",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
   },
   {
     method: 'GET',
-    path: '/integrations/sync-status',
-    summary: 'Get sync status',
-    description: 'Retrieves integration sync status.',
+    path: '/shadow-ai/settings',
+    summary: "Get Settings",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Sync status' }],
-    tag: 'Integrations',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'PATCH',
+    path: '/shadow-ai/settings',
+    summary: "Update Settings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
   },
   {
     method: 'GET',
-    path: '/integrations/health',
-    summary: 'Check integration health',
-    description: 'Checks health of integrations.',
+    path: '/shadow-ai/tools',
+    summary: "Get Tools",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Integration health status' }],
-    tag: 'Integrations',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'GET',
+    path: '/shadow-ai/tools/{id}',
+    summary: "Get Tool By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'POST',
+    path: '/shadow-ai/tools/{id}/start-governance',
+    summary: "Start Governance",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'PATCH',
+    path: '/shadow-ai/tools/{id}/status',
+    summary: "Update Tool Status",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'GET',
+    path: '/shadow-ai/users',
+    summary: "Get Users",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'GET',
+    path: '/shadow-ai/users/{email}/activity',
+    summary: "Get User Detail",
+    requiresAuth: true,
+    parameters: [
+      { name: 'email', in: 'path', type: 'string', required: true, description: "The email" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'POST',
+    path: '/v1/shadow-ai/events',
+    summary: "Ingest Events",
+    requiresAuth: false,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
   },
 ];
 
@@ -2306,117 +6937,89 @@ export const integrationEndpoints: Endpoint[] = [
 export const shareLinkEndpoints: Endpoint[] = [
   {
     method: 'POST',
-    path: '/shareLinks',
-    summary: 'Create share link',
-    description: 'Creates a new share link.',
+    path: '/shares',
+    summary: "Create Share Link",
     requiresAuth: true,
-    requestBody: {
-      resource_type: 'string (required)',
-      resource_id: 'integer (required)',
-      expires_at: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Share link created' }],
-    tag: 'Share Links',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Share Links",
   },
   {
     method: 'GET',
-    path: '/shareLinks/token/{token}',
-    summary: 'Get share link by token',
-    description: 'Retrieves a share link by its token.',
+    path: '/shares/token/{token}',
+    summary: "Get Share Link By Token",
     requiresAuth: false,
     parameters: [
-      { name: 'token', in: 'path', type: 'string', required: true, description: 'Share token' },
+      { name: 'token', in: 'path', type: 'string', required: true, description: "The token" },
     ],
-    responses: [{ status: 200, description: 'Share link details' }],
-    tag: 'Share Links',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Share Links",
   },
   {
     method: 'GET',
-    path: '/shareLinks/view/{token}',
-    summary: 'View shared resource',
-    description: 'Views the resource associated with a share link.',
+    path: '/shares/view/{token}',
+    summary: "Get Shared Data By Token",
     requiresAuth: false,
     parameters: [
-      { name: 'token', in: 'path', type: 'string', required: true, description: 'Share token' },
+      { name: 'token', in: 'path', type: 'string', required: true, description: "The token" },
     ],
-    responses: [{ status: 200, description: 'Shared resource data' }],
-    tag: 'Share Links',
-  },
-  {
-    method: 'GET',
-    path: '/shareLinks/{resourceType}/{resourceId}',
-    summary: 'Get share links for resource',
-    description: 'Retrieves all share links for a resource.',
-    requiresAuth: true,
-    parameters: [
-      { name: 'resourceType', in: 'path', type: 'string', required: true, description: 'Resource type' },
-      { name: 'resourceId', in: 'path', type: 'integer', required: true, description: 'Resource ID' },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
     ],
-    responses: [{ status: 200, description: 'Share links for resource' }],
-    tag: 'Share Links',
+    tag: "Share Links",
   },
   {
     method: 'PATCH',
-    path: '/shareLinks/{id}',
-    summary: 'Update share link',
-    description: 'Updates a share link.',
+    path: '/shares/{id}',
+    summary: "Update Share Link",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Share link ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Share link updated' }],
-    tag: 'Share Links',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Share Links",
   },
   {
     method: 'DELETE',
-    path: '/shareLinks/{id}',
-    summary: 'Delete share link',
-    description: 'Deletes a share link.',
+    path: '/shares/{id}',
+    summary: "Delete Share Link",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Share link ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Share link deleted' }],
-    tag: 'Share Links',
-  },
-];
-
-// Reporting endpoints
-export const reportingEndpoints: Endpoint[] = [
-  {
-    method: 'POST',
-    path: '/reporting/generate-report',
-    summary: 'Generate report',
-    description: 'Generates a compliance report.',
-    requiresAuth: true,
-    requestBody: {
-      reportType: 'string (required)',
-      projectId: 'integer (required)',
-      format: 'string (required) - pdf, xlsx, or docx',
-    },
-    responses: [{ status: 200, description: 'Report generated' }],
-    tag: 'Reporting',
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Share Links",
   },
   {
     method: 'GET',
-    path: '/reporting/generate-report',
-    summary: 'Get report templates',
-    description: 'Retrieves available report templates.',
-    requiresAuth: true,
-    responses: [{ status: 200, description: 'Report templates list' }],
-    tag: 'Reporting',
-  },
-  {
-    method: 'DELETE',
-    path: '/reporting/{id}',
-    summary: 'Delete report',
-    description: 'Deletes a generated report.',
+    path: '/shares/{resourceType}/{resourceId}',
+    summary: "Get Share Links For Resource",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Report ID' },
+      { name: 'resourceType', in: 'path', type: 'string', required: true, description: "The resourceType" },
+      { name: 'resourceId', in: 'path', type: 'integer', required: true, description: "The resourceId" },
     ],
-    responses: [{ status: 200, description: 'Report deleted' }],
-    tag: 'Reporting',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Share Links",
   },
 ];
 
@@ -2425,173 +7028,1173 @@ export const slackWebhookEndpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/slackWebhooks',
-    summary: 'Get all Slack webhooks',
-    description: 'Retrieves all Slack webhooks.',
+    summary: "Get All Slack Webhooks",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Slack webhooks list' }],
-    tag: 'Slack Webhooks',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Slack Webhooks",
   },
   {
     method: 'POST',
     path: '/slackWebhooks',
-    summary: 'Create Slack webhook',
-    description: 'Creates a new Slack webhook.',
+    summary: "Create New Slack Webhook",
     requiresAuth: true,
-    requestBody: {
-      name: 'string (required)',
-      webhook_url: 'string (required)',
-      channel: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Webhook created' }],
-    tag: 'Slack Webhooks',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Slack Webhooks",
   },
   {
     method: 'GET',
     path: '/slackWebhooks/{id}',
-    summary: 'Get Slack webhook by ID',
-    description: 'Retrieves a specific Slack webhook.',
+    summary: "Get Slack Webhook By Id",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Webhook ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Webhook details' }],
-    tag: 'Slack Webhooks',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Slack Webhooks",
   },
   {
     method: 'PATCH',
     path: '/slackWebhooks/{id}',
-    summary: 'Update Slack webhook',
-    description: 'Updates a Slack webhook.',
+    summary: "Update Slack Webhook By Id",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Webhook ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Webhook updated' }],
-    tag: 'Slack Webhooks',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Slack Webhooks",
   },
   {
     method: 'DELETE',
     path: '/slackWebhooks/{id}',
-    summary: 'Delete Slack webhook',
-    description: 'Deletes a Slack webhook.',
+    summary: "Delete Slack Webhook By Id",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Webhook ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Webhook deleted' }],
-    tag: 'Slack Webhooks',
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Slack Webhooks",
   },
   {
     method: 'POST',
     path: '/slackWebhooks/{id}/send',
-    summary: 'Send test message',
-    description: 'Sends a test message to a Slack webhook.',
+    summary: "Send Slack Message",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Webhook ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    requestBody: {
-      message: 'string (required)',
-    },
-    responses: [{ status: 200, description: 'Message sent' }],
-    tag: 'Slack Webhooks',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Slack Webhooks",
   },
 ];
 
-// Subscription endpoints
+// Subscriptions endpoints
 export const subscriptionEndpoints: Endpoint[] = [
   {
     method: 'GET',
-    path: '/subscription',
-    summary: 'Get subscription status',
-    description: 'Retrieves current subscription status.',
+    path: '/subscriptions',
+    summary: "Get Subscription Controller",
     requiresAuth: true,
-    responses: [{ status: 200, description: 'Subscription status' }],
-    tag: 'Subscription',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Subscriptions",
   },
   {
     method: 'POST',
-    path: '/subscription',
-    summary: 'Create subscription',
-    description: 'Creates a new subscription.',
+    path: '/subscriptions',
+    summary: "Create Subscription Controller",
     requiresAuth: true,
-    requestBody: {
-      plan: 'string (required)',
-      billingCycle: 'string (optional)',
-    },
-    responses: [{ status: 201, description: 'Subscription created' }],
-    tag: 'Subscription',
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Subscriptions",
   },
   {
     method: 'PUT',
-    path: '/subscription/{id}',
-    summary: 'Update subscription',
-    description: 'Updates a subscription.',
+    path: '/subscriptions/{id}',
+    summary: "Update Subscription Controller",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Subscription ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Subscription updated' }],
-    tag: 'Subscription',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Subscriptions",
   },
-];
-
-// Tiers endpoints
-export const tierEndpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/tiers/features/{id}',
-    summary: 'Get tier features',
-    description: 'Retrieves features for a subscription tier.',
+    summary: "Get Tiers Features",
     requiresAuth: true,
     parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: 'Tier ID' },
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    responses: [{ status: 200, description: 'Tier features' }],
-    tag: 'Tiers',
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Subscriptions",
+  },
+];
+
+// Super Admin endpoints
+export const superAdminEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/super-admin/organizations',
+    summary: "List Organizations",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'POST',
+    path: '/super-admin/organizations',
+    summary: "Create Org",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'PATCH',
+    path: '/super-admin/organizations/{id}',
+    summary: "Update Org",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'DELETE',
+    path: '/super-admin/organizations/{id}',
+    summary: "Delete Org",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'POST',
+    path: '/super-admin/organizations/{id}/invite',
+    summary: "Invite User To Org",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'GET',
+    path: '/super-admin/organizations/{id}/users',
+    summary: "List Org Users",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'GET',
+    path: '/super-admin/users',
+    summary: "List All Users",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'GET',
+    path: '/super-admin/users/count',
+    summary: "Get User Count",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'DELETE',
+    path: '/super-admin/users/{id}',
+    summary: "Remove User",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+];
+
+// System endpoints
+export const systemEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/health',
+    summary: "Health Check",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "System",
+  },
+  {
+    method: 'GET',
+    path: '/logger/events',
+    summary: "Get Events",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "System",
+  },
+  {
+    method: 'GET',
+    path: '/logger/logs',
+    summary: "Get Logs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "System",
+  },
+  {
+    method: 'GET',
+    path: '/version',
+    summary: "Get application version",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "System",
+  },
+];
+
+// Tasks endpoints
+export const taskEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/tasks',
+    summary: "Get All Tasks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+  {
+    method: 'POST',
+    path: '/tasks',
+    summary: "Create Task",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+  {
+    method: 'GET',
+    path: '/tasks/{id}',
+    summary: "Get Task By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+  {
+    method: 'PUT',
+    path: '/tasks/{id}',
+    summary: "Update Task",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+  {
+    method: 'DELETE',
+    path: '/tasks/{id}',
+    summary: "Delete Task",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+  {
+    method: 'GET',
+    path: '/tasks/{id}/entities',
+    summary: "Get Task Entity Links",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+  {
+    method: 'POST',
+    path: '/tasks/{id}/entities',
+    summary: "Add Task Entity Link",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+  {
+    method: 'DELETE',
+    path: '/tasks/{id}/entities/{linkId}',
+    summary: "Remove Task Entity Link",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+      { name: 'linkId', in: 'path', type: 'integer', required: true, description: "The linkId" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+  {
+    method: 'DELETE',
+    path: '/tasks/{id}/hard',
+    summary: "Hard Delete Task",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+  {
+    method: 'PUT',
+    path: '/tasks/{id}/restore',
+    summary: "Restore Task",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tasks",
+  },
+];
+
+// Tokens endpoints
+export const tokenEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/tokens',
+    summary: "Get Api Tokens",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tokens",
+  },
+  {
+    method: 'POST',
+    path: '/tokens',
+    summary: "Create Api Token",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tokens",
+  },
+  {
+    method: 'DELETE',
+    path: '/tokens/{id}',
+    summary: "Delete Api Token",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Tokens",
+  },
+];
+
+// Training endpoints
+export const trainingEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/training',
+    summary: "Get All Training Registar",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Training",
+  },
+  {
+    method: 'POST',
+    path: '/training',
+    summary: "Create New Training Registar",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Training",
+  },
+  {
+    method: 'GET',
+    path: '/training/training-id/{id}',
+    summary: "Get Training Registar By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Training",
+  },
+  {
+    method: 'PATCH',
+    path: '/training/{id}',
+    summary: "Update Training Registar By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Training",
+  },
+  {
+    method: 'DELETE',
+    path: '/training/{id}',
+    summary: "Delete Training Registar By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Training",
+  },
+];
+
+// Users - CRUD endpoints
+export const userEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/users',
+    summary: "List all users in organization",
+    description: "Returns all users belonging to the authenticated user's organization, ordered by created_at DESC, id ASC. Password hashes are excluded.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Users found" },
+      { status: 204, description: "No users found (empty organization)" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - CRUD",
+  },
+  {
+    method: 'GET',
+    path: '/users/check/exists',
+    summary: "Check if any user exists",
+    description: "Returns a boolean indicating whether any user record exists in the database. Used during initial setup flow to determine if onboarding is needed.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Check result" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - Utility",
+  },
+  {
+    method: 'PATCH',
+    path: '/users/chng-pass/{id}',
+    summary: "Change password (authenticated)",
+    description: "Changes the password for the authenticated user. Requires the current password for verification. Protected by selfOnly middleware (users can only change their own password). Rate-limited.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID (must match authenticated user via selfOnly middleware)" },
+    ],
+    requestBody: {
+      "id": "integer (required)",
+      "currentPassword": "string (required)",
+      "newPassword": "string (required)",
+    },
+    responses: [
+      { status: 202, description: "Password changed successfully" },
+      { status: 400, description: "Validation error (weak password, missing fields)" },
+      { status: 403, description: "Business logic error (wrong current password)" },
+      { status: 404, description: "User not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - Password",
+  },
+  {
+    method: 'POST',
+    path: '/users/register',
+    summary: "Register a new user",
+    description: "Creates a new user account. Requires a valid registration JWT (set by registerJWT middleware). Validates email uniqueness, password strength, and required fields. Marks any pending invitation as accepted after successful creation.",
+    requiresAuth: true,
+    requestBody: {
+      "name": "string (required)",
+      "surname": "string (required)",
+      "email": "string (required)",
+      "password": "string (required)",
+      "roleId": "integer (required)",
+      "organizationId": "integer (required)",
+    },
+    responses: [
+      { status: 201, description: "User created successfully" },
+      { status: 400, description: "Validation error (missing fields, weak password, invalid email)" },
+      { status: 403, description: "Business logic error" },
+      { status: 409, description: "User with this email already exists" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - Registration",
+  },
+  {
+    method: 'POST',
+    path: '/users/reset-password',
+    summary: "Reset user password",
+    description: "Resets the password for a user identified by email. Protected by resetPasswordMiddleware (validates reset token/permission). Password is hashed via bcrypt before storage.",
+    requiresAuth: false,
+    requestBody: {
+      "email": "string (required)",
+      "newPassword": "string (required)",
+    },
+    responses: [
+      { status: 202, description: "Password reset successfully" },
+      { status: 400, description: "Validation error (weak password)" },
+      { status: 403, description: "Business logic error" },
+      { status: 404, description: "User not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - Password",
+  },
+  {
+    method: 'GET',
+    path: '/users/{id}',
+    summary: "Get user by ID",
+    description: "Retrieves a single user by their numeric ID. Super-admins can access any user; regular users can only access users within their organization (or their own record).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID" },
+    ],
+    responses: [
+      { status: 200, description: "User found" },
+      { status: 403, description: "Access denied (user belongs to different organization)" },
+      { status: 404, description: "User not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - CRUD",
+  },
+  {
+    method: 'PATCH',
+    path: '/users/{id}',
+    summary: "Update user by ID",
+    description: "Updates user fields (name, surname, email, roleId, last_login). Only provided fields are updated. Organization isolation enforced. Sends Slack notification on role change. Sends email notification when role changes from Editor (3) to Admin (1).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID to update" },
+    ],
+    requestBody: {
+      "name": "string (optional)",
+      "surname": "string (optional)",
+      "email": "string (optional)",
+      "roleId": "integer (optional)",
+      "last_login": "string (optional)",
+    },
+    responses: [
+      { status: 202, description: "User updated" },
+      { status: 400, description: "Validation error" },
+      { status: 403, description: "Access denied or business logic error" },
+      { status: 404, description: "User not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - CRUD",
+  },
+  {
+    method: 'DELETE',
+    path: '/users/{id}',
+    summary: "Delete user by ID",
+    description: "Deletes a user and nullifies all their foreign key references across projects, vendors, risks, vendor risks, files, automations, and invitations. Also removes the user from projects_members. Demo users and super-admins cannot be deleted.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID to delete" },
+    ],
+    responses: [
+      { status: 202, description: "User deleted" },
+      { status: 403, description: "Forbidden: demo user, super-admin, or wrong organization" },
+      { status: 404, description: "User not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - CRUD",
+  },
+  {
+    method: 'GET',
+    path: '/users/{id}/calculate-progress',
+    summary: "Calculate user project progress",
+    description: "Computes completion metrics across all projects the user is a member of. Calculates subcontrol completion (status=\"Done\") and assessment question completion (has answer) per project and as aggregated totals.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID to calculate progress for" },
+    ],
+    responses: [
+      { status: 200, description: "Progress calculated" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - Analytics",
+  },
+  {
+    method: 'GET',
+    path: '/users/{id}/profile-photo',
+    summary: "Get profile photo",
+    description: "Returns the profile photo binary content for the specified user. The response includes the raw file content and its MIME type.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID" },
+    ],
+    responses: [
+      { status: 200, description: "Profile photo returned" },
+      { status: 404, description: "No profile photo found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - Profile Photo",
+  },
+  {
+    method: 'POST',
+    path: '/users/{id}/profile-photo',
+    summary: "Upload profile photo",
+    description: "Uploads a profile photo for the specified user. The file is stored in the tenant-scoped files table. If the user already has a profile photo, the old one is deleted and replaced. Uses multer for multipart file handling.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID" },
+    ],
+    requestBody: {
+      "photo": "string (required)",
+    },
+    responses: [
+      { status: 200, description: "Profile photo uploaded" },
+      { status: 400, description: "No file provided" },
+      { status: 403, description: "Access denied (wrong organization)" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - Profile Photo",
+  },
+  {
+    method: 'DELETE',
+    path: '/users/{id}/profile-photo',
+    summary: "Delete profile photo",
+    description: "Removes the profile photo from the user record and deletes the associated file from the files table.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID" },
+    ],
+    responses: [
+      { status: 200, description: "Profile photo deleted" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users - Profile Photo",
+  },
+];
+
+// User Preferences endpoints
+export const userPreferenceEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/user-preferences',
+    summary: "Create User Preferences",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "User Preferences",
+  },
+  {
+    method: 'GET',
+    path: '/user-preferences/{userId}',
+    summary: "Get Preferences By User",
+    requiresAuth: true,
+    parameters: [
+      { name: 'userId', in: 'path', type: 'integer', required: true, description: "The userId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "User Preferences",
+  },
+  {
+    method: 'PATCH',
+    path: '/user-preferences/{userId}',
+    summary: "Update User Preferences",
+    requiresAuth: true,
+    parameters: [
+      { name: 'userId', in: 'path', type: 'integer', required: true, description: "The userId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "User Preferences",
+  },
+];
+
+// Vendors endpoints
+export const vendorEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/vendors',
+    summary: "Get all vendors",
+    description: "Retrieves all vendors for the authenticated user's organization, ordered by creation date descending. Each vendor includes its associated project IDs and the reviewer's full name.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Vendors retrieved successfully" },
+      { status: 204, description: "No vendors found" },
+      { status: 401, description: "Unauthorized - missing or invalid JWT" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+  {
+    method: 'POST',
+    path: '/vendors',
+    summary: "Create a vendor",
+    description: "Creates a new vendor in the authenticated user's organization. Validates required fields, checks demo restrictions, associates projects via the vendors_projects join table, records creation in change history, fires automation triggers (vendor_added), and sends in-app assignment notifications to assignee and reviewer.",
+    requiresAuth: true,
+    requestBody: {
+      "(schema)": "VendorInput",
+    },
+    responses: [
+      { status: 201, description: "Vendor created successfully" },
+      { status: 400, description: "Validation error (missing or invalid required fields)" },
+      { status: 401, description: "Unauthorized - missing or invalid JWT" },
+      { status: 403, description: "Business logic error (e.g. demo vendor restriction)" },
+      { status: 500, description: "Internal server error" },
+      { status: 503, description: "Service unavailable - vendor creation returned null" },
+    ],
+    tag: "Vendors",
+  },
+  {
+    method: 'GET',
+    path: '/vendors/project-id/{id}',
+    summary: "Get vendors by project ID",
+    description: "Retrieves all vendors associated with a specific project. Returns 404 if the project does not exist.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "Project ID" },
+    ],
+    responses: [
+      { status: 200, description: "Vendors retrieved successfully" },
+      { status: 401, description: "Unauthorized - missing or invalid JWT" },
+      { status: 404, description: "Project not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+  {
+    method: 'GET',
+    path: '/vendors/{id}',
+    summary: "Get vendor by ID",
+    description: "Retrieves a single vendor by its ID, including associated project IDs.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "Vendor ID" },
+    ],
+    responses: [
+      { status: 200, description: "Vendor retrieved successfully" },
+      { status: 401, description: "Unauthorized - missing or invalid JWT" },
+      { status: 404, description: "Vendor not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+  {
+    method: 'PATCH',
+    path: '/vendors/{id}',
+    summary: "Update a vendor",
+    description: "Partially updates an existing vendor. Only provided fields are updated. Review and scorecard fields can be explicitly set to null to clear them. Required fields (vendor_name, vendor_provides, website, vendor_contact_person) are only updated if they have a non-empty value. Records field-level changes in change history, fires automation triggers (vendor_updated), and sends in-app notifications when assignee or reviewer changes.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "Vendor ID" },
+    ],
+    requestBody: {
+      "(schema)": "VendorUpdate",
+    },
+    responses: [
+      { status: 202, description: "Vendor updated successfully" },
+      { status: 400, description: "Validation error" },
+      { status: 401, description: "Unauthorized - missing or invalid JWT, or missing userId/role" },
+      { status: 403, description: "Business logic error (e.g. demo vendor restriction)" },
+      { status: 404, description: "Vendor not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+  {
+    method: 'DELETE',
+    path: '/vendors/{id}',
+    summary: "Delete a vendor",
+    description: "Deletes a vendor and all associated data in a transaction: 1. Deletes vendor risks (vendor_risks table) 2. Deletes project associations (vendors_projects table) 3. Deletes the vendor record itself Fires automation triggers (vendor_deleted).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "Vendor ID" },
+    ],
+    responses: [
+      { status: 202, description: "Vendor deleted successfully" },
+      { status: 401, description: "Unauthorized - missing or invalid JWT" },
+      { status: 404, description: "Vendor not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+];
+
+// Vendor Risks endpoints
+export const vendorRiskEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/vendorRisks',
+    summary: "Create Vendor Risk",
+    requiresAuth: true,
+    requestBody: {
+      "(schema)": "VendorRiskInput",
+    },
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risks",
+  },
+  {
+    method: 'GET',
+    path: '/vendorRisks/all',
+    summary: "Get All Vendor Risks All Projects",
+    requiresAuth: true,
+    parameters: [
+      { name: 'filter', in: 'query', type: 'string', required: false, description: "The filter" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risks",
+  },
+  {
+    method: 'GET',
+    path: '/vendorRisks/by-projid/{id}',
+    summary: "Get All Vendor Risks",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'string', required: true, description: "The id" },
+      { name: 'filter', in: 'query', type: 'string', required: false, description: "The filter" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risks",
+  },
+  {
+    method: 'GET',
+    path: '/vendorRisks/by-vendorid/{id}',
+    summary: "Get All Vendor Risks By Vendor Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+      { name: 'filter', in: 'query', type: 'string', required: false, description: "The filter" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risks",
+  },
+  {
+    method: 'GET',
+    path: '/vendorRisks/{id}',
+    summary: "Get Vendor Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risks",
+  },
+  {
+    method: 'PATCH',
+    path: '/vendorRisks/{id}',
+    summary: "Update Vendor Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "(schema)": "VendorRiskInput",
+    },
+    responses: [
+      { status: 202, description: "Accepted" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risks",
+  },
+  {
+    method: 'DELETE',
+    path: '/vendorRisks/{id}',
+    summary: "Delete Vendor Risk By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 202, description: "Accepted" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risks",
+  },
+];
+
+// Webhooks endpoints
+export const webhookEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/webhooks/github',
+    summary: "Github Webhook Controller",
+    requiresAuth: false,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Webhooks",
   },
 ];
 
 // Export all endpoints grouped
 export const allEndpoints = {
+  agentDiscovery: agentDiscoveryEndpoints,
+  aiAdvisor: aiAdvisorEndpoints,
+  aiDetection: aiDetectionEndpoints,
+  aiIncident: aiIncidentEndpoints,
+  aiTrustCentre: aiTrustCentreEndpoints,
+  approvalWorkflow: approvalWorkflowEndpoints,
+  assessment: assessmentEndpoints,
+  audit: auditEndpoints,
   authentication: authenticationEndpoints,
-  users: userEndpoints,
-  organizations: organizationEndpoints,
-  projects: projectEndpoints,
-  projectRisks: projectRiskEndpoints,
-  vendors: vendorEndpoints,
-  vendorRisks: vendorRiskEndpoints,
-  assessments: assessmentEndpoints,
-  policies: policyEndpoints,
-  modelInventory: modelInventoryEndpoints,
-  modelRisks: modelRiskEndpoints,
+  automation: automationEndpoints,
+  ceMarking: ceMarkingEndpoints,
+  changeHistory: changeHistoryEndpoints,
+  compliance: complianceEndpoints,
+  dashboard: dashboardEndpoints,
+  dataset: datasetEndpoints,
+  demoData: demoDataEndpoints,
+  email: emailEndpoints,
+  entityGraph: entityGraphEndpoints,
   euAiAct: euAiActEndpoints,
+  evidenceHub: evidenceHubEndpoints,
+  file: fileEndpoints,
+  framework: frameworkEndpoints,
+  fria: friaEndpoints,
+  intakeForm: intakeFormEndpoints,
+  integration: integrationEndpoints,
+  internal: internalEndpoints,
+  invitation: invitationEndpoints,
   iso27001: iso27001Endpoints,
   iso42001: iso42001Endpoints,
-  biasAndFairness: biasAndFairnessEndpoints,
-  training: trainingEndpoints,
-  roles: roleEndpoints,
-  controls: controlEndpoints,
-  controlCategories: controlCategoryEndpoints,
-  frameworks: frameworkEndpoints,
-  aiTrustCentre: aiTrustCentreEndpoints,
-  files: fileEndpoints,
-  email: emailEndpoints,
-  dashboard: dashboardEndpoints,
-  search: searchEndpoints,
-  logger: loggerEndpoints,
-  tasks: taskEndpoints,
-  tokens: tokenEndpoints,
-  userPreferences: userPreferenceEndpoints,
-  evidenceHub: evidenceHubEndpoints,
-  aiIncidents: aiIncidentEndpoints,
-  ceMarking: ceMarkingEndpoints,
-  automation: automationEndpoints,
+  llmKey: llmKeyEndpoints,
+  modelInventory: modelInventoryEndpoints,
+  modelRisk: modelRiskEndpoints,
   nistAiRmf: nistAiRmfEndpoints,
-  integrations: integrationEndpoints,
-  shareLinks: shareLinkEndpoints,
+  note: noteEndpoints,
+  notification: notificationEndpoints,
+  organization: organizationEndpoints,
+  plugin: pluginEndpoints,
+  policy: policyEndpoints,
+  postMarketMonitoring: postMarketMonitoringEndpoints,
+  project: projectEndpoints,
+  projectRisk: projectRiskEndpoints,
+  quantitativeRisk: quantitativeRiskEndpoints,
   reporting: reportingEndpoints,
-  slackWebhooks: slackWebhookEndpoints,
+  riskBenchmark: riskBenchmarkEndpoints,
+  riskHistory: riskHistoryEndpoints,
+  role: roleEndpoints,
+  search: searchEndpoints,
+  setting: settingEndpoints,
+  shadowAi: shadowAiEndpoints,
+  shareLink: shareLinkEndpoints,
+  slackWebhook: slackWebhookEndpoints,
   subscription: subscriptionEndpoints,
-  tiers: tierEndpoints,
+  superAdmin: superAdminEndpoints,
+  system: systemEndpoints,
+  task: taskEndpoints,
+  token: tokenEndpoints,
+  training: trainingEndpoints,
+  user: userEndpoints,
+  userPreference: userPreferenceEndpoints,
+  vendor: vendorEndpoints,
+  vendorRisk: vendorRiskEndpoints,
+  webhook: webhookEndpoints,
 };

@@ -7,6 +7,11 @@ import {
 import { getTimeseriesForTimeframe } from "../../utils/history/riskHistory.utils";
 import logger from "../../utils/logger/fileLogger";
 
+// NOTE: write tools (agent_create_risk) used to live in this file. They
+// have moved to `advisor/aiActions/createRisk/` and are wired into the
+// LLM tool surface via the AI Actions registry. This file only holds
+// read-only risk tools now.
+
 export interface FetchRisksParams {
   projectId?: number;
   frameworkId?: number;

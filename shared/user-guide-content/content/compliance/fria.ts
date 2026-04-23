@@ -14,7 +14,7 @@ export const friaContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The FRIA in VerifyWise is an 8-section assessment. Fields auto-save as you work, risk scores update after each change, and you can save snapshots to keep a versioned audit trail.',
+      text: 'In VerifyWise, the FRIA is an 8-section assessment. Fields auto-save as you work, risk scores update after each change and you can save snapshots to keep a versioned audit trail.',
     },
     {
       type: 'heading',
@@ -25,8 +25,8 @@ export const friaContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Open any project from your dashboard.' },
-        { text: 'Click the **FRIA** tab in the project view.' },
+        { text: 'Open any use case from your dashboard.' },
+        { text: 'Click the **FRIA** tab.' },
         { text: 'The assessment is created automatically the first time you open it.' },
       ],
     },
@@ -34,7 +34,7 @@ export const friaContent: ArticleContent = {
       type: 'callout',
       variant: 'info',
       title: 'Auto-creation',
-      text: 'You don\'t need to manually create a FRIA. One is generated per project when you first visit the tab, pre-filled with the project name, organization, and assessment owner.',
+      text: 'You don\'t need to manually create a FRIA. One is generated per use case when you first visit the tab, pre-filled with the use case name, organization and assessment owner.',
     },
     {
       type: 'heading',
@@ -52,12 +52,12 @@ export const friaContent: ArticleContent = {
         {
           icon: 'Building2',
           title: '1. Organisation & system profile',
-          description: 'Identify the deployer, system name, assessment owner, date, and operational context.',
+          description: 'Identify the deployer, system name, assessment owner, date and operational context.',
         },
         {
           icon: 'Scale',
           title: '2. Applicability & scope',
-          description: 'Classify whether the system is high-risk, select the Annex III category, set the review cycle.',
+          description: 'Classify whether the system is high-risk, select the Annex III category and set the review cycle.',
         },
         {
           icon: 'Users',
@@ -67,7 +67,7 @@ export const friaContent: ArticleContent = {
         {
           icon: 'Shield',
           title: '4. Fundamental rights matrix',
-          description: 'Assess 10 rights from the EU Charter. Flag affected rights, rate severity and confidence, document mitigation.',
+          description: 'Assess 10 rights from the EU Charter. Flag affected rights, rate severity and confidence and document mitigation.',
         },
         {
           icon: 'AlertTriangle',
@@ -77,12 +77,12 @@ export const friaContent: ArticleContent = {
         {
           icon: 'Eye',
           title: '6. Human oversight & transparency',
-          description: 'Document oversight measures, transparency practices, redress processes, and data governance.',
+          description: 'Document oversight measures, transparency practices, redress processes and data governance.',
         },
         {
           icon: 'MessageSquare',
           title: '7. Stakeholder consultation',
-          description: 'Record legal review, DPO review, and owner approval status. Add stakeholder consultation notes.',
+          description: 'Record legal review, DPO review and owner approval status. Add stakeholder consultation notes.',
         },
         {
           icon: 'FileCheck',
@@ -120,7 +120,7 @@ export const friaContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Completion', text: 'Percentage of assessment fields filled in, including whether rights have been reviewed and risk items added.' },
+        { bold: 'Completion', text: 'Percentage of fields filled in, including whether rights have been reviewed and risk items added.' },
         { bold: 'Risk score', text: 'A score from 0 to 100 based on flagged rights (weighted by severity and confidence) and risk items (weighted by likelihood and severity).' },
         { bold: 'Rights flagged', text: 'How many of the 10 fundamental rights you\'ve marked as affected.' },
         { bold: 'Status', text: 'Current assessment status (draft or submitted) and how many snapshots have been saved.' },
@@ -173,7 +173,7 @@ export const friaContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Section 5 lets you build a FRIA-specific risk register. You can add risks manually or import them from your project\'s existing risk register.',
+      text: 'Section 5 lets you build a FRIA-specific risk register. You can add risks manually or import them from your use case\'s existing risk register.',
     },
     {
       type: 'heading',
@@ -201,7 +201,7 @@ export const friaContent: ArticleContent = {
       items: [
         { text: 'Click **Import from project risks** in Section 5.' },
         { text: 'Select one or more risks from the list.' },
-        { text: 'Click **Import selected**. The risk description, likelihood, and severity are copied over.' },
+        { text: 'Click **Import selected**. The risk description, likelihood and severity are copied over.' },
       ],
     },
     {
@@ -222,7 +222,7 @@ export const friaContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Snapshots are point-in-time copies of your entire assessment. Save one before a review meeting, after completing a major section, or whenever you want a record you can compare against later.',
+      text: 'Snapshots are point-in-time copies of your entire assessment. Save one before a review meeting, after completing a major section or whenever you want a record you can compare against later.',
     },
     {
       type: 'ordered-list',
@@ -328,7 +328,7 @@ export const friaContent: ArticleContent = {
           collectionId: 'risk-management',
           articleId: 'risk-assessment',
           title: 'Conducting risk assessments',
-          description: 'Learn about project-level risk assessments that feed into the FRIA.',
+          description: 'Learn about use case risk assessments that feed into the FRIA.',
         },
         {
           collectionId: 'ai-governance',

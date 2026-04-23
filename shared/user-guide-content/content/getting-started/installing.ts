@@ -4,46 +4,46 @@ export const installingContent: ArticleContent = {
   blocks: [
     {
       type: 'time-estimate',
-      text: '**Estimated setup time:** 20-30 minutes',
+      text: '**Setup time:** 20-30 minutes',
     },
     {
       type: 'heading',
       id: 'before-you-begin',
       level: 2,
-      text: 'Before you begin',
+      text: 'Prerequisites',
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise can be deployed on your own infrastructure, giving you complete control over your data. Before starting the installation, make sure you have the following prerequisites in place.',
+      text: "VerifyWise runs on your infrastructure. Before you start, make sure you have these in place:",
     },
     {
       type: 'requirements',
       items: [
         {
           icon: 'Server',
-          title: 'Server requirements',
+          title: 'Server',
           items: [
             'Linux server (Ubuntu 20.04+ recommended)',
-            'Minimum 2GB RAM, 2 CPU cores',
-            'At least 20GB available disk space',
+            '2 GB RAM minimum, 2 CPU cores',
+            '20 GB free disk space',
           ],
         },
         {
           icon: 'Terminal',
-          title: 'Software requirements',
+          title: 'Software',
           items: [
-            'Docker and Docker Compose installed',
-            'npm (for development setup only)',
-            'Git for cloning the repository',
+            'Docker and Docker Compose (production)',
+            'Node.js 22 and npm (development only)',
+            'Git',
           ],
         },
         {
           icon: 'Database',
-          title: 'Network requirements',
+          title: 'Networking',
           items: [
-            'Ports 80 and 443 open for web traffic',
-            'Port 5432 for PostgreSQL (internal)',
-            'Port 6379 for Redis (internal)',
+            'Port 3000 (backend API)',
+            'Port 8080 (frontend, production) or 5173 (frontend, development)',
+            'Port 5432 for PostgreSQL and 6379 for Redis (can be internal-only)',
           ],
         },
       ],
@@ -52,23 +52,19 @@ export const installingContent: ArticleContent = {
       type: 'heading',
       id: 'deployment-method',
       level: 2,
-      text: 'Choose your deployment method',
-    },
-    {
-      type: 'paragraph',
-      text: 'VerifyWise supports two deployment approaches depending on your needs:',
+      text: 'Pick a deployment method',
     },
     {
       type: 'grid-cards',
       columns: 2,
       items: [
         {
-          title: 'Production (Docker)',
-          description: 'Recommended for most users. Uses Docker Compose for a fully containerized deployment with minimal configuration. Best for: Teams, production environments',
+          title: 'Production (Docker Compose)',
+          description: 'One install script, everything containerized. Use this unless you plan to modify the source code.',
         },
         {
           title: 'Development (npm)',
-          description: 'Run services individually with hot reload. Useful for contributing to the project or customizing the platform. Best for: Developers, contributors',
+          description: 'Frontend and backend run separately with hot reload. Use this if you want to contribute or customize.',
         },
       ],
     },
@@ -76,21 +72,13 @@ export const installingContent: ArticleContent = {
       type: 'heading',
       id: 'production-setup',
       level: 2,
-      text: 'Production setup (recommended)',
-    },
-    {
-      type: 'paragraph',
-      text: 'The production setup uses Docker Compose to run all services in containers. This is the simplest way to get VerifyWise running.',
+      text: 'Production setup',
     },
     {
       type: 'heading',
       id: 'production-step-1',
       level: 3,
-      text: 'Step 1: Download the installation files',
-    },
-    {
-      type: 'paragraph',
-      text: 'Create a directory and download the required files:',
+      text: '1. Download the install files',
     },
     {
       type: 'code',
@@ -102,34 +90,29 @@ curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/.env.
       type: 'heading',
       id: 'production-step-2',
       level: 3,
-      text: 'Step 2: Configure environment variables',
+      text: '2. Edit environment variables',
     },
     {
       type: 'paragraph',
-      text: 'Open the `.env.prod` file and update these required values:',
+      text: "Open `.env.prod` and change the values below. Everything else has sensible defaults.",
     },
     {
       type: 'code',
-      code: `# Replace with your server's IP address or domain
+      code: `# Your server's IP or domain (replace localhost)
 BACKEND_URL=http://your-server-ip:3000
 FRONTEND_URL=http://your-server-ip:8080
 
-# Generate a secure JWT secret (run this command)
-# openssl rand -base64 32
+# Generate a JWT secret: openssl rand -base64 32
 JWT_SECRET=your-generated-secret-here
 
-# Set a strong database password
+# Pick a strong database password
 POSTGRES_PASSWORD=your-secure-password`,
     },
     {
       type: 'heading',
       id: 'production-step-3',
       level: 3,
-      text: 'Step 3: Run the installation script',
-    },
-    {
-      type: 'paragraph',
-      text: 'Make the script executable and run it:',
+      text: '3. Run the installer',
     },
     {
       type: 'code',
@@ -138,7 +121,7 @@ POSTGRES_PASSWORD=your-secure-password`,
     },
     {
       type: 'paragraph',
-      text: 'The script will pull the Docker images, create the database, and start all services. Once complete, VerifyWise will be available at your configured `FRONTEND_URL`.',
+      text: "The script pulls Docker images, creates the database and starts all services. When it finishes, open your `FRONTEND_URL` in a browser.",
     },
     {
       type: 'heading',
@@ -148,143 +131,133 @@ POSTGRES_PASSWORD=your-secure-password`,
     },
     {
       type: 'paragraph',
-      text: "For development, you'll run the frontend and backend separately with hot reload enabled. This setup requires more steps but gives you full control over each service.",
+      text: "This runs frontend and backend separately with hot reload. You'll need 2 terminal windows (3 if you want the BullMQ worker for background jobs).",
     },
     {
       type: 'heading',
       id: 'dev-step-1',
       level: 3,
-      text: 'Step 1: Clone and install dependencies',
+      text: '1. Clone and install',
     },
     {
       type: 'code',
       code: `git clone https://github.com/bluewave-labs/verifywise.git
 cd verifywise
 
-# Install frontend dependencies
 cd Clients && npm install
-
-# Install backend dependencies
 cd ../Servers && npm install`,
     },
     {
       type: 'heading',
       id: 'dev-step-2',
       level: 3,
-      text: 'Step 2: Start database services',
+      text: '2. Start PostgreSQL and Redis',
     },
     {
       type: 'paragraph',
-      text: 'Run PostgreSQL and Redis in Docker containers:',
+      text: 'The easiest way is Docker containers:',
     },
     {
       type: 'code',
-      code: `# Start PostgreSQL
-docker run -d --name mypostgres -p 5432:5432 \\
+      code: `docker run -d --name mypostgres -p 5432:5432 \\
   -e POSTGRES_PASSWORD=your_password postgres
 
-# Start Redis
 docker run -d --name myredis -p 6379:6379 redis
 
-# Create the database
 docker exec -it mypostgres psql -U postgres -c "CREATE DATABASE verifywise;"`,
     },
     {
       type: 'heading',
       id: 'dev-step-3',
       level: 3,
-      text: 'Step 3: Configure and start services',
+      text: '3. Configure and start',
     },
     {
       type: 'code',
-      code: `# Copy the environment file
+      code: `# Copy the dev environment file
 cp .env.dev Servers/.env
 
-# Start the backend (in one terminal)
+# Terminal 1: backend with auto-restart
 cd Servers && npm run watch
 
-# Start the frontend (in another terminal)
+# Terminal 2: frontend with hot reload
 cd Clients && npm run dev`,
     },
     {
       type: 'paragraph',
-      text: 'The frontend will be available at `http://localhost:5173` and the backend API at `http://localhost:3000`.',
+      text: 'Frontend: `http://localhost:5173`. Backend API: `http://localhost:3000`.',
     },
     {
       type: 'heading',
       id: 'environment-config',
       level: 2,
-      text: 'Environment configuration',
-    },
-    {
-      type: 'paragraph',
-      text: "Here's a reference of the key environment variables you can configure:",
+      text: 'Environment variables reference',
     },
     {
       type: 'table',
       columns: [
-        { key: 'variable', label: 'Variable', width: '180px' },
+        { key: 'variable', label: 'Variable', width: '200px' },
         { key: 'description', label: 'Description' },
       ],
       rows: [
-        { variable: 'BACKEND_URL', description: 'URL where the API server is accessible' },
-        { variable: 'FRONTEND_URL', description: 'URL where the web application is accessible' },
-        { variable: 'JWT_SECRET', description: 'Secret key for signing authentication tokens' },
-        { variable: 'POSTGRES_PASSWORD', description: 'Password for the PostgreSQL database' },
+        { variable: 'BACKEND_URL', description: 'URL where the API is reachable (default: http://localhost:3000)' },
+        { variable: 'FRONTEND_URL', description: 'URL where the web app is served (default: http://localhost:8080 in prod)' },
+        { variable: 'JWT_SECRET', description: 'Secret for signing access and refresh tokens' },
+        { variable: 'POSTGRES_PASSWORD', description: 'PostgreSQL password' },
         { variable: 'POSTGRES_DB', description: 'Database name (default: verifywise)' },
-        { variable: 'REDIS_HOST', description: 'Redis server hostname (default: localhost)' },
+        { variable: 'REDIS_HOST', description: 'Redis hostname (default: localhost)' },
       ],
     },
     {
       type: 'heading',
       id: 'first-access',
       level: 2,
-      text: 'First-time access',
+      text: 'First login',
     },
     {
       type: 'paragraph',
-      text: "When you first access VerifyWise, you'll see the admin registration page. This is expected — the platform ships without any default users for security reasons.",
+      text: "VerifyWise ships with no default accounts. The first time you open the app, you'll see a registration page where you create the admin account.",
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to your VerifyWise URL in a web browser' },
-        { text: 'Complete the admin registration form with your details' },
-        { text: 'Log in with your new admin credentials' },
-        { text: "You'll land on the dashboard, ready to create your first use case" },
+        { text: 'Open your VerifyWise URL in a browser' },
+        { text: 'Fill in the admin registration form' },
+        { text: 'Log in with the credentials you just created' },
+        { text: "You'll land on the dashboard" },
       ],
     },
     {
       type: 'callout',
       variant: 'warning',
-      title: 'Important',
-      text: 'Complete the admin registration promptly after deployment. Anyone with access to your VerifyWise URL can register as admin until the first account is created.',
+      title: 'Do this immediately',
+      text: "The registration page is open to anyone who can reach your URL until the first admin account exists. Don't leave the instance accessible without completing registration.",
     },
     {
       type: 'heading',
       id: 'ssl-security',
       level: 2,
-      text: 'SSL and security',
+      text: 'SSL setup',
     },
     {
       type: 'paragraph',
-      text: "For production deployments, we strongly recommend enabling SSL/TLS encryption. You can obtain free certificates using Let's Encrypt with Certbot.",
+      text: "For production, put a reverse proxy (Nginx, Caddy, or your cloud load balancer) in front of VerifyWise and terminate TLS there. Free certificates are available through Let's Encrypt.",
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Install Nginx as a reverse proxy on your server' },
-        { text: 'Install Certbot and obtain certificates for your domain' },
-        { text: 'Configure Nginx to proxy requests to VerifyWise services' },
-        { text: 'Update your `.env.prod` URLs to use `https://`' },
-        { text: 'Restart the services to apply the changes' },
+        { text: 'Install Nginx (or Caddy) on your server' },
+        { text: "Obtain a certificate for your domain (Certbot handles Let's Encrypt automatically)" },
+        { text: 'Configure the proxy to forward traffic to ports 3000 (API) and 8080 (frontend)' },
+        { text: 'Update `BACKEND_URL` and `FRONTEND_URL` in `.env.prod` to use `https://`' },
+        { text: 'Restart the services: `docker compose restart`' },
       ],
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Next step',
-      text: 'Now that VerifyWise is installed, learn how to navigate the dashboard and set up your first AI governance use case.',
+      text: 'Read the dashboard guide to learn how the interface is organized, then follow the quick start to create your first use case.',
     },
   ],
 };

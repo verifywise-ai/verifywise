@@ -25,6 +25,9 @@ infer-openrouter-gpt4:
 infer-multi-model:
 	uv run grs-scenarios generate --stage infer --models-config configs/models.yaml --temperature 0.2 --max-tokens 8192 --limit 6 --resume
 
+infer-debug:
+	uv run grs-scenarios generate --stage infer --models-config configs/models.yaml --dataset-version debug --temperature 0.2 --max-tokens 512 --limit 1
+
 judge:
 	uv run grs-scenarios generate --stage judge --judge-model-id openai/gpt-4o-mini --judge-limit 6
 

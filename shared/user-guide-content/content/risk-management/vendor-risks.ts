@@ -10,11 +10,11 @@ export const vendorRisksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Vendor risk assessment evaluates the risks that come from relying on third-party providers for AI capabilities. When you use external AI services, models, or platforms, you inherit risks from those relationships — risks that are different from those of systems you build and control internally.',
+      text: 'Vendor risk assessment looks at the risks that come from relying on third-party providers for AI capabilities. When you use external AI services, models or platforms, you inherit risks from those relationships, and they\'re different from the risks of systems you build and control yourself.',
     },
     {
       type: 'paragraph',
-      text: 'Third-party AI introduces dependencies that can affect your compliance, security, and operations. A vendor security breach could expose your data. A vendor going out of business could disrupt your services. Changes to a vendor\'s model could alter your system\'s behavior in unexpected ways. Understanding and managing these risks is essential for responsible AI governance.',
+      text: 'Third-party AI creates dependencies that can affect your compliance, security and operations. A vendor security breach could expose your data. A vendor going out of business could disrupt your services. Changes to a vendor\'s model could alter your system\'s behavior in unexpected ways. You need to understand and manage these risks.',
     },
     {
       type: 'heading',
@@ -30,8 +30,8 @@ export const vendorRisksContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Maintain compliance', text: 'Under regulations like the EU AI Act, you remain responsible for AI systems even when using third-party components' },
-        { bold: 'Protect sensitive data', text: 'Understanding what data flows to vendors helps you make informed decisions about data sharing' },
-        { bold: 'Ensure business continuity', text: 'Identifying critical vendor dependencies helps you prepare contingency plans' },
+        { bold: 'Protect sensitive data', text: 'Knowing what data flows to vendors helps you make better decisions about data sharing' },
+        { bold: 'Plan for continuity', text: 'Spotting critical vendor dependencies helps you prepare contingency plans' },
         { bold: 'Prioritize oversight', text: 'Risk scores help you focus review efforts on the vendors that matter most' },
       ],
     },
@@ -54,7 +54,7 @@ export const vendorRisksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise assesses vendor risk across four key dimensions:',
+      text: 'VerifyWise assesses vendor risk across four dimensions:',
     },
     {
       type: 'icon-cards',
@@ -176,17 +176,17 @@ export const vendorRisksContent: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'GDPR — European data protection requirements',
-        'HIPAA — US healthcare data requirements',
-        'SOC 2 — Security and availability controls',
-        'ISO 27001 — Information security management',
-        'EU AI Act — European AI regulation',
-        'CCPA — California consumer privacy',
+        'GDPR, European data protection requirements',
+        'HIPAA, US healthcare data requirements',
+        'SOC 2, security and availability controls',
+        'ISO 27001, information security management',
+        'EU AI Act, European AI regulation',
+        'CCPA, California consumer privacy',
       ],
     },
     {
       type: 'paragraph',
-      text: 'More regulatory exposure means higher risk and greater oversight requirements. Ensure vendors can demonstrate compliance with all applicable regulations.',
+      text: 'More regulatory exposure means higher risk and more oversight. Make sure vendors can demonstrate compliance with all applicable regulations.',
     },
     {
       type: 'heading',
@@ -196,7 +196,7 @@ export const vendorRisksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise calculates an overall risk score based on the scorecard inputs. Higher scores indicate greater risk. Factors that increase the score include:',
+      text: 'VerifyWise calculates an overall risk score from the scorecard inputs. Higher scores mean greater risk. Things that push the score up include:',
     },
     {
       type: 'bullet-list',

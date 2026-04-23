@@ -14,7 +14,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Every use case gets a unique ID (UC-001, UC-002, and so on) and follows the AI system from scoping through deployment. You set its risk classification, assign someone to own it, attach compliance frameworks, and build up a risk register, all from one place.',
+      text: 'Every use case gets a unique ID (UC-1, UC-2, UC-3 and so on) and follows the AI system from scoping through deployment. You set its risk classification, assign someone to own it, attach compliance frameworks and build up a risk register, all from one place.',
     },
     {
       type: 'heading',

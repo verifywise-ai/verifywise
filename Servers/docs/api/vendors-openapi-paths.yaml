@@ -1,0 +1,722 @@
+# Vendors API - OpenAPI 3.0 Path Definitions
+# Paste into the `paths:` section of swagger.yaml
+# Paste Vendor / VendorInput / VendorUpdate into `components.schemas:`
+
+# ---------------------------------------------------------------------------
+# Reusable schemas (add under components.schemas)
+# ---------------------------------------------------------------------------
+# components:
+#   schemas:
+#     Vendor:
+#       type: object
+#       properties:
+#         id:
+#           type: integer
+#           description: Auto-generated primary key
+#           example: 42
+#         order_no:
+#           type: integer
+#           nullable: true
+#           description: Display order number
+#         vendor_name:
+#           type: string
+#           description: Name of the vendor
+#           example: "Acme Corp"
+#         vendor_provides:
+#           type: string
+#           description: What the vendor provides
+#           example: "Cloud hosting services"
+#         assignee:
+#           type: integer
+#           description: User ID of the assigned owner
+#           example: 5
+#         website:
+#           type: string
+#           description: Vendor website URL
+#           example: "https://acme.example.com"
+#         vendor_contact_person:
+#           type: string
+#           description: Name of the vendor contact
+#           example: "Jane Doe"
+#         review_result:
+#           type: string
+#           nullable: true
+#           description: Free-text review result summary
+#         review_status:
+#           type: string
+#           nullable: true
+#           enum:
+#             - Not started
+#             - In review
+#             - Reviewed
+#             - Requires follow-up
+#           default: Not started
+#           description: Current review lifecycle status
+#         reviewer:
+#           type: integer
+#           nullable: true
+#           description: User ID of the reviewer
+#         review_date:
+#           type: string
+#           format: date-time
+#           nullable: true
+#           description: Date the review was performed (ISO 8601)
+#         is_demo:
+#           type: boolean
+#           default: false
+#           description: Whether this is a demo vendor (read-only after creation)
+#         projects:
+#           type: array
+#           items:
+#             type: integer
+#           description: Array of associated project IDs
+#         data_sensitivity:
+#           type: string
+#           nullable: true
+#           enum:
+#             - None
+#             - Internal only
+#             - "Personally identifiable information (PII)"
+#             - Financial data
+#             - "Health data (e.g. HIPAA)"
+#             - Model weights or AI assets
+#             - Other sensitive data
+#           description: Scorecard — type of data the vendor accesses
+#         business_criticality:
+#           type: string
+#           nullable: true
+#           enum:
+#             - "Low (vendor supports non-core functions)"
+#             - "Medium (affects operations but is replaceable)"
+#             - "High (critical to core services or products)"
+#           description: Scorecard — how critical the vendor is to operations
+#         past_issues:
+#           type: string
+#           nullable: true
+#           enum:
+#             - None
+#             - "Minor incident (e.g. small delay, minor bug)"
+#             - "Major incident (e.g. data breach, legal issue)"
+#           description: Scorecard — history of past incidents
+#         regulatory_exposure:
+#           type: string
+#           nullable: true
+#           enum:
+#             - None
+#             - "GDPR (EU)"
+#             - "HIPAA (US)"
+#             - SOC 2
+#             - ISO 27001
+#             - EU AI act
+#             - "CCPA (california)"
+#             - Other
+#           description: Scorecard — applicable regulatory framework
+#         risk_score:
+#           type: integer
+#           nullable: true
+#           description: Computed risk score for the vendor
+#         created_at:
+#           type: string
+#           format: date-time
+#           description: Creation timestamp (ISO 8601)
+#         updated_at:
+#           type: string
+#           format: date-time
+#           description: Last update timestamp (ISO 8601)
+#       required:
+#         - vendor_name
+#         - vendor_provides
+#         - assignee
+#         - website
+#         - vendor_contact_person
+#
+#     VendorWithReviewerName:
+#       allOf:
+#         - $ref: '#/components/schemas/Vendor'
+#         - type: object
+#           properties:
+#             reviewer_name:
+#               type: string
+#               description: Full name of the reviewer (joined from users table)
+#               example: "John Smith"
+#
+#     VendorInput:
+#       type: object
+#       required:
+#         - vendor_name
+#         - vendor_provides
+#         - assignee
+#         - website
+#         - vendor_contact_person
+#       properties:
+#         vendor_name:
+#           type: string
+#           description: Name of the vendor (required, non-empty)
+#         vendor_provides:
+#           type: string
+#           description: What the vendor provides (required, non-empty)
+#         assignee:
+#           type: integer
+#           minimum: 1
+#           description: User ID of the assigned owner (required, >= 1)
+#         website:
+#           type: string
+#           description: Vendor website URL (required, non-empty)
+#         vendor_contact_person:
+#           type: string
+#           description: Name of the vendor contact (required, non-empty)
+#         review_result:
+#           type: string
+#           description: Free-text review result summary
+#         review_status:
+#           type: string
+#           enum:
+#             - Not started
+#             - In review
+#             - Reviewed
+#             - Requires follow-up
+#           description: Current review lifecycle status
+#         reviewer:
+#           type: integer
+#           minimum: 1
+#           description: User ID of the reviewer
+#         review_date:
+#           type: string
+#           format: date-time
+#           description: Date of the review (ISO 8601)
+#         order_no:
+#           type: integer
+#           description: Display order number
+#         is_demo:
+#           type: boolean
+#           default: false
+#           description: Mark as demo vendor
+#         projects:
+#           type: array
+#           items:
+#             type: integer
+#           description: Array of project IDs to associate
+#         data_sensitivity:
+#           type: string
+#           enum:
+#             - None
+#             - Internal only
+#             - "Personally identifiable information (PII)"
+#             - Financial data
+#             - "Health data (e.g. HIPAA)"
+#             - Model weights or AI assets
+#             - Other sensitive data
+#         business_criticality:
+#           type: string
+#           enum:
+#             - "Low (vendor supports non-core functions)"
+#             - "Medium (affects operations but is replaceable)"
+#             - "High (critical to core services or products)"
+#         past_issues:
+#           type: string
+#           enum:
+#             - None
+#             - "Minor incident (e.g. small delay, minor bug)"
+#             - "Major incident (e.g. data breach, legal issue)"
+#         regulatory_exposure:
+#           type: string
+#           enum:
+#             - None
+#             - "GDPR (EU)"
+#             - "HIPAA (US)"
+#             - SOC 2
+#             - ISO 27001
+#             - EU AI act
+#             - "CCPA (california)"
+#             - Other
+#         risk_score:
+#           type: integer
+#           description: Computed risk score
+#
+#     VendorUpdate:
+#       type: object
+#       description: All fields are optional. Only provided fields are updated. Review and scorecard fields can be set to null to clear them.
+#       properties:
+#         vendor_name:
+#           type: string
+#         vendor_provides:
+#           type: string
+#         assignee:
+#           type: integer
+#           minimum: 1
+#         website:
+#           type: string
+#         vendor_contact_person:
+#           type: string
+#         review_result:
+#           type: string
+#           nullable: true
+#         review_status:
+#           type: string
+#           nullable: true
+#           enum:
+#             - Not started
+#             - In review
+#             - Reviewed
+#             - Requires follow-up
+#         reviewer:
+#           type: integer
+#           nullable: true
+#         review_date:
+#           type: string
+#           format: date-time
+#           nullable: true
+#         order_no:
+#           type: integer
+#         projects:
+#           type: array
+#           items:
+#             type: integer
+#         data_sensitivity:
+#           type: string
+#           nullable: true
+#           enum:
+#             - None
+#             - Internal only
+#             - "Personally identifiable information (PII)"
+#             - Financial data
+#             - "Health data (e.g. HIPAA)"
+#             - Model weights or AI assets
+#             - Other sensitive data
+#         business_criticality:
+#           type: string
+#           nullable: true
+#           enum:
+#             - "Low (vendor supports non-core functions)"
+#             - "Medium (affects operations but is replaceable)"
+#             - "High (critical to core services or products)"
+#         past_issues:
+#           type: string
+#           nullable: true
+#           enum:
+#             - None
+#             - "Minor incident (e.g. small delay, minor bug)"
+#             - "Major incident (e.g. data breach, legal issue)"
+#         regulatory_exposure:
+#           type: string
+#           nullable: true
+#           enum:
+#             - None
+#             - "GDPR (EU)"
+#             - "HIPAA (US)"
+#             - SOC 2
+#             - ISO 27001
+#             - EU AI act
+#             - "CCPA (california)"
+#             - Other
+#         risk_score:
+#           type: integer
+#           nullable: true
+
+# ---------------------------------------------------------------------------
+# Path definitions (add under paths:)
+# ---------------------------------------------------------------------------
+
+/vendors:
+  get:
+    tags:
+      - Vendors
+    summary: Get all vendors
+    description: Retrieves all vendors for the authenticated user's organization, ordered by creation date descending. Each vendor includes its associated project IDs and the reviewer's full name.
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Vendors retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/VendorWithReviewerName"
+      "204":
+        description: No vendors found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: No Content
+                data:
+                  type: "null"
+      "401":
+        description: Unauthorized — missing or invalid JWT
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Internal Server Error
+                error:
+                  type: string
+
+  post:
+    tags:
+      - Vendors
+    summary: Create a vendor
+    description: |
+      Creates a new vendor in the authenticated user's organization.
+      Validates required fields, checks demo restrictions, associates
+      projects via the vendors_projects join table, records creation
+      in change history, fires automation triggers (`vendor_added`),
+      and sends in-app assignment notifications to assignee and reviewer.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/VendorInput"
+    responses:
+      "201":
+        description: Vendor created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Created
+                data:
+                  $ref: "#/components/schemas/Vendor"
+      "400":
+        description: Validation error (missing or invalid required fields)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Bad Request
+                data:
+                  type: string
+                  description: Validation error message
+      "401":
+        description: Unauthorized — missing or invalid JWT
+      "403":
+        description: Business logic error (e.g. demo vendor restriction)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Forbidden
+                data:
+                  type: string
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Internal Server Error
+                error:
+                  type: string
+      "503":
+        description: Service unavailable — vendor creation returned null
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Service Unavailable
+                error:
+                  type: object
+
+/vendors/project-id/{id}:
+  get:
+    tags:
+      - Vendors
+    summary: Get vendors by project ID
+    description: Retrieves all vendors associated with a specific project. Returns 404 if the project does not exist.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Project ID
+    responses:
+      "200":
+        description: Vendors retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Vendor"
+      "401":
+        description: Unauthorized — missing or invalid JWT
+      "404":
+        description: Project not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Not Found
+                data:
+                  type: array
+                  items: {}
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Internal Server Error
+                error:
+                  type: string
+
+/vendors/{id}:
+  get:
+    tags:
+      - Vendors
+    summary: Get vendor by ID
+    description: Retrieves a single vendor by its ID, including associated project IDs.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Vendor ID
+    responses:
+      "200":
+        description: Vendor retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  $ref: "#/components/schemas/Vendor"
+      "401":
+        description: Unauthorized — missing or invalid JWT
+      "404":
+        description: Vendor not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Not Found
+                data:
+                  type: "null"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Internal Server Error
+                error:
+                  type: string
+
+  patch:
+    tags:
+      - Vendors
+    summary: Update a vendor
+    description: |
+      Partially updates an existing vendor. Only provided fields are updated.
+      Review and scorecard fields can be explicitly set to null to clear them.
+      Required fields (vendor_name, vendor_provides, website, vendor_contact_person)
+      are only updated if they have a non-empty value.
+      Records field-level changes in change history, fires automation triggers
+      (`vendor_updated`), and sends in-app notifications when assignee or reviewer changes.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Vendor ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/VendorUpdate"
+    responses:
+      "202":
+        description: Vendor updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Accepted
+                data:
+                  $ref: "#/components/schemas/Vendor"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Bad Request
+                data:
+                  type: string
+      "401":
+        description: Unauthorized — missing or invalid JWT, or missing userId/role
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Unauthorized
+      "403":
+        description: Business logic error (e.g. demo vendor restriction)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Forbidden
+                data:
+                  type: string
+      "404":
+        description: Vendor not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Not Found
+                data:
+                  type: object
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Internal Server Error
+                error:
+                  type: string
+
+  delete:
+    tags:
+      - Vendors
+    summary: Delete a vendor
+    description: |
+      Deletes a vendor and all associated data in a transaction:
+      1. Deletes vendor risks (vendor_risks table)
+      2. Deletes project associations (vendors_projects table)
+      3. Deletes the vendor record itself
+      Fires automation triggers (`vendor_deleted`).
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Vendor ID
+    responses:
+      "202":
+        description: Vendor deleted successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Accepted
+                data:
+                  type: boolean
+                  example: true
+      "401":
+        description: Unauthorized — missing or invalid JWT
+      "404":
+        description: Vendor not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Not Found
+                data:
+                  type: object
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Internal Server Error
+                error:
+                  type: string

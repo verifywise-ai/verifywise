@@ -26,6 +26,7 @@ const RisksView = ({
   title,
   headerContent,
   refreshTrigger,
+  readOnly = false,
 }: IRisksViewProps) => {
   const { users, loading: usersLoading } = useUsers();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -250,6 +251,29 @@ const RisksView = ({
             {title}
           </Typography>
 
+          {readOnly && (
+            <Box
+              sx={{
+                p: 1.5,
+                borderRadius: 1,
+                backgroundColor: "action.hover",
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                This is a read-only view. To add or edit risks, go to the{" "}
+                <Typography
+                  component="a"
+                  href="/risk-management"
+                  variant="body2"
+                  sx={{ color: "primary.main", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
+                >
+                  Risk Management
+                </Typography>{" "}
+                page.
+              </Typography>
+            </Box>
+          )}
+
           {showCustomizableSkeleton ? (
             <CustomizableSkeleton variant="rectangular" width="100%" height={200} />
           ) : (
@@ -257,16 +281,16 @@ const RisksView = ({
               rows={projectRisks}
               setPage={setCurrentPagingation}
               page={currentPage}
-              setSelectedRow={(row: RiskModel) => setSelectedRow([row])}
-              setAnchor={setAnchor}
-              onDeleteRisk={handleDelete}
+              setSelectedRow={readOnly ? () => {} : (row: RiskModel) => setSelectedRow([row])}
+              setAnchor={readOnly ? (() => {}) as any : setAnchor}
+              onDeleteRisk={readOnly ? () => {} : handleDelete}
               flashRow={null}
             />
           )}
         </Stack>
 
-        {/* Edit Risk Popup */}
-        {selectedRow.length > 0 && anchor && (
+        {/* Edit Risk Popup - hidden in read-only mode */}
+        {!readOnly && selectedRow.length > 0 && anchor && (
           <Popup
             popupId="edit-risk-popup"
             popupContent={

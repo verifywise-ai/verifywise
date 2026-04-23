@@ -14,7 +14,7 @@ export const ciCdIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'This works with GitHub Actions out of the box. For other CI systems (GitLab, Jenkins, CircleCI), a standalone Python script and CLI are also available.',
+      text: 'This works with GitHub Actions out of the box. For other CI systems (GitLab, Jenkins, CircleCI), a standalone Python script and CLI are available too.',
     },
     {
       type: 'heading',
@@ -29,7 +29,7 @@ export const ciCdIntegrationContent: ArticleContent = {
         { text: 'Runs your model against the dataset you specify.' },
         { text: 'An LLM judge scores each response on the metrics you chose (correctness, hallucination, faithfulness, etc.).' },
         { text: 'If any metric falls below the threshold, the CI step fails and the PR is blocked.' },
-        { text: 'Results are posted as a PR comment, uploaded as build artifacts, and stored in your VerifyWise dashboard.' },
+        { text: 'Results are posted as a PR comment, uploaded as build artifacts and stored in your VerifyWise dashboard.' },
       ],
     },
     {
@@ -101,7 +101,7 @@ jobs:
       type: 'callout',
       variant: 'info',
       title: 'Model vs judge',
-      text: 'The evaluation uses two LLMs: the model generates responses, and the judge scores them. If both use the same provider (e.g. both OpenAI), a single LLM_API_KEY is enough. If they use different providers, set JUDGE_API_KEY separately.',
+      text: 'The evaluation uses two LLMs: the model generates responses and the judge scores them. If both use the same provider (e.g. both OpenAI), a single LLM_API_KEY is enough. If they use different providers, set JUDGE_API_KEY separately.',
     },
     {
       type: 'heading',
@@ -169,7 +169,7 @@ jobs:
     },
     {
       type: 'paragraph',
-      text: 'For GitLab CI, Jenkins, CircleCI, or any other system, use the standalone Python script. It only needs the requests library:',
+      text: 'For GitLab CI, Jenkins, CircleCI or any other system, use the standalone Python script. It only needs the requests library:',
     },
     {
       type: 'code',
@@ -186,7 +186,7 @@ python ci_eval_runner.py \\
     },
     {
       type: 'paragraph',
-      text: 'The script exits with code 0 if all metrics pass, 1 if any metric fails, and 2 on errors. Download ci_eval_runner.py from the verifywise-eval-action repository.',
+      text: 'The script exits with code 0 if all metrics pass, 1 if any metric fails and 2 on errors. Download ci_eval_runner.py from the verifywise-eval-action repository.',
     },
     {
       type: 'heading',
@@ -244,7 +244,7 @@ assert results.passed, f"Failed: {[m.name for m in results.metrics if not m.pass
     },
     {
       type: 'paragraph',
-      text: 'CI-triggered experiments appear in the same Experiments list as manually run ones. You can see the scores, compare against previous runs, and drill into individual prompt-level results from the VerifyWise dashboard.',
+      text: 'CI-triggered experiments appear in the same Experiments list as manually run ones. You can see the scores, compare against previous runs and drill into individual prompt-level results from the VerifyWise dashboard.',
     },
     {
       type: 'article-links',

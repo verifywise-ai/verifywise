@@ -1,0 +1,728 @@
+# Policies API — OpenAPI 3.0 Path Definitions
+# Paste into the `paths:` section of swagger.yaml
+
+/api/policies:
+  get:
+    tags:
+      - Policies
+    summary: Get all policies
+    description: Returns all policies for the authenticated user's organization, including assigned reviewer IDs.
+    operationId: getAllPolicies
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: List of policies retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/PolicyWithReviewers"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+  post:
+    tags:
+      - Policies
+    summary: Create a new policy
+    description: Creates a new policy. The `author_id` and `last_updated_by` are set from the JWT token automatically.
+    operationId: createPolicy
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PolicyCreateRequest"
+    responses:
+      "201":
+        description: Policy created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Created
+                data:
+                  $ref: "#/components/schemas/PolicyWithReviewers"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+      "503":
+        description: Service unavailable — policy creation failed
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+
+/api/policies/tags:
+  get:
+    tags:
+      - Policies
+    summary: Get available policy tags
+    description: Returns the static list of allowed policy tags.
+    operationId: getPolicyTags
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: List of available tags
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - AI ethics
+                      - Fairness
+                      - Transparency
+                      - Explainability
+                      - Bias mitigation
+                      - Privacy
+                      - Data governance
+                      - Model risk
+                      - Accountability
+                      - Security
+                      - LLM
+                      - Human oversight
+                      - EU AI Act
+                      - ISO 42001
+                      - NIST RMF
+                      - Red teaming
+                      - Audit
+                      - Monitoring
+                      - Vendor management
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/api/policies/import/docx:
+  post:
+    tags:
+      - Policies
+    summary: Import DOCX and convert to HTML
+    description: >
+      Uploads a `.docx` file (max 10 MB) and converts it to HTML suitable for
+      the policy content editor. Returns the converted HTML and any conversion warnings.
+    operationId: importDocx
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - file
+            properties:
+              file:
+                type: string
+                format: binary
+                description: A `.docx` file (max 10 MB). Accepted MIME types are `application/vnd.openxmlformats-officedocument.wordprocessingml.document` and `application/octet-stream`.
+    responses:
+      "200":
+        description: DOCX converted to HTML successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  type: object
+                  properties:
+                    html:
+                      type: string
+                      description: The converted HTML content
+                    warnings:
+                      type: array
+                      items:
+                        type: string
+                      description: Conversion warnings (e.g., unsupported formatting)
+      "400":
+        description: Bad request — no file uploaded or invalid file type
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/api/policies/{id}:
+  get:
+    tags:
+      - Policies
+    summary: Get policy by ID
+    description: Returns a single policy by its ID, including assigned reviewer IDs.
+    operationId: getPolicyById
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PolicyId"
+    responses:
+      "200":
+        description: Policy retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  $ref: "#/components/schemas/PolicyWithReviewers"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+  put:
+    tags:
+      - Policies
+    summary: Update a policy
+    description: >
+      Updates an existing policy. Only provided fields are updated.
+      The `last_updated_by` and `last_updated_at` are set automatically from the JWT token.
+      If `assigned_reviewer_ids` is provided, the reviewer list is fully replaced.
+    operationId: updatePolicy
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PolicyId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PolicyUpdateRequest"
+    responses:
+      "202":
+        description: Policy updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Accepted
+                data:
+                  $ref: "#/components/schemas/PolicyWithReviewers"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+  delete:
+    tags:
+      - Policies
+    summary: Delete a policy by ID
+    description: Permanently deletes a policy and its associated reviewer mappings (via CASCADE).
+    operationId: deletePolicyById
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PolicyId"
+    responses:
+      "202":
+        description: Policy deleted successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Accepted
+                data:
+                  type: boolean
+                  example: true
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/api/policies/{id}/export/pdf:
+  get:
+    tags:
+      - Policies
+    summary: Export policy as PDF
+    description: Generates and downloads the policy as a PDF file.
+    operationId: exportPolicyPDF
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PolicyId"
+    responses:
+      "200":
+        description: PDF file stream
+        content:
+          application/pdf:
+            schema:
+              type: string
+              format: binary
+        headers:
+          Content-Disposition:
+            schema:
+              type: string
+              example: 'attachment; filename="AI_Ethics_Policy.pdf"'
+          Content-Length:
+            schema:
+              type: integer
+      "400":
+        description: Invalid policy ID
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/api/policies/{id}/export/docx:
+  get:
+    tags:
+      - Policies
+    summary: Export policy as DOCX
+    description: Generates and downloads the policy as a DOCX file.
+    operationId: exportPolicyDOCX
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PolicyId"
+    responses:
+      "200":
+        description: DOCX file stream
+        content:
+          application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+            schema:
+              type: string
+              format: binary
+        headers:
+          Content-Disposition:
+            schema:
+              type: string
+              example: 'attachment; filename="AI_Ethics_Policy.docx"'
+          Content-Length:
+            schema:
+              type: integer
+      "400":
+        description: Invalid policy ID
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/api/policies/{id}/review/request:
+  post:
+    tags:
+      - Policies
+    summary: Request review for a policy
+    description: >
+      Sets the policy review status to `pending_review` and sends in-app
+      notifications to each specified reviewer.
+    operationId: requestPolicyReview
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PolicyId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - reviewer_ids
+            properties:
+              reviewer_ids:
+                type: array
+                items:
+                  type: integer
+                description: List of user IDs to request review from
+                example: [2, 5, 8]
+              message:
+                type: string
+                description: Optional message to include in the review request notification
+                example: "Please review the updated data governance section."
+    responses:
+      "200":
+        description: Review requested successfully; returns the updated policy
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  $ref: "#/components/schemas/PolicyWithReviewers"
+      "400":
+        description: Invalid policy ID or missing reviewer_ids
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/api/policies/{id}/review/approve:
+  put:
+    tags:
+      - Policies
+    summary: Approve a policy review
+    description: >
+      Sets the policy review status to `approved` and sends an in-app
+      notification to the policy author.
+    operationId: approvePolicyReview
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PolicyId"
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              comment:
+                type: string
+                description: Optional approval comment
+                example: "Looks good, approved."
+    responses:
+      "200":
+        description: Policy review approved; returns the updated policy
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  $ref: "#/components/schemas/PolicyWithReviewers"
+      "400":
+        description: Invalid policy ID
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+/api/policies/{id}/review/reject:
+  put:
+    tags:
+      - Policies
+    summary: Reject a policy review (request changes)
+    description: >
+      Sets the policy review status to `changes_requested` and sends an in-app
+      notification to the policy author. A comment is required.
+    operationId: rejectPolicyReview
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "#/components/parameters/PolicyId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - comment
+            properties:
+              comment:
+                type: string
+                description: Reason for requesting changes (required)
+                example: "Section 3 needs more detail on bias mitigation procedures."
+    responses:
+      "200":
+        description: Policy review rejected; returns the updated policy
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  $ref: "#/components/schemas/PolicyWithReviewers"
+      "400":
+        description: Invalid policy ID or missing comment
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorResponse"
+      "404":
+        $ref: "#/components/responses/NotFound"
+      "500":
+        $ref: "#/components/responses/InternalServerError"
+
+# ---------------------------------------------------------------------------
+# Components — paste into the `components:` section of swagger.yaml
+# ---------------------------------------------------------------------------
+
+components:
+  parameters:
+    PolicyId:
+      name: id
+      in: path
+      required: true
+      description: Numeric ID of the policy
+      schema:
+        type: integer
+        example: 42
+
+  schemas:
+    PolicyWithReviewers:
+      type: object
+      description: A policy record with computed assigned reviewer IDs
+      properties:
+        id:
+          type: integer
+          description: Auto-generated primary key
+          example: 42
+        organization_id:
+          type: integer
+          description: Tenant organization ID
+          example: 1
+        title:
+          type: string
+          description: Policy title
+          example: "AI Ethics Policy"
+        content_html:
+          type: string
+          description: Full policy content as HTML
+          example: "<h1>AI Ethics Policy</h1><p>...</p>"
+        status:
+          type: string
+          description: Policy lifecycle status
+          example: "draft"
+        tags:
+          type: array
+          items:
+            type: string
+            enum:
+              - AI ethics
+              - Fairness
+              - Transparency
+              - Explainability
+              - Bias mitigation
+              - Privacy
+              - Data governance
+              - Model risk
+              - Accountability
+              - Security
+              - LLM
+              - Human oversight
+              - EU AI Act
+              - ISO 42001
+              - NIST RMF
+              - Red teaming
+              - Audit
+              - Monitoring
+              - Vendor management
+          description: Categorization tags
+        next_review_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Scheduled next review date
+        author_id:
+          type: integer
+          description: User ID of the policy creator
+          example: 1
+        last_updated_by:
+          type: integer
+          description: User ID of the last editor
+          example: 1
+        last_updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of last update
+        review_status:
+          type: string
+          nullable: true
+          enum:
+            - pending_review
+            - approved
+            - changes_requested
+            - null
+          description: Current review workflow status
+        review_comment:
+          type: string
+          nullable: true
+          description: Most recent review comment
+        reviewed_by:
+          type: integer
+          nullable: true
+          description: User ID of the last reviewer
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of last review action
+        is_demo:
+          type: boolean
+          description: Whether this is a demo/seed policy
+          default: false
+        created_at:
+          type: string
+          format: date-time
+          description: Row creation timestamp (set by database)
+        assigned_reviewer_ids:
+          type: array
+          items:
+            type: integer
+          description: User IDs of assigned reviewers (aggregated from mapping table)
+          example: [2, 5]
+
+    PolicyCreateRequest:
+      type: object
+      required:
+        - title
+        - content_html
+        - status
+      properties:
+        title:
+          type: string
+          description: Policy title
+          example: "Data Governance Policy"
+        content_html:
+          type: string
+          description: Full policy content as HTML
+          example: "<h1>Data Governance</h1><p>This policy outlines...</p>"
+        status:
+          type: string
+          description: Initial policy status
+          example: "draft"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Categorization tags (must be from the allowed tag list)
+          example: ["Data governance", "Privacy"]
+        next_review_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Scheduled next review date
+          example: "2026-07-01T00:00:00.000Z"
+        assigned_reviewer_ids:
+          type: array
+          items:
+            type: integer
+          description: User IDs to assign as reviewers
+          example: [2, 5]
+        is_demo:
+          type: boolean
+          description: Mark as a demo policy
+          default: false
+
+    PolicyUpdateRequest:
+      type: object
+      description: All fields are optional. Only provided fields are updated.
+      properties:
+        title:
+          type: string
+          description: Updated policy title
+        content_html:
+          type: string
+          description: Updated policy content as HTML
+        status:
+          type: string
+          description: Updated policy status
+        tags:
+          type: array
+          items:
+            type: string
+          description: Replacement tag list (must be from the allowed tag list)
+        next_review_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Updated next review date
+        assigned_reviewer_ids:
+          type: array
+          items:
+            type: integer
+          description: Replacement reviewer list (fully replaces existing reviewers)
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Bad Request"
+        data:
+          type: string
+          example: "reviewer_ids is required"
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Not Found"
+              data:
+                nullable: true
+                example: null
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Internal Server Error"
+              error:
+                type: string
+                example: "Unexpected error message"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token from /api/auth/login

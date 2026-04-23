@@ -10,7 +10,7 @@ export const quantitativeRiskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Qualitative labels like "high" or "low" tell you something about a risk, but they do not tell you what it could actually cost. Quantitative risk assessment fills that gap. It uses the FAIR methodology (Factor Analysis of Information Risk) to put a dollar figure on each risk in your register: how much you stand to lose per year and whether your controls justify their cost.',
+      text: 'Qualitative labels like "high" or "low" tell you something about a risk, but they don\'t tell you what it could actually cost. Quantitative risk assessment fills that gap. It uses the FAIR methodology (Factor Analysis of Information Risk) to put a dollar figure on each risk in your register: how much you stand to lose per year and whether your controls justify their cost.',
     },
     {
       type: 'paragraph',
@@ -19,7 +19,7 @@ export const quantitativeRiskAssessmentContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Enabling quantitative assessment does not replace qualitative scoring. Severity and likelihood ratings stay in place. You get both views on every risk.',
+      text: 'Enabling quantitative assessment doesn\'t replace qualitative scoring. Severity and likelihood ratings stay in place. You get both views on every risk.',
     },
     {
       type: 'heading',
@@ -43,7 +43,7 @@ export const quantitativeRiskAssessmentContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'warning',
-      text: 'Only admins can change this setting. Other roles can see the toggle but cannot switch it.',
+      text: 'Only admins can change this setting. Other roles can see the toggle but can\'t switch it.',
     },
     {
       type: 'heading',
@@ -53,7 +53,7 @@ export const quantitativeRiskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'FAIR is a widely adopted framework for expressing risk in monetary terms. VerifyWise uses a simplified version built around four calculations:',
+      text: 'FAIR is a well-known framework for expressing risk in monetary terms. VerifyWise uses a simplified version built around four calculations:',
     },
     {
       type: 'bullet-list',
@@ -92,7 +92,7 @@ export const quantitativeRiskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You do not have to estimate from zero. Pick an industry benchmark from the dropdown and VerifyWise fills in all fifteen frequency and loss fields for you. There are 19 benchmarks across six industries, drawn from published regulatory penalty data and incident reports.',
+      text: 'You don\'t have to estimate from zero. Pick an industry benchmark from the dropdown and VerifyWise fills in all fifteen frequency and loss fields for you. There are 19 benchmarks across six industries, drawn from published regulatory penalty data and incident reports.',
     },
     {
       type: 'bullet-list',
@@ -108,7 +108,7 @@ export const quantitativeRiskAssessmentContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Benchmarks give you a calibrated starting point, not a finished assessment. Adjust the numbers after applying one to reflect your organization, risk appetite, and scale.',
+      text: 'Benchmarks give you a calibrated starting point, not a finished assessment. Adjust the numbers after applying one to reflect your organization, risk appetite and scale.',
     },
     {
       type: 'heading',
@@ -199,7 +199,7 @@ export const quantitativeRiskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Putting numbers to risk is not just good practice. Several frameworks require or strongly encourage it:',
+      text: 'Putting numbers to risk isn\'t just good practice. Several frameworks require or strongly encourage it:',
     },
     {
       type: 'bullet-list',
@@ -220,10 +220,10 @@ export const quantitativeRiskAssessmentContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Start from a benchmark, then adjust. The pre-loaded numbers come from published penalty data and real incidents, so they are a solid baseline. Tailor them to your size and context.' },
-        { text: 'Do not pretend you know more than you do. Wide min-max ranges are honest; artificially narrow ranges create a false sense of precision.' },
+        { text: 'Don\'t pretend you know more than you do. Wide min-max ranges are honest; artificially narrow ranges create a false sense of precision.' },
         { text: 'Revisit every quarter. Regulations shift, models get updated, and new threat patterns emerge. Stale numbers are worse than no numbers.' },
         { text: 'Use ALE to prioritize. When two risks compete for budget, the one with a higher ALE usually deserves attention first.' },
-        { text: 'Watch the trend chart. If your total ALE keeps climbing despite mitigation spending, something is not working.' },
+        { text: 'Watch the trend chart. If your total ALE keeps climbing despite mitigation spending, something isn\'t working.' },
       ],
     },
   ],

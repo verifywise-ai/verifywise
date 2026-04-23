@@ -36,7 +36,7 @@ export const guardrailsContent: ArticleContent = {
         { entity: 'Person name', example: 'John Smith', coverage: 'English names (NLP-based)' },
         { entity: 'IBAN', example: 'DE89370400440532013000', coverage: 'All countries' },
         { entity: 'Turkish TCKN', example: '12345678901', coverage: '11-digit national ID' },
-        { entity: 'EU phone', example: '+33 1 42 68 53 00', coverage: 'FR, DE, UK, TR, and more' },
+        { entity: 'EU phone', example: '+33 1 42 68 53 00', coverage: 'FR, DE, UK, TR and more' },
         { entity: 'US SSN', example: '123-45-6789', coverage: 'Standard format' },
         { entity: 'IP address', example: '192.168.1.1', coverage: 'IPv4' },
         { entity: 'Location', example: 'Berlin, Germany', coverage: 'Cities, countries (NLP-based)' },
@@ -179,7 +179,7 @@ export const guardrailsContent: ArticleContent = {
       items: [
         { bold: 'EU AI Act Art. 9', text: 'Guardrails are risk mitigation measures that identify and control risks per request.' },
         { bold: 'EU AI Act Art. 10', text: 'PII scanning blocks personal data before it reaches the model (data minimization).' },
-        { bold: 'EU AI Act Art. 12', text: 'Every detection is logged with timestamp, entity type, action, and matched text.' },
+        { bold: 'EU AI Act Art. 12', text: 'Every detection is logged with timestamp, entity type, action and matched text.' },
         { bold: 'ISO 42001 A.2', text: 'Guardrail rules are AI policies that are enforced, not just documented.' },
       ],
     },
@@ -191,7 +191,7 @@ export const guardrailsContent: ArticleContent = {
           collectionId: 'ai-gateway',
           articleId: 'settings',
           title: 'Settings',
-          description: 'Configure error behavior, replacement text, and log retention for guardrails.',
+          description: 'Configure error behavior, replacement text and log retention for guardrails.',
         },
         {
           collectionId: 'ai-gateway',

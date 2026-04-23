@@ -10,11 +10,11 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Vendor management is the practice of tracking, evaluating, and overseeing your relationships with third-party providers. For AI governance, this means maintaining visibility into who supplies your AI capabilities, what data they access, and how their services affect your compliance obligations.',
+      text: 'Vendor management is about tracking, evaluating and overseeing your relationships with third-party providers. For AI governance, that means knowing who supplies your AI capabilities, what data they can access and how their services affect your compliance obligations.',
     },
     {
       type: 'paragraph',
-      text: 'Modern AI systems often rely on external providers for models, training data, compute infrastructure, or complete AI services. Each of these relationships introduces dependencies that need to be understood and managed. Without proper vendor management, you may not know which vendors have access to sensitive data, which use cases depend on which services, or how a vendor change could impact your operations.',
+      text: 'Most AI systems rely on external providers for models, training data, compute or complete AI services. Each relationship creates dependencies you need to understand. Without proper vendor management, you might not know which vendors access sensitive data, which use cases depend on which services or how a vendor change could disrupt your operations.',
     },
     {
       type: 'heading',
@@ -24,7 +24,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Effective vendor management helps you:',
+      text: 'Good vendor management helps you:',
     },
     {
       type: 'bullet-list',
@@ -39,7 +39,7 @@ export const vendorManagementContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Under the EU AI Act, organizations using third-party AI systems remain responsible for compliance. Proper vendor management is essential to demonstrate due diligence.',
+      text: 'Under the EU AI Act, organizations using third-party AI systems are still responsible for compliance. Proper vendor management helps you demonstrate due diligence.',
     },
     {
       type: 'heading',
@@ -49,7 +49,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Access the Vendor Registry from the sidebar to view and manage all your AI vendors. The registry displays:',
+      text: 'Open the vendor registry from the sidebar to view and manage all your AI vendors. The registry shows:',
     },
     {
       type: 'checklist',
@@ -64,7 +64,7 @@ export const vendorManagementContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/vendor-list.png',
       alt: 'Vendor list page showing a table with vendor names, assignees, status, risk scores, scorecards, and review dates',
-      caption: 'The vendor registry displays all registered AI vendors with their risk scores and review status.',
+      caption: 'The vendor registry lists all registered AI vendors with their risk scores and review status.',
     },
     {
       type: 'heading',
@@ -74,7 +74,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To register a new vendor, click "Add vendor" and provide the following information:',
+      text: 'To register a new vendor, click "Add vendor" and fill in:',
     },
     {
       type: 'ordered-list',
@@ -100,7 +100,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise includes a built-in review workflow for vendor assessments:',
+      text: 'VerifyWise has a built-in review workflow for vendor assessments:',
     },
     {
       type: 'icon-cards',
@@ -147,7 +147,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise uses a scorecard approach to assess vendor risk. Each vendor is evaluated across multiple dimensions:',
+      text: 'VerifyWise uses a scorecard to assess vendor risk. Each vendor gets evaluated across several dimensions:',
     },
     {
       type: 'heading',
@@ -220,12 +220,12 @@ export const vendorManagementContent: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'GDPR — General Data Protection Regulation',
-        'HIPAA — Health Insurance Portability and Accountability Act',
-        'SOC 2 — Service Organization Control 2',
-        'ISO 27001 — Information Security Management',
-        'EU AI Act — European AI Regulation',
-        'CCPA — California Consumer Privacy Act',
+        'GDPR, General Data Protection Regulation',
+        'HIPAA, Health Insurance Portability and Accountability Act',
+        'SOC 2, Service Organization Control 2',
+        'ISO 27001, Information Security Management',
+        'EU AI Act, European AI Regulation',
+        'CCPA, California Consumer Privacy Act',
       ],
     },
     {
@@ -236,13 +236,13 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Based on the scorecard inputs, VerifyWise calculates an overall risk score for each vendor. Higher scores indicate greater risk requiring more attention and oversight.',
+      text: 'Based on the scorecard inputs, VerifyWise calculates an overall risk score for each vendor. Higher scores mean greater risk and more oversight needed.',
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',
-      text: 'Regularly update scorecard values as your vendor relationship evolves. Changes in data sharing, criticality, or regulatory requirements should trigger a scorecard review.',
+      text: 'Keep scorecard values up to date as your vendor relationship evolves. Changes in data sharing, criticality or regulatory requirements should trigger a scorecard review.',
     },
     {
       type: 'heading',
@@ -252,7 +252,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Associate vendors with the projects that use their services. This creates visibility into:',
+      text: 'Associate vendors with the projects that use their services. This lets you see:',
     },
     {
       type: 'bullet-list',

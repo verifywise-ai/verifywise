@@ -212,7 +212,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
                 subControls.forEach((sub: any) => {
                   const subId = sub.id || sub.dataValues?.id;
                   const subNo = sub.order_no || sub.dataValues?.order_no || "";
-                  const subTitle = sub.title || sub.dataValues?.title || "Subcontrol";
+                  const subTitle = sub.title || sub.dataValues?.title || "Control";
                   // Format: "1.1.a - Subcontrol Title"
                   const subDisplayName = categoryNo && controlNo && subNo
                     ? `${categoryNo}.${controlNo}.${subNo} - ${subTitle}`
@@ -273,12 +273,13 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
               const subClauses = clauseData.subClauses || [];
               subClauses.forEach((sub: any) => {
                 const subData = sub.dataValues || sub;
-                // Format: "Clause 4.1 - Understanding the organization..."
-                // Fields: clauseData.clause_no, subData.order_no
+                // Format: "Clause 6.1.1 - General — actions to address..."
+                // Prefer canonical subclause_id when present (handles 3-level ids like 6.1.1)
+                const displayId = subData.subclause_id ?? `${clauseData.clause_no}.${subData.order_no}`;
                 subEntityList.push({
                   _id: `iso42001_subclause_${subData.id}`,
                   entity_id: subData.id,
-                  name: `Clause ${clauseData.clause_no}.${subData.order_no} - ${subData.title}`,
+                  name: `Clause ${displayId} - ${subData.title}`,
                   type: "iso42001_subclause",
                 });
               });
@@ -603,9 +604,9 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
       iso27001_subclause: "ISO 27001 Clause",
       iso27001_annexcontrol: "ISO 27001 Annex",
       iso27001_assessment: "ISO 27001 Assessment",
-      eu_control: "EU AI Act Control",
-      eu_subcontrol: "EU AI Act Subcontrol",
-      eu_assessment: "EU AI Act Assessment",
+      eu_control: "EU AI Act Requirement",
+      eu_subcontrol: "EU AI Act Sub-requirement",
+      eu_assessment: "EU AI Act Control",
     };
     return displayNames[type] || type;
   };

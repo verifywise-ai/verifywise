@@ -269,6 +269,32 @@ export const ISO27001Clause = [
       {
         arrangement: 6,
         index: 1,
+        sub_index: 1,
+        title: "General — actions to address risks and opportunities",
+        requirement_summary:
+          "When planning for the ISMS, consider the issues from 4.1 and requirements from 4.2 to determine risks and opportunities that need to be addressed so the ISMS achieves its intended outcomes, prevents or reduces undesired effects, and supports continual improvement.",
+        key_questions: [
+          "Have we identified risks and opportunities based on context (4.1) and interested party requirements (4.2)?",
+          "Do planned actions integrate into ISMS processes?",
+          "How do we evaluate the effectiveness of these actions?",
+        ],
+        evidence_examples: [
+          "Risk and opportunity register linked to context analysis",
+          "Planning integration records",
+          "Effectiveness evaluation records",
+        ],
+        implementation_description:
+          "Maintain a risk and opportunity register derived from context analysis (4.1) and stakeholder requirements (4.2). Plan actions, integrate them into ISMS processes, and evaluate their effectiveness. This general planning step precedes the specific risk assessment (6.1.2) and risk treatment (6.1.3).",
+        status: "Not Started",
+        owner: "",
+        reviewer: "",
+        approver: "",
+        due_date: "",
+        cross_mappings: [],
+      },
+      {
+        arrangement: 6,
+        index: 1,
         sub_index: 2,
         title: "Information security risk assessment",
         requirement_summary:
@@ -362,11 +388,37 @@ export const ISO27001Clause = [
             framework: "ISO 42001",
             clause_no: 8,
             order_no: 4,
-            clause_title: "AI System Lifecycle",
+            clause_title: "AI system lifecycle",
             relevance: "High",
           },
         ],
-      }
+      },
+      {
+        arrangement: 6,
+        index: 3,
+        title: "Planning of changes",
+        requirement_summary:
+          "When the organization determines the need for changes to the ISMS, the changes shall be carried out in a planned manner.",
+        key_questions: [
+          "Is there a defined process for planning ISMS changes?",
+          "Are changes assessed for impact on risk assessments and the Statement of Applicability before implementation?",
+          "Are responsibilities, timelines, and resources documented?",
+        ],
+        evidence_examples: [
+          "ISMS change management procedure",
+          "Change request and impact assessment records",
+          "Approval records",
+          "Post-change review records",
+        ],
+        implementation_description:
+          "Manage ISMS changes through a formal change control process. Assess impact on existing risk assessments, controls, and the Statement of Applicability before approval. This clause is new in ISO 27001:2022.",
+        status: "Not Started",
+        owner: "",
+        reviewer: "",
+        approver: "",
+        due_date: "",
+        cross_mappings: [],
+      },
     ]
   },
   {

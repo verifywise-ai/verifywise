@@ -4,6 +4,7 @@ import { ApprovalRequestModel } from "../domain.layer/models/approvalWorkflow/ap
 import { ApprovalRequestStepModel } from "../domain.layer/models/approvalWorkflow/approvalRequestStep.model";
 import { ApprovalWorkflowStepModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflowStep.model";
 import { ApprovalRequestStatus, ApprovalStepStatus, ApprovalResult } from "../domain.layer/enums/approval-workflow.enum";
+import { executeAiAction } from "../advisor/aiActions";
 
 /**
  * Notification info to be sent after transaction commits
@@ -162,9 +163,10 @@ export const getMyApprovalRequestsQuery = async (
     `SELECT * FROM approval_requests
      WHERE organization_id = :organizationId
        AND requested_by = :userId
+       AND status = :status
      ORDER BY created_at DESC`,
     {
-      replacements: { organizationId, userId },
+      replacements: { organizationId, userId, status: ApprovalRequestStatus.PENDING },
       mapToModel: true,
       model: ApprovalRequestModel,
       ...(transaction && { transaction }),
@@ -627,6 +629,15 @@ export const processApprovalQuery = async (
             transaction,
           }
         );
+      }
+
+      // ===== AI ACTION EXECUTION AFTER APPROVAL =====
+      // For ai_action approval requests, run the proposed write operation
+      // (e.g. agent_create_risk) inside this same transaction. If the
+      // executor throws, the transaction rolls back and the approval state
+      // change is reverted — the approver will see an error.
+      if (entityType === "ai_action") {
+        await executeAiAction(requestId, organizationId, transaction);
       }
 
       // Return notification info after all processing is done

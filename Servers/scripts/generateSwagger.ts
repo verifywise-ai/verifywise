@@ -137,14 +137,18 @@ function parseRouteFile(filePath: string): {
     let handlerName = "unknown";
 
     // Known middleware patterns to skip
+    // Use word-boundary-aware matching for patterns that could be substrings of handler names
     const middlewarePatterns = [
       "authenticateJWT", "authorize", "superAdminOnly",
-      "multer", "upload", "express", "json", "raw", "proxy",
+      "multer", "upload.", "express", "jsonParser", "rawParser", "proxy",
       "validateId", "validateVisibility", "validate", "limiter",
-      "checkCache", "cacheResponse", "jsonParser",
+      "checkCache", "cacheResponse",
     ];
 
-    for (const arg of args) {
+    // The last non-middleware argument is typically the handler.
+    // Process in reverse to find the handler first, then collect middlewares.
+    for (let i = args.length - 1; i >= 0; i--) {
+      const arg = args[i];
       const isMiddleware = middlewarePatterns.some((mw) => arg.includes(mw));
 
       if (isMiddleware) {
@@ -152,11 +156,16 @@ function parseRouteFile(filePath: string): {
         if (arg.includes("authorize")) middlewares.push(arg);
         if (arg.includes("superAdminOnly")) middlewares.push("superAdminOnly");
         if (arg.includes("upload")) middlewares.push("fileUpload");
-      } else if (/^[a-zA-Z_]\w*$/.test(arg)) {
-        // Simple identifier — this is the handler
-        handlerName = arg;
+      } else if (handlerName === "unknown") {
+        // Try to identify the handler
+        if (/^[a-zA-Z_]\w*$/.test(arg)) {
+          // Simple identifier — this is the handler
+          handlerName = arg;
+        } else if (arg.includes("=>") || arg.includes("function")) {
+          // Inline/anonymous handler — try to derive name from route path
+          handlerName = "anonymous";
+        }
       }
-      // Skip anything with parens/brackets that isn't a known middleware
     }
 
     endpoints.push({ method, routePath, handlerName, middlewares });

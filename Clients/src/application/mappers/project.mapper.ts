@@ -46,27 +46,14 @@ export function mapRiskClassification(
  */
 export function mapHighRiskRole(value: number | string): HighRiskRole {
   if (typeof value === "number") {
-    // Map numeric values to enum (assuming 0-5 mapping)
-    const numericMapping: Record<number, HighRiskRole> = {
-      0: HighRiskRole.DEPLOYER,
-      1: HighRiskRole.PROVIDER,
-      2: HighRiskRole.DISTRIBUTOR,
-      3: HighRiskRole.IMPORTER,
-      4: HighRiskRole.PRODUCT_MANUFACTURER,
-      5: HighRiskRole.AUTHORIZED_REPRESENTATIVE,
-    };
-    return numericMapping[value] || HighRiskRole.DEPLOYER;
+    return value === 1 ? HighRiskRole.PROVIDER : HighRiskRole.DEPLOYER;
   }
-  // Map string values to enum
-  const mapping: Record<string, HighRiskRole> = {
-    "deployer": HighRiskRole.DEPLOYER,
-    "provider": HighRiskRole.PROVIDER,
-    "distributor": HighRiskRole.DISTRIBUTOR,
-    "importer": HighRiskRole.IMPORTER,
-    "product manufacturer": HighRiskRole.PRODUCT_MANUFACTURER,
-    "authorized representative": HighRiskRole.AUTHORIZED_REPRESENTATIVE,
-  };
-  return mapping[value.toLowerCase()] || HighRiskRole.DEPLOYER;
+  // Legacy values (Distributor, Importer, Product manufacturer,
+  // Authorized representative) collapse onto Provider; not_applicable onto
+  // Deployer — matches the DB migration's remap.
+  const v = value.toLowerCase();
+  if (v === "deployer" || v === "not_applicable") return HighRiskRole.DEPLOYER;
+  return HighRiskRole.PROVIDER;
 }
 
 /**

@@ -70,46 +70,68 @@ import {
 } from 'lucide-react';
 import EndpointCard from './components/EndpointCard';
 import {
-  authenticationEndpoints,
-  userEndpoints,
-  organizationEndpoints,
-  projectEndpoints,
-  projectRiskEndpoints,
-  vendorEndpoints,
-  vendorRiskEndpoints,
+  agentDiscoveryEndpoints,
+  aiAdvisorEndpoints,
+  aiDetectionEndpoints,
+  aiIncidentEndpoints,
+  aiTrustCentreEndpoints,
+  approvalWorkflowEndpoints,
   assessmentEndpoints,
-  policyEndpoints,
-  modelInventoryEndpoints,
-  modelRiskEndpoints,
+  auditEndpoints,
+  authenticationEndpoints,
+  automationEndpoints,
+  ceMarkingEndpoints,
+  changeHistoryEndpoints,
+  complianceEndpoints,
+  dashboardEndpoints,
+  datasetEndpoints,
+  demoDataEndpoints,
+  emailEndpoints,
+  entityGraphEndpoints,
   euAiActEndpoints,
+  evidenceHubEndpoints,
+  fileEndpoints,
+  frameworkEndpoints,
+  friaEndpoints,
+  intakeFormEndpoints,
+  integrationEndpoints,
+  internalEndpoints,
+  invitationEndpoints,
   iso27001Endpoints,
   iso42001Endpoints,
-  biasAndFairnessEndpoints,
-  trainingEndpoints,
-  roleEndpoints,
-  controlEndpoints,
-  controlCategoryEndpoints,
-  frameworkEndpoints,
-  aiTrustCentreEndpoints,
-  fileEndpoints,
-  emailEndpoints,
-  dashboardEndpoints,
-  searchEndpoints,
-  loggerEndpoints,
-  taskEndpoints,
-  tokenEndpoints,
-  userPreferenceEndpoints,
-  evidenceHubEndpoints,
-  aiIncidentEndpoints,
-  ceMarkingEndpoints,
-  automationEndpoints,
+  llmKeyEndpoints,
+  modelInventoryEndpoints,
+  modelRiskEndpoints,
   nistAiRmfEndpoints,
-  integrationEndpoints,
-  shareLinkEndpoints,
+  noteEndpoints,
+  notificationEndpoints,
+  organizationEndpoints,
+  pluginEndpoints,
+  policyEndpoints,
+  postMarketMonitoringEndpoints,
+  projectEndpoints,
+  projectRiskEndpoints,
+  quantitativeRiskEndpoints,
   reportingEndpoints,
+  riskBenchmarkEndpoints,
+  riskHistoryEndpoints,
+  roleEndpoints,
+  searchEndpoints,
+  settingEndpoints,
+  shadowAiEndpoints,
+  shareLinkEndpoints,
   slackWebhookEndpoints,
   subscriptionEndpoints,
-  tierEndpoints,
+  superAdminEndpoints,
+  systemEndpoints,
+  taskEndpoints,
+  tokenEndpoints,
+  trainingEndpoints,
+  userEndpoints,
+  userPreferenceEndpoints,
+  vendorEndpoints,
+  vendorRiskEndpoints,
+  webhookEndpoints,
   Endpoint,
 } from './config/endpoints';
 
@@ -179,51 +201,73 @@ const App: React.FC = () => {
     { id: 'organizations', label: 'Organizations', icon: <Building2 size={14} />, category: 'core-resources', keywords: ['org', 'organization', 'tenant'] },
     { id: 'projects', label: 'Projects', icon: <FolderKanban size={14} />, category: 'core-resources', keywords: ['project', 'compliance'] },
     { id: 'roles', label: 'Roles', icon: <UserCog size={14} />, category: 'core-resources', keywords: ['role', 'permission', 'access'] },
+    { id: 'invitations', label: 'Invitations', icon: <Mail size={14} />, category: 'core-resources', keywords: ['invite', 'invitation', 'onboard'] },
+    { id: 'super-admin', label: 'Super admin', icon: <Shield size={14} />, category: 'core-resources', keywords: ['super', 'admin', 'system'] },
 
     // Risk Management
     { id: 'project-risks', label: 'Project risks', icon: <AlertTriangle size={14} />, category: 'risk-management', keywords: ['risk', 'threat', 'vulnerability', 'project'] },
     { id: 'vendors', label: 'Vendors', icon: <Package size={14} />, category: 'risk-management', keywords: ['vendor', 'supplier', 'third-party'] },
     { id: 'vendor-risks', label: 'Vendor risks', icon: <AlertTriangle size={14} />, category: 'risk-management', keywords: ['vendor', 'risk', 'supplier'] },
+    { id: 'quantitative-risks', label: 'Quantitative risks', icon: <Gauge size={14} />, category: 'risk-management', keywords: ['quantitative', 'risk', 'benchmark'] },
+    { id: 'risk-benchmarks', label: 'Risk benchmarks', icon: <BarChart3 size={14} />, category: 'risk-management', keywords: ['benchmark', 'risk', 'compare'] },
+    { id: 'risk-history', label: 'Risk history', icon: <ScrollText size={14} />, category: 'risk-management', keywords: ['risk', 'history', 'timeline'] },
 
     // AI Governance
     { id: 'model-inventory', label: 'Model inventory', icon: <Brain size={14} />, category: 'ai-governance', keywords: ['model', 'inventory', 'ai', 'llm'] },
     { id: 'model-risks', label: 'Model risks', icon: <Gauge size={14} />, category: 'ai-governance', keywords: ['model', 'risk', 'ai'] },
-    { id: 'bias-fairness', label: 'Bias & fairness', icon: <Scale size={14} />, category: 'ai-governance', keywords: ['bias', 'fairness', 'metrics'] },
+    { id: 'datasets', label: 'Datasets', icon: <Database size={14} />, category: 'ai-governance', keywords: ['dataset', 'data', 'training'] },
     { id: 'training', label: 'Training', icon: <GraduationCap size={14} />, category: 'ai-governance', keywords: ['training', 'education', 'learning'] },
     { id: 'ai-trust-centre', label: 'AI Trust Centre', icon: <Globe size={14} />, category: 'ai-governance', keywords: ['trust', 'centre', 'center', 'ai'] },
+    { id: 'ai-detection', label: 'AI detection', icon: <Search size={14} />, category: 'ai-governance', keywords: ['detection', 'scan', 'ai', 'repository'] },
+    { id: 'ai-advisor', label: 'AI advisor', icon: <Sparkles size={14} />, category: 'ai-governance', keywords: ['advisor', 'ai', 'chat', 'guidance'] },
+    { id: 'agent-discovery', label: 'Agent discovery', icon: <Brain size={14} />, category: 'ai-governance', keywords: ['agent', 'primitive', 'discovery'] },
+    { id: 'shadow-ai', label: 'Shadow AI', icon: <AlertTriangle size={14} />, category: 'ai-governance', keywords: ['shadow', 'ai', 'unauthorized'] },
 
     // Compliance Frameworks
     { id: 'assessments', label: 'Assessments', icon: <ClipboardCheck size={14} />, category: 'compliance', keywords: ['assessment', 'evaluate'] },
     { id: 'policies', label: 'Policies', icon: <FileCheck size={14} />, category: 'compliance', keywords: ['policy', 'governance'] },
-    { id: 'controls', label: 'Controls', icon: <Settings size={14} />, category: 'compliance', keywords: ['control', 'safeguard'] },
-    { id: 'control-categories', label: 'Control categories', icon: <Boxes size={14} />, category: 'compliance', keywords: ['category', 'control'] },
     { id: 'frameworks', label: 'Frameworks', icon: <Layers size={14} />, category: 'compliance', keywords: ['framework', 'standard'] },
     { id: 'eu-ai-act', label: 'EU AI Act', icon: <Shield size={14} />, category: 'compliance', keywords: ['eu', 'ai act', 'regulation'] },
     { id: 'iso-27001', label: 'ISO 27001', icon: <Award size={14} />, category: 'compliance', keywords: ['iso', '27001', 'security'] },
     { id: 'iso-42001', label: 'ISO 42001', icon: <Award size={14} />, category: 'compliance', keywords: ['iso', '42001', 'ai'] },
+    { id: 'nist-ai-rmf', label: 'NIST AI RMF', icon: <Award size={14} />, category: 'compliance', keywords: ['nist', 'rmf', 'framework'] },
+    { id: 'fria', label: 'FRIA', icon: <Scale size={14} />, category: 'compliance', keywords: ['fria', 'fundamental', 'rights', 'impact'] },
+    { id: 'compliance-score', label: 'Compliance score', icon: <Gauge size={14} />, category: 'compliance', keywords: ['compliance', 'score', 'progress'] },
+    { id: 'approval-workflows', label: 'Approval workflows', icon: <ClipboardCheck size={14} />, category: 'compliance', keywords: ['approval', 'workflow', 'review'] },
 
     // Utilities
     { id: 'files', label: 'Files', icon: <Upload size={14} />, category: 'utilities', keywords: ['file', 'upload', 'document'] },
     { id: 'email', label: 'Email services', icon: <Mail size={14} />, category: 'utilities', keywords: ['email', 'mail', 'invite'] },
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={14} />, category: 'utilities', keywords: ['dashboard', 'stats', 'metrics'] },
     { id: 'search', label: 'Search', icon: <Search size={14} />, category: 'utilities', keywords: ['search', 'find', 'query'] },
-    { id: 'logger', label: 'Logger', icon: <ScrollText size={14} />, category: 'utilities', keywords: ['log', 'audit', 'history'] },
+    { id: 'system', label: 'System & logs', icon: <ScrollText size={14} />, category: 'utilities', keywords: ['log', 'audit', 'history', 'system', 'version', 'health'] },
     { id: 'tasks', label: 'Tasks', icon: <ListTodo size={14} />, category: 'utilities', keywords: ['task', 'todo', 'item'] },
     { id: 'tokens', label: 'Tokens', icon: <KeyRound size={14} />, category: 'utilities', keywords: ['token', 'api key', 'access'] },
     { id: 'user-preferences', label: 'User preferences', icon: <SlidersHorizontal size={14} />, category: 'utilities', keywords: ['preference', 'settings', 'config'] },
+    { id: 'notes', label: 'Notes', icon: <FileText size={14} />, category: 'utilities', keywords: ['note', 'comment', 'annotation'] },
+    { id: 'notifications', label: 'Notifications', icon: <Bell size={14} />, category: 'utilities', keywords: ['notification', 'alert', 'bell'] },
     { id: 'share-links', label: 'Share links', icon: <Link size={14} />, category: 'utilities', keywords: ['share', 'link', 'public'] },
     { id: 'reporting', label: 'Reporting', icon: <BarChart3 size={14} />, category: 'utilities', keywords: ['report', 'analytics', 'export'] },
     { id: 'slack-webhooks', label: 'Slack webhooks', icon: <MessageSquare size={14} />, category: 'utilities', keywords: ['slack', 'webhook', 'notification'] },
+    { id: 'settings', label: 'Settings', icon: <Settings size={14} />, category: 'utilities', keywords: ['settings', 'configuration', 'config'] },
     { id: 'subscription', label: 'Subscription', icon: <CreditCard size={14} />, category: 'utilities', keywords: ['subscription', 'billing', 'plan'] },
-    { id: 'tiers', label: 'Tiers', icon: <Sparkles size={14} />, category: 'utilities', keywords: ['tier', 'plan', 'pricing'] },
 
     // Advanced
     { id: 'evidence-hub', label: 'Evidence hub', icon: <Database size={14} />, category: 'advanced', keywords: ['evidence', 'document', 'proof'] },
     { id: 'ai-incidents', label: 'AI incidents', icon: <Siren size={14} />, category: 'advanced', keywords: ['incident', 'ai', 'issue'] },
     { id: 'ce-marking', label: 'CE marking', icon: <Stamp size={14} />, category: 'advanced', keywords: ['ce', 'marking', 'certification'] },
     { id: 'automation', label: 'Automation', icon: <Zap size={14} />, category: 'advanced', keywords: ['automation', 'rule', 'workflow'] },
-    { id: 'nist-ai-rmf', label: 'NIST AI RMF', icon: <Award size={14} />, category: 'advanced', keywords: ['nist', 'rmf', 'framework'] },
     { id: 'integrations', label: 'Integrations', icon: <Globe size={14} />, category: 'advanced', keywords: ['integration', 'connect', 'api'] },
+    { id: 'intake-forms', label: 'Intake forms', icon: <ClipboardCheck size={14} />, category: 'advanced', keywords: ['intake', 'form', 'submission'] },
+    { id: 'entity-graph', label: 'Entity graph', icon: <Layers size={14} />, category: 'advanced', keywords: ['entity', 'graph', 'relationship'] },
+    { id: 'post-market-monitoring', label: 'Post-market monitoring', icon: <Gauge size={14} />, category: 'advanced', keywords: ['post-market', 'monitoring', 'pmm'] },
+    { id: 'plugins', label: 'Plugins', icon: <Boxes size={14} />, category: 'advanced', keywords: ['plugin', 'marketplace', 'extension'] },
+    { id: 'change-history', label: 'Change history', icon: <ScrollText size={14} />, category: 'advanced', keywords: ['change', 'history', 'audit'] },
+    { id: 'audit-ledger', label: 'Audit ledger', icon: <FileCheck size={14} />, category: 'advanced', keywords: ['audit', 'ledger', 'verify'] },
+    { id: 'webhooks', label: 'Webhooks', icon: <Zap size={14} />, category: 'advanced', keywords: ['webhook', 'callback', 'event'] },
+    { id: 'demo-data', label: 'Demo data', icon: <Database size={14} />, category: 'advanced', keywords: ['demo', 'seed', 'sample', 'data'] },
+    { id: 'internal', label: 'Internal', icon: <Code2 size={14} />, category: 'advanced', keywords: ['internal', 'debug', 'system'] },
+    { id: 'llm-keys', label: 'LLM keys', icon: <KeyRound size={14} />, category: 'advanced', keywords: ['llm', 'key', 'api', 'provider'] },
   ];
 
   // Style Guide nav items - full list
@@ -463,7 +507,7 @@ const App: React.FC = () => {
             }}
           >
             <Typography sx={{ fontSize: 11, fontWeight: 500, color: '#15803d' }}>
-              v1.7.0
+              v2.0.0
             </Typography>
           </Box>
         </Box>
@@ -585,41 +629,63 @@ const App: React.FC = () => {
               {activeSection === 'organizations' && <EndpointSection title="Organizations" description="Endpoints for managing organizations (multi-tenancy support)." endpoints={organizationEndpoints} />}
               {activeSection === 'projects' && <EndpointSection title="Projects" description="Endpoints for managing compliance projects." endpoints={projectEndpoints} />}
               {activeSection === 'roles' && <EndpointSection title="Roles" description="Endpoints for managing user roles and permissions." endpoints={roleEndpoints} />}
+              {activeSection === 'invitations' && <EndpointSection title="Invitations" description="Endpoints for managing user invitations." endpoints={invitationEndpoints} />}
+              {activeSection === 'super-admin' && <EndpointSection title="Super admin" description="Endpoints for super admin operations across all organizations." endpoints={superAdminEndpoints} />}
               {activeSection === 'project-risks' && <EndpointSection title="Project risks" description="Endpoints for managing project-level risks." endpoints={projectRiskEndpoints} />}
               {activeSection === 'vendors' && <EndpointSection title="Vendors" description="Endpoints for managing third-party vendors and suppliers." endpoints={vendorEndpoints} />}
               {activeSection === 'vendor-risks' && <EndpointSection title="Vendor risks" description="Endpoints for managing vendor-related risks." endpoints={vendorRiskEndpoints} />}
+              {activeSection === 'quantitative-risks' && <EndpointSection title="Quantitative risks" description="Endpoints for quantitative risk assessment and portfolio analysis." endpoints={quantitativeRiskEndpoints} />}
+              {activeSection === 'risk-benchmarks' && <EndpointSection title="Risk benchmarks" description="Endpoints for risk benchmark data and comparisons." endpoints={riskBenchmarkEndpoints} />}
+              {activeSection === 'risk-history' && <EndpointSection title="Risk history" description="Endpoints for viewing risk change history and timelines." endpoints={riskHistoryEndpoints} />}
               {activeSection === 'model-inventory' && <EndpointSection title="Model inventory" description="Endpoints for managing AI/ML model inventory." endpoints={modelInventoryEndpoints} />}
               {activeSection === 'model-risks' && <EndpointSection title="Model risks" description="Endpoints for managing AI model risks." endpoints={modelRiskEndpoints} />}
-              {activeSection === 'bias-fairness' && <EndpointSection title="Bias & fairness" description="Endpoints for bias and fairness analysis of AI models." endpoints={biasAndFairnessEndpoints} />}
+              {activeSection === 'datasets' && <EndpointSection title="Datasets" description="Endpoints for managing datasets associated with AI models." endpoints={datasetEndpoints} />}
               {activeSection === 'training' && <EndpointSection title="Training" description="Endpoints for managing AI training records." endpoints={trainingEndpoints} />}
               {activeSection === 'ai-trust-centre' && <EndpointSection title="AI Trust Centre" description="Endpoints for managing the AI Trust Centre public-facing portal." endpoints={aiTrustCentreEndpoints} />}
+              {activeSection === 'ai-detection' && <EndpointSection title="AI detection" description="Endpoints for AI detection scanning, findings, and repository management." endpoints={aiDetectionEndpoints} />}
+              {activeSection === 'ai-advisor' && <EndpointSection title="AI advisor" description="Endpoints for the AI governance advisor and chat interface." endpoints={aiAdvisorEndpoints} />}
+              {activeSection === 'agent-discovery' && <EndpointSection title="Agent discovery" description="Endpoints for discovering and managing AI agent primitives." endpoints={agentDiscoveryEndpoints} />}
+              {activeSection === 'shadow-ai' && <EndpointSection title="Shadow AI" description="Endpoints for shadow AI detection, monitoring, and governance." endpoints={shadowAiEndpoints} />}
               {activeSection === 'assessments' && <EndpointSection title="Assessments" description="Endpoints for managing compliance assessments." endpoints={assessmentEndpoints} />}
               {activeSection === 'policies' && <EndpointSection title="Policies" description="Endpoints for managing organizational policies." endpoints={policyEndpoints} />}
-              {activeSection === 'controls' && <EndpointSection title="Controls" description="Endpoints for managing compliance controls." endpoints={controlEndpoints} />}
-              {activeSection === 'control-categories' && <EndpointSection title="Control categories" description="Endpoints for managing control categories." endpoints={controlCategoryEndpoints} />}
               {activeSection === 'frameworks' && <EndpointSection title="Frameworks" description="Endpoints for managing compliance frameworks." endpoints={frameworkEndpoints} />}
               {activeSection === 'eu-ai-act' && <EndpointSection title="EU AI Act" description="Endpoints for EU AI Act compliance management." endpoints={euAiActEndpoints} />}
               {activeSection === 'iso-27001' && <EndpointSection title="ISO 27001" description="Endpoints for ISO 27001 information security compliance." endpoints={iso27001Endpoints} />}
               {activeSection === 'iso-42001' && <EndpointSection title="ISO 42001" description="Endpoints for ISO 42001 AI management system compliance." endpoints={iso42001Endpoints} />}
+              {activeSection === 'nist-ai-rmf' && <EndpointSection title="NIST AI RMF" description="Endpoints for NIST AI Risk Management Framework compliance." endpoints={nistAiRmfEndpoints} />}
+              {activeSection === 'fria' && <EndpointSection title="FRIA" description="Endpoints for Fundamental Rights Impact Assessment management." endpoints={friaEndpoints} />}
+              {activeSection === 'compliance-score' && <EndpointSection title="Compliance score" description="Endpoints for organization compliance scoring and details." endpoints={complianceEndpoints} />}
+              {activeSection === 'approval-workflows' && <EndpointSection title="Approval workflows" description="Endpoints for managing approval workflows and requests." endpoints={approvalWorkflowEndpoints} />}
               {activeSection === 'files' && <EndpointSection title="Files" description="Endpoints for file upload and management." endpoints={fileEndpoints} />}
               {activeSection === 'email' && <EndpointSection title="Email services" description="Endpoints for email-related operations." endpoints={emailEndpoints} />}
               {activeSection === 'dashboard' && <EndpointSection title="Dashboard" description="Endpoints for retrieving dashboard metrics and statistics." endpoints={dashboardEndpoints} />}
               {activeSection === 'search' && <EndpointSection title="Search" description="Endpoints for global search functionality across the platform." endpoints={searchEndpoints} />}
-              {activeSection === 'logger' && <EndpointSection title="Logger" description="Endpoints for accessing audit logs and activity history." endpoints={loggerEndpoints} />}
+              {activeSection === 'system' && <EndpointSection title="System & logs" description="Endpoints for system health, version info, and activity logs." endpoints={systemEndpoints} />}
               {activeSection === 'tasks' && <EndpointSection title="Tasks" description="Endpoints for managing tasks and to-do items." endpoints={taskEndpoints} />}
               {activeSection === 'tokens' && <EndpointSection title="Tokens" description="Endpoints for API token management." endpoints={tokenEndpoints} />}
               {activeSection === 'user-preferences' && <EndpointSection title="User preferences" description="Endpoints for managing user preferences and settings." endpoints={userPreferenceEndpoints} />}
+              {activeSection === 'notes' && <EndpointSection title="Notes" description="Endpoints for creating and managing notes." endpoints={noteEndpoints} />}
+              {activeSection === 'notifications' && <EndpointSection title="Notifications" description="Endpoints for notification management and real-time streaming." endpoints={notificationEndpoints} />}
               {activeSection === 'share-links' && <EndpointSection title="Share links" description="Endpoints for creating and managing shareable links." endpoints={shareLinkEndpoints} />}
               {activeSection === 'reporting' && <EndpointSection title="Reporting" description="Endpoints for generating reports and analytics." endpoints={reportingEndpoints} />}
+              {activeSection === 'settings' && <EndpointSection title="Settings" description="Endpoints for managing application settings and configuration." endpoints={settingEndpoints} />}
               {activeSection === 'slack-webhooks' && <EndpointSection title="Slack webhooks" description="Endpoints for managing Slack webhook integrations." endpoints={slackWebhookEndpoints} />}
               {activeSection === 'subscription' && <EndpointSection title="Subscription" description="Endpoints for managing subscriptions and billing." endpoints={subscriptionEndpoints} />}
-              {activeSection === 'tiers' && <EndpointSection title="Tiers" description="Endpoints for managing subscription tiers and plans." endpoints={tierEndpoints} />}
               {activeSection === 'evidence-hub' && <EndpointSection title="Evidence hub" description="Endpoints for the evidence management hub and document repository." endpoints={evidenceHubEndpoints} />}
               {activeSection === 'ai-incidents' && <EndpointSection title="AI incidents" description="Endpoints for managing AI-related incidents and issues." endpoints={aiIncidentEndpoints} />}
               {activeSection === 'ce-marking' && <EndpointSection title="CE marking" description="Endpoints for CE marking compliance and certification." endpoints={ceMarkingEndpoints} />}
               {activeSection === 'automation' && <EndpointSection title="Automation" description="Endpoints for automation rules and workflow management." endpoints={automationEndpoints} />}
-              {activeSection === 'nist-ai-rmf' && <EndpointSection title="NIST AI RMF" description="Endpoints for NIST AI Risk Management Framework compliance." endpoints={nistAiRmfEndpoints} />}
               {activeSection === 'integrations' && <EndpointSection title="Integrations" description="Endpoints for managing third-party integrations." endpoints={integrationEndpoints} />}
+              {activeSection === 'intake-forms' && <EndpointSection title="Intake forms" description="Endpoints for intake form creation, public submissions, and review." endpoints={intakeFormEndpoints} />}
+              {activeSection === 'entity-graph' && <EndpointSection title="Entity graph" description="Endpoints for entity relationship graph, annotations, and gap rules." endpoints={entityGraphEndpoints} />}
+              {activeSection === 'post-market-monitoring' && <EndpointSection title="Post-market monitoring" description="Endpoints for post-market monitoring configuration and cycles." endpoints={postMarketMonitoringEndpoints} />}
+              {activeSection === 'plugins' && <EndpointSection title="Plugins" description="Endpoints for plugin marketplace and installation management." endpoints={pluginEndpoints} />}
+              {activeSection === 'change-history' && <EndpointSection title="Change history" description="Endpoints for tracking entity change history across all domains." endpoints={changeHistoryEndpoints} />}
+              {activeSection === 'audit-ledger' && <EndpointSection title="Audit ledger" description="Endpoints for the tamper-proof audit ledger." endpoints={auditEndpoints} />}
+              {activeSection === 'webhooks' && <EndpointSection title="Webhooks" description="Endpoints for managing webhook configurations and deliveries." endpoints={webhookEndpoints} />}
+              {activeSection === 'demo-data' && <EndpointSection title="Demo data" description="Endpoints for managing demo and seed data." endpoints={demoDataEndpoints} />}
+              {activeSection === 'internal' && <EndpointSection title="Internal" description="Internal system endpoints for debugging and diagnostics." endpoints={internalEndpoints} />}
+              {activeSection === 'llm-keys' && <EndpointSection title="LLM keys" description="Endpoints for managing LLM provider API keys." endpoints={llmKeyEndpoints} />}
               </>
               )}
               {activeTopTab === 'style-guide' && <StyleGuideWrapper section={activeSection} />}
@@ -766,12 +832,12 @@ const OverviewSection: React.FC = () => (
       </Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
         {[
-          { label: 'Core resources', count: 4, desc: 'Users, Organizations, Projects, Roles' },
-          { label: 'Risk management', count: 3, desc: 'Project risks, Vendors, Vendor risks' },
-          { label: 'AI governance', count: 5, desc: 'Model inventory, Model risks, Bias & fairness, Training, AI Trust Centre' },
-          { label: 'Compliance', count: 8, desc: 'Assessments, Policies, Controls, Frameworks, EU AI Act, ISO standards' },
-          { label: 'Utilities', count: 13, desc: 'Files, Email, Dashboard, Search, Logger, Tasks, Tokens, Preferences, Share links, Reporting, Slack, Subscriptions, Tiers' },
-          { label: 'Advanced', count: 6, desc: 'Evidence hub, AI incidents, CE marking, Automation, NIST AI RMF, Integrations' },
+          { label: 'Core resources', count: 6, desc: 'Users, Organizations, Projects, Roles, Invitations, Super admin' },
+          { label: 'Risk management', count: 5, desc: 'Project risks, Vendors, Vendor risks, Quantitative risks, Risk benchmarks' },
+          { label: 'AI governance', count: 9, desc: 'Model inventory, Model risks, Datasets, Training, AI Trust Centre, AI detection, AI advisor, Agent discovery, Shadow AI' },
+          { label: 'Compliance', count: 10, desc: 'Assessments, Policies, Frameworks, EU AI Act, ISO 27001, ISO 42001, NIST AI RMF, FRIA, Compliance score, Approval workflows' },
+          { label: 'Utilities', count: 14, desc: 'Files, Email, Dashboard, Search, System & logs, Tasks, Tokens, Preferences, Notes, Notifications, Share links, Reporting, Slack, Subscriptions' },
+          { label: 'Advanced', count: 12, desc: 'Evidence hub, AI incidents, CE marking, Automation, Integrations, Intake forms, Entity graph, Post-market monitoring, Plugins, Change history, Audit ledger, LLM keys' },
         ].map((category) => (
           <Box
             key={category.label}

@@ -85,3 +85,18 @@ export async function deleteVendorRisk({
   return response;
 }
 
+export async function getVendorRisksByFrameworkId({
+  frameworkId,
+  signal,
+  filter = 'active',
+}: {
+  frameworkId: number;
+  signal?: AbortSignal;
+  filter?: 'active' | 'deleted' | 'all';
+}): Promise<any> {
+  const response = await apiServices.get(`/vendorRisks/by-frameworkid/${frameworkId}?filter=${filter}`, {
+    signal,
+  });
+  return response.data;
+}
+

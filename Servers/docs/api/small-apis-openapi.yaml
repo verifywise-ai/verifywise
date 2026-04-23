@@ -1,0 +1,1850 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise Small APIs
+  description: >
+    OpenAPI specification for smaller API domains: Share Links, Notes, Search,
+    Reporting, Dashboard, CE Marking, Roles, Subscriptions, Tiers, API Tokens,
+    LLM Keys, and User Preferences.
+  version: 1.0.0
+
+servers:
+  - url: /api
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SHARE LINKS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /shares:
+    post:
+      tags: [Share Links]
+      summary: Create a new share link
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShareLinkCreateRequest"
+      responses:
+        "201":
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/ShareLinkResponse"
+        "400":
+          description: Validation error
+        "500":
+          description: Server error
+
+  /shares/{resourceType}/{resourceId}:
+    get:
+      tags: [Share Links]
+      summary: Get all share links for a specific resource
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: resourceType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [model, vendor, project, policy, risk]
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            description: Use 0 for table/list view sharing
+      responses:
+        "200":
+          description: Array of share links
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ShareLinkListItem"
+        "400":
+          description: Invalid resource type or ID
+        "500":
+          description: Server error
+
+  /shares/token/{token}:
+    get:
+      tags: [Share Links]
+      summary: Get share link metadata by token (public, no auth)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            description: 64-character hex share token
+      responses:
+        "200":
+          description: Share link metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/ShareLinkMetadata"
+        "400":
+          description: Invalid token format
+        "403":
+          description: Share link disabled or expired
+        "404":
+          description: Share link not found
+        "500":
+          description: Server error
+
+  /shares/view/{token}:
+    get:
+      tags: [Share Links]
+      summary: Get shared resource data by token (public, no auth)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            description: 64-character hex share token
+      responses:
+        "200":
+          description: Shared resource data with permissions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/SharedDataResponse"
+        "400":
+          description: Invalid token or unsupported resource type
+        "403":
+          description: Share link disabled or expired
+        "404":
+          description: Share link or resource not found
+        "500":
+          description: Server error
+
+  /shares/{id}:
+    patch:
+      tags: [Share Links]
+      summary: Update a share link
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShareLinkUpdateRequest"
+      responses:
+        "200":
+          description: Updated share link
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/ShareLinkListItem"
+        "400":
+          description: No fields to update
+        "403":
+          description: Unauthorized (not the creator)
+        "404":
+          description: Share link not found
+        "500":
+          description: Server error
+    delete:
+      tags: [Share Links]
+      summary: Delete a share link
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Share link deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: Share link deleted successfully
+        "403":
+          description: Unauthorized (not the creator)
+        "404":
+          description: Share link not found
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # NOTES
+  # ─────────────────────────────────────────────────────────────────────────────
+  /notes:
+    post:
+      tags: [Notes]
+      summary: Create a new note
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteCreateRequest"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Note"
+        "400":
+          description: Validation error (missing content, attached_to, or attached_to_id)
+        "500":
+          description: Server error
+    get:
+      tags: [Notes]
+      summary: Fetch notes for an entity
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: attachedTo
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [project, vendor, model, risk, policy, task, incident]
+            description: Entity type the notes are attached to
+        - name: attachedToId
+          in: query
+          required: true
+          schema:
+            type: string
+            description: ID of the entity
+      responses:
+        "200":
+          description: Array of notes (may be empty)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Note"
+        "400":
+          description: Missing query parameters
+        "500":
+          description: Server error
+
+  /notes/{id}:
+    put:
+      tags: [Notes]
+      summary: Update note content
+      description: Only the author or admins can update a note
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  maxLength: 5000
+      responses:
+        "200":
+          description: Updated note
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Note"
+        "400":
+          description: Validation or permission error
+        "500":
+          description: Server error
+    delete:
+      tags: [Notes]
+      summary: Delete a note
+      description: Only the author or admins can delete a note
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Note deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: string
+                        example: Note deleted successfully
+        "400":
+          description: Permission error
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SEARCH
+  # ─────────────────────────────────────────────────────────────────────────────
+  /search:
+    get:
+      tags: [Search]
+      summary: Global search across all entities
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 3
+          description: Search query (minimum 3 characters unless reviewStatus is set)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Maximum results per entity type
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Pagination offset
+        - name: reviewStatus
+          in: query
+          schema:
+            type: string
+          description: Filter by review status (bypasses min query length)
+      responses:
+        "200":
+          description: Grouped search results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/SearchResponse"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # REPORTING
+  # ─────────────────────────────────────────────────────────────────────────────
+  /reporting/generate-report:
+    post:
+      tags: [Reporting]
+      summary: Generate a report (legacy, redirects to v2)
+      description: Admin only. Generates compliance/assessment reports as DOCX/PDF.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportGenerateRequest"
+      responses:
+        "200":
+          description: Report file binary
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: User not found
+        "500":
+          description: Generation or upload failed
+    get:
+      tags: [Reporting]
+      summary: Get all previously generated reports
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Array of report metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/GeneratedReport"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Server error
+
+  /reporting/v2/generate-report:
+    post:
+      tags: [Reporting]
+      summary: Generate report v2 (HTML/EJS-based, supports PDF and DOCX)
+      description: Admin only. Rich formatting with optional AI enhancement.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportGenerateRequest"
+      responses:
+        "200":
+          description: Report file binary with Content-Disposition header
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="report.docx"
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: User not found
+        "500":
+          description: Generation or upload failed
+
+  /reporting/{id}:
+    delete:
+      tags: [Reporting]
+      summary: Delete a generated report by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted report data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/GeneratedReport"
+        "204":
+          description: No report to delete
+        "404":
+          description: Report not found
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # DASHBOARD
+  # ─────────────────────────────────────────────────────────────────────────────
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard overview data
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/DashboardData"
+        "204":
+          description: No data available
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # CE MARKING
+  # ─────────────────────────────────────────────────────────────────────────────
+  /ce-marking/{projectId}:
+    get:
+      tags: [CE Marking]
+      summary: Get CE Marking data for a project
+      description: Creates default record with 7 conformity steps if none exists.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: CE Marking data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CEMarkingResponse"
+        "404":
+          description: Project not found or no access
+        "500":
+          description: Server error
+    put:
+      tags: [CE Marking]
+      summary: Update CE Marking data for a project
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CEMarkingUpdateRequest"
+      responses:
+        "200":
+          description: Updated CE Marking data (same shape as GET response)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CEMarkingResponse"
+        "404":
+          description: Project or CE Marking record not found
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ROLES
+  # ─────────────────────────────────────────────────────────────────────────────
+  /roles:
+    get:
+      tags: [Roles]
+      summary: List all roles
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Array of roles
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Role"
+        "204":
+          description: No roles found
+        "500":
+          description: Server error
+
+  /roles/{id}:
+    get:
+      tags: [Roles]
+      summary: Get role by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Role object
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Role"
+        "404":
+          description: Role not found
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SUBSCRIPTIONS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /subscriptions:
+    get:
+      tags: [Subscriptions]
+      summary: Get all subscriptions
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Array of subscriptions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Subscription"
+        "404":
+          description: No subscriptions found
+        "500":
+          description: Server error
+    post:
+      tags: [Subscriptions]
+      summary: Create a new subscription
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionCreateRequest"
+      responses:
+        "201":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Subscription"
+        "400":
+          description: Creation failed
+        "500":
+          description: Server error
+
+  /subscriptions/{id}:
+    put:
+      tags: [Subscriptions]
+      summary: Update a subscription
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionUpdateRequest"
+      responses:
+        "200":
+          description: Subscription updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Subscription"
+        "404":
+          description: Subscription not found
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # TIERS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /tiers/features/{id}:
+    get:
+      tags: [Tiers]
+      summary: Get features for a specific tier
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Tier ID
+      responses:
+        "200":
+          description: Tier features
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/TierFeatures"
+        "404":
+          description: Tier features not found
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # API TOKENS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /tokens:
+    get:
+      tags: [API Tokens]
+      summary: List all API tokens for the organization
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Array of API tokens
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ApiToken"
+        "500":
+          description: Server error
+    post:
+      tags: [API Tokens]
+      summary: Create a new API token
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiTokenCreateRequest"
+      responses:
+        "201":
+          description: API token created (includes full token value, shown only once)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/ApiTokenCreated"
+        "400":
+          description: Validation error
+        "500":
+          description: Server error
+
+  /tokens/{id}:
+    delete:
+      tags: [API Tokens]
+      summary: Delete an API token
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Token deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: API token deleted successfully
+        "404":
+          description: Token not found
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # LLM KEYS
+  # ─────────────────────────────────────────────────────────────────────────────
+  /llm-keys:
+    get:
+      tags: [LLM Keys]
+      summary: List all LLM keys for the organization
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Array of LLM keys (key values are masked)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/LLMKey"
+        "500":
+          description: Server error
+    post:
+      tags: [LLM Keys]
+      summary: Create a new LLM key
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LLMKeyCreateRequest"
+      responses:
+        "201":
+          description: LLM key created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/LLMKey"
+        "400":
+          description: Validation error or duplicate key
+        "500":
+          description: Server error
+
+  /llm-keys/status:
+    get:
+      tags: [LLM Keys]
+      summary: Get LLM key configuration status
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Key status summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/LLMKeyStatus"
+        "500":
+          description: Server error
+
+  /llm-keys/{name}:
+    get:
+      tags: [LLM Keys]
+      summary: Get LLM key by provider name
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [Anthropic, OpenAI, OpenRouter, Custom]
+      responses:
+        "200":
+          description: LLM key for provider
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/LLMKey"
+        "500":
+          description: Server error
+
+  /llm-keys/{id}:
+    patch:
+      tags: [LLM Keys]
+      summary: Update an LLM key
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LLMKeyUpdateRequest"
+      responses:
+        "200":
+          description: LLM key updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/LLMKey"
+        "400":
+          description: Validation error or duplicate key
+        "404":
+          description: LLM key not found
+        "500":
+          description: Server error
+    delete:
+      tags: [LLM Keys]
+      summary: Delete an LLM key
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: LLM key deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: LLM Key deleted successfully
+        "404":
+          description: LLM key not found
+        "500":
+          description: Server error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # USER PREFERENCES
+  # ─────────────────────────────────────────────────────────────────────────────
+  /user-preferences/{userId}:
+    get:
+      tags: [User Preferences]
+      summary: Get preferences for a user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User preferences (null if none exist)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        oneOf:
+                          - $ref: "#/components/schemas/UserPreference"
+                          - type: "null"
+        "500":
+          description: Server error
+    patch:
+      tags: [User Preferences]
+      summary: Update user preferences
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPreferenceUpdateRequest"
+      responses:
+        "200":
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/UserPreference"
+        "400":
+          description: Update failed or validation error
+        "404":
+          description: User preferences not found
+        "500":
+          description: Server error
+
+  /user-preferences:
+    post:
+      tags: [User Preferences]
+      summary: Create user preferences
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPreferenceCreateRequest"
+      responses:
+        "201":
+          description: Preferences created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StatusCodeWrapper"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/UserPreference"
+        "400":
+          description: Missing fields, invalid user_id, or preferences already exist
+        "500":
+          description: Server error
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ─── Generic wrapper ────────────────────────────────────────────────────────
+    StatusCodeWrapper:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          description: Response payload
+
+    # ─── Share Links ────────────────────────────────────────────────────────────
+    ShareLinkSettings:
+      type: object
+      properties:
+        shareAllFields:
+          type: boolean
+          default: false
+        allowDataExport:
+          type: boolean
+          default: true
+        allowViewersToOpenRecords:
+          type: boolean
+          default: false
+        displayToolbar:
+          type: boolean
+          default: true
+
+    ShareLinkCreateRequest:
+      type: object
+      required: [resource_type, resource_id]
+      properties:
+        resource_type:
+          type: string
+          enum: [model, vendor, project, policy, risk]
+        resource_id:
+          type: integer
+          minimum: 0
+          description: Use 0 for sharing the entire table/list view
+        settings:
+          $ref: "#/components/schemas/ShareLinkSettings"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ShareLinkUpdateRequest:
+      type: object
+      properties:
+        settings:
+          $ref: "#/components/schemas/ShareLinkSettings"
+        is_enabled:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ShareLinkResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        share_token:
+          type: string
+        resource_type:
+          type: string
+        resource_id:
+          type: integer
+        settings:
+          $ref: "#/components/schemas/ShareLinkSettings"
+        is_enabled:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        shareable_url:
+          type: string
+          format: uri
+
+    ShareLinkListItem:
+      allOf:
+        - $ref: "#/components/schemas/ShareLinkResponse"
+        - properties:
+            is_valid:
+              type: boolean
+              description: Whether the link is currently active and not expired
+
+    ShareLinkMetadata:
+      type: object
+      properties:
+        id:
+          type: integer
+        share_token:
+          type: string
+        resource_type:
+          type: string
+        resource_id:
+          type: integer
+        settings:
+          $ref: "#/components/schemas/ShareLinkSettings"
+        is_enabled:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_valid:
+          type: boolean
+
+    SharedDataResponse:
+      type: object
+      properties:
+        share_link:
+          type: object
+          properties:
+            resource_type:
+              type: string
+            settings:
+              $ref: "#/components/schemas/ShareLinkSettings"
+        data:
+          description: Resource data (object for single record, array for table view)
+          oneOf:
+            - type: object
+            - type: array
+              items:
+                type: object
+        permissions:
+          type: object
+          properties:
+            allowDataExport:
+              type: boolean
+            allowViewersToOpenRecords:
+              type: boolean
+
+    # ─── Notes ──────────────────────────────────────────────────────────────────
+    NoteCreateRequest:
+      type: object
+      required: [content, attached_to, attached_to_id]
+      properties:
+        content:
+          type: string
+          maxLength: 5000
+        attached_to:
+          type: string
+          enum: [project, vendor, model, risk, policy, task, incident]
+        attached_to_id:
+          type: string
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+        author_id:
+          type: integer
+        attached_to:
+          type: string
+        attached_to_id:
+          type: string
+        organization_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # ─── Search ─────────────────────────────────────────────────────────────────
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: object
+          description: Results grouped by entity type (projects, vendors, models, etc.)
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              description: Entity-specific result object
+        totalCount:
+          type: integer
+        query:
+          type: string
+        message:
+          type: string
+          description: Present when query is too short
+
+    # ─── Reporting ──────────────────────────────────────────────────────────────
+    ReportGenerateRequest:
+      type: object
+      required: [projectId, frameworkId, projectFrameworkId, reportType]
+      properties:
+        projectId:
+          type: integer
+        frameworkId:
+          type: integer
+        projectFrameworkId:
+          type: integer
+        reportType:
+          oneOf:
+            - type: string
+              enum:
+                - projectRisks
+                - vendorRisks
+                - modelRisks
+                - compliance
+                - assessment
+                - clausesAndAnnexes
+                - nistSubcategories
+                - vendors
+                - models
+                - trainingRegistry
+                - policyManager
+                - incidentManagement
+                - all
+            - type: array
+              items:
+                type: string
+        reportName:
+          type: string
+        format:
+          type: string
+          enum: [pdf, docx]
+          default: docx
+        aiEnhanced:
+          type: boolean
+          default: false
+        llmKeyId:
+          type: integer
+          description: LLM key ID for AI-enhanced reports
+
+    GeneratedReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        project_id:
+          type: integer
+        report_type:
+          type: string
+        created_by:
+          type: integer
+        organization_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    # ─── Dashboard ──────────────────────────────────────────────────────────────
+    DashboardData:
+      type: object
+      properties:
+        projects:
+          type: integer
+          description: Total project count
+        trainings:
+          type: integer
+          description: Total training records
+        models:
+          type: integer
+          description: Total model count
+        reports:
+          type: integer
+          description: Total report count
+        task_radar:
+          type: object
+          properties:
+            overdue:
+              type: integer
+            due:
+              type: integer
+            upcoming:
+              type: integer
+        projects_list:
+          type: array
+          items:
+            type: object
+            description: Project summary objects
+
+    # ─── CE Marking ────────────────────────────────────────────────────────────
+    ConformityStep:
+      type: object
+      properties:
+        id:
+          type: integer
+        step:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [Not started, In progress, Completed, Not needed]
+        owner:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+        completedDate:
+          type: string
+          format: date
+          nullable: true
+
+    CEMarkingResponse:
+      type: object
+      properties:
+        isHighRiskAISystem:
+          type: boolean
+        roleInProduct:
+          type: string
+          enum: [standalone, safety_component, product_itself]
+        annexIIICategory:
+          type: string
+        controlsCompleted:
+          type: integer
+        controlsTotal:
+          type: integer
+        assessmentsCompleted:
+          type: integer
+        assessmentsTotal:
+          type: integer
+        conformitySteps:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConformityStep"
+        completedStepsCount:
+          type: integer
+        totalStepsCount:
+          type: integer
+        declarationStatus:
+          type: string
+          enum: [draft, ready, signed]
+        signedOn:
+          type: string
+          format: date
+          nullable: true
+        signatory:
+          type: string
+          nullable: true
+        declarationDocument:
+          type: string
+          nullable: true
+        registrationStatus:
+          type: string
+          enum: [not_registered, pending, registered]
+        euRegistrationId:
+          type: string
+          nullable: true
+        registrationDate:
+          type: string
+          format: date
+          nullable: true
+        euRecordUrl:
+          type: string
+          format: uri
+          nullable: true
+        policiesLinked:
+          type: integer
+        evidenceLinked:
+          type: integer
+        linkedPolicies:
+          type: array
+          items:
+            type: integer
+        linkedEvidences:
+          type: array
+          items:
+            type: integer
+        totalIncidents:
+          type: integer
+        aiActReportableIncidents:
+          type: integer
+        lastIncident:
+          type: string
+          format: date-time
+          nullable: true
+        linkedIncidents:
+          type: array
+          items:
+            type: integer
+
+    CEMarkingUpdateRequest:
+      type: object
+      properties:
+        isHighRiskAISystem:
+          type: boolean
+        roleInProduct:
+          type: string
+        annexIIICategory:
+          type: string
+        declarationStatus:
+          type: string
+        signedOn:
+          type: string
+          format: date
+        signatory:
+          type: string
+        declarationDocument:
+          type: string
+        registrationStatus:
+          type: string
+        euRegistrationId:
+          type: string
+        registrationDate:
+          type: string
+          format: date
+        euRecordUrl:
+          type: string
+        linkedPolicies:
+          type: array
+          items:
+            type: integer
+        linkedEvidences:
+          type: array
+          items:
+            type: integer
+        linkedIncidents:
+          type: array
+          items:
+            type: integer
+        conformitySteps:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              description:
+                type: string
+              status:
+                type: string
+                enum: [Not started, In progress, Completed, Not needed]
+              owner:
+                type: string
+              dueDate:
+                type: string
+                format: date
+              completedDate:
+                type: string
+                format: date
+
+    # ─── Roles ──────────────────────────────────────────────────────────────────
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          enum: [Admin, Reviewer, Editor, Auditor]
+        description:
+          type: string
+
+    # ─── Subscriptions ──────────────────────────────────────────────────────────
+    SubscriptionCreateRequest:
+      type: object
+      required: [organization_id, tier_id, status, start_date]
+      properties:
+        organization_id:
+          type: integer
+        tier_id:
+          type: integer
+        stripe_sub_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, cancelled, past_due, trialing]
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+
+    SubscriptionUpdateRequest:
+      type: object
+      properties:
+        tier_id:
+          type: integer
+        stripe_sub_id:
+          type: string
+        status:
+          type: string
+          enum: [active, cancelled, past_due, trialing]
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        tier_id:
+          type: integer
+        stripe_sub_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # ─── Tiers ──────────────────────────────────────────────────────────────────
+    TierFeatures:
+      type: object
+      description: Tier details with associated feature flags
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        features:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              enabled:
+                type: boolean
+
+    # ─── API Tokens ─────────────────────────────────────────────────────────────
+    ApiTokenCreateRequest:
+      type: object
+      required: [name, expires_in_days]
+      properties:
+        name:
+          type: string
+          description: Descriptive name for the token
+        expires_in_days:
+          type: integer
+          minimum: 1
+          description: Number of days until token expires
+
+    ApiToken:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        created_by:
+          type: integer
+        organization_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ApiTokenCreated:
+      allOf:
+        - $ref: "#/components/schemas/ApiToken"
+        - properties:
+            token:
+              type: string
+              description: Full JWT token value (only shown on creation)
+
+    # ─── LLM Keys ──────────────────────────────────────────────────────────────
+    LLMKeyCreateRequest:
+      type: object
+      required: [name, key]
+      properties:
+        name:
+          type: string
+          enum: [Anthropic, OpenAI, OpenRouter, Custom]
+          description: LLM provider name
+        key:
+          type: string
+          description: API key value
+        model:
+          type: string
+          description: Default model to use with this key
+        url:
+          type: string
+          format: uri
+          description: Required for Custom provider; auto-populated for others
+        custom_headers:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          description: Optional custom headers (string key-value pairs)
+
+    LLMKeyUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          enum: [Anthropic, OpenAI, OpenRouter, Custom]
+        key:
+          type: string
+        model:
+          type: string
+        url:
+          type: string
+          format: uri
+        custom_headers:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    LLMKey:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        key:
+          type: string
+          description: Masked key value
+        url:
+          type: string
+        model:
+          type: string
+          nullable: true
+        custom_headers:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+        organization_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    LLMKeyStatus:
+      type: object
+      properties:
+        hasKeys:
+          type: boolean
+        keyCount:
+          type: integer
+        providers:
+          type: array
+          items:
+            type: string
+
+    # ─── User Preferences ───────────────────────────────────────────────────────
+    UserPreferenceCreateRequest:
+      type: object
+      required: [user_id, date_format]
+      properties:
+        user_id:
+          type: integer
+          minimum: 1
+        date_format:
+          type: string
+          description: "Preferred date format (e.g., YYYY-MM-DD, DD/MM/YYYY)"
+
+    UserPreferenceUpdateRequest:
+      type: object
+      properties:
+        date_format:
+          type: string
+
+    UserPreference:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        date_format:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

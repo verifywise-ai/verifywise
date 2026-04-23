@@ -15,13 +15,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["./src/*"],
       "@user-guide-content/*": ["../../shared/user-guide-content/*"],
-      "lucide-react": ["node_modules/lucide-react"]
+      "lucide-react": ["./node_modules/lucide-react"]
     }
   },
-  "include": ["src", "../../shared/user-guide-content"],
+  "include": ["./src", "../../shared/user-guide-content"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

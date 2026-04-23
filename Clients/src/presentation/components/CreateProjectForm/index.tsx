@@ -225,10 +225,6 @@ export function CreateProjectForm({
     () => [
       { _id: 1, name: HighRiskRole.DEPLOYER },
       { _id: 2, name: HighRiskRole.PROVIDER },
-      { _id: 3, name: HighRiskRole.DISTRIBUTOR },
-      { _id: 4, name: HighRiskRole.IMPORTER },
-      { _id: 5, name: HighRiskRole.PRODUCT_MANUFACTURER },
-      { _id: 6, name: HighRiskRole.AUTHORIZED_REPRESENTATIVE },
     ],
     []
   );

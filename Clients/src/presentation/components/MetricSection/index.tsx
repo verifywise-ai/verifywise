@@ -24,11 +24,11 @@ const MetricSection: FC<MetricSectionProps> = ({
     value: string | number;
   }[] = [
     {
-      title: "Compliance tracker completion rate",
+      title: "Requirements tracker completion rate",
       value: `${controls.percentageComplete.toFixed(2)}%`,
     },
     {
-      title: "Assessment tracker completion rate",
+      title: "Controls tracker completion rate",
       value: `${assessments.percentageComplete.toFixed(2)}%`,
     },
   ];

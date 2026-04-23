@@ -161,29 +161,35 @@ export const useAdvisorRuntime = (
     [selectedLLMKeyId]
   );
 
-  // Persist new messages when assistant finishes responding
+  // Persist new messages when the turn settles. We persist user turns even
+  // on abort/error/disconnect so the human can reload, see what they asked,
+  // and retry. Only the assistant turn is skipped on failure — a partial or
+  // aborted assistant response is not worth keeping.
   const onFinish = useCallback(({ messages, isAbort, isError, isDisconnect }: {
     message: UIMessage; messages: UIMessage[];
     isAbort: boolean; isError: boolean; isDisconnect: boolean;
   }) => {
-    // Don't persist incomplete/failed responses
-    if (isAbort || isError || isDisconnect) return;
-
     const context = contextRef.current;
     const domain = pageContextRef.current;
 
     if (!context || !domain || !messages.length) return;
 
-    // Only persist messages we haven't already saved
+    const skipAssistant = isAbort || isError || isDisconnect;
+
+    // Only persist messages we haven't already saved. `addMessage` is
+    // async (it may create a conversation row on the first turn) but we
+    // fire-and-forget here: the context batches saves per conversation
+    // and any failure is logged on its end.
     for (const msg of messages) {
       if (msg.id === 'welcome' || persistedIdsRef.current.has(msg.id)) continue;
+      if (msg.role === 'assistant' && skipAssistant) continue;
 
       const text = extractTextFromUIMessage(msg);
 
       if (msg.role === 'assistant') {
         const chartData = extractChartData(msg, text);
         const extMsg = msg as ExtendedUIMessage;
-        context.addMessage(domain, {
+        void context.addMessage(domain, {
           id: msg.id,
           role: 'assistant',
           content: text,
@@ -192,7 +198,7 @@ export const useAdvisorRuntime = (
         });
       } else if (msg.role === 'user') {
         const extMsg = msg as ExtendedUIMessage;
-        context.addMessage(domain, {
+        void context.addMessage(domain, {
           id: msg.id,
           role: 'user',
           content: text,

@@ -10,7 +10,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Rules page lets you configure automated alerts for Shadow AI activity. When a rule\'s conditions are met, the system sends notifications so you can respond to new risks or policy violations without manually monitoring dashboards.',
+      text: 'The Rules page lets you set up automated alerts for Shadow AI activity. When a rule\'s conditions are met, the system sends notifications so you can respond to new risks or policy violations without manually watching dashboards.',
     },
     {
       type: 'heading',
@@ -20,7 +20,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The default view displays all configured alert rules as cards. Each card shows the rule name, trigger type, threshold values, notification settings, and an active/inactive toggle.',
+      text: 'The default view displays all configured alert rules as cards. Each card shows the rule name, trigger type, threshold values, notification settings and an active/inactive toggle.',
     },
     {
       type: 'paragraph',
@@ -107,7 +107,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The risk score (0-100) is calculated nightly using a weighted formula: approval status (40%), data and compliance policies (25%), usage volume (15%), and department sensitivity (20%). Tools that are unapproved with weak compliance posture in sensitive departments score highest.',
+      text: 'The risk score (0-100) is calculated nightly using a weighted formula: approval status (40%), data and compliance policies (25%), usage volume (15%) and department sensitivity (20%). Tools that are unapproved with weak compliance posture in sensitive departments score highest.',
     },
     {
       type: 'callout',

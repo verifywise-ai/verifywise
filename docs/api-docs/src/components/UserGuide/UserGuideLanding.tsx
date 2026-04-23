@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, ArrowRight } from 'lucide-react';
 import { collections, fastFinds, getCollection } from '@user-guide-content/userGuideConfig';
 import { colors, typography, spacing, border } from '../../styles/theme';
+import { resolveIcon } from './iconResolver';
 import './UserGuideLanding.css';
 
 interface UserGuideLandingProps {
@@ -136,7 +137,7 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
           }}
         >
           {collections.map((collection) => {
-            const IconComponent = collection.icon;
+            const IconComponent = resolveIcon(collection.icon);
             return (
               <div
                 key={collection.id}

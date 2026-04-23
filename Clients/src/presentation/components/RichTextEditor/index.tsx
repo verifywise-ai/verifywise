@@ -109,6 +109,19 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
     }
   }, [editor, isEditable]);
 
+  // TipTap's useEditor only consumes `content` on first mount. When the parent
+  // sets `initialContent` later (e.g. after an async fetch fills the form), the
+  // editor would otherwise stay empty. Sync only when the incoming value
+  // actually differs from the editor's current HTML so user keystrokes don't
+  // get clobbered.
+  useEffect(() => {
+    if (!editor) return;
+    const incoming = initialContent ?? "";
+    if (incoming !== editor.getHTML()) {
+      editor.commands.setContent(incoming, { emitUpdate: false });
+    }
+  }, [editor, initialContent]);
+
   useEffect(() => {
     return () => {
       editor?.destroy();

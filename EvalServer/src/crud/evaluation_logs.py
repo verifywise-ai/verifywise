@@ -309,6 +309,7 @@ async def create_experiment(
     description: Optional[str] = None,
     baseline_experiment_id: Optional[str] = None,
     created_by: Optional[int] = None,
+    model_inventory_id: Optional[int] = None,
 ) -> Optional[Dict[str, Any]]:
     """Create a new experiment"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -325,9 +326,9 @@ async def create_experiment(
         result = await db.execute(
             text('''
                 INSERT INTO llm_evals_experiments
-                (id, organization_id, project_id, name, description, config, baseline_experiment_id, status, created_by)
-                VALUES (:id, :organization_id, :project_id, :name, :description, CAST(:config_json AS jsonb), :baseline_experiment_id, :status, :created_by)
-                RETURNING id, name, status, created_at
+                (id, organization_id, project_id, name, description, config, baseline_experiment_id, status, created_by, model_inventory_id)
+                VALUES (:id, :organization_id, :project_id, :name, :description, CAST(:config_json AS jsonb), :baseline_experiment_id, :status, :created_by, :model_inventory_id)
+                RETURNING id, name, status, created_at, model_inventory_id
             '''),
             {
                 "id": experiment_id,
@@ -339,6 +340,7 @@ async def create_experiment(
                 "baseline_experiment_id": baseline_experiment_id,
                 "status": "pending",
                 "created_by": str(created_by) if created_by is not None else None,
+                "model_inventory_id": model_inventory_id,
             }
         )
 
@@ -352,6 +354,7 @@ async def create_experiment(
                 "name": row["name"],
                 "status": row["status"],
                 "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                "model_inventory_id": row["model_inventory_id"],
             }
         return None
     except Exception as e:
@@ -372,7 +375,7 @@ async def get_experiment_by_id(
         text('''
             SELECT id, project_id, name, description, config, baseline_experiment_id,
                    status, results, error_message, started_at, completed_at,
-                   created_at, updated_at, created_by
+                   created_at, updated_at, created_by, model_inventory_id
             FROM llm_evals_experiments
             WHERE organization_id = :organization_id AND id = :experiment_id
         '''),
@@ -397,6 +400,7 @@ async def get_experiment_by_id(
             "created_at": row["created_at"].isoformat() if row["created_at"] else None,
             "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
             "created_by": row["created_by"],
+            "model_inventory_id": row["model_inventory_id"],
         }
     return None
 
@@ -426,7 +430,7 @@ async def get_experiments(
     result = await db.execute(
         text(f'''
             SELECT id, project_id, name, description, config, status,
-                   results, created_at, updated_at, started_at, completed_at
+                   results, created_at, updated_at, started_at, completed_at, model_inventory_id
             FROM llm_evals_experiments
             {where_clause}
             ORDER BY created_at DESC
@@ -449,6 +453,7 @@ async def get_experiments(
             "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
             "started_at": row["started_at"].isoformat() if row["started_at"] else None,
             "completed_at": row["completed_at"].isoformat() if row["completed_at"] else None,
+            "model_inventory_id": row["model_inventory_id"],
         })
 
     return experiments

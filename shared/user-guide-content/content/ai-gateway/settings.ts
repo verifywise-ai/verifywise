@@ -10,7 +10,7 @@ export const aiGatewaySettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Settings page covers 3 areas: API keys for LLM providers, monthly budget limits, and guardrail configuration. Changes take effect immediately.',
+      text: 'The Settings page covers 3 areas: API keys for LLM providers, monthly budget limits and guardrail configuration. Changes take effect immediately.',
     },
     {
       type: 'heading',
@@ -52,7 +52,7 @@ export const aiGatewaySettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Budgets set a monthly spending limit across all endpoints. The budget section shows current spend with a progress bar, alert threshold, and hard limit status. Spend resets automatically on the 1st of each month.',
+      text: 'Budgets set a monthly spending limit across all endpoints. The budget section shows current spend with a progress bar, alert threshold and hard limit status. Spend resets automatically on the 1st of each month.',
     },
     {
       type: 'heading',

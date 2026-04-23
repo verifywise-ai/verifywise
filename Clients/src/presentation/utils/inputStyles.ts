@@ -237,6 +237,16 @@ export const getAutocompleteStyles = (theme: Theme, options: InputStylesOptions 
         },
       },
     },
+
+    ...(hasError && {
+      '& .MuiOutlinedInput-root fieldset': {
+        borderColor: `${errorBorder} !important`,
+      },
+      '& .MuiOutlinedInput-root.Mui-focused fieldset': {
+        borderWidth: '2px',
+        boxShadow: `0 0 0 3px ${errorBorder}1A`,
+      },
+    }),
   };
 };
 

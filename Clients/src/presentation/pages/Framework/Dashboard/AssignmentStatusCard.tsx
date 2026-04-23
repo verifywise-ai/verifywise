@@ -422,7 +422,7 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                 >
                   <Typography sx={{ fontSize: 12, color: "#666666" }}>
                     {/* Use appropriate terminology based on framework type */}
-                    {isISO27001 || isISO42001 ? "Clauses" : "Controls"}
+                    {isISO27001 || isISO42001 ? "Clauses" : "Requirements"}
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     {/* Status icon with color-coded completion indicator */}

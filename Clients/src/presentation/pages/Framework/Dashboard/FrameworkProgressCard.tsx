@@ -240,7 +240,7 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                   }}
                 >
                   <Typography sx={{ fontSize: 12, color: "#666666" }}>
-                    {isISO27001 || isISO42001 ? "Clauses" : "Controls"}
+                    {isISO27001 || isISO42001 ? "Clauses" : "Requirements"}
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, justifyContent: "flex-end" }}>
                     <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>

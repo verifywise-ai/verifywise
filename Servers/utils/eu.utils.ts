@@ -637,6 +637,89 @@ export const getAssessmentsEUByProjectIdQuery = async (
   return assessments;
 };
 
+/**
+ * Resolve which EU AI Act category ids are visible to a project, given its
+ * `type_of_high_risk_role` + `ai_risk_classification`. Returns `null` when
+ * either is missing — callers should interpret that as "no filter, show all".
+ *
+ * Rules:
+ *   - Categories tagged `General Risk` always show (horizontal obligations
+ *     like Art 4 AI literacy that apply regardless of risk level).
+ *   - Categories matching the project's tier show. Role is additionally
+ *     required to match when the selected tier is `High risk` or `GPAI`
+ *     (those are the only tiers where provider/deployer obligations diverge).
+ *   - For Prohibited / Limited risk / Minimal risk, role is ignored — both
+ *     providers and deployers see the same list.
+ *
+ * Both `type_of_high_risk_role` and `ai_risk_classification` are required on
+ * project-based framework creation (validated on the form), so we treat them
+ * as always-set for EU AI Act projects.
+ */
+export const getVisibleEuCategoryIdsForProject = async (
+  projectFrameworkId: number,
+  organizationId: number,
+  transaction: Transaction | null = null
+): Promise<number[]> => {
+  const [[project]] = (await sequelize.query(
+    `SELECT p.type_of_high_risk_role AS role, p.ai_risk_classification AS tier
+     FROM projects p
+     JOIN projects_frameworks pf ON pf.project_id = p.id
+       AND pf.organization_id = p.organization_id
+     WHERE pf.id = :projectFrameworkId
+       AND pf.organization_id = :organizationId
+     LIMIT 1;`,
+    {
+      replacements: { projectFrameworkId, organizationId },
+      ...(transaction ? { transaction } : {}),
+    }
+  )) as [{ role: string; tier: string }[], number];
+
+  const ROLE_FILTERED_TIERS = new Set(["High risk", "GPAI"]);
+  const applyRoleFilter = ROLE_FILTERED_TIERS.has(project.tier);
+
+  const [rows] = (await sequelize.query(
+    `SELECT cc.id
+     FROM controlcategories_struct_eu cc
+     JOIN frameworks f ON f.id = cc.framework_id
+     WHERE f.name = 'EU AI Act'
+       AND (
+         EXISTS (
+           SELECT 1 FROM controlcategories_struct_eu__risk_tiers cct
+           JOIN eu_act_risk_tiers rt ON rt.id = cct.risk_tier_id
+           WHERE cct.control_category_id = cc.id
+             AND rt.name = 'General Risk'
+         )
+         OR (
+           EXISTS (
+             SELECT 1 FROM controlcategories_struct_eu__risk_tiers cct
+             JOIN eu_act_risk_tiers rt ON rt.id = cct.risk_tier_id
+             WHERE cct.control_category_id = cc.id
+               AND rt.name = :tier
+           )
+           AND (
+             :applyRoleFilter = FALSE
+             OR EXISTS (
+               SELECT 1 FROM controlcategories_struct_eu__roles ccr
+               JOIN eu_act_roles r ON r.id = ccr.role_id
+               WHERE ccr.control_category_id = cc.id
+                 AND r.name = :role
+             )
+           )
+         )
+       );`,
+    {
+      replacements: {
+        tier: project.tier,
+        role: project.role,
+        applyRoleFilter,
+      },
+      ...(transaction ? { transaction } : {}),
+    }
+  )) as [{ id: number }[], number];
+
+  return rows.map((r) => r.id);
+};
+
 export const getComplianceEUByProjectIdQuery = async (
   projectFrameworkId: number,
   organizationId: number
@@ -652,7 +735,13 @@ export const getComplianceEUByProjectIdQuery = async (
     controlIds[0].map((c) => c.id),
     organizationId
   );
-  return compliances;
+
+  const visibleIds = await getVisibleEuCategoryIdsForProject(
+    projectFrameworkId,
+    organizationId
+  );
+  const allowed = new Set(visibleIds);
+  return (compliances as any[]).filter((cc) => allowed.has(cc.id));
 };
 
 export const createNewAssessmentEUQuery = async (

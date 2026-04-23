@@ -10,11 +10,11 @@ export const iso42001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'ISO/IEC 42001 is the international standard for AI management systems. It provides a framework for organizations to establish, implement, maintain, and continually improve an AI management system (AIMS). Published in December 2023, it is the first global standard specifically designed for AI governance.',
+      text: 'ISO/IEC 42001 is the international standard for AI management systems. It provides a framework for establishing, implementing, maintaining and continually improving an AI management system (AIMS). Published in December 2023, it\'s the first global standard designed specifically for AI governance.',
     },
     {
       type: 'paragraph',
-      text: 'Unlike regulations that mandate specific behaviors, ISO 42001 provides a management system approach. It helps organizations build the processes, controls, and culture needed to govern AI responsibly. Certification demonstrates to customers, partners, and regulators that your organization takes AI governance seriously.',
+      text: 'Unlike regulations that mandate specific behaviors, ISO 42001 takes a management system approach. It helps you build the processes, controls and culture needed to govern AI responsibly. Getting certified shows customers, partners and regulators that your organization takes AI governance seriously.',
     },
     {
       type: 'heading',
@@ -25,12 +25,12 @@ export const iso42001Content: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Credibility', text: 'Third-party certification provides independent verification of your AI governance practices' },
-        { bold: 'Market differentiation', text: 'Early adopters gain competitive advantage as certification becomes expected' },
+        { bold: 'Credibility', text: 'Third-party certification gives independent verification of your AI governance practices' },
+        { bold: 'Market differentiation', text: 'Early adopters gain an edge as certification becomes expected' },
         { bold: 'Regulatory alignment', text: 'ISO 42001 aligns with EU AI Act requirements and other emerging regulations' },
         { bold: 'Risk reduction', text: 'Systematic governance reduces the likelihood and impact of AI failures' },
-        { bold: 'Customer assurance', text: 'Certification addresses customer concerns about AI safety and ethics' },
-        { bold: 'Continuous improvement', text: 'The standard requires ongoing improvement of AI governance practices' },
+        { bold: 'Customer assurance', text: 'Certification helps address customer concerns about AI safety and ethics' },
+        { bold: 'Continuous improvement', text: 'The standard requires ongoing improvement of your AI governance practices' },
       ],
     },
     {
@@ -54,7 +54,7 @@ export const iso42001Content: ArticleContent = {
         {
           icon: 'Building',
           title: 'Context of the organization',
-          description: 'Understand your environment, stakeholders, and scope of the AI management system.',
+          description: 'Understand your environment, stakeholders and scope of the AI management system.',
         },
         {
           icon: 'Users',
@@ -64,12 +64,12 @@ export const iso42001Content: ArticleContent = {
         {
           icon: 'Target',
           title: 'Planning',
-          description: 'Address risks and opportunities, set objectives, and plan to achieve them.',
+          description: 'Address risks and opportunities, set objectives and plan to achieve them.',
         },
         {
           icon: 'Settings',
           title: 'Support',
-          description: 'Provide necessary resources, competence, awareness, and documentation.',
+          description: 'Provide the resources, competence, awareness and documentation needed.',
         },
         {
           icon: 'Activity',
@@ -79,7 +79,7 @@ export const iso42001Content: ArticleContent = {
         {
           icon: 'BarChart3',
           title: 'Performance evaluation',
-          description: 'Monitor, measure, analyze, and evaluate your AI management system.',
+          description: 'Monitor, measure, analyze and evaluate your AI management system.',
         },
         {
           icon: 'RefreshCw',
@@ -96,7 +96,7 @@ export const iso42001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'In addition to the management system clauses, ISO 42001 includes Annex A, a catalog of reference controls specifically designed for AI systems. Unlike the clauses which are mandatory requirements, Annex A provides a set of controls that organizations select based on their risk assessment. Organizations must consider each control and either implement it or document why it is not applicable to their context.',
+      text: 'On top of the management system clauses, ISO 42001 includes Annex A, a catalog of reference controls designed for AI systems. The clauses are mandatory, but Annex A is different. You select controls based on your risk assessment and either implement them or document why they don\'t apply to your context.',
     },
     {
       type: 'paragraph',
@@ -163,7 +163,7 @@ export const iso42001Content: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',
-      text: 'Start by scoping your AI management system appropriately. You do not need to include every AI system in your organization. Begin with a defined scope and expand over time.',
+      text: 'Start by scoping your AI management system appropriately. You don\'t need to include every AI system in your organization. Begin with a defined scope and expand over time.',
     },
     {
       type: 'heading',
@@ -221,13 +221,13 @@ export const iso42001Content: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'Clause 4: Context of the organization — Understanding your environment, stakeholders, and AIMS scope',
-        'Clause 5: Leadership — Management commitment, AI policy, and organizational roles',
-        'Clause 6: Planning — Risk assessment, objectives, and change planning',
-        'Clause 7: Support — Resources, competence, awareness, and documentation',
-        'Clause 8: Operation — AI lifecycle implementation and impact assessments',
-        'Clause 9: Performance evaluation — Monitoring, internal audit, and management review',
-        'Clause 10: Improvement — Nonconformity handling and continual improvement',
+        'Clause 4: Context of the organization, covering your environment, stakeholders and AIMS scope',
+        'Clause 5: Leadership, covering management commitment, AI policy and organizational roles',
+        'Clause 6: Planning, covering risk assessment, objectives and change planning',
+        'Clause 7: Support, covering resources, competence, awareness and documentation',
+        'Clause 8: Operation, covering AI lifecycle implementation and impact assessments',
+        'Clause 9: Performance evaluation, covering monitoring, internal audit and management review',
+        'Clause 10: Improvement, covering nonconformity handling and continual improvement',
       ],
     },
     {
@@ -248,7 +248,7 @@ export const iso42001Content: ArticleContent = {
         { bold: 'Document implementation', text: 'Describe how your organization addresses the requirement' },
         { bold: 'Review evidence examples', text: 'See what evidence typically supports compliance' },
         { bold: 'Link evidence', text: 'Attach documents from your Evidence Hub' },
-        { bold: 'Assign responsibility', text: 'Set owner, reviewer, and approver' },
+        { bold: 'Assign responsibility', text: 'Set owner, reviewer and approver' },
         { bold: 'Update status', text: 'Track progress from Not started through Implemented' },
       ],
     },
@@ -279,8 +279,8 @@ export const iso42001Content: ArticleContent = {
     {
       type: 'image',
       src: '/images/user-guide/control-details.png',
-      alt: 'Control detail modal showing subcontrol tabs, Overview/Evidence/Auditor Feedback sections, and fields for status, approver, risk review, owner, reviewer, due date, and implementation details',
-      caption: 'The control detail view allows you to track implementation status, assign responsibilities, and document compliance.',
+      alt: 'Control detail modal showing subcontrol tabs, Overview/Evidence/Auditor Feedback sections and fields for status, approver, risk review, owner, reviewer, due date and implementation details',
+      caption: 'The control detail view lets you track implementation status, assign responsibilities and document compliance.',
     },
     {
       type: 'heading',
@@ -345,7 +345,7 @@ export const iso42001Content: ArticleContent = {
         { bold: 'Implementation description', text: 'How your organization implements this control' },
         { bold: 'Evidence links', text: 'Supporting documentation' },
         { bold: 'Status', text: 'Not started, In progress, or Implemented' },
-        { bold: 'Assignments', text: 'Owner, reviewer, and approver' },
+        { bold: 'Assignments', text: 'Owner, reviewer and approver' },
         { bold: 'Due date', text: 'Target completion date' },
         { bold: 'Auditor feedback', text: 'Notes from auditors' },
       ],
@@ -423,7 +423,7 @@ export const iso42001Content: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',
-      text: 'Use the evidence examples provided in each subclause as a guide for what documentation auditors typically expect. Common evidence includes policies, procedures, meeting minutes, training records, and system documentation.',
+      text: 'Use the evidence examples in each subclause as a guide for what auditors typically expect. Common evidence includes policies, procedures, meeting minutes, training records and system documentation.',
     },
     {
       type: 'heading',
@@ -433,7 +433,7 @@ export const iso42001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'ISO 42001 emphasizes risk-based decision making. You can link use case risks to both subclauses and annex controls to demonstrate how your control implementation addresses identified risks. This creates traceability between your risk assessment and control implementation.',
+      text: 'ISO 42001 puts risk-based decision making front and center. You can link use case risks to both subclauses and annex controls to show how your control implementation addresses identified risks. This creates traceability between your risk assessment and what you\'ve actually done about it.',
     },
     {
       type: 'heading',
@@ -449,7 +449,7 @@ export const iso42001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'ISO 42001 is intended for any organization, regardless of size, type, or nature, that provides or uses products or services utilizing AI systems. Whether you are developing AI in-house or deploying third-party AI solutions, the standard helps ensure responsible AI development and deployment.',
+      text: 'Any organization that provides or uses AI-powered products or services can benefit from ISO 42001, regardless of size or industry. Whether you\'re developing AI in-house or deploying third-party solutions, the standard helps you govern AI responsibly.',
     },
     {
       type: 'heading',
@@ -459,7 +459,7 @@ export const iso42001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'There are no specific prerequisites for pursuing ISO 42001 certification. However, organizations need an established AI management system with documented policies, processes, and risk management practices ready for audit. You can build these while preparing for certification.',
+      text: 'There are no specific prerequisites. However, you\'ll need an established AI management system with documented policies, processes and risk management practices ready for audit. You can build these while preparing for certification.',
     },
     {
       type: 'heading',
@@ -469,7 +469,7 @@ export const iso42001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The standard requires organizations to determine, assess, and treat AI risks and opportunities. This includes considering the domain, application context, and intended use of AI systems. Risk assessment is not a one-time activity but an ongoing process throughout the AI lifecycle.',
+      text: 'The standard requires you to determine, assess and treat AI risks and opportunities. This includes considering the domain, application context and intended use of AI systems. Risk assessment isn\'t a one-time activity but an ongoing process throughout the AI lifecycle.',
     },
     {
       type: 'heading',
@@ -479,7 +479,7 @@ export const iso42001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'ISO 42001 requires organizations to define and document processes, roles, responsibilities, and policies that support the ethical development, deployment, and operation of AI systems. This includes impact assessments, risk management, and governance structures that promote accountability.',
+      text: 'ISO 42001 requires you to define and document processes, roles, responsibilities and policies that support ethical AI development, deployment and operation. This includes impact assessments, risk management and governance structures that promote accountability.',
     },
     {
       type: 'heading',
@@ -489,7 +489,7 @@ export const iso42001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'ISO 42001 applies a harmonized structure that aligns with quality management (ISO 9001), information security (ISO 27001), and privacy standards. This enables integrated implementation where organizations can address multiple standards through a unified management system.',
+      text: 'ISO 42001 uses a harmonized structure that aligns with quality management (ISO 9001), information security (ISO 27001) and privacy standards. This means you can address multiple standards through a single, unified management system.',
     },
     {
       type: 'heading',
@@ -499,7 +499,7 @@ export const iso42001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Start by understanding your AI system context, establishing an AI policy, assessing risks and impacts, and securing leadership commitment. Then plan, support, operate, monitor, and continually improve your AI management system. VerifyWise provides tools to support each phase of implementation.',
+      text: 'Start by understanding your AI system context, establishing an AI policy, assessing risks and impacts and getting leadership buy-in. Then plan, support, operate, monitor and continually improve your AI management system. VerifyWise has tools to support each phase.',
     },
     {
       type: 'article-links',

@@ -1,0 +1,531 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise Notifications API
+  version: 1.0.0
+  description: >
+    Real-time and REST endpoints for the VerifyWise notification system.
+    All endpoints require JWT authentication via the Authorization header.
+    Responses are wrapped in `{ message: string, data: T }`.
+
+paths:
+  /notifications/stream:
+    get:
+      summary: SSE stream for real-time notifications
+      operationId: streamNotifications
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      description: >
+        Establishes a persistent Server-Sent Events connection.
+        The server sends an initial `{ "type": "connected" }` event,
+        followed by heartbeat comments every 30 seconds.
+        New notifications arrive as `IRealtimeNotification` events.
+        Stale connections are cleaned up after 1 hour.
+        Only one connection per user is allowed; opening a new one closes the previous.
+      responses:
+        "200":
+          description: SSE stream established
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: >
+                  Initial event: `data: {"type":"connected"}\n\n`.
+                  Notification events: `data: <IRealtimeNotification JSON>\n\n`.
+                  Heartbeats: `: heartbeat\n\n` (comment, every 30s).
+        "401":
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications:
+    get:
+      summary: List notifications for the current user
+      operationId: getNotifications
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: is_read
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Filter by read status. Omit to return all.
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/NotificationType"
+          description: Filter by notification type.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of notifications to return.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Number of notifications to skip (for pagination).
+      responses:
+        "200":
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, data]
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/NotificationJSON"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications/summary:
+    get:
+      summary: Get notification summary for bell icon badge
+      operationId: getNotificationSummary
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      description: >
+        Returns unread count, total count, and the 10 most recent notifications
+        in a single atomic query.
+      responses:
+        "200":
+          description: Notification summary
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, data]
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: "#/components/schemas/NotificationSummary"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications/unread-count:
+    get:
+      summary: Get unread notification count
+      operationId: getUnreadCount
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, data]
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: object
+                    required: [unread_count]
+                    properties:
+                      unread_count:
+                        type: integer
+                        example: 5
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications/read-all:
+    patch:
+      summary: Mark all notifications as read
+      operationId: markAllAsRead
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      description: >
+        Marks every unread notification for the current user as read.
+        Returns the count of notifications that were updated.
+      responses:
+        "200":
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, data]
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: object
+                    required: [marked_count]
+                    properties:
+                      marked_count:
+                        type: integer
+                        description: Number of notifications that were marked as read.
+                        example: 12
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications/{id}/read:
+    patch:
+      summary: Mark a single notification as read
+      operationId: markAsRead
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The notification ID.
+      responses:
+        "200":
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, data]
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: "#/components/schemas/NotificationJSON"
+        "400":
+          description: Invalid notification ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications/{id}:
+    delete:
+      summary: Delete a notification
+      operationId: deleteNotification
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The notification ID.
+      responses:
+        "200":
+          description: Notification deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, data]
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: object
+                    required: [deleted]
+                    properties:
+                      deleted:
+                        type: boolean
+                        example: true
+        "400":
+          description: Invalid notification ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT token obtained from the auth endpoints.
+        Payload includes id, email, organizationId, tenantId, roleName, expire.
+
+  schemas:
+    NotificationType:
+      type: string
+      enum:
+        - task_assigned
+        - task_updated
+        - task_completed
+        - review_requested
+        - review_approved
+        - review_rejected
+        - approval_requested
+        - approval_approved
+        - approval_rejected
+        - approval_complete
+        - policy_due_soon
+        - policy_overdue
+        - training_assigned
+        - training_completed
+        - vendor_review_due
+        - file_uploaded
+        - comment_added
+        - mention
+        - shadow_ai_alert
+        - ai_gateway_budget_warning
+        - ai_gateway_budget_exhausted
+        - ai_gateway_guardrail_spike
+        - ai_gateway_config_change
+        - ai_gateway_virtual_key_budget_exhausted
+        - system
+        - assignment_owner
+        - assignment_reviewer
+        - assignment_approver
+        - assignment_member
+        - assignment_assignee
+        - assignment_action_owner
+
+    NotificationEntityType:
+      type: string
+      enum:
+        - project
+        - task
+        - policy
+        - vendor
+        - model
+        - training
+        - file
+        - use_case
+        - risk
+        - assessment
+        - comment
+        - user
+        - shadow_ai_tool
+        - ai_gateway
+
+    NotificationJSON:
+      type: object
+      description: Notification record as returned by the API.
+      required:
+        - id
+        - user_id
+        - type
+        - title
+        - message
+        - is_read
+        - created_at
+      properties:
+        id:
+          type: integer
+          description: Unique notification ID.
+          example: 42
+        user_id:
+          type: integer
+          description: ID of the user who receives this notification.
+          example: 7
+        type:
+          $ref: "#/components/schemas/NotificationType"
+        title:
+          type: string
+          description: Short notification title.
+          example: "Task assigned to you"
+        message:
+          type: string
+          description: Notification body text.
+          example: "You have been assigned to task 'Review vendor contract'."
+        entity_type:
+          allOf:
+            - $ref: "#/components/schemas/NotificationEntityType"
+          nullable: true
+          description: Type of entity the notification relates to.
+        entity_id:
+          type: integer
+          nullable: true
+          description: ID of the related entity.
+          example: 15
+        entity_name:
+          type: string
+          nullable: true
+          description: Display name of the related entity.
+          example: "Review vendor contract"
+        action_url:
+          type: string
+          nullable: true
+          description: Deep-link URL for the notification action.
+          example: "/projects/3/tasks/15"
+        is_read:
+          type: boolean
+          description: Whether the notification has been read.
+          example: false
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO 8601 timestamp of when the notification was read.
+          example: "2026-04-20T14:30:00.000Z"
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the notification was created.
+          example: "2026-04-20T10:00:00.000Z"
+        created_by:
+          type: integer
+          nullable: true
+          description: ID of the user who triggered the notification.
+          example: 3
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Arbitrary key-value metadata attached to the notification.
+          example: { "old_status": "in_progress", "new_status": "completed" }
+
+    NotificationSummary:
+      type: object
+      description: Summary payload for the bell icon badge.
+      required:
+        - unread_count
+        - total_count
+        - recent_notifications
+      properties:
+        unread_count:
+          type: integer
+          description: Number of unread notifications.
+          example: 3
+        total_count:
+          type: integer
+          description: Total number of notifications.
+          example: 47
+        recent_notifications:
+          type: array
+          description: The 10 most recent notifications (read and unread).
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/NotificationJSON"
+
+    ErrorResponse:
+      type: object
+      required: [message, data]
+      properties:
+        message:
+          type: string
+          description: HTTP status text.
+          example: Not Found
+        data:
+          type: string
+          description: Error detail message.
+          example: "Notification not found"
+
+    RealtimeNotification:
+      type: object
+      description: Payload sent over the SSE stream when a new notification arrives.
+      required:
+        - type
+        - data
+      properties:
+        type:
+          type: string
+          enum: [notification]
+        data:
+          $ref: "#/components/schemas/NotificationJSON"

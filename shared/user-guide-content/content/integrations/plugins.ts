@@ -10,7 +10,7 @@ export const pluginsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Plugins extend VerifyWise with additional compliance frameworks, integrations, and features. The marketplace lists all available plugins. You install the ones you need and they appear in your sidebar and project views.',
+      text: 'Plugins extend VerifyWise with extra compliance frameworks, integrations and features. The marketplace lists everything available. Install the ones you need and they show up in your sidebar and project views.',
     },
     {
       type: 'heading',
@@ -23,7 +23,7 @@ export const pluginsContent: ArticleContent = {
       items: [
         { text: 'Go to **Plugins** from the sidebar.' },
         { text: 'Click **Marketplace** to see all available plugins.' },
-        { text: 'Each plugin card shows the name, description, version, and category.' },
+        { text: 'Each plugin card shows the name, description, version and category.' },
         { text: 'Click a plugin to see its full description and requirements.' },
       ],
     },
@@ -51,7 +51,7 @@ export const pluginsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Framework plugins', text: 'Add compliance frameworks like SOC 2, GDPR, HIPAA, PCI DSS, NYC Local Law 144, or Saudi PDPL. Once installed, these appear as framework options when configuring projects.' },
+        { bold: 'Framework plugins', text: 'Add compliance frameworks like SOC 2, GDPR, HIPAA, PCI DSS, NYC Local Law 144 or Saudi PDPL. Once installed, these appear as framework options when configuring projects.' },
         { bold: 'Integration plugins', text: 'Connect VerifyWise to external tools and services (e.g., Azure AI Foundry).' },
         { bold: 'Utility plugins', text: 'Add features like risk import tools or specialized reporting.' },
       ],
@@ -64,13 +64,13 @@ export const pluginsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Under **My plugins**, you can see all installed plugins. Click **Manage** on any plugin to view its configuration, check for updates, or uninstall it.',
+      text: 'Under **My plugins**, you can see everything you\'ve installed. Click **Manage** on any plugin to view its configuration, check for updates or uninstall it.',
     },
     {
       type: 'callout',
       variant: 'info',
       title: 'Plugin data',
-      text: 'Uninstalling a plugin removes its features from the interface but does not delete any data that was created while it was active. Your compliance records and assessments are preserved.',
+      text: 'Uninstalling a plugin removes its features from the interface but doesn\'t delete any data created while it was active. Your compliance records and assessments are preserved.',
     },
     {
       type: 'heading',

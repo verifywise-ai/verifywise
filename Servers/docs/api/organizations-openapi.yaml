@@ -1,0 +1,450 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise Organizations API
+  description: RESTful API for organization management with multi-tenant architecture.
+  version: 1.0.0
+
+paths:
+  /organizations/exists:
+    get:
+      summary: Check if any organizations exist
+      description: >
+        Public endpoint used for setup/initialization flows to determine if this
+        is a fresh installation requiring initial organization setup.
+      operationId: getOrganizationsExists
+      tags:
+        - Organizations
+      security: []
+      responses:
+        "200":
+          description: Boolean result indicating whether organizations exist.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/OrganizationExistsResult"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /organizations/{id}:
+    get:
+      summary: Get organization by ID
+      description: Retrieves detailed information about a single organization.
+      operationId: getOrganizationById
+      tags:
+        - Organizations
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      responses:
+        "200":
+          description: Organization found.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Organization"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    patch:
+      summary: Update organization by ID
+      description: >
+        Updates an existing organization's name and/or logo. Uses a database
+        transaction for atomicity. Only provided fields are updated.
+      operationId: updateOrganizationById
+      tags:
+        - Organizations
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrganizationRequest"
+      responses:
+        "200":
+          description: Organization updated successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Organization"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/BusinessLogicError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /organizations:
+    post:
+      summary: Create a new organization
+      description: >
+        Creates a new organization with complete onboarding flow: organization
+        record creation, tenant hash provisioning, admin user creation, and JWT
+        token generation. Requires super-admin privileges. All operations are
+        wrapped in a database transaction.
+      operationId: createOrganization
+      tags:
+        - Organizations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrganizationRequest"
+      responses:
+        "201":
+          description: Organization and admin user created successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/CreatedEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CreateOrganizationResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/BusinessLogicError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /organizations/{id}/onboarding-status:
+    patch:
+      summary: Update onboarding status to completed
+      description: >
+        Sets the organization's onboarding_status to "completed". Called after
+        the user selects demo data, a blank dashboard, or dismisses the setup
+        modal. The requesting user must belong to the target organization.
+      operationId: updateOnboardingStatus
+      tags:
+        - Organizations
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      responses:
+        "200":
+          description: Onboarding status updated to completed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/OnboardingStatusResponse"
+        "403":
+          description: Access denied - user does not belong to this organization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT access token. Payload includes id, email, organizationId,
+        tenantId, roleName, and expire.
+
+  parameters:
+    OrganizationId:
+      name: id
+      in: path
+      required: true
+      description: Unique numeric identifier of the organization.
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+  schemas:
+    # ---------- Request schemas ----------
+
+    CreateOrganizationRequest:
+      type: object
+      required:
+        - name
+        - userEmail
+        - userName
+        - userSurname
+        - userPassword
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          description: Organization name.
+          example: Acme Corp
+        logo:
+          type: string
+          format: uri
+          nullable: true
+          description: URL of the organization logo. Optional.
+          example: https://example.com/logo.png
+        userEmail:
+          type: string
+          format: email
+          description: Email address for the initial admin user.
+          example: admin@acme.com
+        userName:
+          type: string
+          description: First name of the initial admin user.
+          example: John
+        userSurname:
+          type: string
+          description: Last name of the initial admin user.
+          example: Doe
+        userPassword:
+          type: string
+          format: password
+          description: Password for the initial admin user.
+          example: SecurePassword123!
+
+    UpdateOrganizationRequest:
+      type: object
+      description: >
+        Partial update - only provided fields are changed. At least one field
+        should be provided.
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          description: New organization name.
+          example: Acme Corporation
+        logo:
+          type: string
+          format: uri
+          nullable: true
+          description: New logo URL. Pass null to clear.
+          example: https://example.com/new-logo.png
+
+    # ---------- Response schemas ----------
+
+    Organization:
+      type: object
+      description: Full organization record as returned from the database.
+      properties:
+        id:
+          type: integer
+          description: Auto-incrementing primary key.
+          example: 1
+        name:
+          type: string
+          description: Organization name.
+          example: Acme Corp
+        logo:
+          type: string
+          nullable: true
+          description: Logo URL or empty string if not set.
+          example: https://example.com/logo.png
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the organization was created.
+          example: "2025-01-15T10:30:00.000Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of the last update.
+          example: "2025-01-15T12:00:00.000Z"
+        onboarding_status:
+          type: string
+          enum:
+            - pending
+            - completed
+          description: Whether the organization has completed onboarding.
+          example: pending
+        tenant_id:
+          type: string
+          nullable: true
+          description: SHA-256 derived hash used for tenant identification.
+          example: a1b2c3d4e5
+        risk_assessment_mode:
+          type: string
+          enum:
+            - qualitative
+            - quantitative
+          description: Risk assessment methodology for the organization.
+          example: qualitative
+        ageInDays:
+          type: integer
+          description: Computed age of the organization in days (present in toJSON output).
+          example: 45
+
+    OrganizationExistsResult:
+      type: object
+      properties:
+        exists:
+          type: boolean
+          description: True if at least one organization exists, false otherwise.
+          example: true
+
+    CreateOrganizationResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/SafeUser"
+        organization:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: Acme Corp
+        token:
+          type: string
+          description: JWT access token for the newly created admin user.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    SafeUser:
+      type: object
+      description: User object with sensitive fields (password hash) omitted.
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          format: email
+          example: admin@acme.com
+        name:
+          type: string
+          example: John
+        surname:
+          type: string
+          example: Doe
+        role_id:
+          type: integer
+          description: "Role identifier (1=Admin, 2=Reviewer, 3=Editor, 4=Auditor)."
+          example: 1
+        organization_id:
+          type: integer
+          example: 1
+
+    OnboardingStatusResponse:
+      type: object
+      properties:
+        onboarding_status:
+          type: string
+          enum:
+            - completed
+          example: completed
+
+    # ---------- Envelope schemas ----------
+
+    SuccessEnvelope:
+      type: object
+      properties:
+        message:
+          type: string
+          example: OK
+        data:
+          description: Response payload.
+
+    CreatedEnvelope:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Created
+        data:
+          description: Response payload.
+
+    ErrorEnvelope:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Forbidden
+        data:
+          type: string
+          description: Error detail message.
+          example: Access denied
+
+  responses:
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorEnvelope"
+              - type: object
+                properties:
+                  message:
+                    example: Not Found
+
+    ValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorEnvelope"
+              - type: object
+                properties:
+                  message:
+                    example: Bad Request
+
+    BusinessLogicError:
+      description: Business rule violation.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorEnvelope"
+              - type: object
+                properties:
+                  message:
+                    example: Forbidden
+
+    InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorEnvelope"
+              - type: object
+                properties:
+                  message:
+                    example: Internal Server Error

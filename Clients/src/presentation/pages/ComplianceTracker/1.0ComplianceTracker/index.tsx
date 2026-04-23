@@ -124,7 +124,7 @@ const ComplianceTracker = ({
 
     try {
       const response = await getEntityById({
-        routeUrl: `/eu-ai-act/controlCategories`,
+        routeUrl: `/eu-ai-act/controlCategories?projectFrameworkId=${currentProjectFramework}`,
       });
       setControlCategories(response);
     } catch (err) {
@@ -144,12 +144,21 @@ const ComplianceTracker = ({
       // No EU AI Act framework - just stop loading
       setLoading(false);
     }
-  }, [currentProjectId, currentProjectFramework]);
+    // Also re-fetch when the project's role or risk classification changes,
+    // because the server filters categories by those fields. Without this
+    // dependency, editing the use-case settings wouldn't refresh the
+    // visible list until the user navigates away and back.
+  }, [
+    currentProjectId,
+    currentProjectFramework,
+    project?.type_of_high_risk_role,
+    project?.ai_risk_classification,
+  ]);
 
   if (loading) {
     return (
       <Stack className="compliance-tracker" sx={{ gap: "16px" }}>
-        <Typography sx={pageHeadingStyle}>Compliance tracker</Typography>
+        <Typography sx={pageHeadingStyle}>Requirements tracker</Typography>
         <CustomizableSkeleton
           variant="rectangular"
           minWidth={300}
@@ -168,7 +177,7 @@ const ComplianceTracker = ({
   if (!currentProjectId) {
     return (
       <Stack className="compliance-tracker" sx={{ gap: "16px" }}>
-        <Typography sx={pageHeadingStyle}>Compliance tracker</Typography>
+        <Typography sx={pageHeadingStyle}>Requirements tracker</Typography>
         <Typography>Please select a project to view compliance data</Typography>
       </Stack>
     );
@@ -190,7 +199,7 @@ const ComplianceTracker = ({
           <StatsCard
             completed={complianceData.allDonesubControls}
             total={complianceData.allsubControls}
-            title="Subcontrols"
+            title="Controls"
             progressbarColor={brand.primary}
           />
         </Stack>

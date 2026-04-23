@@ -75,8 +75,12 @@ Keys are:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/advisor` | Run advisor query |
-| GET | `/advisor/conversations/:domain` | Get conversation history |
-| POST | `/advisor/conversations/:domain` | Save conversation |
+| POST | `/advisor/chat` | Streaming chat (AI SDK UI message protocol, multi-turn history) |
+| GET | `/advisor/conversations/:domain` | List all conversations in a domain (summaries, most recent first) |
+| POST | `/advisor/conversations/:domain` | Create a new empty conversation in a domain |
+| GET | `/advisor/conversations/:domain/:id` | Get a single conversation with full messages |
+| PUT | `/advisor/conversations/:domain/:id` | Replace the messages array of a conversation |
+| DELETE | `/advisor/conversations/:domain/:id` | Delete a conversation |
 
 ### Run Advisor Request
 

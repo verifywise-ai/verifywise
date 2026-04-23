@@ -34,6 +34,7 @@ const VWProjectRisks = ({ project }: { project?: Project }) => {
     <RisksView
       fetchRisks={fetchProjectRisks}
       title="Use case risks"
+      readOnly
     />
   );
 };

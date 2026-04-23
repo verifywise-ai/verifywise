@@ -38,8 +38,8 @@ const useAssessmentProgress = ({
       return response?.data as AssessmentProgress || defaultAssessmentProgress;
     },
     enabled: !!projectFrameworkId,
-    staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    // staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes
+    // gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   });
 
   return {

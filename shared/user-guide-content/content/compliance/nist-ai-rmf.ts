@@ -10,11 +10,11 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The NIST AI Risk Management Framework (AI RMF) is a voluntary framework developed by the U.S. National Institute of Standards and Technology to help organizations design, develop, deploy, and use AI systems responsibly. It provides practical guidance for managing AI risks throughout the AI lifecycle.',
+      text: 'The NIST AI Risk Management Framework (AI RMF) is a voluntary framework from the U.S. National Institute of Standards and Technology. It helps organizations design, develop, deploy and use AI systems responsibly, with practical guidance for managing AI risks throughout the lifecycle.',
     },
     {
       type: 'paragraph',
-      text: 'Unlike prescriptive regulations, the NIST AI RMF offers flexible, risk-based guidance that organizations can adapt to their specific context. It emphasizes trustworthiness characteristics and provides a structured approach to identifying, assessing, and managing AI risks. Many organizations use it as a foundation for their AI governance programs.',
+      text: 'Unlike prescriptive regulations, the NIST AI RMF offers flexible, risk-based guidance you can adapt to your specific context. It focuses on trustworthiness characteristics and gives you a structured way to identify, assess and manage AI risks. Many organizations use it as a foundation for their AI governance programs.',
     },
     {
       type: 'heading',
@@ -24,18 +24,18 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The NIST AI RMF has emerged as a leading framework for AI governance because it balances comprehensiveness with flexibility. Whether you are a startup deploying your first AI model or an enterprise managing hundreds of AI systems, the framework scales to your needs.',
+      text: 'The NIST AI RMF has become a go-to framework for AI governance because it balances thoroughness with flexibility. Whether you\'re a startup deploying your first AI model or an enterprise managing hundreds of AI systems, it scales to your needs.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Flexible framework', text: 'Adaptable to organizations of any size, sector, or AI maturity level. You can implement it incrementally as your AI governance capabilities grow' },
-        { bold: 'Risk-based approach', text: 'Focus resources on the risks that matter most to your organization rather than checking boxes on a compliance list' },
-        { bold: 'Widely recognized', text: 'Referenced by regulators, customers, and partners globally. Increasingly required in government contracts and enterprise procurement' },
-        { bold: 'Complementary', text: 'Aligns with and supports compliance with regulations like the EU AI Act and ISO 42001. Implementing the AI RMF creates foundations for other standards' },
-        { bold: 'Practical guidance', text: 'The accompanying Playbook provides specific suggested actions and examples for each subcategory' },
+        { bold: 'Flexible', text: 'Works for organizations of any size, sector or AI maturity level. You can implement it incrementally as your governance capabilities grow' },
+        { bold: 'Risk-based', text: 'Lets you focus resources on the risks that matter most rather than checking boxes on a compliance list' },
+        { bold: 'Widely recognized', text: 'Referenced by regulators, customers and partners globally. Increasingly required in government contracts and enterprise procurement' },
+        { bold: 'Complementary', text: 'Aligns with regulations like the EU AI Act and ISO 42001. Implementing the AI RMF creates foundations for other standards' },
+        { bold: 'Practical guidance', text: 'The accompanying Playbook gives specific suggested actions and examples for each subcategory' },
         { bold: 'Free and accessible', text: 'Publicly available with no licensing requirements. NIST continues to develop additional resources and profiles' },
-        { bold: 'Stakeholder trust', text: 'Demonstrates to customers, investors, and the public that you take AI risks seriously and have processes to manage them' },
+        { bold: 'Stakeholder trust', text: 'Shows customers, investors and the public that you take AI risks seriously and have processes to manage them' },
       ],
     },
     {
@@ -51,7 +51,7 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'At the heart of the NIST AI RMF are seven characteristics of trustworthy AI systems. These characteristics are interconnected and sometimes in tension with each other. Effective AI governance requires balancing these characteristics based on context, use case, and stakeholder needs.',
+      text: 'The NIST AI RMF is built around seven characteristics of trustworthy AI systems. These characteristics are interconnected and sometimes in tension with each other. Good AI governance means balancing them based on context, use case and stakeholder needs.',
     },
     {
       type: 'icon-cards',
@@ -59,12 +59,12 @@ export const nistAiRmfContent: ArticleContent = {
         {
           icon: 'Shield',
           title: 'Safe',
-          description: 'AI systems should not endanger human life, health, property, or the environment. Safety considerations span the entire AI lifecycle from design through deployment and retirement.',
+          description: 'AI systems should not endanger human life, health, property or the environment. Safety considerations span the entire AI lifecycle from design through deployment and retirement.',
         },
         {
           icon: 'Lock',
           title: 'Secure and resilient',
-          description: 'AI systems should withstand attacks and recover from failures. This includes protecting against adversarial manipulation, data poisoning, and model theft.',
+          description: 'AI systems should withstand attacks and recover from failures. This includes protecting against adversarial manipulation, data poisoning and model theft.',
         },
         {
           icon: 'Eye',
@@ -79,12 +79,12 @@ export const nistAiRmfContent: ArticleContent = {
         {
           icon: 'Scale',
           title: 'Fair with harmful bias managed',
-          description: 'AI systems should treat individuals and groups equitably. This requires active efforts to identify, measure, and mitigate harmful biases throughout the AI lifecycle.',
+          description: 'AI systems should treat individuals and groups equitably. This takes active effort to identify, measure and mitigate harmful biases throughout the AI lifecycle.',
         },
         {
           icon: 'UserCheck',
           title: 'Privacy enhanced',
-          description: 'AI systems should protect individual privacy and data rights. This includes privacy considerations during data collection, model training, and inference.',
+          description: 'AI systems should protect individual privacy and data rights. This includes privacy considerations during data collection, model training and inference.',
         },
         {
           icon: 'CheckCircle',
@@ -95,7 +95,7 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'These characteristics are not independent. For example, increasing explainability might reduce model performance, and strong privacy protections could limit the data available for bias testing. The framework helps organizations navigate these tradeoffs thoughtfully.',
+      text: 'These characteristics aren\'t independent. For example, increasing explainability might reduce model performance, and strong privacy protections could limit the data available for bias testing. The framework helps you navigate these tradeoffs thoughtfully.',
     },
     {
       type: 'heading',
@@ -115,16 +115,16 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Govern function establishes and maintains a culture of risk management for AI across the organization. Unlike the other three functions which focus on specific AI systems, Govern is cross-cutting and informs how Map, Measure, and Manage are performed.',
+      text: 'The Govern function establishes and maintains a culture of risk management for AI across the organization. Unlike the other three functions which focus on specific AI systems, Govern is cross-cutting and informs how Map, Measure and Manage are performed.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Policies and procedures', text: 'Define organizational AI policies, procedures, and practices that are transparent and consistently implemented' },
-        { bold: 'Accountability structures', text: 'Establish clear roles, responsibilities, and lines of authority for AI risk management' },
+        { bold: 'Policies and procedures', text: 'Define organizational AI policies, procedures and practices that are transparent and consistently implemented' },
+        { bold: 'Accountability structures', text: 'Establish clear roles, responsibilities and lines of authority for AI risk management' },
         { bold: 'Legal and regulatory compliance', text: 'Ensure processes are in place to understand and comply with applicable AI regulations' },
-        { bold: 'Risk culture', text: 'Promote a critical thinking and safety-first mindset throughout AI design, development, and deployment' },
-        { bold: 'Third-party management', text: 'Address risks from third-party AI software, data, and services' },
+        { bold: 'Risk culture', text: 'Promote a critical thinking and safety-first mindset throughout AI design, development and deployment' },
+        { bold: 'Third-party management', text: 'Address risks from third-party AI software, data and services' },
         { bold: 'Workforce development', text: 'Provide training so personnel can perform AI risk management duties effectively' },
       ],
     },
@@ -136,16 +136,16 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Map function frames the context in which AI systems operate and identifies potential impacts. Thorough context mapping is essential because AI risks depend heavily on the specific use case, deployment environment, and affected stakeholders.',
+      text: 'The Map function frames the context in which AI systems operate and identifies potential impacts. Thorough context mapping matters because AI risks depend heavily on the specific use case, deployment environment and affected stakeholders.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Context establishment', text: 'Document intended purposes, users, deployment settings, and applicable laws and norms' },
+      { bold: 'Context establishment', text: 'Document intended purposes, users, deployment settings and applicable laws and norms' },
         { bold: 'System categorization', text: 'Define what tasks the AI system performs and how its outputs will be used' },
-        { bold: 'Benefits and costs', text: 'Examine potential benefits and costs, including non-monetary impacts on individuals and communities' },
-        { bold: 'Third-party components', text: 'Map risks from third-party data, models, and AI services' },
-        { bold: 'Impact characterization', text: 'Identify the likelihood and magnitude of potential impacts on individuals, groups, and society' },
+        { bold: 'Benefits and costs', text: 'Look at potential benefits and costs, including non-monetary impacts on individuals and communities' },
+        { bold: 'Third-party components', text: 'Map risks from third-party data, models and AI services' },
+        { bold: 'Impact characterization', text: 'Identify the likelihood and magnitude of potential impacts on individuals, groups and society' },
         { bold: 'Stakeholder engagement', text: 'Integrate feedback from affected communities and external stakeholders' },
       ],
     },
@@ -157,16 +157,16 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Measure function employs quantitative and qualitative methods to analyze, assess, and monitor AI risks and trustworthiness characteristics. Measurement approaches should be connected to the deployment context identified in the Map function.',
+      text: 'The Measure function uses quantitative and qualitative methods to analyze, assess and monitor AI risks and trustworthiness characteristics. Your measurement approaches should connect to the deployment context you identified in the Map function.',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Metrics selection', text: 'Identify appropriate metrics for measuring AI risks based on the mapped context and trustworthiness characteristics' },
         { bold: 'Trustworthiness evaluation', text: 'Evaluate AI systems against all relevant trustworthiness characteristics (safety, fairness, privacy, etc.)' },
-        { bold: 'Testing and validation', text: 'Document test sets, metrics, and tools used during testing, evaluation, verification, and validation (TEVV)' },
-        { bold: 'Ongoing monitoring', text: 'Monitor deployed AI systems for performance, behavior, and compliance with requirements' },
-        { bold: 'Risk tracking', text: 'Track existing, unanticipated, and emergent risks over time' },
+        { bold: 'Testing and validation', text: 'Document test sets, metrics and tools used during testing, evaluation, verification and validation (TEVV)' },
+        { bold: 'Ongoing monitoring', text: 'Monitor deployed AI systems for performance, behavior and compliance with requirements' },
+        { bold: 'Risk tracking', text: 'Track existing, unanticipated and emergent risks over time' },
         { bold: 'Feedback integration', text: 'Gather feedback from end users and affected communities about system performance' },
       ],
     },
@@ -183,11 +183,11 @@ export const nistAiRmfContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Risk prioritization', text: 'Prioritize risks for treatment based on impact, likelihood, and available resources' },
-        { bold: 'Response strategies', text: 'Develop and document responses to high-priority risks (mitigate, transfer, avoid, or accept)' },
+        { bold: 'Risk prioritization', text: 'Prioritize risks for treatment based on impact, likelihood and available resources' },
+        { bold: 'Response strategies', text: 'Develop and document responses to high-priority risks (mitigate, transfer, avoid or accept)' },
         { bold: 'Residual risk documentation', text: 'Document negative residual risks that remain after treatment' },
         { bold: 'Benefit maximization', text: 'Plan strategies to maximize AI benefits while minimizing negative impacts' },
-        { bold: 'Incident response', text: 'Establish processes for responding to, recovering from, and learning from AI incidents' },
+        { bold: 'Incident response', text: 'Establish processes for responding to, recovering from and learning from AI incidents' },
         { bold: 'Third-party risk management', text: 'Monitor and manage risks from third-party AI components and services' },
       ],
     },
@@ -199,15 +199,15 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise provides a structured environment to implement and track your NIST AI RMF activities. The platform organizes the framework into functions, categories, and subcategories, making it easy to work through requirements systematically.',
+      text: 'VerifyWise gives you a structured place to implement and track your NIST AI RMF activities. The platform organizes the framework into functions, categories and subcategories so you can work through requirements systematically.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Govern', text: 'Policy management, role-based access control, and organizational structure documentation for AI governance' },
-        { bold: 'Map', text: 'Model inventory with context documentation, impact assessment tools, and stakeholder tracking' },
+        { bold: 'Govern', text: 'Policy management, role-based access control and organizational structure documentation for AI governance' },
+        { bold: 'Map', text: 'Model inventory with context documentation, impact assessment tools and stakeholder tracking' },
         { bold: 'Measure', text: 'Risk assessment tracking across all trustworthiness characteristics with metrics and evidence collection' },
-        { bold: 'Manage', text: 'Risk mitigation planning, incident tracking, and evidence collection to demonstrate risk treatment' },
+        { bold: 'Manage', text: 'Risk mitigation planning, incident tracking and evidence collection to demonstrate risk treatment' },
       ],
     },
     {
@@ -259,10 +259,10 @@ export const nistAiRmfContent: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'GOVERN (6 categories, ~19 subcategories) — Establishes AI risk management culture and policies',
-        'MAP (5 categories, ~18 subcategories) — Frames context and scope of AI risks',
-        'MEASURE (4 categories, ~25 subcategories) — Evaluates AI risks and trustworthiness',
-        'MANAGE (4 categories, ~15 subcategories) — Addresses identified risks',
+        'GOVERN (6 categories, ~19 subcategories), establishes AI risk management culture and policies',
+        'MAP (5 categories, ~18 subcategories), frames context and scope of AI risks',
+        'MEASURE (4 categories, ~25 subcategories), evaluates AI risks and trustworthiness',
+        'MANAGE (4 categories, ~15 subcategories), addresses identified risks',
       ],
     },
     {
@@ -281,7 +281,7 @@ export const nistAiRmfContent: ArticleContent = {
         { bold: 'Review the requirement', text: 'Read the subcategory description to understand what is expected' },
         { bold: 'Document implementation', text: 'Describe how your organization addresses this requirement' },
         { bold: 'Link evidence', text: 'Attach documents, policies, or records from your Evidence Hub' },
-        { bold: 'Assign responsibility', text: 'Set owner, reviewer, and approver for accountability' },
+        { bold: 'Assign responsibility', text: 'Set owner, reviewer and approver for accountability' },
         { bold: 'Update status', text: 'Track progress through the implementation workflow' },
         { bold: 'Add tags', text: 'Organize subcategories with custom tags for filtering' },
         { bold: 'Link risks', text: 'Connect use case risks that this subcategory addresses' },
@@ -302,7 +302,7 @@ export const nistAiRmfContent: ArticleContent = {
       items: [
         { bold: 'Status', text: 'Current progress through the implementation workflow' },
         { bold: 'Implementation description', text: 'Your documentation of how the requirement is addressed' },
-        { bold: 'Evidence links', text: 'Supporting documents, policies, and artifacts' },
+        { bold: 'Evidence links', text: 'Supporting documents, policies and artifacts' },
         { bold: 'Owner', text: 'Person responsible for implementation' },
         { bold: 'Reviewer', text: 'Person who reviews the implementation' },
         { bold: 'Approver', text: 'Person who gives final sign-off' },
@@ -325,13 +325,13 @@ export const nistAiRmfContent: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'Not started — Work has not begun on this subcategory',
-        'Draft — Initial implementation documentation is being prepared',
-        'In progress — Active work is underway to implement the requirement',
-        'Awaiting review — Implementation is complete and ready for reviewer assessment',
-        'Awaiting approval — Reviewer has approved; waiting for final approver sign-off',
-        'Implemented — The subcategory has been fully addressed and approved',
-        'Needs rework — Reviewer or approver has identified issues that need correction',
+        'Not started: work hasn\'t begun on this subcategory',
+        'Draft: initial implementation documentation is being prepared',
+        'In progress: active work is underway to implement the requirement',
+        'Awaiting review: implementation is complete and ready for reviewer assessment',
+        'Awaiting approval: reviewer has approved, waiting for final approver sign-off',
+        'Implemented: the subcategory has been fully addressed and approved',
+        'Needs rework: reviewer or approver has identified issues that need correction',
       ],
     },
     {
@@ -342,13 +342,13 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise provides multiple ways to monitor your NIST AI RMF implementation:',
+      text: 'There are several ways to monitor your NIST AI RMF implementation in VerifyWise:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Overall completion', text: 'Total subcategories implemented vs. total subcategories' },
-        { bold: 'Progress by function', text: 'Separate progress tracking for Govern, Map, Measure, and Manage' },
+        { bold: 'Progress by function', text: 'Separate progress tracking for Govern, Map, Measure and Manage' },
         { bold: 'Status breakdown', text: 'Distribution across all status values' },
         { bold: 'Assignment coverage', text: 'How many subcategories have owners assigned' },
         { bold: 'Overdue items', text: 'Subcategories past their due date' },
@@ -356,7 +356,7 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use these metrics to identify bottlenecks, allocate resources, and report progress to stakeholders.',
+      text: 'Use these metrics to spot bottlenecks, allocate resources and report progress to stakeholders.',
     },
     {
       type: 'heading',
@@ -391,7 +391,7 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The NIST AI RMF is fundamentally about managing AI risks. You can link use case risks to subcategories to create traceability between your risk assessment and your control implementation. When you link a risk to a subcategory, it demonstrates how your NIST AI RMF activities address specific identified risks.',
+      text: 'The NIST AI RMF is all about managing AI risks. You can link use case risks to subcategories to create traceability between your risk assessment and your control implementation. Linking a risk to a subcategory shows how your NIST AI RMF activities address that specific risk.',
     },
     {
       type: 'heading',
@@ -407,7 +407,7 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The NIST AI RMF is voluntary for most organizations. However, it is increasingly referenced in government contracts, procurement requirements, and industry standards. Some federal agencies require AI RMF implementation for AI systems used in government contexts. Even when not required, implementing the framework demonstrates AI governance maturity.',
+      text: 'For most organizations, it\'s voluntary. That said, it shows up more and more in government contracts, procurement requirements and industry standards. Some federal agencies require AI RMF implementation for AI systems used in government contexts. Even when it\'s not required, implementing the framework signals AI governance maturity.',
     },
     {
       type: 'heading',
@@ -417,7 +417,7 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Start with the Govern function, as it establishes the organizational foundation for all other AI risk management activities. Then focus on the Map function for your highest-risk AI systems to understand context and potential impacts. You do not need to complete all subcategories before moving to Measure and Manage.',
+      text: 'Start with the Govern function since it establishes the organizational foundation for everything else. Then focus on the Map function for your highest-risk AI systems to understand context and potential impacts. You don\'t need to complete all subcategories before moving to Measure and Manage.',
     },
     {
       type: 'heading',
@@ -447,7 +447,7 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'No. The AI RMF is designed to be flexible. Organizations should prioritize subcategories based on their specific AI systems, risk tolerance, and resources. Start with the subcategories most relevant to your highest-risk AI systems and expand coverage over time as your AI governance program matures.',
+      text: 'No. The AI RMF is designed to be flexible. Prioritize subcategories based on your specific AI systems, risk tolerance and resources. Start with the subcategories most relevant to your highest-risk AI systems and expand coverage over time.',
     },
     {
       type: 'heading',
@@ -457,7 +457,7 @@ export const nistAiRmfContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The NIST AI RMF Playbook is a companion document that provides specific suggested actions for each subcategory. It includes examples, considerations, and guidance to help organizations understand how to implement each requirement. The Playbook is available for free from the NIST website and is regularly updated.',
+      text: 'The NIST AI RMF Playbook is a companion document with specific suggested actions for each subcategory. It includes examples, considerations and guidance to help you understand how to implement each requirement. The Playbook is free on the NIST website and gets updated regularly.',
     },
     {
       type: 'article-links',

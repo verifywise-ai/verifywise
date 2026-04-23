@@ -10,26 +10,25 @@ export const modelLifecycleContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'AI model lifecycle management is the practice of governing AI systems from conception through retirement. Unlike traditional software that may remain stable for years, AI models require continuous attention — they can degrade over time, their training data may become outdated, and their real-world performance may drift from initial expectations.',
+      text: "AI models aren't static. They degrade over time, their training data gets stale, and production performance can drift from what you measured in testing. Lifecycle management is how you keep track of where each model is and what kind of oversight it needs at that stage.",
     },
     {
       type: 'paragraph',
-      text: 'Understanding where each model sits in its lifecycle is essential for effective governance. A model in development requires different oversight than one in production. A model being retired needs careful attention to ensure continuity. By tracking lifecycle phases, you can apply the right controls at the right time.',
+      text: 'A model in development needs different governance than one serving production traffic. A model being retired needs a transition plan. VerifyWise tracks these phases so you can apply the right controls at the right time.',
     },
     {
       type: 'heading',
       id: 'why-lifecycle',
       level: 2,
-      text: 'Why track model lifecycle?',
+      text: 'What lifecycle tracking gives you',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Right-sized governance', text: 'Apply controls appropriate to each phase — development needs flexibility, production needs stability' },
-        { bold: 'Risk awareness', text: 'Each phase introduces different risks that require different mitigation strategies' },
-        { bold: 'Resource allocation', text: 'Focus monitoring and maintenance resources on models that need them most' },
-        { bold: 'Compliance evidence', text: 'Document the journey of each model for regulatory audits and reviews' },
-        { bold: 'Retirement planning', text: 'Ensure orderly transitions when models are replaced or decommissioned' },
+        { bold: 'Proportional governance', text: 'Development needs flexibility; production needs stability. You apply different controls depending on the phase.' },
+        { bold: 'Phase-specific risks', text: 'A model in testing has different risks than one in production. Tracking the phase tells you what to watch for.' },
+        { bold: 'Audit trail', text: 'Regulators want to see how a model went from development to production. The lifecycle record provides that.' },
+        { bold: 'Retirement planning', text: 'When you replace a model, there needs to be a transition plan. Tracking the phase makes that visible.' },
       ],
     },
     {
@@ -40,7 +39,7 @@ export const modelLifecycleContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise recognizes the following phases in the AI model lifecycle, aligned with industry standards and regulatory expectations:',
+      text: 'VerifyWise tracks these phases:',
     },
     {
       type: 'icon-cards',
@@ -163,7 +162,7 @@ export const modelLifecycleContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise supports EU AI Act risk classification for projects, which influences governance requirements throughout the lifecycle:',
+      text: 'Each use case gets an EU AI Act risk classification, which determines how much governance overhead applies:',
     },
     {
       type: 'grid-cards',
@@ -183,7 +182,7 @@ export const modelLifecycleContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'For high-risk AI systems, VerifyWise tracks your organization\'s role in the AI value chain, as different roles carry different compliance obligations:',
+      text: 'For high-risk systems, you also record your organization\'s role. Different roles have different obligations under the EU AI Act:',
     },
     {
       type: 'bullet-list',
@@ -204,7 +203,7 @@ export const modelLifecycleContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'All status changes and lifecycle transitions are automatically logged with timestamps and user attribution. This audit trail demonstrates governance oversight and is essential for regulatory compliance.',
+      text: 'All status changes and lifecycle transitions are logged automatically with timestamps and who made the change. This record is what auditors and regulators will look at when reviewing your governance process.',
     },
     {
       type: 'callout',

@@ -47,11 +47,8 @@ export const ICT: Partial<AnnexCategoryStructISO & AnnexCategoryISO>[] = [
     description: "Ensuring AI systems are resilient to failures and attacks.",
     guidance:
       "AI systems should be designed and operated to be resilient against failures, errors, and attacks.",
-    is_applicable: false,
-    justification_for_exclusion:
-      "Current AI deployments are limited and do not yet require advanced resilience measures.",
+    is_applicable: true,
     implementation_description: "",
-    auditor_feedback:
-      "Recommend planning for resilience as AI footprint expands.",
+    auditor_feedback: "",
   },
 ];

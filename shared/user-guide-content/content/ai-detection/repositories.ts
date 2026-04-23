@@ -75,7 +75,7 @@ export const repositoriesContent: ArticleContent = {
         { bold: 'Schedule', text: 'Frequency and time, or "Disabled" if scheduling is off' },
         { bold: 'Last scan', text: 'When the most recent scan ran and its status' },
         { bold: 'Next scan', text: 'When the next scheduled scan will run (blank if disabled)' },
-        { bold: 'Actions', text: 'Scan now, edit, and delete buttons' },
+        { bold: 'Actions', text: 'Scan now, edit and delete buttons' },
       ],
     },
     {
@@ -101,7 +101,7 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click the pencil icon to edit a repository. You can change the display name, default branch, and schedule. The URL can\'t be changed after creation; delete and re-add if you need a different URL.',
+      text: 'Click the pencil icon to edit a repository. You can change the display name, default branch and schedule. The URL can\'t be changed after creation; delete and re-add if you need a different URL.',
     },
     {
       type: 'heading',

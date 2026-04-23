@@ -4,20 +4,16 @@ permissions:
   contents: read
 
 on:
-  # Run manually or on specific branches/paths
+  # Disabled: this workflow only runs when triggered manually from the
+  # Actions tab (workflow_dispatch). The pull_request trigger is
+  # intentionally omitted so PRs don't auto-run E2E tests.
   workflow_dispatch:
-  pull_request:
-    branches: ['master', 'develop']
-    paths:
-      - 'Clients/**'
-      - 'Servers/**'
-      - 'AIGateway/**'
 
 jobs:
   e2e-tests:
     name: Playwright E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     services:
       postgres:

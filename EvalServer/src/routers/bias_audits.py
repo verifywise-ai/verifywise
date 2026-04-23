@@ -6,16 +6,23 @@ Shared-schema multi-tenancy: Uses organization_id from request.state.
 """
 
 from fastapi import APIRouter, BackgroundTasks, Request, UploadFile, File, Form, HTTPException
+from pydantic import BaseModel
 from controllers.bias_audits import (
     list_presets_controller,
     get_preset_controller,
     create_bias_audit_controller,
     get_bias_audit_status_controller,
     get_bias_audit_results_controller,
+    get_bias_audit_report_controller,
+    update_bias_audit_name_controller,
     list_bias_audits_controller,
     delete_bias_audit_controller,
     get_csv_headers_controller,
 )
+
+
+class UpdateAuditNameRequest(BaseModel):
+    systemName: str
 
 router = APIRouter()
 
@@ -85,6 +92,31 @@ async def get_audit_results(audit_id: str, request: Request):
     """Get full results of a completed bias audit."""
     organization_id = _get_organization_id(request)
     return await get_bias_audit_results_controller(
+        audit_id,
+        organization_id=organization_id,
+    )
+
+
+@router.patch("/bias-audits/{audit_id}")
+async def update_audit(
+    audit_id: str,
+    request: Request,
+    payload: UpdateAuditNameRequest,
+):
+    """Update the user-editable system name for an audit."""
+    organization_id = _get_organization_id(request)
+    return await update_bias_audit_name_controller(
+        audit_id,
+        organization_id=organization_id,
+        system_name=payload.systemName,
+    )
+
+
+@router.get("/bias-audits/{audit_id}/report.pdf")
+async def get_audit_report(audit_id: str, request: Request):
+    """Download a formal PDF report for a completed bias audit."""
+    organization_id = _get_organization_id(request)
+    return await get_bias_audit_report_controller(
         audit_id,
         organization_id=organization_id,
     )

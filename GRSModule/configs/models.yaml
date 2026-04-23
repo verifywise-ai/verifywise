@@ -1,18 +1,78 @@
 version: models_v0.1
 models:
-  - provider: openrouter
-    model_id: google/gemini-2.5-pro
+  # - provider: openrouter
+  #   model_id: google/gemini-2.5-pro
 
   # AWS Bedrock models — requires AWS credentials in ~/.aws/credentials
   # Use base model IDs or cross-region inference profile IDs (prefixed with region group, e.g. us.)
-#  - provider: bedrock
-#    model_id: anthropic.claude-3-5-sonnet-20241022-v2:0
-#    region: us-east-1
 
-#  - provider: bedrock
-#    model_id: us.meta.llama3-3-70b-instruct-v1:0
-#    region: us-east-1
+  - provider: bedrock
+    model_id: us.anthropic.claude-sonnet-4-6
+    region: us-east-1
+    profile: verifywise-bedrock
 
-#  - provider: bedrock
-#    model_id: mistral.mistral-large-2402-v1:0
-#    region: eu-west-1
+  - provider: bedrock
+    model_id: us.anthropic.claude-opus-4-6-v1
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: openrouter
+    model_id: amazon/nova-premier-v1
+
+  - provider: bedrock
+    model_id: openai.gpt-oss-120b-1:0
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: bedrock
+    model_id: us.meta.llama3-3-70b-instruct-v1:0
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: bedrock
+    model_id: mistral.mistral-large-3-675b-instruct
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: bedrock
+    model_id: deepseek.v3.2
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: bedrock
+    model_id: qwen.qwen3-32b-v1:0
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: bedrock
+    model_id: google.gemma-3-12b-it
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: openrouter
+    model_id: meta-llama/llama-3.2-3b-instruct
+
+  - provider: bedrock
+    model_id: mistral.ministral-3-14b-instruct
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: bedrock
+    model_id: ai21.jamba-1-5-mini-v1:0
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: bedrock
+    model_id: mistral.ministral-3-8b-instruct
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: bedrock
+    model_id: google.gemma-3-4b-it
+    region: us-east-1
+    profile: verifywise-bedrock
+
+  - provider: bedrock
+    model_id: openai.gpt-oss-20b-1:0
+    region: us-east-1
+    profile: verifywise-bedrock

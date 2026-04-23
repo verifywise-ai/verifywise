@@ -2,8 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import {
   AdvisorMessage,
-  getConversationAPI,
-  saveConversationAPI,
+  listConversationsAPI,
+  getConversationByIdAPI,
+  createConversationAPI,
+  updateConversationAPI,
+  deleteConversationAPI,
 } from "../advisor.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => {
@@ -19,160 +22,216 @@ vi.mock("../../../infrastructure/api/networkServices", () => {
 });
 
 describe("Test Advisor Repository", () => {
-  describe("getConversationAPI", () => {
+  describe("listConversationsAPI", () => {
     beforeEach(vi.clearAllMocks);
-
     afterEach(vi.clearAllMocks);
-    it("should add the domain to the url and make a GET request", async () => {
+
+    it("should GET /advisor/conversations/:domain", async () => {
       const mockResponse = {
         data: {
           domain: "test-domain",
-          messages: [],
+          conversations: [],
         },
         status: 200,
         statusText: "OK",
       };
-
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
-      await getConversationAPI("test-domain");
+      await listConversationsAPI("test-domain");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
       expect(apiServices.get).toHaveBeenCalledWith(
         `/advisor/conversations/test-domain`,
       );
     });
+
     it("should throw an error with status and data if the API call fails", async () => {
       const mockError = {
-        response: {
-          status: 404,
-          data: { message: "Not Found" },
-        },
+        response: { status: 500, data: { message: "Server Error" } },
       };
-
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(getConversationAPI("test-domain")).rejects.toThrow();
-
-      try {
-        await getConversationAPI("test-domain");
-      } catch (error) {
-        expect(error).toEqual({
-          ...mockError,
-          status: 404,
-          data: { message: "Not Found" },
-        });
-      }
+      await expect(listConversationsAPI("test-domain")).rejects.toEqual(
+        expect.objectContaining({
+          status: 500,
+          data: { message: "Server Error" },
+        }),
+      );
     });
-    it("should return the response data on successful API call", async () => {
+
+    it("should return the response data on success", async () => {
       const mockResponse = {
         data: {
           domain: "test-domain",
-          messages: [],
+          conversations: [
+            {
+              id: 1,
+              title: "First chat",
+              last_message_at: "2026-04-08T00:00:00Z",
+              message_count: 4,
+              created_at: "2026-04-08T00:00:00Z",
+              updated_at: "2026-04-08T00:00:00Z",
+            },
+          ],
         },
         status: 200,
         statusText: "OK",
       };
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
-      const result = await getConversationAPI("test-domain");
+      const result = await listConversationsAPI("test-domain");
       expect(result).toEqual(mockResponse);
     });
 
-    it("should throw error without response property for network errors", async () => {
-      const networkError = new Error("Network timeout");
-
-      vi.mocked(apiServices.get).mockRejectedValue(networkError);
-
-      await expect(getConversationAPI("test-domain")).rejects.toThrow(
+    it("should propagate network errors", async () => {
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
+      await expect(listConversationsAPI("test-domain")).rejects.toThrow(
         "Network timeout",
       );
     });
   });
-  describe("saveConversationAPI", () => {
-    beforeEach(vi.clearAllMocks);
 
+  describe("getConversationByIdAPI", () => {
+    beforeEach(vi.clearAllMocks);
     afterEach(vi.clearAllMocks);
-    const messages = [
+
+    it("should GET /advisor/conversations/:domain/:id", async () => {
+      const mockResponse = {
+        data: {
+          domain: "test-domain",
+          conversation: {
+            id: 42,
+            title: "My chat",
+            messages: [],
+            last_message_at: null,
+            created_at: "2026-04-08T00:00:00Z",
+            updated_at: "2026-04-08T00:00:00Z",
+          },
+        },
+        status: 200,
+        statusText: "OK",
+      };
+      vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
+
+      await getConversationByIdAPI("test-domain", 42);
+
+      expect(apiServices.get).toHaveBeenCalledWith(
+        `/advisor/conversations/test-domain/42`,
+      );
+    });
+
+    it("should surface a 404 as a thrown error", async () => {
+      vi.mocked(apiServices.get).mockRejectedValue({
+        response: { status: 404, data: { error: "Conversation not found" } },
+      });
+
+      await expect(
+        getConversationByIdAPI("test-domain", 42),
+      ).rejects.toEqual(
+        expect.objectContaining({ status: 404 }),
+      );
+    });
+  });
+
+  describe("createConversationAPI", () => {
+    beforeEach(vi.clearAllMocks);
+    afterEach(vi.clearAllMocks);
+
+    it("should POST /advisor/conversations/:domain with an empty body", async () => {
+      const mockResponse = {
+        data: {
+          domain: "test-domain",
+          conversation: {
+            id: 7,
+            title: null,
+            messages: [],
+            last_message_at: null,
+            created_at: "2026-04-08T00:00:00Z",
+            updated_at: "2026-04-08T00:00:00Z",
+          },
+        },
+        status: 201,
+        statusText: "Created",
+      };
+      vi.mocked(apiServices.post).mockResolvedValue(mockResponse);
+
+      await createConversationAPI("test-domain");
+
+      expect(apiServices.post).toHaveBeenCalledWith(
+        `/advisor/conversations/test-domain`,
+        {},
+      );
+    });
+  });
+
+  describe("updateConversationAPI", () => {
+    beforeEach(vi.clearAllMocks);
+    afterEach(vi.clearAllMocks);
+
+    const messages: AdvisorMessage[] = [
       {
         id: "1",
         role: "user",
-        content: "Test message",
-        createdAt: "2024-01-01T00:00:00Z",
-        chartData: undefined,
+        content: "Hello",
+        createdAt: "2026-04-08T00:00:00Z",
       },
     ];
 
-    it("should add the domain to the url and make a POST request with messages", async () => {
+    it("should PUT /advisor/conversations/:domain/:id with the messages array", async () => {
       const mockResponse = {
         data: {
           domain: "test-domain",
-          messages: [],
+          conversation: {
+            id: 7,
+            title: "Hello",
+            messages,
+            last_message_at: "2026-04-08T00:01:00Z",
+            created_at: "2026-04-08T00:00:00Z",
+            updated_at: "2026-04-08T00:01:00Z",
+          },
         },
         status: 200,
         statusText: "OK",
       };
+      vi.mocked(apiServices.put).mockResolvedValue(mockResponse);
 
-      vi.mocked(apiServices.post).mockResolvedValue(mockResponse);
+      await updateConversationAPI("test-domain", 7, messages);
 
-      await saveConversationAPI("test-domain", messages as AdvisorMessage[]);
-
-      expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        `/advisor/conversations/test-domain`,
+      expect(apiServices.put).toHaveBeenCalledWith(
+        `/advisor/conversations/test-domain/7`,
         { messages },
       );
     });
-    it("should throw an error with status and data if the API call fails", async () => {
-      const mockError = {
-        response: {
-          status: 500,
-          data: { message: "Internal Server Error" },
-        },
-      };
 
-      vi.mocked(apiServices.post).mockRejectedValue(mockError);
+    it("should propagate a 500 error with its data", async () => {
+      vi.mocked(apiServices.put).mockRejectedValue({
+        response: { status: 500, data: { message: "Server Error" } },
+      });
 
       await expect(
-        saveConversationAPI("test-domain", messages as AdvisorMessage[]),
-      ).rejects.toThrow();
-
-      try {
-        await saveConversationAPI("test-domain", messages as AdvisorMessage[]);
-      } catch (error) {
-        expect(error).toEqual({
-          ...mockError,
+        updateConversationAPI("test-domain", 7, messages),
+      ).rejects.toEqual(
+        expect.objectContaining({
           status: 500,
-          data: { message: "Internal Server Error" },
-        });
-      }
-    });
-    it("should return the response data on successful API call", async () => {
-      const mockResponse = {
-        data: {
-          domain: "test-domain",
-          messages: [],
-        },
-        status: 200,
-        statusText: "OK",
-      };
-      vi.mocked(apiServices.post).mockResolvedValue(mockResponse);
-
-      const result = await saveConversationAPI(
-        "test-domain",
-        messages as AdvisorMessage[],
+          data: { message: "Server Error" },
+        }),
       );
-      expect(result).toEqual(mockResponse);
     });
+  });
 
-    it("should throw error without response property for network errors", async () => {
-      const networkError = new Error("Connection refused");
+  describe("deleteConversationAPI", () => {
+    beforeEach(vi.clearAllMocks);
+    afterEach(vi.clearAllMocks);
 
-      vi.mocked(apiServices.post).mockRejectedValue(networkError);
+    it("should DELETE /advisor/conversations/:domain/:id", async () => {
+      const mockResponse = { data: undefined, status: 204, statusText: "No Content" };
+      vi.mocked(apiServices.delete).mockResolvedValue(mockResponse);
 
-      await expect(
-        saveConversationAPI("test-domain", messages as AdvisorMessage[]),
-      ).rejects.toThrow("Connection refused");
+      await deleteConversationAPI("test-domain", 3);
+
+      expect(apiServices.delete).toHaveBeenCalledWith(
+        `/advisor/conversations/test-domain/3`,
+      );
     });
   });
 });

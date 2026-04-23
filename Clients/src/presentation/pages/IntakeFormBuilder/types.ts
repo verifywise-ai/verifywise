@@ -392,10 +392,6 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
     options: [
       { label: "Deployer", value: "Deployer" },
       { label: "Provider", value: "Provider" },
-      { label: "Distributor", value: "Distributor" },
-      { label: "Importer", value: "Importer" },
-      { label: "Product manufacturer", value: "Product manufacturer" },
-      { label: "Authorized representative", value: "Authorized representative" },
     ],
     entityFieldMapping: "type_of_high_risk_role",
     order: 4,

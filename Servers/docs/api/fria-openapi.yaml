@@ -1,0 +1,1112 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise FRIA API
+  description: >
+    Fundamental Rights Impact Assessment (FRIA) endpoints for managing
+    EU AI Act Article 27 assessments, rights matrices, risk items, model
+    links, evidence attachments, and version snapshots.
+  version: 1.0.0
+
+tags:
+  - name: FRIA Assessment
+    description: Core assessment CRUD and auto-creation
+  - name: FRIA Rights
+    description: Fundamental rights matrix (10 EU Charter rights)
+  - name: FRIA Risk Items
+    description: Risk items within an assessment
+  - name: FRIA Model Links
+    description: Link/unlink model inventory entries to an assessment
+  - name: FRIA Evidence
+    description: Evidence file attachments per assessment section
+  - name: FRIA Versions
+    description: Submission and version snapshot management
+
+paths:
+  # ── Assessment CRUD ────────────────────────────────────────────────
+  /fria/{projectId}:
+    get:
+      tags: [FRIA Assessment]
+      summary: Get FRIA for a project
+      description: >
+        Returns the FRIA assessment for the given project. If no assessment
+        exists, one is auto-created in draft status with all 10 rights
+        rows initialized.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Assessment with related rights, risk items, and model links
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/FriaFullResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    put:
+      tags: [FRIA Assessment]
+      summary: Update FRIA assessment fields
+      description: >
+        Partially updates assessment fields. Scores (risk_score,
+        risk_level, completion_pct, rights_flagged) are recomputed
+        automatically after every update. Requires Admin or Editor role.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FriaUpdateRequest"
+      responses:
+        "200":
+          description: Updated assessment
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/FriaAssessment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Rights matrix ──────────────────────────────────────────────────
+  /fria/{friaId}/rights:
+    put:
+      tags: [FRIA Rights]
+      summary: Bulk upsert all rights for a FRIA
+      description: >
+        Accepts an array of up to 10 rights (keyed by right_key) and
+        upserts each one. Scores are recomputed after the update.
+        Requires Admin or Editor role.
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FriaRightsUpdateRequest"
+      responses:
+        "200":
+          description: Updated rights array
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FriaRight"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Risk items ─────────────────────────────────────────────────────
+  /fria/{friaId}/risk-items:
+    get:
+      tags: [FRIA Risk Items]
+      summary: List risk items for a FRIA
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+      responses:
+        "200":
+          description: Array of risk items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FriaRiskItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    post:
+      tags: [FRIA Risk Items]
+      summary: Add a risk item to a FRIA
+      description: >
+        Creates a new risk item. Scores are recomputed after creation.
+        Requires Admin or Editor role.
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FriaRiskItemCreateRequest"
+      responses:
+        "201":
+          description: Created risk item
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/FriaRiskItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /fria/{friaId}/risk-items/{itemId}:
+    patch:
+      tags: [FRIA Risk Items]
+      summary: Update a risk item
+      description: >
+        Partially updates risk item fields. Scores are recomputed after
+        the update. Requires Admin or Editor role.
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FriaRiskItemUpdateRequest"
+      responses:
+        "200":
+          description: Updated risk item
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/FriaRiskItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    delete:
+      tags: [FRIA Risk Items]
+      summary: Delete a risk item
+      description: >
+        Removes a risk item. Scores are recomputed after deletion.
+        Requires Admin or Editor role.
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+        - $ref: "#/components/parameters/ItemId"
+      responses:
+        "200":
+          description: Deletion confirmed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/DeletedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Model links ────────────────────────────────────────────────────
+  /fria/{friaId}/models:
+    get:
+      tags: [FRIA Model Links]
+      summary: List linked models for a FRIA
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+      responses:
+        "200":
+          description: Array of model links with model inventory details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FriaModelLink"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /fria/{friaId}/models/{modelId}:
+    post:
+      tags: [FRIA Model Links]
+      summary: Link a model to a FRIA
+      description: >
+        Creates an association between a model inventory entry and the
+        FRIA. Duplicate links are silently ignored (ON CONFLICT DO
+        NOTHING). Requires Admin or Editor role.
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+        - $ref: "#/components/parameters/ModelId"
+      responses:
+        "201":
+          description: Created model link
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/FriaModelLink"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    delete:
+      tags: [FRIA Model Links]
+      summary: Unlink a model from a FRIA
+      description: Requires Admin or Editor role.
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+        - $ref: "#/components/parameters/ModelId"
+      responses:
+        "200":
+          description: Deletion confirmed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/DeletedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Evidence attachments ───────────────────────────────────────────
+  /fria/{friaId}/evidence:
+    get:
+      tags: [FRIA Evidence]
+      summary: Get evidence files for a FRIA
+      description: >
+        If the section query parameter is provided, returns evidence for
+        that section only. Otherwise returns evidence for all 8 sections
+        grouped by entity type (section_1 through section_8).
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+        - name: section
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - section_1
+              - section_2
+              - section_3
+              - section_4
+              - section_5
+              - section_6
+              - section_7
+              - section_8
+          description: Filter evidence by a specific section
+      responses:
+        "200":
+          description: Evidence files (single section array or grouped object)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        description: >
+                          When section param is provided, an array of
+                          evidence file objects. When omitted, an object
+                          keyed by section type with arrays of evidence
+                          file objects.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    post:
+      tags: [FRIA Evidence]
+      summary: Link a file as evidence to a FRIA section
+      description: Requires Admin or Editor role.
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FriaEvidenceLinkRequest"
+      responses:
+        "201":
+          description: Evidence linked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          linked:
+                            type: boolean
+                            example: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /fria/{friaId}/evidence/{linkId}:
+    delete:
+      tags: [FRIA Evidence]
+      summary: Unlink an evidence file from a FRIA
+      description: Requires Admin or Editor role.
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+        - name: linkId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the file-entity link to remove
+      responses:
+        "200":
+          description: Evidence unlinked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/DeletedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ── Submit & versioning ────────────────────────────────────────────
+  /fria/{friaId}/submit:
+    post:
+      tags: [FRIA Versions]
+      summary: Submit FRIA for review
+      description: >
+        Creates a full snapshot of the current assessment state (assessment,
+        rights, risk items, model links) and changes the status to
+        submitted. The version number is incremented. Requires Admin or
+        Editor role.
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FriaSubmitRequest"
+      responses:
+        "200":
+          description: Submission confirmed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          submitted:
+                            type: boolean
+                            example: true
+                          version:
+                            type: integer
+                            description: The version number that was snapshotted
+                            example: 1
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /fria/{friaId}/versions:
+    get:
+      tags: [FRIA Versions]
+      summary: List all version snapshots for a FRIA
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+      responses:
+        "200":
+          description: Array of snapshots ordered by version descending
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FriaSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /fria/{friaId}/versions/{version}:
+    get:
+      tags: [FRIA Versions]
+      summary: Get a specific version snapshot
+      parameters:
+        - $ref: "#/components/parameters/FriaId"
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Version number of the snapshot
+      responses:
+        "200":
+          description: Snapshot data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/FriaSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+# ════════════════════════════════════════════════════════════════════
+# COMPONENTS
+# ════════════════════════════════════════════════════════════════════
+components:
+  # ── Security ─────────────────────────────────────────────────────
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ── Parameters ───────────────────────────────────────────────────
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: ID of the project
+
+    FriaId:
+      name: friaId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: ID of the FRIA assessment
+
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: ID of the risk item
+
+    ModelId:
+      name: modelId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: ID of the model inventory entry
+
+  # ── Reusable responses ──────────────────────────────────────────
+  responses:
+    BadRequest:
+      description: Invalid or missing parameters
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+  # ── Schemas ─────────────────────────────────────────────────────
+  schemas:
+    # -- Envelope wrappers --
+    ApiEnvelope:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 200
+        data:
+          description: Response payload (varies per endpoint)
+
+    ErrorEnvelope:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 400
+        data:
+          type: string
+          example: "Invalid project ID"
+
+    DeletedResponse:
+      type: object
+      properties:
+        deleted:
+          type: boolean
+          example: true
+
+    # -- Enums --
+    FriaStatus:
+      type: string
+      enum: [draft, submitted, approved, rejected]
+
+    FriaRiskLevel:
+      type: string
+      enum: [Low, Medium, High]
+
+    FriaLikelihood:
+      type: string
+      enum: [Low, Medium, High]
+
+    FriaSeverity:
+      type: string
+      enum: [Low, Medium, High]
+
+    # -- Assessment --
+    FriaAssessment:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        project_id:
+          type: integer
+        version:
+          type: integer
+        status:
+          $ref: "#/components/schemas/FriaStatus"
+        # Section 1: Organisation & system profile
+        assessment_owner:
+          type: string
+          nullable: true
+        assessment_date:
+          type: string
+          nullable: true
+          description: ISO 8601 date string
+        operational_context:
+          type: string
+          nullable: true
+        # Section 2: Applicability & scope
+        is_high_risk:
+          type: string
+          nullable: true
+        high_risk_basis:
+          type: string
+          nullable: true
+        deployer_type:
+          type: string
+          nullable: true
+        annex_iii_category:
+          type: string
+          nullable: true
+        first_use_date:
+          type: string
+          nullable: true
+        review_cycle:
+          type: string
+          nullable: true
+        period_frequency:
+          type: string
+          nullable: true
+        fria_rationale:
+          type: string
+          nullable: true
+        # Section 3: Affected persons
+        affected_groups:
+          type: string
+          nullable: true
+        vulnerability_context:
+          type: string
+          nullable: true
+        group_flags:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: JSON array of group flag identifiers
+        # Section 5: Specific risks context
+        risk_scenarios:
+          type: string
+          nullable: true
+        provider_info_used:
+          type: string
+          nullable: true
+        # Section 6: Oversight
+        human_oversight:
+          type: string
+          nullable: true
+        transparency_measures:
+          type: string
+          nullable: true
+        redress_process:
+          type: string
+          nullable: true
+        data_governance:
+          type: string
+          nullable: true
+        # Section 7: Consultation
+        legal_review:
+          type: string
+          nullable: true
+        dpo_review:
+          type: string
+          nullable: true
+        owner_approval:
+          type: string
+          nullable: true
+        stakeholders_consulted:
+          type: string
+          nullable: true
+        consultation_notes:
+          type: string
+          nullable: true
+        # Section 8: Summary
+        deployment_decision:
+          type: string
+          nullable: true
+        decision_conditions:
+          type: string
+          nullable: true
+        # Computed scores (cached on save)
+        completion_pct:
+          type: integer
+          description: 0-100 completion percentage
+        risk_score:
+          type: integer
+          description: 0-100 computed risk score
+        risk_level:
+          $ref: "#/components/schemas/FriaRiskLevel"
+        rights_flagged:
+          type: integer
+          description: Count of flagged rights (0-10)
+        # Metadata
+        created_by:
+          type: integer
+        updated_by:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        # Joined fields
+        project_title:
+          type: string
+          nullable: true
+        organization_name:
+          type: string
+          nullable: true
+        created_by_name:
+          type: string
+          nullable: true
+        updated_by_name:
+          type: string
+          nullable: true
+
+    FriaUpdateRequest:
+      type: object
+      description: >
+        All fields are optional. Only provided fields are updated.
+        Scores are recomputed automatically.
+      properties:
+        status:
+          $ref: "#/components/schemas/FriaStatus"
+        assessment_owner:
+          type: string
+        assessment_date:
+          type: string
+        operational_context:
+          type: string
+        is_high_risk:
+          type: string
+        high_risk_basis:
+          type: string
+        deployer_type:
+          type: string
+        annex_iii_category:
+          type: string
+        first_use_date:
+          type: string
+        review_cycle:
+          type: string
+        period_frequency:
+          type: string
+        fria_rationale:
+          type: string
+        affected_groups:
+          type: string
+        vulnerability_context:
+          type: string
+        group_flags:
+          type: array
+          items:
+            type: string
+        risk_scenarios:
+          type: string
+        provider_info_used:
+          type: string
+        human_oversight:
+          type: string
+        transparency_measures:
+          type: string
+        redress_process:
+          type: string
+        data_governance:
+          type: string
+        legal_review:
+          type: string
+        dpo_review:
+          type: string
+        owner_approval:
+          type: string
+        stakeholders_consulted:
+          type: string
+        consultation_notes:
+          type: string
+        deployment_decision:
+          type: string
+        decision_conditions:
+          type: string
+
+    FriaFullResponse:
+      type: object
+      properties:
+        assessment:
+          $ref: "#/components/schemas/FriaAssessment"
+        rights:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriaRight"
+        riskItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriaRiskItem"
+        modelLinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriaModelLink"
+
+    # -- Rights --
+    FriaRight:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        fria_id:
+          type: integer
+        right_key:
+          type: string
+          description: >
+            One of: dignity, privacy, data, equality, child, worker,
+            education, effective, accessibility, freedom
+        right_title:
+          type: string
+          description: Human-readable right name (e.g. "Human dignity")
+        charter_ref:
+          type: string
+          description: EU Charter article reference (e.g. "Article 1")
+        flagged:
+          type: boolean
+          description: Whether this right is flagged as impacted
+        severity:
+          type: integer
+          description: Severity rating (0-5 scale)
+        confidence:
+          type: integer
+          description: Confidence rating (0-5 scale)
+        impact_pathway:
+          type: string
+          nullable: true
+          description: Description of how the right may be impacted
+        mitigation:
+          type: string
+          nullable: true
+          description: Planned mitigation measures
+
+    FriaRightsUpdateRequest:
+      type: object
+      required:
+        - rights
+      properties:
+        rights:
+          type: array
+          items:
+            type: object
+            required:
+              - right_key
+            properties:
+              right_key:
+                type: string
+                description: >
+                  One of: dignity, privacy, data, equality, child,
+                  worker, education, effective, accessibility, freedom
+              flagged:
+                type: boolean
+              severity:
+                type: integer
+              confidence:
+                type: integer
+              impact_pathway:
+                type: string
+              mitigation:
+                type: string
+
+    # -- Risk items --
+    FriaRiskItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        fria_id:
+          type: integer
+        risk_description:
+          type: string
+        likelihood:
+          $ref: "#/components/schemas/FriaLikelihood"
+        severity:
+          $ref: "#/components/schemas/FriaSeverity"
+        existing_controls:
+          type: string
+          nullable: true
+        further_action:
+          type: string
+          nullable: true
+        linked_project_risk_id:
+          type: integer
+          nullable: true
+          description: Optional link to a project risk register entry
+        sort_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        # Joined fields
+        linked_risk_name:
+          type: string
+          nullable: true
+        linked_risk_description:
+          type: string
+          nullable: true
+
+    FriaRiskItemCreateRequest:
+      type: object
+      required:
+        - risk_description
+      properties:
+        risk_description:
+          type: string
+        likelihood:
+          $ref: "#/components/schemas/FriaLikelihood"
+        severity:
+          $ref: "#/components/schemas/FriaSeverity"
+        existing_controls:
+          type: string
+        further_action:
+          type: string
+        linked_project_risk_id:
+          type: integer
+        sort_order:
+          type: integer
+
+    FriaRiskItemUpdateRequest:
+      type: object
+      description: All fields are optional. Only provided fields are updated.
+      properties:
+        risk_description:
+          type: string
+        likelihood:
+          $ref: "#/components/schemas/FriaLikelihood"
+        severity:
+          $ref: "#/components/schemas/FriaSeverity"
+        existing_controls:
+          type: string
+        further_action:
+          type: string
+        linked_project_risk_id:
+          type: integer
+        sort_order:
+          type: integer
+
+    # -- Model links --
+    FriaModelLink:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        fria_id:
+          type: integer
+        model_id:
+          type: integer
+        # Joined fields from model_inventories
+        provider:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        version:
+          type: string
+          nullable: true
+        model_status:
+          type: string
+          nullable: true
+
+    # -- Evidence --
+    FriaEvidenceLinkRequest:
+      type: object
+      required:
+        - file_id
+        - entity_type
+      properties:
+        file_id:
+          type: integer
+          description: ID of an already-uploaded file in the evidence hub
+        entity_type:
+          type: string
+          description: >
+            Section identifier, e.g. "section_1" through "section_8",
+            or a right key like "right_dignity"
+
+    # -- Snapshots --
+    FriaSnapshot:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        fria_id:
+          type: integer
+        version:
+          type: integer
+        snapshot_data:
+          type: object
+          description: >
+            Full JSON snapshot containing assessment, rights, riskItems,
+            and modelLinks at the time of submission
+          properties:
+            assessment:
+              $ref: "#/components/schemas/FriaAssessment"
+            rights:
+              type: array
+              items:
+                $ref: "#/components/schemas/FriaRight"
+            riskItems:
+              type: array
+              items:
+                $ref: "#/components/schemas/FriaRiskItem"
+            modelLinks:
+              type: array
+              items:
+                $ref: "#/components/schemas/FriaModelLink"
+        snapshot_reason:
+          type: string
+          nullable: true
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        # Joined field
+        created_by_name:
+          type: string
+          nullable: true
+
+    FriaSubmitRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: >
+            Optional reason for submission. Defaults to
+            "Submitted for review" if omitted.
+
+security:
+  - BearerAuth: []

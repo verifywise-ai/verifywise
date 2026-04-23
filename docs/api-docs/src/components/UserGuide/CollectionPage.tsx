@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronLeft, ArrowRight, FileText } from 'lucide-react';
 import { Collection } from '@user-guide-content/userGuideConfig';
 import { colors, typography, spacing, border } from '../../styles/theme';
+import { resolveIcon } from './iconResolver';
 import './CollectionPage.css';
 
 interface CollectionPageProps {
@@ -15,7 +16,7 @@ const CollectionPage: React.FC<CollectionPageProps> = ({
   onBack,
   onArticleClick,
 }) => {
-  const IconComponent = collection.icon;
+  const IconComponent = resolveIcon(collection.icon);
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: colors.background.alt }}>

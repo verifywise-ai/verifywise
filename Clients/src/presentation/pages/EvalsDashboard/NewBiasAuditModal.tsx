@@ -28,8 +28,10 @@ import {
   runBiasAudit,
   type BiasAuditPresetSummary,
   type BiasAuditPreset,
+  type BiasAuditMetric,
   type CreateBiasAuditConfig,
 } from "../../../application/repository/deepEval.repository";
+import { getAllEntities } from "../../../application/repository/entity.repository";
 import { palette } from "../../themes/palette";
 
 /** Parse a single CSV row handling quoted fields (RFC 4180). */
@@ -196,7 +198,11 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
+  const [metric, setMetric] = useState<BiasAuditMetric>("selection_rate");
   const [outcomeColumn, setOutcomeColumn] = useState("");
+  const [scoreColumn, setScoreColumn] = useState("");
+  const [predictionColumn, setPredictionColumn] = useState("");
+  const [groundTruthColumn, setGroundTruthColumn] = useState("");
 
   // Step 4: Review & run
   const [threshold, setThreshold] = useState<number | null>(0.8);
@@ -209,6 +215,10 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
   const [presetsError, setPresetsError] = useState<string | null>(null);
   const [alert, setAlert] = useState<{ show: boolean; variant: "success" | "error" | "info"; title: string; body: string } | null>(null);
   const presetRequestIdRef = useRef(0);
+
+  // Model inventory link
+  const [modelInventories, setModelInventories] = useState<Array<{ id: number; provider: string; model: string; version: string; status: string }>>([]);
+  const [selectedModelInventoryId, setSelectedModelInventoryId] = useState<number | null>(null);
 
   // Load presets on modal open
   useEffect(() => {
@@ -226,6 +236,18 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         setPresetsError("Failed to load compliance frameworks. Please try again.");
       })
       .finally(() => setLoadingPresets(false));
+  }, [isOpen]);
+
+  // Load model inventories on modal open
+  useEffect(() => {
+    if (!isOpen) return;
+    getAllEntities({ routeUrl: "/modelInventory" })
+      .then((response) => {
+        if (response?.data) {
+          setModelInventories(response.data);
+        }
+      })
+      .catch(() => {});
   }, [isOpen]);
 
   // Handle preset selection (request ID prevents race conditions on rapid clicks)
@@ -315,6 +337,7 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         presetId: fullPreset.id,
         presetName: fullPreset.name,
         mode: fullPreset.mode,
+        metric,
         orgId,
         categories: fullPreset.categories,
         intersectional: {
@@ -324,16 +347,22 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         metrics: fullPreset.metrics,
         threshold,
         smallSampleExclusion: smallSampleExclusion,
-        outcomeColumn,
+        outcomeColumn: metric === "selection_rate" ? outcomeColumn : "",
+        scoreColumn: metric === "scoring_rate" ? scoreColumn : undefined,
+        predictionColumn:
+          metric === "fairness_metrics" ? predictionColumn : undefined,
+        groundTruthColumn:
+          metric === "fairness_metrics" ? groundTruthColumn : undefined,
         columnMapping: Object.fromEntries(
           Object.entries(columnMapping).filter(([, v]) => v)
         ),
+        systemName: aedtName,
+        systemDescription: aedtDescription,
+        dataSource: dataSourceDescription,
         metadata: {
-          aedt_name: aedtName,
-          description: aedtDescription,
           distribution_date: distributionDate,
-          data_source_description: dataSourceDescription,
         },
+        modelInventoryId: selectedModelInventoryId || undefined,
       };
       const result = await runBiasAudit(csvFile, config);
       const rowCount = csvPreview.length > 0 ? `${csvHeaders.length} columns` : "";
@@ -367,12 +396,17 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
     setCsvHeaders([]);
     setCsvPreview([]);
     setColumnMapping({});
+    setMetric("selection_rate");
     setOutcomeColumn("");
+    setScoreColumn("");
+    setPredictionColumn("");
+    setGroundTruthColumn("");
     setThreshold(0.8);
     setSmallSampleExclusion(null);
     setIntersectionalEnabled(false);
     setSubmitError(null);
     setPresetsError(null);
+    setSelectedModelInventoryId(null);
     onClose();
   };
 
@@ -384,7 +418,20 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
       case 1:
         return aedtName.trim().length > 0;
       case 2: {
-        if (!csvFile || !outcomeColumn) return false;
+        if (!csvFile) return false;
+        // Metric-specific column requirements
+        const metricColumns: string[] = [];
+        if (metric === "selection_rate") {
+          if (!outcomeColumn) return false;
+          metricColumns.push(outcomeColumn);
+        } else if (metric === "scoring_rate") {
+          if (!scoreColumn) return false;
+          metricColumns.push(scoreColumn);
+        } else if (metric === "fairness_metrics") {
+          if (!predictionColumn || !groundTruthColumn) return false;
+          if (predictionColumn === groundTruthColumn) return false;
+          metricColumns.push(predictionColumn, groundTruthColumn);
+        }
         // Only require mapping for categories with defined groups (non-empty)
         const requiredKeys = Object.entries(fullPreset?.categories || {})
           .filter(([, cat]) => cat.groups && cat.groups.length > 0)
@@ -393,8 +440,8 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         const mappedValues = Object.values(columnMapping).filter(Boolean);
         // Prevent duplicate column mappings (same CSV column mapped to multiple categories)
         if (new Set(mappedValues).size !== mappedValues.length) return false;
-        // Outcome column must not be used as a category column
-        if (mappedValues.includes(outcomeColumn)) return false;
+        // Metric columns must not overlap with category columns
+        if (metricColumns.some((col) => mappedValues.includes(col))) return false;
         return true;
       }
       case 3:
@@ -513,6 +560,26 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         rows={3}
         isOptional
       />
+
+      <Box mt="16px">
+        <Select
+          id="model-inventory-link"
+          label="Link to model inventory (optional)"
+          placeholder="None — don't link to inventory"
+          value={selectedModelInventoryId !== null ? String(selectedModelInventoryId) : ""}
+          onChange={(e) =>
+            setSelectedModelInventoryId(e.target.value === "" ? null : Number(e.target.value))
+          }
+          items={[
+            { _id: "", name: "None — don't link to inventory" },
+            ...modelInventories.map((m) => ({
+              _id: String(m.id),
+              name: `${m.provider} — ${m.model} (v${m.version})`,
+            })),
+          ]}
+          sx={{ width: "100%" }}
+        />
+      </Box>
     </Stack>
   );
 
@@ -536,6 +603,34 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         </Typography>
       </Box>
 
+      {/* Metric mode selector */}
+      <Box>
+        <Stack direction="row" alignItems="center" spacing={0.5} mb={1}>
+          <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
+            Audit metric
+          </Typography>
+          <VWTooltip
+            content="The metric determines what your CSV needs to contain. Selection rate works for binary hire/reject decisions. Scoring rate is for tools that output a continuous score — it compares how often each group scores above the overall median. Fairness metrics compute TPR, FPR, and equalized odds from model predictions vs. ground truth."
+            placement="top"
+            maxWidth={320}
+          >
+            <Box sx={{ display: "flex", cursor: "help" }}>
+              <Info size={14} strokeWidth={1.5} color={palette.text.accent} />
+            </Box>
+          </VWTooltip>
+        </Stack>
+        <Select
+          id="metric-mode"
+          value={metric}
+          onChange={(e) => setMetric(e.target.value as BiasAuditMetric)}
+          items={[
+            { _id: "selection_rate", name: "Selection rate (binary outcome)" },
+            { _id: "scoring_rate", name: "Scoring rate (continuous score, LL144 compliant)" },
+            { _id: "fairness_metrics", name: "Fairness metrics (prediction + ground truth)" },
+          ]}
+        />
+      </Box>
+
       {/* Data requirements */}
       <Box sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: "4px", p: "12px", backgroundColor: palette.background.accent }}>
         <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
@@ -550,12 +645,38 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
               </Typography>
             </Stack>
           ))}
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
-            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-              <strong>Outcome</strong> — binary result column (1/yes/selected = selected, 0/no = not selected)
-            </Typography>
-          </Stack>
+          {metric === "selection_rate" && (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
+              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                <strong>Outcome</strong> — binary result column (1/yes/selected = selected, 0/no = not selected)
+              </Typography>
+            </Stack>
+          )}
+          {metric === "scoring_rate" && (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
+              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                <strong>Score</strong> — numeric column. Impact ratio is computed from the rate at which each group scores above the overall median.
+              </Typography>
+            </Stack>
+          )}
+          {metric === "fairness_metrics" && (
+            <>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
+                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                  <strong>Prediction</strong> — binary column with what the model predicted
+                </Typography>
+              </Stack>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
+                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                  <strong>Ground truth</strong> — binary column with the actual correct answer
+                </Typography>
+              </Stack>
+            </>
+          )}
         </Stack>
         <Typography sx={{ fontSize: 11, color: palette.text.accent, mt: 1.5 }}>
           Column names don't need to match exactly — you'll map them in the next section after uploading.
@@ -642,19 +763,68 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
               );
             })}
 
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
-              Outcome column
-            </Typography>
-            <Select
-              id="outcome-column"
-              value={outcomeColumn}
-              onChange={(e) => setOutcomeColumn(String(e.target.value))}
-              items={csvHeaders.map((h) => ({ _id: h, name: h }))}
-              placeholder="Select outcome column"
-              sx={{ flex: 1 }}
-            />
-          </Stack>
+          {metric === "selection_rate" && (
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
+                Outcome column
+              </Typography>
+              <Select
+                id="outcome-column"
+                value={outcomeColumn}
+                onChange={(e) => setOutcomeColumn(String(e.target.value))}
+                items={csvHeaders.map((h) => ({ _id: h, name: h }))}
+                placeholder="Select outcome column"
+                sx={{ flex: 1 }}
+              />
+            </Stack>
+          )}
+
+          {metric === "scoring_rate" && (
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
+                Score column
+              </Typography>
+              <Select
+                id="score-column"
+                value={scoreColumn}
+                onChange={(e) => setScoreColumn(String(e.target.value))}
+                items={csvHeaders.map((h) => ({ _id: h, name: h }))}
+                placeholder="Select numeric score column"
+                sx={{ flex: 1 }}
+              />
+            </Stack>
+          )}
+
+          {metric === "fairness_metrics" && (
+            <>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
+                  Prediction column
+                </Typography>
+                <Select
+                  id="prediction-column"
+                  value={predictionColumn}
+                  onChange={(e) => setPredictionColumn(String(e.target.value))}
+                  items={csvHeaders.map((h) => ({ _id: h, name: h }))}
+                  placeholder="Select prediction column"
+                  sx={{ flex: 1 }}
+                />
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
+                  Ground truth column
+                </Typography>
+                <Select
+                  id="ground-truth-column"
+                  value={groundTruthColumn}
+                  onChange={(e) => setGroundTruthColumn(String(e.target.value))}
+                  items={csvHeaders.map((h) => ({ _id: h, name: h }))}
+                  placeholder="Select ground truth column"
+                  sx={{ flex: 1 }}
+                />
+              </Stack>
+            </>
+          )}
         </Stack>
       )}
 

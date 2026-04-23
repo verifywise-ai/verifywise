@@ -1032,13 +1032,13 @@ const Framework = () => {
                   value: "linked-models",
                   icon: "Link",
                   count: linkedModelsCount,
-                  tooltip: "AI models mapped to this framework's controls",
+                  tooltip: "AI models mapped to this framework's requirements",
                 },
                 {
-                  label: "Controls and Requirements",
+                  label: "Requirements and Controls",
                   value: "controls",
                   icon: "FileCode",
-                  tooltip: "Regulatory controls and their implementation status",
+                  tooltip: "Regulatory requirements and the controls implementing them",
                 },
                 {
                   label: "Settings",

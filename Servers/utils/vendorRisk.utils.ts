@@ -65,7 +65,7 @@ export const getVendorRiskByIdQuery = async (
   id: number,
   organizationId: number,
   includeDeleted: boolean = false
-): Promise<IVendorRisk | null> => {
+): Promise<(IVendorRisk & { frameworks?: number[] }) | null> => {
   const whereClause = includeDeleted
     ? "WHERE organization_id = :organizationId AND id = :id"
     : "WHERE organization_id = :organizationId AND id = :id AND is_deleted = false";
@@ -77,7 +77,26 @@ export const getVendorRiskByIdQuery = async (
       model: VendorRiskModel,
     }
   );
-  return result[0];
+  if (!result[0]) return null;
+
+  // Convert model instance to plain object so toJSON() doesn't strip extra fields
+  const vendorRisk: IVendorRisk & { frameworks?: number[] } =
+    typeof result[0].toJSON === "function" ? result[0].toJSON() : { ...(result[0] as any) };
+
+  // Attach framework IDs (defensive: table may not exist if migration hasn't run)
+  try {
+    const frameworkResult = (await sequelize.query(
+      `SELECT framework_id FROM frameworks_vendorrisks WHERE vendorrisk_id = :vendorRiskId AND organization_id = :organizationId`,
+      { replacements: { vendorRiskId: id, organizationId } }
+    )) as [{ framework_id: number }[], number];
+    if (frameworkResult[0].length > 0) {
+      vendorRisk.frameworks = frameworkResult[0].map((f) => f.framework_id);
+    }
+  } catch {
+    // frameworks_vendorrisks table may not exist yet — skip
+  }
+
+  return vendorRisk;
 };
 
 export const createNewVendorRiskQuery = async (
@@ -248,4 +267,95 @@ export const getAllVendorRisksAllProjectsQuery = async (
     }
   );
   return risks;
+};
+
+export const createVendorRiskFrameworkAssociations = async (
+  frameworks: number[],
+  vendorRiskId: number,
+  organizationId: number,
+  transaction: Transaction
+): Promise<void> => {
+  if (!frameworks || frameworks.length === 0) return;
+
+  const frameworkReplacements: Record<string, number>[] = [];
+  const placeholders = frameworks
+    .map((_, index) => {
+      frameworkReplacements.push({
+        [`frameworkId_${index}`]: frameworks[index],
+      });
+      return `(:frameworkId_${index}, :vendorRiskId, :organizationId)`;
+    })
+    .join(", ");
+  const replacements: any = {
+    vendorRiskId,
+    organizationId,
+    ...Object.assign({}, ...frameworkReplacements),
+  };
+  await sequelize.query(
+    `INSERT INTO frameworks_vendorrisks (framework_id, vendorrisk_id, organization_id) VALUES ${placeholders}`,
+    {
+      replacements,
+      transaction,
+    }
+  );
+};
+
+export const deleteVendorRiskFrameworkAssociations = async (
+  vendorRiskId: number,
+  organizationId: number,
+  transaction: Transaction
+): Promise<void> => {
+  await sequelize.query(
+    `DELETE FROM frameworks_vendorrisks WHERE vendorrisk_id = :vendorRiskId AND organization_id = :organizationId`,
+    {
+      replacements: { vendorRiskId, organizationId },
+      transaction,
+    }
+  );
+};
+
+export const getVendorRisksByFrameworkIdQuery = async (
+  frameworkId: number,
+  organizationId: number,
+  filter: "active" | "deleted" | "all" = "active"
+): Promise<any[]> => {
+  let whereClause = "";
+  switch (filter) {
+    case "active":
+      whereClause = "AND vr.is_deleted = false";
+      break;
+    case "deleted":
+      whereClause = "AND vr.is_deleted = true";
+      break;
+    case "all":
+      whereClause = "";
+      break;
+  }
+
+  const risks = await sequelize.query(
+    `SELECT
+      vr.*,
+      v.vendor_name
+    FROM vendorRisks AS vr
+    INNER JOIN frameworks_vendorrisks fvr ON vr.id = fvr.vendorrisk_id AND fvr.framework_id = :frameworkId AND fvr.organization_id = :organizationId
+    JOIN vendors AS v ON vr.vendor_id = v.id AND v.organization_id = :organizationId
+    WHERE vr.organization_id = :organizationId ${whereClause}
+    ORDER BY vr.created_at DESC, vr.id ASC`,
+    {
+      replacements: { frameworkId, organizationId },
+      type: QueryTypes.SELECT,
+    }
+  );
+  return risks;
+};
+
+export const getVendorRiskFrameworkIds = async (
+  vendorRiskId: number,
+  organizationId: number
+): Promise<number[]> => {
+  const result = (await sequelize.query(
+    `SELECT framework_id FROM frameworks_vendorrisks WHERE vendorrisk_id = :vendorRiskId AND organization_id = :organizationId`,
+    { replacements: { vendorRiskId, organizationId } }
+  )) as [{ framework_id: number }[], number];
+  return result[0].map((f) => f.framework_id);
 };

@@ -26,7 +26,7 @@ export const historyContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Repository', text: 'Owner and name of the scanned repository' },
-        { bold: 'Status', text: 'Current state — Completed, Failed, Cancelled, or Scanning' },
+        { bold: 'Status', text: 'Current state: Completed, Failed, Cancelled or Scanning' },
         { bold: 'Risk score', text: 'AGRS letter grade (A through F) and numeric score, if calculated' },
         { bold: 'Findings', text: 'Total detections: libraries, API calls, secrets, security issues' },
         { bold: 'Files scanned', text: 'Total source files analyzed' },
@@ -36,13 +36,13 @@ export const historyContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click any completed scan row to see its full results: risk score, library findings, API calls, secrets, and security issues.',
+      text: 'Click any completed scan row to see its full results: risk score, library findings, API calls, secrets and security issues.',
     },
     {
       type: 'image',
       src: '/images/user-guide/ai-detection-history.png',
       alt: 'Scan results table showing past repository scans with status and findings',
-      caption: 'Complete scan results with repository, status, risk score, findings, and duration',
+      caption: 'Complete scan results with repository, status, risk score, findings and duration',
     },
     {
       type: 'heading',
@@ -88,7 +88,7 @@ export const historyContent: ArticleContent = {
       type: 'heading',
       id: 'sorting-filtering',
       level: 2,
-      text: 'Sorting, filtering, and search',
+      text: 'Sorting, filtering and search',
     },
     {
       type: 'paragraph',

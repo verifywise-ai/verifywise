@@ -53,7 +53,7 @@ export const shareLinksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can view all active share links, see when they expire, and revoke them early if needed. Expired links automatically stop working.',
+      text: 'You can view all active share links, see when they expire and revoke them early if needed. Expired links automatically stop working.',
     },
     {
       type: 'heading',

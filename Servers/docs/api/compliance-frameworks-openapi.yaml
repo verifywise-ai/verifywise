@@ -1,0 +1,2089 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise Compliance Frameworks API
+  description: API endpoints for compliance framework management including ISO 27001, ISO 42001, NIST AI RMF, and compliance scoring.
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: Local server
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==================== Frameworks ====================
+  /frameworks:
+    get:
+      tags: [Frameworks]
+      summary: Get all frameworks
+      description: Retrieves all compliance frameworks for the authenticated user's organization.
+      responses:
+        "200":
+          description: Frameworks retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "204":
+          description: No frameworks found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /frameworks/{id}:
+    get:
+      tags: [Frameworks]
+      summary: Get framework by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Framework found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /frameworks/toProject:
+    post:
+      tags: [Frameworks]
+      summary: Add framework to project
+      description: Associates a framework with a project. Fails if the project has a pending approval request.
+      parameters:
+        - name: frameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Framework added to project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: Project has pending approval request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /frameworks/fromProject:
+    delete:
+      tags: [Frameworks]
+      summary: Remove framework from project
+      description: Removes a framework association from a project. Fails if the project has a pending approval request.
+      parameters:
+        - name: frameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Framework removed from project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: Project has pending approval request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ==================== ISO 27001 ====================
+  /iso27001/clauses:
+    get:
+      tags: [ISO 27001]
+      summary: Get all ISO 27001 clauses
+      description: Returns all ISO 27001 clause structure records for the organization.
+      responses:
+        "200":
+          description: Clauses retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ISO27001Clause"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/clauses/struct/byProjectId/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get clauses structure for project
+      description: Returns clauses with nested sub-clauses for a specific project framework ID.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Clauses structure retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ISO27001ClauseWithSubClauses"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/annexes:
+    get:
+      tags: [ISO 27001]
+      summary: Get all ISO 27001 annexes
+      description: Returns all ISO 27001 annex structure records for the organization.
+      responses:
+        "200":
+          description: Annexes retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ISO27001Annex"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/annexes/struct/byProjectId/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get annexes structure for project
+      description: Returns annexes with nested controls for a specific project framework ID.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Annexes structure retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ISO27001AnnexWithControls"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/clauses/byProjectId/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get clauses by project framework ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Clauses retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/annexes/byProjectId/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get annexes by project framework ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Annexes retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/subClauses/byClauseId/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get sub-clauses by clause ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Sub-clauses retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: No sub-clauses found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/annexControls/byAnnexId/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get annex controls by annex ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Annex controls retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: No annex controls found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/subClause/byId/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get sub-clause by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sub-clause retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: No sub-clause found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/annexControl/byId/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get annex control by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Annex control retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: No annex control found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/clauses/progress/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get project clauses progress
+      description: Returns total and completed sub-clauses count for a project framework.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Progress data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/annexes/progress/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get project annexes progress
+      description: Returns total and completed annex controls count for a project framework.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Progress data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/all/clauses/progress:
+    get:
+      tags: [ISO 27001]
+      summary: Get all projects clauses progress
+      description: Returns clauses progress across all projects in the organization.
+      responses:
+        "200":
+          description: Progress data for all projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/all/annexes/progress:
+    get:
+      tags: [ISO 27001]
+      summary: Get all projects annexes progress
+      description: Returns annexes progress across all projects in the organization.
+      responses:
+        "200":
+          description: Progress data for all projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/clauses/assignments/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get project clauses assignments
+      description: Returns total and assigned sub-clauses count for a project framework.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assignment data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/annexes/assignments/{id}:
+    get:
+      tags: [ISO 27001]
+      summary: Get project annexes assignments
+      description: Returns total and assigned annex controls count for a project framework.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assignment data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/saveClauses/{id}:
+    patch:
+      tags: [ISO 27001]
+      summary: Save/update a sub-clause
+      description: Updates a sub-clause with new data, file uploads, file unlinking, and risk associations. Accepts multipart/form-data.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ISO27001SaveClauseRequest"
+      responses:
+        "200":
+          description: Sub-clause updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/saveAnnexes/{id}:
+    patch:
+      tags: [ISO 27001]
+      summary: Save/update an annex control
+      description: Updates an annex control with new data, file uploads, file unlinking, and risk associations. Accepts multipart/form-data.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ISO27001SaveAnnexRequest"
+      responses:
+        "200":
+          description: Annex control updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/clauses/byProjectId/{id}:
+    delete:
+      tags: [ISO 27001]
+      summary: Delete management system clauses by project ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Clauses deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso27001/annexes/byProjectId/{id}:
+    delete:
+      tags: [ISO 27001]
+      summary: Delete reference controls by project ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Annex controls deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ==================== ISO 42001 ====================
+  /iso42001/clauses:
+    get:
+      tags: [ISO 42001]
+      summary: Get all ISO 42001 clauses
+      responses:
+        "200":
+          description: Clauses retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ISO42001Clause"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/clauses/struct/byProjectId/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get clauses structure for project
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Clauses structure with sub-clauses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ISO42001ClauseWithSubClauses"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/annexes:
+    get:
+      tags: [ISO 42001]
+      summary: Get all ISO 42001 annexes
+      responses:
+        "200":
+          description: Annexes retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ISO42001Annex"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/annexes/struct/byProjectId/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get annexes structure for project
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Annexes structure with categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ISO42001AnnexWithCategories"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/clauses/byProjectId/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get clauses by project framework ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Clauses retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/annexes/byProjectId/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get annexes by project framework ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Annexes retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/subClauses/byClauseId/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get sub-clauses by clause ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Sub-clauses retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: No sub-clauses found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/annexCategories/byAnnexId/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get annex categories by annex ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Annex categories retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: No annex categories found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/subClause/byId/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get sub-clause by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sub-clause retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: No sub-clause found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/subclauses/{id}/risks:
+    get:
+      tags: [ISO 42001]
+      summary: Get risks linked to a sub-clause
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Linked risks retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RisksResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/annexCategories/{id}/risks:
+    get:
+      tags: [ISO 42001]
+      summary: Get risks linked to an annex category
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Linked risks retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RisksResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/annexCategory/byId/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get annex category by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: projectFrameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Annex category retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: No annex category found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/clauses/progress/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get project clauses progress
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Progress data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/annexes/progress/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get project annexes progress
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Progress data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/all/clauses/progress:
+    get:
+      tags: [ISO 42001]
+      summary: Get all projects clauses progress
+      responses:
+        "200":
+          description: Progress data for all projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/all/annexes/progress:
+    get:
+      tags: [ISO 42001]
+      summary: Get all projects annexes progress
+      responses:
+        "200":
+          description: Progress data for all projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/clauses/assignments/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get project clauses assignments
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assignment data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/annexes/assignments/{id}:
+    get:
+      tags: [ISO 42001]
+      summary: Get project annexes assignments
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assignment data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/saveClauses/{id}:
+    patch:
+      tags: [ISO 42001]
+      summary: Save/update a sub-clause
+      description: Updates a sub-clause with new data, file uploads, file unlinking, and risk associations.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ISO42001SaveClauseRequest"
+      responses:
+        "200":
+          description: Sub-clause updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/saveAnnexes/{id}:
+    patch:
+      tags: [ISO 42001]
+      summary: Save/update an annex category
+      description: Updates an annex category with new data, file uploads, file unlinking, and risk associations.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ISO42001SaveAnnexRequest"
+      responses:
+        "200":
+          description: Annex category updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/clauses/byProjectId/{id}:
+    delete:
+      tags: [ISO 42001]
+      summary: Delete management system clauses by project ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Clauses deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /iso42001/annexes/byProjectId/{id}:
+    delete:
+      tags: [ISO 42001]
+      summary: Delete reference controls by project ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Annex controls deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ==================== NIST AI RMF ====================
+  /nist-ai-rmf/functions:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get all NIST AI RMF functions
+      description: Returns all NIST AI RMF functions (Govern, Map, Measure, Manage) for the organization.
+      responses:
+        "200":
+          description: Functions retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/NISTFunction"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/functions/{id}:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get NIST AI RMF function by ID or name
+      description: The id parameter can be a function name (GOVERN, MAP, MEASURE, MANAGE) or a numeric ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Function name (GOVERN, MAP, MEASURE, MANAGE) or numeric ID
+      responses:
+        "200":
+          description: Function retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/categories/{title}:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get categories by function title
+      description: Returns all NIST AI RMF categories filtered by function title.
+      parameters:
+        - name: title
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Function title (e.g., GOVERN, MAP)
+      responses:
+        "200":
+          description: Categories retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/NISTCategory"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/subcategories/byId/{id}:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get subcategory by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Subcategory retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/NISTSubcategory"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/subcategories/{id}/risks:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get risks linked to a subcategory
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Risks retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Risks retrieved successfully"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Risk"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/subcategories/{categoryId}/{title}:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get subcategories by category ID and title
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: title
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Function title for filtering
+      responses:
+        "200":
+          description: Subcategories retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/NISTSubcategory"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/subcategories/{id}:
+    patch:
+      tags: [NIST AI RMF]
+      summary: Update subcategory by ID
+      description: Updates a NIST AI RMF subcategory with new data, file uploads, file unlinking, tag changes, and risk associations.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/NISTSubcategoryUpdateRequest"
+      responses:
+        "200":
+          description: Subcategory updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/subcategories/{id}/status:
+    patch:
+      tags: [NIST AI RMF]
+      summary: Update subcategory status
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NISTSubcategoryStatusUpdate"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Status is required or invalid status value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/progress:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get overall NIST AI RMF progress
+      description: Returns total and completed subcategories count.
+      responses:
+        "200":
+          description: Progress data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/NISTProgress"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/progress-by-function:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get progress grouped by function
+      description: Returns progress for each function (Govern, Map, Measure, Manage).
+      responses:
+        "200":
+          description: Progress by function
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/assignments:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get overall NIST AI RMF assignments
+      description: Returns total and assigned subcategories count.
+      responses:
+        "200":
+          description: Assignment data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/NISTAssignments"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/assignments-by-function:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get assignments grouped by function
+      description: Returns assignments for each function (Govern, Map, Measure, Manage).
+      responses:
+        "200":
+          description: Assignments by function
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/status-breakdown:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get status breakdown
+      description: Returns count of subcategories by status.
+      responses:
+        "200":
+          description: Status breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /nist-ai-rmf/overview:
+    get:
+      tags: [NIST AI RMF]
+      summary: Get full NIST AI RMF overview
+      description: Returns all functions with categories and subcategories in a nested structure.
+      responses:
+        "200":
+          description: Full overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ==================== Compliance Score ====================
+  /compliance/score:
+    get:
+      tags: [Compliance Score]
+      summary: Get compliance score
+      description: Retrieves the AI compliance score for the authenticated user's organization.
+      responses:
+        "200":
+          description: Compliance score retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ComplianceScore"
+        "400":
+          description: Organization ID is required
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /compliance/score/{organizationId}:
+    get:
+      tags: [Compliance Score]
+      summary: Get compliance score by organization
+      description: Retrieves compliance score for a specific organization. Requires the user to belong to that organization.
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Compliance score retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ComplianceScore"
+        "400":
+          description: Invalid organization ID
+        "403":
+          description: Access denied
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /compliance/details/{organizationId}:
+    get:
+      tags: [Compliance Score]
+      summary: Get detailed compliance breakdown
+      description: Returns detailed compliance analysis with insights, strongest/weakest modules, improvement priority, and data quality indicators.
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Detailed compliance data retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ComplianceDetails"
+        "400":
+          description: Invalid organization ID
+        "403":
+          description: Access denied
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Resource ID
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    # ---- Generic response wrappers ----
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 200
+        data:
+          description: Response payload (varies by endpoint)
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+        data:
+          type: string
+          description: Error message
+
+    # ---- Frameworks ----
+    Framework:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        organization_id:
+          type: integer
+
+    # ---- ISO 27001 ----
+    ISO27001Clause:
+      type: object
+      properties:
+        id:
+          type: integer
+        arrangement:
+          type: integer
+        title:
+          type: string
+
+    ISO27001ClauseWithSubClauses:
+      type: object
+      properties:
+        id:
+          type: integer
+        arrangement:
+          type: integer
+        title:
+          type: string
+        subClauses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ISO27001SubClause"
+
+    ISO27001SubClause:
+      type: object
+      properties:
+        id:
+          type: integer
+        subclause_meta_id:
+          type: integer
+        projects_frameworks_id:
+          type: integer
+        organization_id:
+          type: integer
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+          nullable: true
+        evidence_links:
+          type: array
+          items:
+            type: object
+        risks_mitigated:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    ISO27001Annex:
+      type: object
+      properties:
+        id:
+          type: integer
+        arrangement:
+          type: string
+        order_no:
+          type: integer
+        title:
+          type: string
+
+    ISO27001AnnexWithControls:
+      type: object
+      properties:
+        id:
+          type: integer
+        arrangement:
+          type: string
+        order_no:
+          type: integer
+        title:
+          type: string
+        controls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ISO27001AnnexControl"
+
+    ISO27001AnnexControl:
+      type: object
+      properties:
+        id:
+          type: integer
+        annexcontrol_meta_id:
+          type: integer
+        projects_frameworks_id:
+          type: integer
+        organization_id:
+          type: integer
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+          nullable: true
+        evidence_links:
+          type: array
+          items:
+            type: object
+        risks_mitigated:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    ISO27001SaveClauseRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User ID for file upload attribution
+        project_id:
+          type: string
+          description: Project ID for file upload association
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+        tags:
+          type: string
+          description: JSON-encoded array of tag strings
+        delete:
+          type: string
+          description: JSON-encoded array of file IDs to unlink
+        risksDelete:
+          type: string
+          description: JSON-encoded array of risk IDs to remove
+        risksMitigated:
+          type: string
+          description: JSON-encoded array of risk IDs to add
+        files:
+          type: array
+          items:
+            type: string
+            format: binary
+          description: Evidence files to upload
+
+    ISO27001SaveAnnexRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User ID for file upload attribution
+        project_id:
+          type: string
+          description: Project ID for file upload association
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+        tags:
+          type: string
+          description: JSON-encoded array of tag strings
+        delete:
+          type: string
+          description: JSON-encoded array of file IDs to unlink
+        risksDelete:
+          type: string
+          description: JSON-encoded array of risk IDs to remove
+        risksMitigated:
+          type: string
+          description: JSON-encoded array of risk IDs to add
+        files:
+          type: array
+          items:
+            type: string
+            format: binary
+          description: Evidence files to upload
+
+    # ---- ISO 42001 ----
+    ISO42001Clause:
+      type: object
+      properties:
+        id:
+          type: integer
+        clause_no:
+          type: integer
+        title:
+          type: string
+
+    ISO42001ClauseWithSubClauses:
+      type: object
+      properties:
+        id:
+          type: integer
+        clause_no:
+          type: integer
+        title:
+          type: string
+        subClauses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ISO42001SubClause"
+
+    ISO42001SubClause:
+      type: object
+      properties:
+        id:
+          type: integer
+        subclause_meta_id:
+          type: integer
+        projects_frameworks_id:
+          type: integer
+        organization_id:
+          type: integer
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+          nullable: true
+        evidence_links:
+          type: array
+          items:
+            type: object
+        risks_mitigated:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    ISO42001Annex:
+      type: object
+      properties:
+        id:
+          type: integer
+        annex_no:
+          type: integer
+        title:
+          type: string
+
+    ISO42001AnnexWithCategories:
+      type: object
+      properties:
+        id:
+          type: integer
+        annex_no:
+          type: integer
+        title:
+          type: string
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ISO42001AnnexCategory"
+
+    ISO42001AnnexCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        annexcategory_meta_id:
+          type: integer
+        projects_frameworks_id:
+          type: integer
+        organization_id:
+          type: integer
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+          nullable: true
+        evidence_links:
+          type: array
+          items:
+            type: object
+        risks_mitigated:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    ISO42001SaveClauseRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+        project_id:
+          type: string
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+        tags:
+          type: string
+          description: JSON-encoded array of tag strings
+        delete:
+          type: string
+          description: JSON-encoded array of file IDs to unlink
+        risksDelete:
+          type: string
+          description: JSON-encoded array of risk IDs to remove
+        risksMitigated:
+          type: string
+          description: JSON-encoded array of risk IDs to add
+        files:
+          type: array
+          items:
+            type: string
+            format: binary
+
+    ISO42001SaveAnnexRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+        project_id:
+          type: string
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+        tags:
+          type: string
+          description: JSON-encoded array of tag strings
+        delete:
+          type: string
+          description: JSON-encoded array of file IDs to unlink
+        risksDelete:
+          type: string
+          description: JSON-encoded array of risk IDs to remove
+        risksMitigated:
+          type: string
+          description: JSON-encoded array of risk IDs to add
+        files:
+          type: array
+          items:
+            type: string
+            format: binary
+
+    # ---- NIST AI RMF ----
+    NISTFunction:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+          example: GOVERN
+        description:
+          type: string
+        organization_id:
+          type: integer
+
+    NISTCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        function_id:
+          type: integer
+        organization_id:
+          type: integer
+
+    NISTSubcategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        subcategory_meta_id:
+          type: integer
+        organization_id:
+          type: integer
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+          nullable: true
+        evidence_links:
+          type: array
+          items:
+            type: object
+        risks_mitigated:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    NISTSubcategoryUpdateRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User ID for file upload attribution
+        project_id:
+          type: string
+          description: Project ID for file upload association
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+        owner:
+          type: integer
+          nullable: true
+        reviewer:
+          type: integer
+          nullable: true
+        approver:
+          type: integer
+          nullable: true
+        implementation_details:
+          type: string
+        tags:
+          type: string
+          description: JSON-encoded array of tag strings
+        delete:
+          type: string
+          description: JSON-encoded array of file IDs to unlink
+        risksDelete:
+          type: string
+          description: JSON-encoded array of risk IDs to remove
+        risksMitigated:
+          type: string
+          description: JSON-encoded array of risk IDs to add
+        files:
+          type: array
+          items:
+            type: string
+            format: binary
+          description: Evidence files to upload
+
+    NISTSubcategoryStatusUpdate:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [Not started, Draft, In review, Done]
+          description: New status value
+
+    NISTProgress:
+      type: object
+      properties:
+        totalSubcategories:
+          type: integer
+        doneSubcategories:
+          type: integer
+
+    NISTAssignments:
+      type: object
+      properties:
+        totalSubcategories:
+          type: integer
+        assignedSubcategories:
+          type: integer
+
+    # ---- Compliance Score ----
+    ComplianceScore:
+      type: object
+      properties:
+        organizationId:
+          type: integer
+        overallScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        calculatedAt:
+          type: string
+          format: date-time
+        modules:
+          type: object
+          properties:
+            riskManagement:
+              $ref: "#/components/schemas/ModuleScore"
+            vendorManagement:
+              $ref: "#/components/schemas/ModuleScore"
+            projectGovernance:
+              $ref: "#/components/schemas/ModuleScore"
+            modelLifecycle:
+              $ref: "#/components/schemas/ModuleScore"
+            policyDocumentation:
+              $ref: "#/components/schemas/ModuleScore"
+        metadata:
+          $ref: "#/components/schemas/ComplianceMetadata"
+
+    ModuleScore:
+      type: object
+      properties:
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        weight:
+          type: number
+          description: Module weight (sums to 1.0 across all modules)
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComponentScore"
+        totalDataPoints:
+          type: integer
+        qualityScore:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Data completeness indicator
+
+    ComponentScore:
+      type: object
+      properties:
+        name:
+          type: string
+        score:
+          type: number
+        weight:
+          type: number
+        dataPoints:
+          type: integer
+        details:
+          type: object
+          description: Module-specific details
+
+    ComplianceMetadata:
+      type: object
+      properties:
+        totalProjects:
+          type: integer
+        applicableProjects:
+          type: integer
+        lastUpdated:
+          type: string
+          format: date-time
+        dataFreshness:
+          type: object
+          properties:
+            risks:
+              type: string
+              format: date-time
+            vendors:
+              type: string
+              format: date-time
+            projects:
+              type: string
+              format: date-time
+            models:
+              type: string
+              format: date-time
+            policies:
+              type: string
+              format: date-time
+        calculationMethod:
+          type: string
+          enum: [balanced_weighted_average]
+        version:
+          type: string
+
+    ComplianceDetails:
+      allOf:
+        - $ref: "#/components/schemas/ComplianceScore"
+        - type: object
+          properties:
+            insights:
+              type: object
+              properties:
+                strongestModule:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    score:
+                      type: number
+                weakestModule:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    score:
+                      type: number
+                improvementPriority:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      module:
+                        type: string
+                      score:
+                        type: number
+                      weight:
+                        type: number
+                      impact:
+                        type: number
+                        description: "(100 - score) * weight"
+                overallTrend:
+                  type: string
+                  enum: [up, down, stable]
+                dataQuality:
+                  type: object
+                  properties:
+                    riskManagement:
+                      type: number
+                    vendorManagement:
+                      type: number
+                    projectGovernance:
+                      type: number
+                    modelLifecycle:
+                      type: number
+                    policyDocumentation:
+                      type: number
+
+    # ---- Shared ----
+    ProgressResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        done:
+          type: integer
+
+    AssignmentResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        assigned:
+          type: integer
+
+    RisksResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Risk"
+
+    Risk:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        risk_level:
+          type: string
+        status:
+          type: string
+        organization_id:
+          type: integer

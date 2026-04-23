@@ -10,7 +10,7 @@ export const playgroundContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Playground is a chat interface for testing your endpoints before sending production traffic through them. Send messages, watch responses stream in, and check that guardrails catch what they should.',
+      text: 'The Playground is a chat interface for testing your endpoints before sending production traffic through them. Send messages, watch responses stream in and check that guardrails catch what they should.',
     },
     {
       type: 'heading',

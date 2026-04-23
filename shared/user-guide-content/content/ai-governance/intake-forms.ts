@@ -14,7 +14,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Intake forms let anyone in your organization request a new AI use case or register a model without needing a VerifyWise account. You publish a public form, share the link, and submissions land in your governance queue for review. When you approve a submission, VerifyWise creates the use case or model inventory entry and carries over the risk score from the intake.',
+      text: 'Intake forms let anyone in your organization request a new AI use case or register a model without needing a VerifyWise account. You publish a public form, share the link and submissions land in your governance queue for review. When you approve a submission, VerifyWise creates the use case or model inventory entry and carries over the risk score from the intake.',
     },
     {
       type: 'paragraph',
@@ -34,8 +34,8 @@ export const intakeFormsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { bold: 'Build', text: 'Create a form in the drag-and-drop builder. Choose field types, set validation rules, and map fields to entity properties.' },
-        { bold: 'Brand', text: 'Customize the look with your organization\'s colors, logo, and typography.' },
+        { bold: 'Build', text: 'Create a form in the drag-and-drop builder. Choose field types, set validation rules and map fields to entity properties.' },
+        { bold: 'Brand', text: 'Customize the look with your organization\'s colors, logo and typography.' },
         { bold: 'Publish', text: 'One click generates a public URL. Share it internally, embed it in a wiki, or send it via email.' },
         { bold: 'Collect', text: 'Submissions arrive with automatic risk scoring. If an LLM key is connected, the system also runs an LLM-based risk analysis on top.' },
         { bold: 'Review', text: 'Approve or reject each submission. Approvals create governed entities instantly. Rejections send the submitter a pre-filled resubmission link.' },
@@ -69,7 +69,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Marketing buys a third-party content generation tool. The intake form captures the vendor name, what data the tool touches, whether it makes decisions on its own, and how many people are affected. Governance reviews it before the tool goes live across the company.',
+      text: 'Marketing buys a third-party content generation tool. The intake form captures the vendor name, what data the tool touches, whether it makes decisions on its own and how many people are affected. Governance reviews it before the tool goes live across the company.',
     },
     {
       type: 'heading',
@@ -79,7 +79,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Data science teams ship models regularly. An intake form set up for model inventory collects the model name, version, training data description, intended use, and provider. Approved submissions go straight into the model inventory with risk metadata carried over.',
+      text: 'Data science teams ship models regularly. An intake form set up for model inventory collects the model name, version, training data description, intended use and provider. Approved submissions go straight into the model inventory with risk metadata carried over.',
     },
     {
       type: 'heading',
@@ -156,7 +156,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can keep all of these, remove the ones you don\'t need, or add your own. Model inventory forms have their own set of defaults (model name, version, provider, intended use, and risk level).',
+      text: 'You can keep all of these, remove the ones you don\'t need, or add your own. Model inventory forms have their own set of defaults (model name, version, provider, intended use and risk level).',
     },
     {
       type: 'heading',
@@ -166,7 +166,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The builder has three areas: a **field palette** on the left, the **form canvas** in the center, and a **settings panel** on the right.',
+      text: 'The builder has three areas: a **field palette** on the left, the **form canvas** in the center and a **settings panel** on the right.',
     },
     {
       type: 'heading',
@@ -221,7 +221,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Text and textarea fields also support **min length**, **max length**, and **regex pattern** validation. Number fields support **min** and **max** bounds. Select and multi-select fields have an **options editor** where you add label/value pairs.',
+      text: 'Text and textarea fields also support **min length**, **max length** and **regex pattern** validation. Number fields support **min** and **max** bounds. Select and multi-select fields have an **options editor** where you add label/value pairs.',
     },
     {
       type: 'heading',
@@ -236,22 +236,22 @@ export const intakeFormsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: '`project_title` — use case name' },
-        { text: '`description` — system description' },
-        { text: '`goal` — business justification' },
-        { text: '`owner` — responsible person' },
-        { text: '`start_date` — planned start date' },
-        { text: '`ai_risk_classification` — risk tier' },
-        { text: '`type_of_high_risk_role` — high-risk role category' },
+        { text: '`project_title`, use case name' },
+        { text: '`description`, system description' },
+        { text: '`goal`, business justification' },
+        { text: '`owner`, responsible person' },
+        { text: '`start_date`, planned start date' },
+        { text: '`ai_risk_classification`, risk tier' },
+        { text: '`type_of_high_risk_role`, high-risk role category' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'For model inventory forms: `name`, `description`, `modelVersion`, `provider`, `owner`, `modelType`, `intendedUse`, and `riskLevel`.',
+      text: 'For model inventory forms: `name`, `description`, `modelVersion`, `provider`, `owner`, `modelType`, `intendedUse` and `riskLevel`.',
     },
     {
       type: 'paragraph',
-      text: 'Fields without a mapping are still captured in the submission data — they just don\'t auto-populate entity properties. The reviewing admin can always edit entity data before confirming approval.',
+      text: 'Fields without a mapping are still captured in the submission data. They just don\'t auto-populate entity properties. The reviewing admin can always edit entity data before confirming approval.',
     },
     {
       type: 'heading',
@@ -289,9 +289,9 @@ export const intakeFormsContent: ArticleContent = {
         { key: 'default', label: 'Default', width: '25%' },
       ],
       rows: [
-        { setting: 'Format', description: 'Form width — narrow (620px) or wide (820px)', default: 'Narrow' },
-        { setting: 'Alignment', description: 'Horizontal position — left, center, or right', default: 'Center' },
-        { setting: 'Color theme', description: 'Primary color used for the banner gradient, focused inputs, and the submit button', default: '#13715B' },
+        { setting: 'Format', description: 'Form width, either narrow (620px) or wide (820px)', default: 'Narrow' },
+        { setting: 'Alignment', description: 'Horizontal position: left, center or right', default: 'Center' },
+        { setting: 'Color theme', description: 'Primary color used for the banner gradient, focused inputs and the submit button', default: '#13715B' },
         { setting: 'Background color', description: 'Page background behind the form card', default: '#fafafa' },
         { setting: 'Logo URL', description: 'Organization logo displayed on the form', default: 'None' },
         { setting: 'Font family', description: 'Typography for all form text', default: 'Inter' },
@@ -360,7 +360,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Toggle on **Suggested questions** to show a panel of pre-built governance questions in the builder. They are organized by category (risks, compliance, operations, vendors, models) and you can add any of them to your form with one click. Each question comes with the field type, validation rules, and guidance text already set up.',
+      text: 'Toggle on **Suggested questions** to show a panel of pre-built governance questions in the builder. They are organized by category (risks, compliance, operations, vendors, models) and you can add any of them to your form with one click. Each question comes with the field type, validation rules and guidance text already set up.',
     },
     {
       type: 'heading',
@@ -415,7 +415,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When someone opens the public link, they see the form page with your color theme, the form title in a gradient banner, and an optional description. No login required.',
+      text: 'When someone opens the public link, they see the form page with your color theme, the form title in a gradient banner and an optional description. No login required.',
     },
     {
       type: 'heading',
@@ -425,7 +425,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The submitter fills out the required fields, optionally enters their contact information, solves a math CAPTCHA (something like "7 + 4 = ?"), and clicks **Submit**. The CAPTCHA blocks automated spam but is simple enough that it won\'t slow anyone down.',
+      text: 'The submitter fills out the required fields, optionally enters their contact information, solves a math CAPTCHA (something like "7 + 4 = ?") and clicks **Submit**. The CAPTCHA blocks automated spam but is simple enough that it won\'t slow anyone down.',
     },
     {
       type: 'paragraph',
@@ -456,7 +456,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'All submissions appear in the **Submissions** tab on the intake forms page. Each row shows the submitter\'s name (if provided), the form name, submission status, risk tier, and date.',
+      text: 'All submissions appear in the **Submissions** tab on the intake forms page. Each row shows the submitter\'s name (if provided), the form name, submission status, risk tier and date.',
     },
     {
       type: 'paragraph',
@@ -479,7 +479,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Every submission is scored across multiple risk dimensions. Each dimension produces a score from 1 to 10, a weight, and a set of signals (short explanations of what drove the score).',
+      text: 'Every submission is scored across multiple risk dimensions. Each dimension produces a score from 1 to 10, a weight and a set of signals (short explanations of what drove the score).',
     },
     {
       type: 'table',
@@ -523,7 +523,7 @@ export const intakeFormsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Review the entity data preview — these are the field values that will populate the new entity. You can edit them before confirming.' },
+        { text: 'Review the entity data preview. These are the field values that will populate the new entity, and you can edit them before confirming.' },
         { text: 'Optionally override the risk tier with a justification.' },
         { text: 'Click **Approve**. VerifyWise creates the entity (use case or model inventory entry) with the confirmed data.' },
         { text: 'If the submitter provided an email, they receive an approval notification.' },
@@ -603,7 +603,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The intake forms list page shows all your forms with their status, entity type, submission count, and creation date.',
+      text: 'The intake forms list page shows all your forms with their status, entity type, submission count and creation date.',
     },
     {
       type: 'heading',
@@ -689,7 +689,7 @@ export const intakeFormsContent: ArticleContent = {
       items: [
         { text: 'Archive forms as soon as you stop accepting submissions. This prevents stale links from collecting data.' },
         { text: 'Enable contact collection when you need to communicate decisions back to submitters. Disable it when anonymity is more important than follow-up.' },
-        { text: 'The CAPTCHA and rate limiting run automatically — no configuration needed.' },
+        { text: 'The CAPTCHA and rate limiting run automatically. No configuration needed.' },
       ],
     },
     {

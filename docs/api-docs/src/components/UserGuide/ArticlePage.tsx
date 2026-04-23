@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Collection, Article } from '@user-guide-content/userGuideConfig';
 import type { TocItem } from '@user-guide-content/contentTypes';
 import { colors, typography, spacing, border } from '../../styles/theme';
+import { resolveIcon } from './iconResolver';
 import './ArticlePage.css';
 
 type Mode = 'web' | 'in-app';
@@ -34,7 +35,7 @@ const ArticlePage: React.FC<ArticlePageProps> = ({
   children,
   mode = 'web',
 }) => {
-  const IconComponent = collection.icon;
+  const IconComponent = resolveIcon(collection.icon);
   const isInApp = mode === 'in-app';
   const [activeSection, setActiveSection] = useState<string>('');
 

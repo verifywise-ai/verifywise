@@ -10,7 +10,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Organization settings allow you to configure your organization\'s identity and branding within VerifyWise. These settings define how your organization appears across the platform and in generated reports.',
+      text: 'Organization settings let you configure your organization\'s identity and branding in VerifyWise. These settings control how your organization appears across the platform and in generated reports.',
     },
     {
       type: 'heading',
@@ -25,14 +25,14 @@ export const organizationSettingsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click on Settings in the main navigation' },
+        { text: 'Click on Settings in the sidebar footer' },
         { text: 'Select the Organization tab' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Only users with Admin or Editor roles can modify organization settings. Viewers can see the settings but cannot make changes.',
+      text: 'Only users with Admin or Editor roles can modify organization settings. Reviewers and Auditors can see the settings but can\'t make changes.',
     },
     {
       type: 'heading',
@@ -42,7 +42,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The organization name identifies your company or team across VerifyWise. It appears in reports, documentation, and throughout the platform.',
+      text: 'The organization name identifies your company or team across VerifyWise. It shows up in reports, documentation and throughout the platform.',
     },
     {
       type: 'paragraph',
@@ -59,8 +59,8 @@ export const organizationSettingsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Name requirements', text: 'The organization name must be between 2 and 100 characters' },
-        { bold: 'Updates apply immediately', text: 'The new name appears across the platform once saved' },
-        { bold: 'Reports use current name', text: 'Generated reports will show the organization name at the time of generation' },
+        { bold: 'Updates apply right away', text: 'The new name appears across the platform once saved' },
+        { bold: 'Reports use current name', text: 'Generated reports show the organization name at the time of generation' },
       ],
     },
     {
@@ -71,7 +71,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Upload your organization\'s logo to brand your VerifyWise instance. The logo appears in various places throughout the platform.',
+      text: 'Upload your organization\'s logo to brand your VerifyWise instance. The logo appears in various places across the platform.',
     },
     {
       type: 'heading',
@@ -106,7 +106,7 @@ export const organizationSettingsContent: ArticleContent = {
       items: [
         { bold: 'Recommended size', text: '200 x 200 pixels for best display quality' },
         { bold: 'Maximum file size', text: '5MB' },
-        { bold: 'Supported formats', text: 'PNG, JPG, JPEG, GIF, and SVG' },
+        { bold: 'Supported formats', text: 'PNG, JPG, JPEG, GIF and SVG' },
       ],
     },
     {
@@ -124,14 +124,14 @@ export const organizationSettingsContent: ArticleContent = {
       items: [
         { text: 'Click the Delete button below the current logo' },
         { text: 'Confirm the removal when prompted' },
-        { text: 'The logo is removed and a placeholder is displayed' },
+        { text: 'The logo is removed and a placeholder is shown' },
       ],
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Logo tips',
-      text: 'Use a square logo with a transparent background for the best appearance. The logo is displayed in a circular frame, so centered designs work best.',
+      text: 'Use a square logo with a transparent background for the best look. The logo displays in a circular frame, so centered designs work best.',
     },
     {
       type: 'heading',
@@ -141,7 +141,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When you first log in to VerifyWise, you may be prompted to set your organization name if it has not been configured. This ensures your governance documentation and reports display the correct organization identifier from the start.',
+      text: 'When you first log in, you may be asked to set your organization name if it hasn\'t been configured yet. This makes sure your governance docs and reports show the right organization identifier from the start.',
     },
     {
       type: 'heading',
@@ -157,7 +157,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Yes, you can update the organization name at any time from the Organization tab in Settings. The change takes effect immediately across the platform.',
+      text: 'Yes. You can update the organization name at any time from the Organization tab in Settings. The change takes effect right away across the platform.',
     },
     {
       type: 'heading',
@@ -167,7 +167,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The organization logo is used for branding within the VerifyWise platform. Report formatting depends on the specific report type and may or may not include the logo.',
+      text: 'The logo is used for branding within the platform. Whether it appears in reports depends on the specific report type.',
     },
     {
       type: 'heading',
@@ -177,7 +177,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Users with Admin or Editor roles can modify organization settings. Viewers can see the settings but cannot make changes. If you need to update settings but do not have permission, contact your organization\'s administrator.',
+      text: 'Users with Admin or Editor roles can modify organization settings. Reviewers and Auditors can view them but can\'t make changes. If you need to update settings but don\'t have permission, contact your organization\'s administrator.',
     },
     {
       type: 'article-links',

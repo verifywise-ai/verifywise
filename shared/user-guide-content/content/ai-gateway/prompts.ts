@@ -14,7 +14,7 @@ export const promptsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The editor is a 50/50 split: messages on the left, a test chat on the right. Fill in variables, pick an endpoint, and see streaming responses before you publish anything.',
+      text: 'The editor is a 50/50 split: messages on the left, a test chat on the right. Fill in variables, pick an endpoint and see streaming responses before you publish anything.',
     },
     {
       type: 'heading',
@@ -59,7 +59,7 @@ export const promptsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Write **{{variableName}}** anywhere in a message to create a placeholder. The editor detects variables automatically and shows them as chips below the message blocks. Variable names can contain letters, numbers, and underscores.',
+      text: 'Write **{{variableName}}** anywhere in a message to create a placeholder. The editor detects variables automatically and shows them as chips below the message blocks. Variable names can contain letters, numbers and underscores.',
     },
     {
       type: 'callout',
@@ -93,7 +93,7 @@ export const promptsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Every **Save draft** click creates a new version. Versions are append-only, numbered v1, v2, v3, etc. Each one captures the full message list, detected variables, model, and parameters.',
+      text: 'Every **Save draft** click creates a new version. Versions are append-only, numbered v1, v2, v3, etc. Each one captures the full message list, detected variables, model and parameters.',
     },
     {
       type: 'bullet-list',
@@ -128,14 +128,14 @@ export const promptsContent: ArticleContent = {
         { text: 'Pick an endpoint from the **Test endpoint** dropdown. This controls which provider and API key get used.' },
         { text: 'If your prompt has variables, fill in their values in the fields that appear below the dropdown.' },
         { text: 'Type a message and press Enter (or click send).' },
-        { text: 'The response streams in. Once it finishes, you\'ll see latency, token count, and cost above the input.' },
+        { text: 'The response streams in. Once it finishes, you\'ll see latency, token count and cost above the input.' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
       title: 'Test requests use real endpoints',
-      text: 'Test requests go through the real proxy flow: guardrails scan the input, rate limits apply, and spend is logged. This costs real budget, same as a production request.',
+      text: 'Test requests go through the real proxy flow: guardrails scan the input, rate limits apply and spend is logged. This costs real budget, same as a production request.',
     },
     {
       type: 'heading',
@@ -177,7 +177,7 @@ export const promptsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'All users can view prompts and their versions. Creating, editing, publishing, and deleting prompts requires the **Admin** role.',
+      text: 'All users can view prompts and their versions. Creating, editing, publishing and deleting prompts requires the **Admin** role.',
     },
     {
       type: 'article-links',
@@ -199,7 +199,7 @@ export const promptsContent: ArticleContent = {
           collectionId: 'ai-gateway',
           articleId: 'getting-started',
           title: 'Getting started',
-          description: 'Set up the AI Gateway from scratch with API keys, endpoints, and first requests.',
+          description: 'Set up the AI Gateway from scratch with API keys, endpoints and first requests.',
         },
       ],
     },

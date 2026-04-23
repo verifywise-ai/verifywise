@@ -33,8 +33,8 @@ const ProjectViewSteps: IPageTourStep[] = [
   {
     target: '[data-joyride-id="project-assessments"]',
     content: {
-      header: "Assessments and evidence",
-      body: "Access completed assessments, linked policies, and uploaded evidence files. Maintain comprehensive documentation for audit readiness.",
+      header: "Controls and evidence",
+      body: "Access completed controls, linked policies, and uploaded evidence files. Maintain comprehensive documentation for audit readiness.",
       icon: <FileText size={20} color={background.main} />,
     },
     placement: "bottom",

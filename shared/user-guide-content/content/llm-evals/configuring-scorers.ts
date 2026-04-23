@@ -10,11 +10,11 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Scorers define what you\'re measuring. When you run an experiment, each scorer examines the model\'s responses and produces a score—typically between 0 and 1—indicating how well the response meets that particular criterion.',
+      text: 'Scorers define what you\'re measuring. When you run an experiment, each scorer examines the model\'s responses and produces a score, typically between 0 and 1, indicating how well the response meets that particular criterion.',
     },
     {
       type: 'paragraph',
-      text: 'Think of scorers as the rubric for your evaluation. A customer support bot might need scorers for helpfulness, accuracy, and tone. A coding assistant might prioritize correctness and completeness. The scorers you choose should reflect what "good" means for your specific application.',
+      text: 'Think of scorers as the rubric for your evaluation. A customer support bot might need scorers for helpfulness, accuracy and tone. A coding assistant might prioritize correctness and completeness. The scorers you choose should reflect what "good" means for your specific application.',
     },
     {
       type: 'heading',
@@ -24,7 +24,7 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'LLM Evals comes with six built-in scorers that cover the most common evaluation needs. These are enabled by default and work well for most applications:',
+      text: 'LLM Evals ships with six built-in scorers that cover common evaluation needs. These are enabled by default and work well for most applications:',
     },
     {
       type: 'heading',
@@ -48,7 +48,7 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Identifies responses containing discriminatory or unfair content. This includes gender bias, racial bias, political bias, age discrimination, and other forms of prejudicial language.',
+      text: 'Identifies responses containing discriminatory or unfair content. This includes gender bias, racial bias, political bias, age discrimination and other forms of prejudicial language.',
     },
     {
       type: 'paragraph',
@@ -62,7 +62,7 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Flags harmful, offensive, abusive, or inappropriate language. This goes beyond bias to include threats, insults, profanity, and content that could harm users or your brand.',
+      text: 'Flags harmful, offensive, abusive or inappropriate language. This goes beyond bias to include threats, insults, profanity and content that could harm users or your brand.',
     },
     {
       type: 'paragraph',
@@ -76,7 +76,7 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Measures whether the response accurately reflects provided context. This is essential for RAG (Retrieval-Augmented Generation) systems where the model should ground its answers in retrieved documents.',
+      text: 'Measures whether the response accurately reflects provided context. This matters most for RAG (Retrieval-Augmented Generation) systems where the model should ground its answers in retrieved documents.',
     },
     {
       type: 'paragraph',
@@ -90,7 +90,7 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Identifies fabricated facts, unsupported claims, and made-up information. Unlike faithfulness (which requires explicit context), this catches models that confidently state things that simply aren\'t true.',
+      text: 'Identifies fabricated facts, unsupported claims and made-up information. Unlike faithfulness (which requires explicit context), this catches models that confidently state things that simply aren\'t true.',
     },
     {
       type: 'paragraph',
@@ -104,11 +104,11 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'For RAG systems, this evaluates the retrieval step: is the context that was retrieved actually relevant to the question? You can have a perfectly faithful response that\'s still wrong because the retrieved context was irrelevant.',
+      text: 'For RAG systems, this evaluates the retrieval step: was the context that got retrieved actually relevant to the question? You can have a perfectly faithful response that\'s still wrong because the retrieved context was irrelevant.',
     },
     {
       type: 'paragraph',
-      text: 'Low scores here indicate a retrieval problem, not a generation problem. Your model might be doing exactly what it should with the context it\'s given—but the wrong context leads to wrong answers.',
+      text: 'Low scores here indicate a retrieval problem, not a generation problem. Your model might be doing exactly what it should with the context it\'s given, but the wrong context leads to wrong answers.',
     },
     {
       type: 'callout',
@@ -133,7 +133,7 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Measures whether each response in a conversation directly addresses the user\'s current message. Unlike general answer relevancy, this considers the conversational context—a response might be relevant to the overall topic but miss what the user just asked.',
+      text: 'Measures whether each response in a conversation directly addresses the user\'s current message. Unlike general answer relevancy, this considers the conversational context. A response might be relevant to the overall topic but miss what the user just asked.',
     },
     {
       type: 'heading',
@@ -212,7 +212,7 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to the **Scorers** tab in your project. You\'ll see a table listing all configured scorers with their name, type, judge model, metric key, and current status (enabled or disabled).',
+      text: 'Navigate to the **Scorers** tab in your project. You\'ll see a table listing all configured scorers with their name, type, judge model, metric key and current status (enabled or disabled).',
     },
     {
       type: 'paragraph',
@@ -249,15 +249,15 @@ export const configuringScorersContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'LLM scorers', text: 'Use a judge model (like GPT-4) to evaluate responses. The most flexible option—you can evaluate nuanced qualities like helpfulness, tone, or domain accuracy. However, they\'re slower and cost more since each evaluation requires API calls.' },
-        { bold: 'Builtin scorers', text: 'Use predefined algorithms that don\'t require an LLM. Faster and cheaper, but less flexible. Good for objective metrics like response length, format compliance, or keyword presence.' },
+        { bold: 'LLM scorers', text: 'Use a judge model (like GPT-4) to evaluate responses. This is the most flexible option, letting you evaluate nuanced qualities like helpfulness, tone or domain accuracy. They\'re slower and cost more since each evaluation requires API calls.' },
+        { bold: 'Builtin scorers', text: 'Use predefined algorithms that don\'t require an LLM. Faster and cheaper, but less flexible. Good for objective metrics like response length, format compliance or keyword presence.' },
         { bold: 'Custom scorers', text: 'Your own evaluation logic. Useful for domain-specific checks that neither LLMs nor builtins handle well. Requires writing code but gives you complete control.' },
       ],
     },
     {
       type: 'callout',
       variant: 'tip',
-      text: 'Start with LLM scorers—they\'re the most versatile. Only switch to builtin or custom scorers when you have specific performance or accuracy requirements that LLM evaluation can\'t meet.',
+      text: 'Start with LLM scorers, they\'re the most versatile. Only switch to builtin or custom scorers when you have specific performance or accuracy requirements that LLM evaluation can\'t meet.',
     },
     {
       type: 'heading',
@@ -317,7 +317,7 @@ export const configuringScorersContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'warning',
-      text: 'Disabling a scorer doesn\'t affect past experiments—those results are preserved. It only affects future experiments in this project.',
+      text: 'Disabling a scorer doesn\'t affect past experiments. Those results are preserved. It only affects future experiments in this project.',
     },
     {
       type: 'heading',
@@ -327,12 +327,12 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A few lessons from teams who\'ve built robust evaluation pipelines:',
+      text: 'A few lessons from teams who\'ve built effective evaluation pipelines:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Match scorers to your goals', text: 'Don\'t just enable everything. Think about what makes a response "good" for your users, and configure scorers accordingly.' },
+        { bold: 'Match scorers to your goals', text: 'Don\'t just enable everything. Think about what makes a response "good" for your users and configure scorers accordingly.' },
         { bold: 'Keep judge models consistent', text: 'If you\'re comparing experiments over time, use the same judge. Different judges may score the same response differently.' },
         { bold: 'Calibrate regularly', text: 'Periodically review scored responses manually. Are the scores matching your intuition? If not, adjust thresholds or scorer configurations.' },
         { bold: 'Document your choices', text: 'Keep notes on why you chose certain thresholds and weights. Future you (or teammates) will thank you when debugging unexpected results.' },
@@ -348,7 +348,7 @@ export const configuringScorersContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'All scores are too low', text: 'Your expected outputs might be too specific. Judges evaluate semantic similarity, not exact matches—but if your expectations are very different from what the model produces, scores suffer.' },
+        { bold: 'All scores are too low', text: 'Your expected outputs might be too specific. Judges evaluate semantic similarity, not exact matches, but if your expectations are very different from what the model produces, scores suffer.' },
         { bold: 'All scores are too high', text: 'Your dataset might be too easy, or your thresholds too permissive. Add challenging test cases and review failing examples to calibrate.' },
         { bold: 'Inconsistent scores', text: 'Judge model temperature might be too high. Lower it (try 0.3-0.5) for more consistent evaluations.' },
         { bold: 'Evaluations are slow', text: 'Each metric requires a judge call. Disable metrics you don\'t need, or use faster judge models for iterative testing.' },

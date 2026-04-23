@@ -10,7 +10,7 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The AI tools page is your central inventory of all AI applications detected in your organization\'s network traffic. From here you can review each tool\'s risk profile, change its status, and bring it under formal governance through the model inventory.',
+      text: 'The AI tools page is your central inventory of all AI applications detected in your organization\'s network traffic. From here you can review each tool\'s risk profile, change its status and bring it under formal governance through the model inventory.',
     },
     {
       type: 'heading',
@@ -92,7 +92,7 @@ export const aiToolsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Vendor, total users, total events, risk score, first detected, and last seen dates' },
+        { text: 'Vendor, total users, total events, risk score, first detected and last seen dates' },
         { text: 'A status selector to change the tool\'s status' },
         { text: 'Department breakdown showing which teams are using the tool' },
         { text: 'Top users ranked by event count' },
@@ -106,7 +106,7 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If a detected tool has not yet been added to the model inventory, a "Start governance" button appears in the detail view. Clicking it opens a wizard that creates a new model inventory entry pre-filled with the tool\'s provider, name, and version.',
+      text: 'If a detected tool has not yet been added to the model inventory, a "Start governance" button appears in the detail view. Clicking it opens a wizard that creates a new model inventory entry pre-filled with the tool\'s provider, name and version.',
     },
     {
       type: 'callout',
@@ -122,7 +122,7 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The risk score is a composite metric from 0 to 100, recalculated nightly. It uses a weighted formula:',
+      text: 'The risk score is a composite metric from 0 to 100 that gets recalculated nightly. It uses a weighted formula:',
     },
     {
       type: 'table',
@@ -133,9 +133,9 @@ export const aiToolsContent: ArticleContent = {
       ],
       rows: [
         { factor: 'Approval status', weight: '40%', description: 'Tools not in the model inventory or not approved receive the maximum score.' },
-        { factor: 'Data & compliance', weight: '25%', description: 'Based on training-on-data policy, SOC 2, GDPR, SSO, and encryption at rest.' },
+        { factor: 'Data & compliance', weight: '25%', description: 'Based on training-on-data policy, SOC 2, GDPR, SSO and encryption at rest.' },
         { factor: 'Usage volume', weight: '15%', description: 'Normalized against the organization average. Higher usage increases the score.' },
-        { factor: 'Department sensitivity', weight: '20%', description: 'Uses the highest sensitivity among accessing departments. Finance, Legal, and HR are rated highest.' },
+        { factor: 'Department sensitivity', weight: '20%', description: 'Uses the highest sensitivity among accessing departments. Finance, Legal and HR are rated highest.' },
       ],
     },
     {

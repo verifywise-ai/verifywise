@@ -10,7 +10,7 @@ export const userActivityContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The User activity page lets you monitor which individuals and departments are using AI tools across your organization. It provides two tab views for different levels of analysis.',
+      text: 'The User activity page lets you monitor which individuals and departments are using AI tools across your organization. It has two tab views for different levels of analysis.',
     },
     {
       type: 'heading',
@@ -33,7 +33,7 @@ export const userActivityContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click any column header to sort the table. Use the period selector to filter by time window (last 7 days, last 30 days, or last 90 days).',
+      text: 'Click any column header to sort the table. Use the period selector to filter by time window (last 7 days, last 30 days or last 90 days).',
     },
     {
       type: 'heading',

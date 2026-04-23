@@ -140,6 +140,7 @@ class CreateExperimentRequest(BaseModel):
     description: Optional[str] = None
     config: Dict[str, Any]  # Contains model, dataset, metrics config
     baseline_experiment_id: Optional[str] = None
+    model_inventory_id: Optional[int] = None
 
 
 class UpdateExperimentStatusRequest(BaseModel):

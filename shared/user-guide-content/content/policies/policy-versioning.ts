@@ -10,11 +10,11 @@ export const policyVersioningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Policies in VerifyWise follow a defined lifecycle from initial creation through publication and eventual retirement. Understanding this lifecycle helps you manage policies effectively and ensures stakeholders always know which policies are active and authoritative.',
+      text: 'Policies in VerifyWise follow a defined lifecycle from creation through publication and eventual retirement. Understanding this lifecycle helps you manage policies well and makes sure stakeholders always know which policies are active.',
     },
     {
       type: 'paragraph',
-      text: 'Each policy has a status that indicates where it is in the lifecycle. Moving policies through these stages creates a clear workflow for policy development, review, and maintenance.',
+      text: 'Each policy has a status showing where it sits in the lifecycle. Moving policies through these stages creates a clear workflow for development, review and maintenance.',
     },
     {
       type: 'heading',
@@ -24,7 +24,7 @@ export const policyVersioningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A clear status workflow ensures that policies are properly reviewed before becoming authoritative and that stakeholders always know which version applies. The workflow creates accountability by requiring policies to pass through defined stages, with visibility into who changed what and when. This structured approach also supports audit requirements by demonstrating that policies undergo appropriate review before publication.',
+      text: 'A clear status workflow makes sure policies get properly reviewed before they become authoritative. It also gives you visibility into who changed what and when, which is exactly what auditors want to see.',
     },
     {
       type: 'paragraph',
@@ -107,7 +107,7 @@ export const policyVersioningContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Status changes are recorded with a timestamp and the user who made the change, creating an audit trail of policy progression.',
+      text: 'Status changes are recorded with a timestamp and the user who made the change, giving you an audit trail of how each policy progressed.',
     },
     {
       type: 'heading',
@@ -117,7 +117,7 @@ export const policyVersioningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Policies should be reviewed periodically to ensure they remain current and effective. The next review date field helps you track when each policy is due for review.',
+      text: 'Policies should be reviewed periodically to make sure they\'re still current. The next review date field helps you track when each policy is due.',
     },
     {
       type: 'bullet-list',
@@ -131,7 +131,7 @@ export const policyVersioningContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',
-      text: 'Review policies at least annually, or more frequently for rapidly evolving areas like AI regulations. Set review dates when you publish a policy so you do not forget to revisit it.',
+      text: 'Review policies at least annually, or more often for fast-moving areas like AI regulations. Set review dates when you publish a policy so you don\'t forget to revisit it.',
     },
     {
       type: 'heading',
@@ -170,7 +170,7 @@ export const policyVersioningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Avoid deleting policies unless absolutely necessary. Maintaining a historical record demonstrates governance maturity and supports audit requirements.',
+      text: 'Try not to delete policies unless you really have to. Keeping a historical record shows governance maturity and supports audit requirements.',
     },
     {
       type: 'article-links',

@@ -10,7 +10,7 @@ export const datasetsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Datasets page is where you register and track every dataset your organization uses for AI systems. Each dataset record captures what the data contains, where it came from, whether it includes personal information, and what biases have been identified.',
+      text: 'The **Datasets** page is where you register and track every dataset your organization uses for AI systems. Each dataset record captures what the data contains, where it came from, whether it includes personal information and what biases have been identified.',
     },
     {
       type: 'paragraph',
@@ -24,11 +24,11 @@ export const datasetsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The main page shows all datasets in a table with columns for name, description, status, type, classification, owner, and source. Above the table, summary cards show how many datasets are in each status (Draft, Active, Deprecated, Archived).',
+      text: 'The main page shows all datasets in a table with columns for name, description, status, type, classification, owner and source. Above the table, summary cards show how many datasets are in each status (Draft, Active, Deprecated, Archived).',
     },
     {
       type: 'paragraph',
-      text: 'You can search by name or description, filter by status, type, or classification, and group datasets by any of those fields to organize them into collapsible sections.',
+      text: 'You can search by name or description, filter by status, type or classification and group datasets by any of those fields to organize them into collapsible sections.',
     },
     {
       type: 'heading',
@@ -40,7 +40,7 @@ export const datasetsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click **Add dataset** in the top right.' },
-        { text: 'Fill in the basic fields: name, description, version, and owner.' },
+        { text: 'Fill in the basic fields: name, description, version and owner.' },
         { text: 'Set the type (Training, Validation, Testing, Production, or Reference) and classification (Public, Internal, Confidential, or Restricted).' },
         { text: 'If the dataset contains personal data, check **Contains PII** and list the PII types present.' },
         { text: 'Document any known biases and mitigation steps.' },
@@ -145,7 +145,7 @@ export const datasetsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Every edit to a dataset is tracked in a change history log. This gives auditors a record of what changed, when, and by whom.',
+      text: 'Every edit to a dataset is tracked in a change history log. This gives auditors a record of what changed, when and by whom.',
     },
     {
       type: 'heading',

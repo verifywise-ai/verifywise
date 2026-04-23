@@ -10,11 +10,11 @@ export const euAiActContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The EU AI Act is the European Union\'s comprehensive regulation governing artificial intelligence systems. It establishes a risk-based framework that classifies AI systems by their potential impact and imposes corresponding requirements for transparency, accountability, and human oversight.',
+      text: 'The EU AI Act is the European Union\'s regulation governing artificial intelligence systems. It uses a risk-based framework that classifies AI systems by their potential impact and sets requirements for transparency, accountability and human oversight.',
     },
     {
       type: 'paragraph',
-      text: 'As the world\'s first comprehensive AI law, the EU AI Act affects any organization that develops, deploys, or uses AI systems within the European Union or that affects EU citizens. Understanding and complying with this regulation is essential for organizations operating in or selling to European markets.',
+      text: 'As the first dedicated AI law, the EU AI Act applies to any organization that develops, deploys or uses AI systems within the European Union or that affects EU citizens. If you operate in or sell to European markets, you\'ll need to understand and comply with this regulation.',
     },
     {
       type: 'heading',
@@ -25,18 +25,18 @@ export const euAiActContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Legal requirement', text: 'Non-compliance can result in significant fines up to 35 million euros or 7% of global annual turnover' },
-        { bold: 'Market access', text: 'Compliance is required to offer AI systems in the EU market' },
-        { bold: 'Competitive advantage', text: 'Demonstrating compliance builds trust with European customers and partners' },
+        { bold: 'Legal requirement', text: 'Non-compliance can result in fines up to 35 million euros or 7% of global annual turnover' },
+        { bold: 'Market access', text: 'You need compliance to offer AI systems in the EU market' },
+        { bold: 'Competitive advantage', text: 'Showing compliance builds trust with European customers and partners' },
         { bold: 'Risk management', text: 'The Act\'s requirements align with sound AI governance practices that protect your organization' },
-        { bold: 'Future readiness', text: 'Similar regulations are emerging globally; EU AI Act compliance prepares you for other jurisdictions' },
+        { bold: 'Future readiness', text: 'Similar regulations are emerging globally, so EU AI Act compliance helps prepare you for other jurisdictions' },
       ],
     },
     {
       type: 'callout',
       variant: 'warning',
       title: 'Important timeline',
-      text: 'The EU AI Act entered into force in August 2024, with different provisions becoming applicable at different times through 2027. Organizations should begin compliance preparations now.',
+      text: 'The EU AI Act entered into force in August 2024, with different provisions kicking in at different times through 2027. Start your compliance preparations now if you haven\'t already.',
     },
     {
       type: 'heading',
@@ -91,7 +91,7 @@ export const euAiActContent: ArticleContent = {
         'Technical documentation and record-keeping',
         'Transparency and information provision to users',
         'Human oversight measures',
-        'Accuracy, robustness, and cybersecurity requirements',
+        'Accuracy, robustness and cybersecurity requirements',
         'Quality management system',
         'Conformity assessment before market placement',
       ],
@@ -104,7 +104,7 @@ export const euAiActContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise provides structured tools to help you meet EU AI Act requirements:',
+      text: 'VerifyWise gives you structured tools to help meet EU AI Act requirements:',
     },
     {
       type: 'bullet-list',
@@ -125,7 +125,7 @@ export const euAiActContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To begin your EU AI Act compliance journey in VerifyWise:',
+      text: 'To start working on EU AI Act compliance in VerifyWise:',
     },
     {
       type: 'ordered-list',
@@ -155,7 +155,7 @@ export const euAiActContent: ArticleContent = {
         { bold: 'Subcontrols', text: 'Specific actions needed to satisfy each control' },
         { bold: 'Status tracking', text: 'Track each control as Waiting, In progress, or Done' },
         { bold: 'Risk review', text: 'Assess residual risk as Acceptable, Residual, or Unacceptable' },
-        { bold: 'Ownership', text: 'Assign owners, reviewers, and approvers to controls' },
+        { bold: 'Ownership', text: 'Assign owners, reviewers and approvers to controls' },
       ],
     },
     {
@@ -172,7 +172,7 @@ export const euAiActContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When you select the EU AI Act framework for a use case, VerifyWise creates an assessment containing all applicable controls. The assessment screen provides a comprehensive view of your compliance progress.',
+      text: 'When you select the EU AI Act framework for a use case, VerifyWise creates an assessment containing all applicable controls. The assessment screen shows your compliance progress at a glance.',
     },
     {
       type: 'paragraph',
@@ -226,7 +226,7 @@ export const euAiActContent: ArticleContent = {
         { bold: 'Review the requirement', text: 'Read the control description and understand what is required' },
         { bold: 'View subcontrols', text: 'See the specific actions needed to satisfy the control' },
         { bold: 'Update status', text: 'Change the control status as you make progress' },
-        { bold: 'Assign responsibility', text: 'Set the owner, reviewer, and approver' },
+        { bold: 'Assign responsibility', text: 'Set the owner, reviewer and approver' },
         { bold: 'Set due date', text: 'Establish a target completion date' },
         { bold: 'Document implementation', text: 'Describe how you are addressing the requirement' },
         { bold: 'Assess risk', text: 'Evaluate the residual risk after implementation' },
@@ -324,7 +324,7 @@ export const euAiActContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Acceptable risk', text: 'The control fully addresses the requirement with minimal residual risk' },
-        { bold: 'Residual risk', text: 'Some risk remains but is documented, understood, and accepted' },
+        { bold: 'Residual risk', text: 'Some risk remains but is documented, understood and accepted' },
         { bold: 'Unacceptable risk', text: 'The implementation does not adequately address the requirement; further action is needed' },
       ],
     },
@@ -332,7 +332,7 @@ export const euAiActContent: ArticleContent = {
       type: 'callout',
       variant: 'warning',
       title: 'Important',
-      text: 'Controls marked with unacceptable risk should be prioritized for additional attention. They indicate gaps in your compliance posture that need to be addressed.',
+      text: 'Controls marked with unacceptable risk need attention first. They point to gaps in your compliance posture that still need work.',
     },
     {
       type: 'heading',
@@ -342,7 +342,7 @@ export const euAiActContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise provides multiple ways to monitor your EU AI Act compliance progress:',
+      text: 'There are several ways to monitor your EU AI Act compliance progress in VerifyWise:',
     },
     {
       type: 'bullet-list',
@@ -356,7 +356,7 @@ export const euAiActContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use these metrics to identify bottlenecks, allocate resources, and report progress to stakeholders.',
+      text: 'Use these metrics to spot bottlenecks, allocate resources and report progress to stakeholders.',
     },
     {
       type: 'heading',

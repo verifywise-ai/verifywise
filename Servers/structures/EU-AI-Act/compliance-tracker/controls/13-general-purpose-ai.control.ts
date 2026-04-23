@@ -1,103 +1,142 @@
 export const GeneralPurposeAImodels = [
   {
     order_no: 1,
-    title: "Unexpected Impact Integration",
+    title:
+      "Classify general-purpose AI models and determine whether they pose systemic risk.",
     description:
-      "Report any serious incidents involving AI systems to relevant market surveillance authorities within specified timeframes.",
-    implementation_details: "Implementation of automated incident reporting system in progress",
+      "Assess each GPAI model against the systemic-risk threshold and maintain classification documentation (Art 51).",
+    article: "Art. 51",
     subControls: [
       {
         order_no: 1,
         title:
-          "We implement processes to capture and integrate unexpected impact inputs.",
+          "We have assessed whether any GPAI model meets the systemic risk threshold (cumulative compute >10^25 FLOPs, or Commission designation).",
         description:
-          "Capturing unforeseen impacts helps refine systems and address emerging risks proactively.",
-        implementation_details: "Implemented a system to track and assess unexpected impacts based on user feedback and ongoing data analysis.",
-        evidence_description: "Impact reports and integration processes",
-        feedback_description: "Positive feedback from risk management team regarding the process",
+          "Compute budget estimates, designation notifications, and threshold assessment records are retained per model.",
+      },
+      {
+        order_no: 2,
+        title:
+          "We maintain documentation of the classification determination and update it when model capabilities or compute thresholds change.",
+        description:
+          "Versioned classification record with review triggers on capability upgrades or regulatory threshold changes.",
       },
     ],
   },
   {
     order_no: 2,
-    title: "AI Model Capability Assessment",
+    title:
+      "Maintain technical documentation and provide information to downstream AI system providers.",
     description:
-      "Conduct comprehensive assessments of AI model capabilities using appropriate tools.",
-    implementation_details: "Conducting assessments to ensure AI models meet safety and quality standards.",
+      "Technical documentation and downstream transparency obligations for GPAI providers (Art 52.1.a-b).",
+    article: "Art. 52(1)(a)-(b)",
     subControls: [
       {
         order_no: 1,
-        title: "We assess AI model capabilities using appropriate tools.",
+        title:
+          "We have drawn up and maintain technical documentation of the model including training process, testing, and evaluation results, per Annex XI.",
         description:
-          "Capability assessments verify that AI models perform as intended and meet required safety and quality standards.",
-        implementation_details: "Utilized testing frameworks and tools such as ModelValidator to ensure AI models meet the standards.",
-        evidence_description: "Assessment reports and tool outputs",
-        feedback_description: "Satisfactory evaluations from model assessment team",
+          "Annex XI-compliant technical documentation covering training, testing, and evaluation is maintained and kept current.",
+      },
+      {
+        order_no: 2,
+        title:
+          "We provide downstream AI system providers with sufficient information and documentation to understand the model's capabilities and limitations and comply with their own obligations.",
+        description:
+          "Model cards, API documentation, and usage guidance are published for downstream providers with capability and limitation disclosures.",
+      },
+      {
+        order_no: 3,
+        title:
+          "We maintain an up-to-date technical summary of the model's characteristics available to the AI Office upon request.",
+        description:
+          "Standing technical summary retained and updated on capability changes; available within required response timeframes.",
       },
     ],
   },
   {
     order_no: 3,
-    title: "Post-Deployment Incident Monitoring",
+    title:
+      "Establish a copyright compliance policy and publish a training content summary.",
     description:
-      "Monitor incidents related to AI systems and respond post-deployment.",
-    implementation_details: "Setting up monitoring infrastructure for incident response.",
+      "Copyright compliance policy and publicly available training data summary (Art 52.1.c-d).",
+    article: "Art. 52(1)(c)-(d)",
     subControls: [
       {
         order_no: 1,
-        title: "We develop plans to address unexpected risks as they arise.",
+        title:
+          "We have established and implemented a policy to comply with Union copyright law, including the text and data mining opt-out mechanism under Directive (EU) 2019/790.",
         description:
-          "Proactive risk plans ensure quick and effective responses to emerging challenges or unforeseen issues.",
-        implementation_details: "Developing risk mitigation plans with predefined action steps based on AI system performance.",
-        evidence_description: "Draft risk response plans and simulation results",
-        feedback_description: "Awaiting feedback from senior management",
+          "Documented copyright policy covering TDM opt-out honouring, takedown procedures, and attribution practices.",
       },
       {
         order_no: 2,
-        title: "We monitor and respond to incidents post-deployment.",
+        title:
+          "We have drawn up and made publicly available a sufficiently detailed summary of the content used for training the model, following the template provided by the AI Office.",
         description:
-          "Post-deployment monitoring identifies and mitigates issues, ensuring continued compliance and system reliability.",
-        implementation_details: "Implemented a continuous monitoring system that tracks key AI performance metrics post-deployment.",
-        evidence_description: "Incident logs and resolution reports",
-        feedback_description: "No major incidents, ongoing system reliability",
+          "Published training-data summary aligned to AI Office template; accessibility and language coverage evidenced.",
       },
     ],
   },
   {
     order_no: 4,
-    title: "AI System Logging Implementation",
+    title:
+      "Assess and mitigate systemic risks for models classified as posing systemic risk.",
     description:
-      "Ensure providers implement systems for capturing and storing AI system logs.",
-    implementation_details: "Implementing logging systems for traceability and compliance.",
+      "Systemic-risk obligations for GPAI-with-systemic-risk providers: evaluation, risk assessment, incident reporting, cybersecurity (Art 53).",
+    article: "Art. 53",
     subControls: [
       {
         order_no: 1,
         title:
-          "We ensure providers implement systems for capturing and storing AI system logs.",
+          "We perform model evaluations including adversarial testing to identify and mitigate systemic risks.",
         description:
-          "Logging systems provide traceability, aiding audits and troubleshooting while supporting regulatory requirements.",
-        implementation_details: "Collaborating with third-party providers to integrate logging systems that comply with industry standards.",
-        evidence_description: "Integration plans and log system designs",
-        feedback_description: "Providers are reviewing final implementation details",
+          "Documented evaluation methodology (red-teaming, adversarial probes) with periodic cadence.",
+      },
+      {
+        order_no: 2,
+        title:
+          "We have assessed possible systemic risks, including their sources, that may stem from the development, placing on the market, or use of the model.",
+        description:
+          "Systemic risk register with sources, scenarios, and mitigation coverage.",
+      },
+      {
+        order_no: 3,
+        title:
+          "We track, document, and report serious incidents and possible corrective measures to the AI Office and relevant national authorities without undue delay.",
+        description:
+          "Incident management process with reporting channels to the AI Office and NCAs, with retention of corrective-measure records.",
+      },
+      {
+        order_no: 4,
+        title:
+          "We ensure an adequate level of cybersecurity protection for the model and its physical infrastructure.",
+        description:
+          "Cybersecurity controls covering weights protection, infrastructure hardening, and access governance.",
       },
     ],
   },
   {
     order_no: 5,
-    title: "Serious Incident Immediate Reporting",
+    title:
+      "Appoint an EU authorized representative (if non-EU provider) and adhere to codes of practice.",
     description:
-      "Immediately report serious incidents to providers, importers, distributors, and authorities.",
-    implementation_details: "Establishing processes for immediate reporting of serious incidents.",
+      "Authorized representative mandate and participation in codes of practice (Art 54-55).",
+    article: "Art. 54-55",
     subControls: [
       {
         order_no: 1,
         title:
-          "We immediately report serious incidents to providers, importers, distributors, and relevant authorities.",
+          "If established outside the Union, we have appointed an authorized representative established in the Union before making a GPAI model available on the Union market.",
         description:
-          "Prompt reporting ensures accountability and timely resolution of incidents, minimizing potential harm.",
-        implementation_details: "Established a reporting protocol with clear guidelines for immediate incident escalation.",
-        evidence_description: "Incident reports and confirmation receipts from authorities",
-        feedback_description: "Fast response and resolution for all reported incidents",
+          "Written mandate to EU representative covering compliance verification, documentation custody, and authority cooperation.",
+      },
+      {
+        order_no: 2,
+        title:
+          "We participate in or adhere to codes of practice covering the obligations in Articles 52 and 53, or demonstrate equivalent alternative means of compliance.",
+        description:
+          "Evidence of code-of-practice participation or a documented equivalent-compliance plan.",
       },
     ],
   },

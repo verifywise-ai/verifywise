@@ -1,0 +1,842 @@
+# Users API - OpenAPI 3.0 Path Definitions
+# Ready to paste into the paths section of swagger.yaml
+#
+# Base path: /api/users
+# Response envelope: { "message": "<status text>", "data": <payload> }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserSafe:
+      type: object
+      description: User object with password_hash excluded
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "John"
+        surname:
+          type: string
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        role_id:
+          type: integer
+          description: "1=Admin, 2=Reviewer, 3=Editor, 4=Auditor, 5=SuperAdmin"
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_demo:
+          type: boolean
+          default: false
+        organization_id:
+          type: integer
+          nullable: true
+          example: 1
+        profile_photo_id:
+          type: integer
+          nullable: true
+      required:
+        - id
+        - name
+        - surname
+        - email
+        - role_id
+        - created_at
+
+    StatusEnvelope:
+      type: object
+      properties:
+        message:
+          type: string
+          description: HTTP status text (e.g. "OK", "Created", "Accepted")
+        data:
+          description: Response payload (varies by endpoint)
+
+    ErrorEnvelope:
+      type: object
+      properties:
+        message:
+          type: string
+          description: HTTP status text or error category
+        data:
+          type: string
+          description: Error detail message
+
+    ProgressResponse:
+      type: object
+      properties:
+        assessmentsMetadata:
+          type: array
+          items:
+            type: object
+            properties:
+              projectId:
+                type: integer
+              totalAssessments:
+                type: integer
+              doneAssessments:
+                type: integer
+        controlsMetadata:
+          type: array
+          items:
+            type: object
+            properties:
+              projectId:
+                type: integer
+              totalSubControls:
+                type: integer
+              doneSubControls:
+                type: integer
+        allTotalAssessments:
+          type: integer
+        allDoneAssessments:
+          type: integer
+        allTotalSubControls:
+          type: integer
+        allDoneSubControls:
+          type: integer
+
+paths:
+  # ─────────────────────────────────────────────────────────
+  # POST /api/users/login
+  # ─────────────────────────────────────────────────────────
+  /api/users/login:
+    post:
+      summary: Authenticate user
+      description: |
+        Validates email/password credentials via bcrypt. Returns a JWT access token
+        in the response body and sets a refresh token in an HTTP-only cookie.
+        Rate-limited to 5 requests per minute per IP.
+      tags: [Users - Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  format: password
+                  example: "SecurePassword123!"
+      responses:
+        "202":
+          description: Authentication successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: "refresh_token=<jwt>; Path=/api/users; HttpOnly; Secure (prod); SameSite=none (prod) / lax (dev)"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Accepted"
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: JWT access token
+                      isSuperAdmin:
+                        type: boolean
+                        description: Only present when user is super-admin (role_id=5)
+                      onboarding_status:
+                        type: string
+                        description: Organization onboarding status (not present for super-admin)
+                        example: "completed"
+                      is_org_creator:
+                        type: boolean
+                        description: Whether user is the first admin of the org (not present for super-admin)
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "429":
+          description: Too many login attempts
+        "500":
+          description: Internal server error
+
+  # ─────────────────────────────────────────────────────────
+  # POST /api/users/refresh-token
+  # ─────────────────────────────────────────────────────────
+  /api/users/refresh-token:
+    post:
+      summary: Refresh access token
+      description: |
+        Reads the refresh_token from an HTTP-only cookie and issues a new
+        JWT access token if the refresh token is still valid.
+      tags: [Users - Authentication]
+      security: []
+      parameters:
+        - in: cookie
+          name: refresh_token
+          required: true
+          schema:
+            type: string
+          description: JWT refresh token set during login
+      responses:
+        "200":
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "OK"
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: New JWT access token
+        "400":
+          description: Refresh token missing from cookie
+        "401":
+          description: Invalid refresh token
+        "406":
+          description: Refresh token expired
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Token expired"
+        "500":
+          description: Internal server error
+
+  # ─────────────────────────────────────────────────────────
+  # POST /api/users/register
+  # ─────────────────────────────────────────────────────────
+  /api/users/register:
+    post:
+      summary: Register a new user
+      description: |
+        Creates a new user account. Requires a valid registration JWT (set by registerJWT middleware).
+        Validates email uniqueness, password strength, and required fields.
+        Marks any pending invitation as accepted after successful creation.
+      tags: [Users - Registration]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, surname, email, password, roleId, organizationId]
+              properties:
+                name:
+                  type: string
+                  description: User's first name
+                  example: "John"
+                surname:
+                  type: string
+                  description: User's last name
+                  example: "Doe"
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  format: password
+                  description: "Must be 8+ chars with uppercase, lowercase, and digit"
+                  example: "SecurePassword123!"
+                roleId:
+                  type: integer
+                  description: "1=Admin, 2=Reviewer, 3=Editor, 4=Auditor"
+                  example: 3
+                organizationId:
+                  type: integer
+                  description: Organization to assign the user to
+                  example: 1
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Created"
+                  data:
+                    $ref: "#/components/schemas/UserSafe"
+        "400":
+          description: Validation error (missing fields, weak password, invalid email)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Business logic error
+        "409":
+          description: User with this email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Internal server error
+
+  # ─────────────────────────────────────────────────────────
+  # GET /api/users
+  # ─────────────────────────────────────────────────────────
+  /api/users:
+    get:
+      summary: List all users in organization
+      description: |
+        Returns all users belonging to the authenticated user's organization,
+        ordered by created_at DESC, id ASC. Password hashes are excluded.
+      tags: [Users - CRUD]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Users found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "OK"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserSafe"
+        "204":
+          description: No users found (empty organization)
+        "500":
+          description: Internal server error
+
+  # ─────────────────────────────────────────────────────────
+  # GET /api/users/check/exists
+  # ─────────────────────────────────────────────────────────
+  /api/users/check/exists:
+    get:
+      summary: Check if any user exists
+      description: |
+        Returns a boolean indicating whether any user record exists in the database.
+        Used during initial setup flow to determine if onboarding is needed.
+      tags: [Users - Utility]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Check result
+          content:
+            application/json:
+              schema:
+                type: boolean
+                example: true
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error"
+
+  # ─────────────────────────────────────────────────────────
+  # GET /api/users/{id}
+  # ─────────────────────────────────────────────────────────
+  /api/users/{id}:
+    get:
+      summary: Get user by ID
+      description: |
+        Retrieves a single user by their numeric ID. Super-admins can access
+        any user; regular users can only access users within their organization
+        (or their own record).
+      tags: [Users - CRUD]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "OK"
+                  data:
+                    $ref: "#/components/schemas/UserSafe"
+        "403":
+          description: Access denied (user belongs to different organization)
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+
+    # ─────────────────────────────────────────────────────────
+    # PATCH /api/users/{id}
+    # ─────────────────────────────────────────────────────────
+    patch:
+      summary: Update user by ID
+      description: |
+        Updates user fields (name, surname, email, roleId, last_login).
+        Only provided fields are updated. Organization isolation enforced.
+        Sends Slack notification on role change. Sends email notification
+        when role changes from Editor (3) to Admin (1).
+      tags: [Users - CRUD]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: User ID to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: First name
+                  example: "Jane"
+                surname:
+                  type: string
+                  description: Last name
+                  example: "Smith"
+                email:
+                  type: string
+                  format: email
+                  example: "jane@example.com"
+                roleId:
+                  type: integer
+                  description: "New role ID (1=Admin, 2=Reviewer, 3=Editor, 4=Auditor). Can be sent as string."
+                  example: 1
+                last_login:
+                  type: string
+                  format: date-time
+                  description: Override last login timestamp
+              description: All fields are optional; only provided fields are updated
+      responses:
+        "202":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Accepted"
+                  data:
+                    $ref: "#/components/schemas/UserSafe"
+        "400":
+          description: Validation error
+        "403":
+          description: Access denied or business logic error
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+
+    # ─────────────────────────────────────────────────────────
+    # DELETE /api/users/{id}
+    # ─────────────────────────────────────────────────────────
+    delete:
+      summary: Delete user by ID
+      description: |
+        Deletes a user and nullifies all their foreign key references across
+        projects, vendors, risks, vendor risks, files, automations, and invitations.
+        Also removes the user from projects_members. Demo users and super-admins
+        cannot be deleted.
+      tags: [Users - CRUD]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: User ID to delete
+      responses:
+        "202":
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Accepted"
+                  data:
+                    type: boolean
+                    description: true if deletion succeeded
+        "403":
+          description: "Forbidden: demo user, super-admin, or wrong organization"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+
+  # ─────────────────────────────────────────────────────────
+  # POST /api/users/reset-password
+  # ─────────────────────────────────────────────────────────
+  /api/users/reset-password:
+    post:
+      summary: Reset user password
+      description: |
+        Resets the password for a user identified by email. Protected by
+        resetPasswordMiddleware (validates reset token/permission).
+        Password is hashed via bcrypt before storage.
+      tags: [Users - Password]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, newPassword]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                newPassword:
+                  type: string
+                  format: password
+                  description: "Must be 8+ chars with uppercase, lowercase, and digit"
+                  example: "NewSecure123!"
+      responses:
+        "202":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Accepted"
+                  data:
+                    $ref: "#/components/schemas/UserSafe"
+        "400":
+          description: Validation error (weak password)
+        "403":
+          description: Business logic error
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+
+  # ─────────────────────────────────────────────────────────
+  # PATCH /api/users/chng-pass/{id}
+  # ─────────────────────────────────────────────────────────
+  /api/users/chng-pass/{id}:
+    patch:
+      summary: Change password (authenticated)
+      description: |
+        Changes the password for the authenticated user. Requires the current
+        password for verification. Protected by selfOnly middleware (users can
+        only change their own password). Rate-limited.
+      tags: [Users - Password]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: User ID (must match authenticated user via selfOnly middleware)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, currentPassword, newPassword]
+              properties:
+                id:
+                  type: integer
+                  description: User ID (must match path parameter)
+                  example: 1
+                currentPassword:
+                  type: string
+                  format: password
+                  description: Current password for verification
+                  example: "OldPassword123!"
+                newPassword:
+                  type: string
+                  format: password
+                  description: "Must be 8+ chars with uppercase, lowercase, and digit"
+                  example: "NewPassword456!"
+      responses:
+        "202":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password updated successfully"
+                  data:
+                    $ref: "#/components/schemas/UserSafe"
+        "400":
+          description: Validation error (weak password, missing fields)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "403":
+          description: Business logic error (wrong current password)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User not found"
+        "500":
+          description: Internal server error
+
+  # ─────────────────────────────────────────────────────────
+  # GET /api/users/{id}/calculate-progress
+  # ─────────────────────────────────────────────────────────
+  /api/users/{id}/calculate-progress:
+    get:
+      summary: Calculate user project progress
+      description: |
+        Computes completion metrics across all projects the user is a member of.
+        Calculates subcontrol completion (status="Done") and assessment question
+        completion (has answer) per project and as aggregated totals.
+      tags: [Users - Analytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: User ID to calculate progress for
+      responses:
+        "200":
+          description: Progress calculated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error"
+
+  # ─────────────────────────────────────────────────────────
+  # POST /api/users/{id}/profile-photo
+  # ─────────────────────────────────────────────────────────
+  /api/users/{id}/profile-photo:
+    post:
+      summary: Upload profile photo
+      description: |
+        Uploads a profile photo for the specified user. The file is stored in the
+        tenant-scoped files table. If the user already has a profile photo, the old
+        one is deleted and replaced. Uses multer for multipart file handling.
+      tags: [Users - Profile Photo]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, etc.)
+      responses:
+        "200":
+          description: Profile photo uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "OK"
+                  data:
+                    type: object
+                    properties:
+                      profile_photo_id:
+                        type: integer
+                        description: ID of the new file record
+        "400":
+          description: No file provided
+        "403":
+          description: Access denied (wrong organization)
+        "500":
+          description: Internal server error
+
+    get:
+      summary: Get profile photo
+      description: |
+        Returns the profile photo binary content for the specified user.
+        The response includes the raw file content and its MIME type.
+      tags: [Users - Profile Photo]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        "200":
+          description: Profile photo returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "OK"
+                  data:
+                    type: object
+                    properties:
+                      content:
+                        type: string
+                        format: byte
+                        description: Base64-encoded file content
+                      type:
+                        type: string
+                        description: MIME type
+                        example: "image/png"
+        "404":
+          description: No profile photo found
+        "500":
+          description: Internal server error
+
+    delete:
+      summary: Delete profile photo
+      description: |
+        Removes the profile photo from the user record and deletes the associated
+        file from the files table.
+      tags: [Users - Profile Photo]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        "200":
+          description: Profile photo deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "OK"
+                  data:
+                    type: boolean
+                    description: true if photo was deleted
+        "500":
+          description: Internal server error

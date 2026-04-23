@@ -1,85 +1,103 @@
+import { Suspense } from "react";
 import { Route, Navigate } from "react-router-dom";
+import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
+
+// Eager imports — only the app shell and route guard
 import Dashboard from "../../presentation/containers/Dashboard";
-import Vendors from "../../presentation/pages/Vendors";
-import Plugins from "../../presentation/pages/Plugins";
-import PluginManagement from "../../presentation/pages/Plugins/PluginManagement";
-import Setting from "../../presentation/pages/SettingsPage";
-import Organization from "../../presentation/pages/SettingsPage/Organization";
-import RegisterUser from "../../presentation/pages/Authentication/RegisterUser";
-import SuperAdminOrganizations from "../../presentation/pages/SuperAdmin/Organizations";
-import SuperAdminUsers from "../../presentation/pages/SuperAdmin/Users";
-import SuperAdminAllUsers from "../../presentation/pages/SuperAdmin/AllUsers";
-import SuperAdminSettings from "../../presentation/pages/SuperAdmin/Settings";
-import Login from "../../presentation/pages/Authentication/Login";
-import ForgotPassword from "../../presentation/pages/Authentication/ForgotPassword";
-import ResetPassword from "../../presentation/pages/Authentication/ResetPassword";
-import SetNewPassword from "../../presentation/pages/Authentication/SetNewPassword";
-import ResetPasswordContinue from "../../presentation/pages/Authentication/ResetPasswordContinue";
-import FileManager from "../../presentation/pages/FileManager";
-import Reporting from "../../presentation/pages/Reporting";
-import VWHome from "../../presentation/pages/Home/1.0Home";
-import VWProjectView from "../../presentation/pages/ProjectView/V1.0ProjectView";
-import PageNotFound from "../../presentation/pages/PageNotFound";
 import ProtectedRoute from "../../presentation/components/ProtectedRoute";
-import EvalsDashboard from "../../presentation/pages/EvalsDashboard/EvalsDashboard";
-import OrgSettings from "../../presentation/pages/EvalsDashboard/OrgSettings";
-import DatasetEditorPage from "../../presentation/pages/EvalsDashboard/DatasetEditorPage";
-import AITrustCenter from "../../presentation/pages/AITrustCenter";
-import AITrustCentrePublic from "../../presentation/pages/AITrustCentrePublic";
-import SharedView from "../../presentation/pages/SharedView";
 
-import Training from "../../presentation/pages/TrainingRegistar";
-import PolicyDashboard from "../../presentation/pages/PolicyDashboard/PoliciesDashboard";
-import PolicyEditorPage from "../../presentation/pages/PolicyDashboard/PolicyEditorPage";
-import WatchTower from "../../presentation/pages/WatchTower";
-import ModelInventory from "../../presentation/pages/ModelInventory";
-import ModelLifecycleDetail from "../../presentation/pages/ModelInventory/ModelLifecycleDetail";
-import Datasets from "../../presentation/pages/Datasets";
-import IncidentManagement from "../../presentation/pages/IncidentManagement";
-import AgentDiscovery from "../../presentation/pages/AgentDiscovery";
-import Framework from "../../presentation/pages/Framework";
-import Tasks from "../../presentation/pages/Tasks";
-import IntegratedDashboard from "../../presentation/pages/DashboardOverview/IntegratedDashboard";
-import StartHere from "../../presentation/pages/StartHere";
-import RiskManagement from "../../presentation/pages/RiskManagement";
-import AutomationsPage from "../../presentation/pages/Automations";
-import StyleGuide from "../../presentation/pages/StyleGuide";
+// ── Authentication routes ─────────────────────────────────────────────
+const Login = lazyRoute(() => import("../../presentation/pages/Authentication/Login"));
+const ForgotPassword = lazyRoute(() => import("../../presentation/pages/Authentication/ForgotPassword"));
+const ResetPassword = lazyRoute(() => import("../../presentation/pages/Authentication/ResetPassword"));
+const SetNewPassword = lazyRoute(() => import("../../presentation/pages/Authentication/SetNewPassword"));
+const ResetPasswordContinue = lazyRoute(() => import("../../presentation/pages/Authentication/ResetPasswordContinue"));
+const RegisterUser = lazyRoute(() => import("../../presentation/pages/Authentication/RegisterUser"));
 
-import ApprovalWorkflows from "../../presentation/pages/ApprovalWorkflows";
-import ReactFlowDemo from "../../presentation/pages/ReactFlowDemo";
-import WizardShowcase from "../../presentation/pages/WizardShowcase";
-import ScanPage from "../../presentation/pages/AIDetection/ScanPage";
-import HistoryPage from "../../presentation/pages/AIDetection/HistoryPage";
-import AIDetectionSettingsPage from "../../presentation/pages/AIDetection/SettingsPage";
-import RepositoriesPage from "../../presentation/pages/AIDetection/RepositoriesPage";
-import ScanDetailsPage from "../../presentation/pages/AIDetection/ScanDetailsPage";
-import InsightsPage from "../../presentation/pages/ShadowAI/InsightsPage";
-import UserActivityPage from "../../presentation/pages/ShadowAI/UserActivityPage";
-import AIToolsPage from "../../presentation/pages/ShadowAI/AIToolsPage";
-import RulesPage from "../../presentation/pages/ShadowAI/RulesPage";
-import ShadowAISettingsPage from "../../presentation/pages/ShadowAI/SettingsPage";
-import AIGatewayEndpointsPage from "../../presentation/pages/AIGateway/Endpoints";
-import AIGatewayAnalyticsPage from "../../presentation/pages/AIGateway/SpendDashboard";
-import AIGatewayPlaygroundPage from "../../presentation/pages/AIGateway/Playground";
-import AIGatewayGuardrailsPage from "../../presentation/pages/AIGateway/Guardrails";
-import AIGatewayLogsPage from "../../presentation/pages/AIGateway/Logs";
-import AIGatewayModelsPage from "../../presentation/pages/AIGateway/Models";
-import AIGatewaySettingsPage from "../../presentation/pages/AIGateway/Settings";
-import AIGatewayVirtualKeysPage from "../../presentation/pages/AIGateway/VirtualKeys";
-import AIGatewayPromptsPage from "../../presentation/pages/AIGateway/Prompts";
-import AIGatewayPromptEditorPage from "../../presentation/pages/AIGateway/Prompts/PromptEditor";
-import MCPAgentKeysPage from "../../presentation/pages/AIGateway/MCPAgentKeys";
-import MCPServersPage from "../../presentation/pages/AIGateway/MCPServers";
-import MCPToolCatalogPage from "../../presentation/pages/AIGateway/MCPToolCatalog";
-import MCPAuditLogPage from "../../presentation/pages/AIGateway/MCPAuditLog";
-import MCPApprovalsPage from "../../presentation/pages/AIGateway/MCPApprovals";
-import MCPGuardrailsPage from "../../presentation/pages/AIGateway/MCPGuardrails";
-import MonitoringForm from "../../presentation/pages/PostMarketMonitoring/MonitoringForm";
-import ReportsArchive from "../../presentation/pages/PostMarketMonitoring/ReportsArchive";
-import IntakeFormsListPage from "../../presentation/pages/IntakeFormBuilder/IntakeFormsListPage";
-import IntakeFormBuilder from "../../presentation/pages/IntakeFormBuilder";
-import PublicIntakeForm from "../../presentation/pages/PublicIntakeForm";
-import SubmissionSuccess from "../../presentation/pages/PublicIntakeForm/SubmissionSuccess";
+// ── Core dashboard routes ─────────────────────────────────────────────
+const Vendors = lazyRoute(() => import("../../presentation/pages/Vendors"));
+const Setting = lazyRoute(() => import("../../presentation/pages/SettingsPage"));
+const Organization = lazyRoute(() => import("../../presentation/pages/SettingsPage/Organization"));
+const FileManager = lazyRoute(() => import("../../presentation/pages/FileManager"));
+const Reporting = lazyRoute(() => import("../../presentation/pages/Reporting"));
+const IntegratedDashboard = lazyRoute(() => import("../../presentation/pages/DashboardOverview/IntegratedDashboard"));
+const StartHere = lazyRoute(() => import("../../presentation/pages/StartHere"));
+const VWHome = lazyRoute(() => import("../../presentation/pages/Home/1.0Home"));
+const VWProjectView = lazyRoute(() => import("../../presentation/pages/ProjectView/V1.0ProjectView"));
+const PageNotFound = lazyRoute(() => import("../../presentation/pages/PageNotFound"));
+
+// ── Compliance & framework routes ─────────────────────────────────────
+const Framework = lazyRoute(() => import("../../presentation/pages/Framework"));
+const Training = lazyRoute(() => import("../../presentation/pages/TrainingRegistar"));
+const PolicyDashboard = lazyRoute(() => import("../../presentation/pages/PolicyDashboard/PoliciesDashboard"));
+const PolicyEditorPage = lazyRoute(() => import("../../presentation/pages/PolicyDashboard/PolicyEditorPage"));
+const WatchTower = lazyRoute(() => import("../../presentation/pages/WatchTower"));
+const RiskManagement = lazyRoute(() => import("../../presentation/pages/RiskManagement"));
+const Tasks = lazyRoute(() => import("../../presentation/pages/Tasks"));
+const AutomationsPage = lazyRoute(() => import("../../presentation/pages/Automations"));
+const ApprovalWorkflows = lazyRoute(() => import("../../presentation/pages/ApprovalWorkflows"));
+const IncidentManagement = lazyRoute(() => import("../../presentation/pages/IncidentManagement"));
+
+// ── AI feature routes ─────────────────────────────────────────────────
+const EvalsDashboard = lazyRoute(() => import("../../presentation/pages/EvalsDashboard/EvalsDashboard"));
+const OrgSettings = lazyRoute(() => import("../../presentation/pages/EvalsDashboard/OrgSettings"));
+const DatasetEditorPage = lazyRoute(() => import("../../presentation/pages/EvalsDashboard/DatasetEditorPage"));
+const AgentDiscovery = lazyRoute(() => import("../../presentation/pages/AgentDiscovery"));
+const ModelInventory = lazyRoute(() => import("../../presentation/pages/ModelInventory"));
+const ModelLifecycleDetail = lazyRoute(() => import("../../presentation/pages/ModelInventory/ModelLifecycleDetail"));
+const Datasets = lazyRoute(() => import("../../presentation/pages/Datasets"));
+const AITrustCenter = lazyRoute(() => import("../../presentation/pages/AITrustCenter"));
+
+// ── AI Detection & Shadow AI routes ───────────────────────────────────
+const ScanPage = lazyRoute(() => import("../../presentation/pages/AIDetection/ScanPage"));
+const HistoryPage = lazyRoute(() => import("../../presentation/pages/AIDetection/HistoryPage"));
+const AIDetectionSettingsPage = lazyRoute(() => import("../../presentation/pages/AIDetection/SettingsPage"));
+const RepositoriesPage = lazyRoute(() => import("../../presentation/pages/AIDetection/RepositoriesPage"));
+const ScanDetailsPage = lazyRoute(() => import("../../presentation/pages/AIDetection/ScanDetailsPage"));
+const InsightsPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/InsightsPage"));
+const UserActivityPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/UserActivityPage"));
+const AIToolsPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/AIToolsPage"));
+const RulesPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/RulesPage"));
+const ShadowAISettingsPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/SettingsPage"));
+
+// ── AI Gateway & MCP routes ───────────────────────────────────────────
+const AIGatewayEndpointsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/Endpoints"));
+const AIGatewayAnalyticsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/SpendDashboard"));
+const AIGatewayPlaygroundPage = lazyRoute(() => import("../../presentation/pages/AIGateway/Playground"));
+const AIGatewayGuardrailsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/Guardrails"));
+const AIGatewayLogsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/Logs"));
+const AIGatewayModelsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/Models"));
+const AIGatewaySettingsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/Settings"));
+const AIGatewayVirtualKeysPage = lazyRoute(() => import("../../presentation/pages/AIGateway/VirtualKeys"));
+const AIGatewayPromptsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/Prompts"));
+const AIGatewayPromptEditorPage = lazyRoute(() => import("../../presentation/pages/AIGateway/Prompts/PromptEditor"));
+const MCPAgentKeysPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPAgentKeys"));
+const MCPServersPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPServers"));
+const MCPToolCatalogPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPToolCatalog"));
+const MCPAuditLogPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPAuditLog"));
+const MCPApprovalsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPApprovals"));
+const MCPGuardrailsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPGuardrails"));
+
+// ── Remaining routes ──────────────────────────────────────────────────
+const Plugins = lazyRoute(() => import("../../presentation/pages/Plugins"));
+const PluginManagement = lazyRoute(() => import("../../presentation/pages/Plugins/PluginManagement"));
+const SuperAdminOrganizations = lazyRoute(() => import("../../presentation/pages/SuperAdmin/Organizations"));
+const SuperAdminUsers = lazyRoute(() => import("../../presentation/pages/SuperAdmin/Users"));
+const SuperAdminAllUsers = lazyRoute(() => import("../../presentation/pages/SuperAdmin/AllUsers"));
+const SuperAdminSettings = lazyRoute(() => import("../../presentation/pages/SuperAdmin/Settings"));
+const MonitoringForm = lazyRoute(() => import("../../presentation/pages/PostMarketMonitoring/MonitoringForm"));
+const ReportsArchive = lazyRoute(() => import("../../presentation/pages/PostMarketMonitoring/ReportsArchive"));
+const IntakeFormsListPage = lazyRoute(() => import("../../presentation/pages/IntakeFormBuilder/IntakeFormsListPage"));
+const IntakeFormBuilder = lazyRoute(() => import("../../presentation/pages/IntakeFormBuilder"));
+const PublicIntakeForm = lazyRoute(() => import("../../presentation/pages/PublicIntakeForm"));
+const SubmissionSuccess = lazyRoute(() => import("../../presentation/pages/PublicIntakeForm/SubmissionSuccess"));
+const AITrustCentrePublic = lazyRoute(() => import("../../presentation/pages/AITrustCentrePublic"));
+const SharedView = lazyRoute(() => import("../../presentation/pages/SharedView"));
+
+// ── Dev-only routes ───────────────────────────────────────────────────
+const StyleGuide = lazyRoute(() => import("../../presentation/pages/StyleGuide"));
+const ReactFlowDemo = lazyRoute(() => import("../../presentation/pages/ReactFlowDemo"));
+const WizardShowcase = lazyRoute(() => import("../../presentation/pages/WizardShowcase"));
 
 // Check if we're in development mode
 const isDev = import.meta.env.DEV;
@@ -90,9 +108,9 @@ export const createRoutes = (
   _triggerSidebarReload: () => void
 ) => [
   // ReactFlow Demo - Development only (must be before dashboard route)
-  ...(isDev ? [<Route key="reactflow-demo" path="/reactflow-demo" element={<ReactFlowDemo />} />] : []),
+  ...(isDev ? [<Route key="reactflow-demo" path="/reactflow-demo" element={<Suspense fallback={<LazyFallback />}><ReactFlowDemo /></Suspense>} />] : []),
   // Wizard Showcase - Development only
-  ...(isDev ? [<Route key="wizard-showcase" path="/wizard-showcase" element={<WizardShowcase />} />] : []),
+  ...(isDev ? [<Route key="wizard-showcase" path="/wizard-showcase" element={<Suspense fallback={<LazyFallback />}><WizardShowcase /></Suspense>} />] : []),
   <Route
     key="dashboard"
     path="/"
@@ -100,110 +118,110 @@ export const createRoutes = (
       <ProtectedRoute Component={Dashboard} reloadTrigger={triggerSidebar} />
     }
   >
-    <Route path="/vendors" element={<Vendors />}>
-      <Route index element={<Vendors />} /> {/* Default tab */}
-      <Route path="risks" element={<Vendors />} /> {/* Risks tab */}
+    <Route path="/vendors" element={<Suspense fallback={<LazyFallback />}><Vendors /></Suspense>}>
+      <Route index element={<Suspense fallback={<LazyFallback />}><Vendors /></Suspense>} /> {/* Default tab */}
+      <Route path="risks" element={<Suspense fallback={<LazyFallback />}><Vendors /></Suspense>} /> {/* Risks tab */}
     </Route>
 
-    <Route path="/settings" element={<Setting />} />
-    <Route path="/settings/:tab" element={<Setting />} />
-    <Route path="/plugins" element={<Plugins />} />
-    <Route path="/plugins/marketplace" element={<Plugins />} />
-    <Route path="/plugins/my-plugins" element={<Plugins />} />
-    <Route path="/plugins/:pluginKey/manage" element={<PluginManagement />} />
+    <Route path="/settings" element={<Suspense fallback={<LazyFallback />}><Setting /></Suspense>} />
+    <Route path="/settings/:tab" element={<Suspense fallback={<LazyFallback />}><Setting /></Suspense>} />
+    <Route path="/plugins" element={<Suspense fallback={<LazyFallback />}><Plugins /></Suspense>} />
+    <Route path="/plugins/marketplace" element={<Suspense fallback={<LazyFallback />}><Plugins /></Suspense>} />
+    <Route path="/plugins/my-plugins" element={<Suspense fallback={<LazyFallback />}><Plugins /></Suspense>} />
+    <Route path="/plugins/:pluginKey/manage" element={<Suspense fallback={<LazyFallback />}><PluginManagement /></Suspense>} />
     <Route path="/setting" element={<Navigate to="/settings" replace />} />
-    <Route path="/organization" element={<Organization />} />
-      <Route path="/file-manager" element={<FileManager />} />
-    <Route path="/reporting" element={<Reporting />} />
-    <Route index element={<IntegratedDashboard />} />
-    <Route path="/start-here" element={<StartHere />} />
-    <Route path="/overview" element={<VWHome />} />
-    <Route path="/framework/:tab?" element={<Framework />} />
-    <Route path="/project-view" element={<VWProjectView />} />
-    <Route path="/evals" element={<EvalsDashboard />} />
-    <Route path="/evals/:projectId" element={<EvalsDashboard />} />
-    <Route path="/evals/:projectId/datasets/editor" element={<DatasetEditorPage />} />
-    <Route path="/evals/settings" element={<OrgSettings />} />
-    <Route path="/training" element={<Training />} />
-    <Route path="/ai-trust-center" element={<AITrustCenter />} />
-    <Route path="/ai-trust-center/:tab" element={<AITrustCenter />} />
-    <Route path="/policies/new" element={<PolicyEditorPage />} />
-    <Route path="/policies/:id/edit" element={<PolicyEditorPage />} />
-    <Route path="/policies" element={<PolicyDashboard />}>
-      <Route index element={<PolicyDashboard />} /> {/* Default tab */}
-      <Route path="templates" element={<PolicyDashboard />} /> {/* Policy Templates tab */}
+    <Route path="/organization" element={<Suspense fallback={<LazyFallback />}><Organization /></Suspense>} />
+      <Route path="/file-manager" element={<Suspense fallback={<LazyFallback />}><FileManager /></Suspense>} />
+    <Route path="/reporting" element={<Suspense fallback={<LazyFallback />}><Reporting /></Suspense>} />
+    <Route index element={<Suspense fallback={<LazyFallback />}><IntegratedDashboard /></Suspense>} />
+    <Route path="/start-here" element={<Suspense fallback={<LazyFallback />}><StartHere /></Suspense>} />
+    <Route path="/overview" element={<Suspense fallback={<LazyFallback />}><VWHome /></Suspense>} />
+    <Route path="/framework/:tab?" element={<Suspense fallback={<LazyFallback />}><Framework /></Suspense>} />
+    <Route path="/project-view" element={<Suspense fallback={<LazyFallback />}><VWProjectView /></Suspense>} />
+    <Route path="/evals" element={<Suspense fallback={<LazyFallback />}><EvalsDashboard /></Suspense>} />
+    <Route path="/evals/:projectId" element={<Suspense fallback={<LazyFallback />}><EvalsDashboard /></Suspense>} />
+    <Route path="/evals/:projectId/datasets/editor" element={<Suspense fallback={<LazyFallback />}><DatasetEditorPage /></Suspense>} />
+    <Route path="/evals/settings" element={<Suspense fallback={<LazyFallback />}><OrgSettings /></Suspense>} />
+    <Route path="/training" element={<Suspense fallback={<LazyFallback />}><Training /></Suspense>} />
+    <Route path="/ai-trust-center" element={<Suspense fallback={<LazyFallback />}><AITrustCenter /></Suspense>} />
+    <Route path="/ai-trust-center/:tab" element={<Suspense fallback={<LazyFallback />}><AITrustCenter /></Suspense>} />
+    <Route path="/policies/new" element={<Suspense fallback={<LazyFallback />}><PolicyEditorPage /></Suspense>} />
+    <Route path="/policies/:id/edit" element={<Suspense fallback={<LazyFallback />}><PolicyEditorPage /></Suspense>} />
+    <Route path="/policies" element={<Suspense fallback={<LazyFallback />}><PolicyDashboard /></Suspense>}>
+      <Route index element={<Suspense fallback={<LazyFallback />}><PolicyDashboard /></Suspense>} /> {/* Default tab */}
+      <Route path="templates" element={<Suspense fallback={<LazyFallback />}><PolicyDashboard /></Suspense>} /> {/* Policy Templates tab */}
     </Route>
-    <Route path="/event-tracker" element={<WatchTower />} />
-    <Route path="/event-tracker/logs" element={<WatchTower />} />
-    <Route path="/model-inventory" element={<ModelInventory />} />
-    <Route path="/model-inventory/model-risks" element={<ModelInventory />} />
-    <Route path="/datasets" element={<Datasets />} />
-    <Route path="/model-inventory/evidence-hub" element={<ModelInventory />} />
+    <Route path="/event-tracker" element={<Suspense fallback={<LazyFallback />}><WatchTower /></Suspense>} />
+    <Route path="/event-tracker/logs" element={<Suspense fallback={<LazyFallback />}><WatchTower /></Suspense>} />
+    <Route path="/model-inventory" element={<Suspense fallback={<LazyFallback />}><ModelInventory /></Suspense>} />
+    <Route path="/model-inventory/model-risks" element={<Suspense fallback={<LazyFallback />}><ModelInventory /></Suspense>} />
+    <Route path="/datasets" element={<Suspense fallback={<LazyFallback />}><Datasets /></Suspense>} />
+    <Route path="/model-inventory/evidence-hub" element={<Suspense fallback={<LazyFallback />}><ModelInventory /></Suspense>} />
     {/* Model lifecycle detail page - rendered by plugin */}
-    <Route path="/model-inventory/models/:id" element={<ModelLifecycleDetail />} />
+    <Route path="/model-inventory/models/:id" element={<Suspense fallback={<LazyFallback />}><ModelLifecycleDetail /></Suspense>} />
     {/* Dynamic route for plugin tabs (e.g., mlflow, other future plugins) */}
-    <Route path="/model-inventory/:pluginTab" element={<ModelInventory />} />
-    <Route path="/risk-management" element={<RiskManagement />} />
-    <Route path="/tasks" element={<Tasks />} />
-    <Route path="/automations" element={<AutomationsPage />} />
-    <Route path="/ai-incident-managements" element={<IncidentManagement />} />
-    <Route path="/agent-discovery" element={<AgentDiscovery />} />
-    <Route path="/approval-workflows" element={<ApprovalWorkflows />} />
+    <Route path="/model-inventory/:pluginTab" element={<Suspense fallback={<LazyFallback />}><ModelInventory /></Suspense>} />
+    <Route path="/risk-management" element={<Suspense fallback={<LazyFallback />}><RiskManagement /></Suspense>} />
+    <Route path="/tasks" element={<Suspense fallback={<LazyFallback />}><Tasks /></Suspense>} />
+    <Route path="/automations" element={<Suspense fallback={<LazyFallback />}><AutomationsPage /></Suspense>} />
+    <Route path="/ai-incident-managements" element={<Suspense fallback={<LazyFallback />}><IncidentManagement /></Suspense>} />
+    <Route path="/agent-discovery" element={<Suspense fallback={<LazyFallback />}><AgentDiscovery /></Suspense>} />
+    <Route path="/approval-workflows" element={<Suspense fallback={<LazyFallback />}><ApprovalWorkflows /></Suspense>} />
     <Route path="/ai-detection" element={<Navigate to="/ai-detection/scan" replace />} />
-    <Route path="/ai-detection/scan" element={<ScanPage />} />
-    <Route path="/ai-detection/repositories" element={<RepositoriesPage />} />
-    <Route path="/ai-detection/history" element={<HistoryPage />} />
-    <Route path="/ai-detection/settings" element={<AIDetectionSettingsPage />} />
-    <Route path="/ai-detection/scans/:scanId" element={<ScanDetailsPage />} />
-    <Route path="/ai-detection/scans/:scanId/:tab" element={<ScanDetailsPage />} />
+    <Route path="/ai-detection/scan" element={<Suspense fallback={<LazyFallback />}><ScanPage /></Suspense>} />
+    <Route path="/ai-detection/repositories" element={<Suspense fallback={<LazyFallback />}><RepositoriesPage /></Suspense>} />
+    <Route path="/ai-detection/history" element={<Suspense fallback={<LazyFallback />}><HistoryPage /></Suspense>} />
+    <Route path="/ai-detection/settings" element={<Suspense fallback={<LazyFallback />}><AIDetectionSettingsPage /></Suspense>} />
+    <Route path="/ai-detection/scans/:scanId" element={<Suspense fallback={<LazyFallback />}><ScanDetailsPage /></Suspense>} />
+    <Route path="/ai-detection/scans/:scanId/:tab" element={<Suspense fallback={<LazyFallback />}><ScanDetailsPage /></Suspense>} />
     <Route path="/shadow-ai" element={<Navigate to="/shadow-ai/insights" replace />} />
-    <Route path="/shadow-ai/insights" element={<InsightsPage />} />
-    <Route path="/shadow-ai/user-activity" element={<UserActivityPage />} />
-    <Route path="/shadow-ai/user-activity/users" element={<UserActivityPage />} />
-    <Route path="/shadow-ai/user-activity/departments" element={<UserActivityPage />} />
-    <Route path="/shadow-ai/tools" element={<AIToolsPage />} />
-    <Route path="/shadow-ai/tools/:toolId" element={<AIToolsPage />} />
-    <Route path="/shadow-ai/rules" element={<RulesPage />} />
-    <Route path="/shadow-ai/rules/alerts" element={<RulesPage />} />
-    <Route path="/shadow-ai/settings" element={<ShadowAISettingsPage />} />
+    <Route path="/shadow-ai/insights" element={<Suspense fallback={<LazyFallback />}><InsightsPage /></Suspense>} />
+    <Route path="/shadow-ai/user-activity" element={<Suspense fallback={<LazyFallback />}><UserActivityPage /></Suspense>} />
+    <Route path="/shadow-ai/user-activity/users" element={<Suspense fallback={<LazyFallback />}><UserActivityPage /></Suspense>} />
+    <Route path="/shadow-ai/user-activity/departments" element={<Suspense fallback={<LazyFallback />}><UserActivityPage /></Suspense>} />
+    <Route path="/shadow-ai/tools" element={<Suspense fallback={<LazyFallback />}><AIToolsPage /></Suspense>} />
+    <Route path="/shadow-ai/tools/:toolId" element={<Suspense fallback={<LazyFallback />}><AIToolsPage /></Suspense>} />
+    <Route path="/shadow-ai/rules" element={<Suspense fallback={<LazyFallback />}><RulesPage /></Suspense>} />
+    <Route path="/shadow-ai/rules/alerts" element={<Suspense fallback={<LazyFallback />}><RulesPage /></Suspense>} />
+    <Route path="/shadow-ai/settings" element={<Suspense fallback={<LazyFallback />}><ShadowAISettingsPage /></Suspense>} />
     <Route path="/ai-gateway" element={<Navigate to="/ai-gateway/dashboard" replace />} />
-    <Route path="/ai-gateway/endpoints" element={<AIGatewayEndpointsPage />} />
-    <Route path="/ai-gateway/dashboard" element={<AIGatewayAnalyticsPage />} />
-    <Route path="/ai-gateway/playground" element={<AIGatewayPlaygroundPage />} />
+    <Route path="/ai-gateway/endpoints" element={<Suspense fallback={<LazyFallback />}><AIGatewayEndpointsPage /></Suspense>} />
+    <Route path="/ai-gateway/dashboard" element={<Suspense fallback={<LazyFallback />}><AIGatewayAnalyticsPage /></Suspense>} />
+    <Route path="/ai-gateway/playground" element={<Suspense fallback={<LazyFallback />}><AIGatewayPlaygroundPage /></Suspense>} />
     <Route path="/ai-gateway/guardrails" element={<Navigate to="/ai-gateway/guardrails/pii" replace />} />
-    <Route path="/ai-gateway/guardrails/:tab" element={<AIGatewayGuardrailsPage />} />
+    <Route path="/ai-gateway/guardrails/:tab" element={<Suspense fallback={<LazyFallback />}><AIGatewayGuardrailsPage /></Suspense>} />
     <Route path="/ai-gateway/models" element={<Navigate to="/ai-gateway/models/catalog" replace />} />
-    <Route path="/ai-gateway/models/:tab" element={<AIGatewayModelsPage />} />
-    <Route path="/ai-gateway/logs" element={<AIGatewayLogsPage />} />
-    <Route path="/ai-gateway/prompts" element={<AIGatewayPromptsPage />} />
-    <Route path="/ai-gateway/prompts/:id" element={<AIGatewayPromptEditorPage />} />
-    <Route path="/ai-gateway/virtual-keys" element={<AIGatewayVirtualKeysPage />} />
+    <Route path="/ai-gateway/models/:tab" element={<Suspense fallback={<LazyFallback />}><AIGatewayModelsPage /></Suspense>} />
+    <Route path="/ai-gateway/logs" element={<Suspense fallback={<LazyFallback />}><AIGatewayLogsPage /></Suspense>} />
+    <Route path="/ai-gateway/prompts" element={<Suspense fallback={<LazyFallback />}><AIGatewayPromptsPage /></Suspense>} />
+    <Route path="/ai-gateway/prompts/:id" element={<Suspense fallback={<LazyFallback />}><AIGatewayPromptEditorPage /></Suspense>} />
+    <Route path="/ai-gateway/virtual-keys" element={<Suspense fallback={<LazyFallback />}><AIGatewayVirtualKeysPage /></Suspense>} />
     <Route path="/ai-gateway/settings" element={<Navigate to="/ai-gateway/settings/api-keys" replace />} />
-    <Route path="/ai-gateway/settings/:tab" element={<AIGatewaySettingsPage />} />
+    <Route path="/ai-gateway/settings/:tab" element={<Suspense fallback={<LazyFallback />}><AIGatewaySettingsPage /></Suspense>} />
     <Route path="/ai-gateway/mcp" element={<Navigate to="/ai-gateway/mcp/agent-keys" replace />} />
-    <Route path="/ai-gateway/mcp/agent-keys" element={<MCPAgentKeysPage />} />
-    <Route path="/ai-gateway/mcp/servers" element={<MCPServersPage />} />
-    <Route path="/ai-gateway/mcp/tools" element={<MCPToolCatalogPage />} />
-    <Route path="/ai-gateway/mcp/audit" element={<MCPAuditLogPage />} />
-    <Route path="/ai-gateway/mcp/approvals" element={<MCPApprovalsPage />} />
-    <Route path="/ai-gateway/mcp/guardrails" element={<MCPGuardrailsPage />} />
-    <Route path="/monitoring/cycle/:cycleId" element={<MonitoringForm />} />
-    <Route path="/monitoring/reports" element={<ReportsArchive />} />
-    <Route path="/intake-forms" element={<IntakeFormsListPage />}>
-      <Route index element={<IntakeFormsListPage />} />
-      <Route path="submissions" element={<IntakeFormsListPage />} />
+    <Route path="/ai-gateway/mcp/agent-keys" element={<Suspense fallback={<LazyFallback />}><MCPAgentKeysPage /></Suspense>} />
+    <Route path="/ai-gateway/mcp/servers" element={<Suspense fallback={<LazyFallback />}><MCPServersPage /></Suspense>} />
+    <Route path="/ai-gateway/mcp/tools" element={<Suspense fallback={<LazyFallback />}><MCPToolCatalogPage /></Suspense>} />
+    <Route path="/ai-gateway/mcp/audit" element={<Suspense fallback={<LazyFallback />}><MCPAuditLogPage /></Suspense>} />
+    <Route path="/ai-gateway/mcp/approvals" element={<Suspense fallback={<LazyFallback />}><MCPApprovalsPage /></Suspense>} />
+    <Route path="/ai-gateway/mcp/guardrails" element={<Suspense fallback={<LazyFallback />}><MCPGuardrailsPage /></Suspense>} />
+    <Route path="/monitoring/cycle/:cycleId" element={<Suspense fallback={<LazyFallback />}><MonitoringForm /></Suspense>} />
+    <Route path="/monitoring/reports" element={<Suspense fallback={<LazyFallback />}><ReportsArchive /></Suspense>} />
+    <Route path="/intake-forms" element={<Suspense fallback={<LazyFallback />}><IntakeFormsListPage /></Suspense>}>
+      <Route index element={<Suspense fallback={<LazyFallback />}><IntakeFormsListPage /></Suspense>} />
+      <Route path="submissions" element={<Suspense fallback={<LazyFallback />}><IntakeFormsListPage /></Suspense>} />
     </Route>
-    <Route path="/intake-forms/:formId/edit" element={<IntakeFormBuilder />} />
-    <Route path="/super-admin" element={<SuperAdminOrganizations />} />
-    <Route path="/super-admin/users" element={<SuperAdminAllUsers />} />
-    <Route path="/super-admin/organizations/:id/users" element={<SuperAdminUsers />} />
-    <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
-    <Route path="/super-admin/settings/:tab" element={<SuperAdminSettings />} />
+    <Route path="/intake-forms/:formId/edit" element={<Suspense fallback={<LazyFallback />}><IntakeFormBuilder /></Suspense>} />
+    <Route path="/super-admin" element={<Suspense fallback={<LazyFallback />}><SuperAdminOrganizations /></Suspense>} />
+    <Route path="/super-admin/users" element={<Suspense fallback={<LazyFallback />}><SuperAdminAllUsers /></Suspense>} />
+    <Route path="/super-admin/organizations/:id/users" element={<Suspense fallback={<LazyFallback />}><SuperAdminUsers /></Suspense>} />
+    <Route path="/super-admin/settings" element={<Suspense fallback={<LazyFallback />}><SuperAdminSettings /></Suspense>} />
+    <Route path="/super-admin/settings/:tab" element={<Suspense fallback={<LazyFallback />}><SuperAdminSettings /></Suspense>} />
   </Route>,
   <Route
     key="user-reg"
     path="/user-reg"
-    element={<ProtectedRoute Component={RegisterUser} />}
+    element={<Suspense fallback={<LazyFallback />}><ProtectedRoute Component={RegisterUser} /></Suspense>}
   />,
   <Route
     key="register"
@@ -218,39 +236,39 @@ export const createRoutes = (
   <Route
     key="login"
     path="/login"
-    element={<ProtectedRoute Component={Login} />}
+    element={<Suspense fallback={<LazyFallback />}><ProtectedRoute Component={Login} /></Suspense>}
   />,
   <Route
     key="forgot-password"
     path="/forgot-password"
-    element={<ProtectedRoute Component={ForgotPassword} />}
+    element={<Suspense fallback={<LazyFallback />}><ProtectedRoute Component={ForgotPassword} /></Suspense>}
   />,
   <Route
     key="reset-password"
     path="/reset-password"
-    element={<ProtectedRoute Component={ResetPassword} />}
+    element={<Suspense fallback={<LazyFallback />}><ProtectedRoute Component={ResetPassword} /></Suspense>}
   />,
   <Route
     key="set-new-password"
     path="/set-new-password"
-    element={<ProtectedRoute Component={SetNewPassword} />}
+    element={<Suspense fallback={<LazyFallback />}><ProtectedRoute Component={SetNewPassword} /></Suspense>}
   />,
   <Route
     key="reset-password-continue"
     path="/reset-password-continue"
-    element={<ProtectedRoute Component={ResetPasswordContinue} />}
+    element={<Suspense fallback={<LazyFallback />}><ProtectedRoute Component={ResetPasswordContinue} /></Suspense>}
   />,
 // <Route key="public" path="/public" element={<AITrustCentrePublic />} />,
-  <Route key="aiTrustCentrepublic" path="/aiTrustCentre/:hash" element={<AITrustCentrePublic />} />,
-  <Route key="sharedView" path="/shared/:resourceType/:token" element={<SharedView />} />,
+  <Route key="aiTrustCentrepublic" path="/aiTrustCentre/:hash" element={<Suspense fallback={<LazyFallback />}><AITrustCentrePublic /></Suspense>} />,
+  <Route key="sharedView" path="/shared/:resourceType/:token" element={<Suspense fallback={<LazyFallback />}><SharedView /></Suspense>} />,
   // Public intake form routes (no authentication required)
   // New URL format: /{publicId}/use-case-form-intake
-  <Route key="publicIntakeFormById" path="/:publicId/use-case-form-intake" element={<PublicIntakeForm />} />,
-  <Route key="publicIntakeFormByIdSuccess" path="/:publicId/use-case-form-intake/success" element={<SubmissionSuccess />} />,
+  <Route key="publicIntakeFormById" path="/:publicId/use-case-form-intake" element={<Suspense fallback={<LazyFallback />}><PublicIntakeForm /></Suspense>} />,
+  <Route key="publicIntakeFormByIdSuccess" path="/:publicId/use-case-form-intake/success" element={<Suspense fallback={<LazyFallback />}><SubmissionSuccess /></Suspense>} />,
   // Legacy URL format: /intake/{tenantSlug}/{formSlug}
-  <Route key="publicIntakeForm" path="/intake/:tenantSlug/:formSlug" element={<PublicIntakeForm />} />,
-  <Route key="publicIntakeFormSuccess" path="/intake/:tenantSlug/:formSlug/success" element={<SubmissionSuccess />} />,
+  <Route key="publicIntakeForm" path="/intake/:tenantSlug/:formSlug" element={<Suspense fallback={<LazyFallback />}><PublicIntakeForm /></Suspense>} />,
+  <Route key="publicIntakeFormSuccess" path="/intake/:tenantSlug/:formSlug/success" element={<Suspense fallback={<LazyFallback />}><SubmissionSuccess /></Suspense>} />,
   // Style Guide - Development only
-  ...(isDev ? [<Route key="style-guide" path="/style-guide/:section?" element={<StyleGuide />} />] : []),
-  <Route key="not-found" path="*" element={<PageNotFound />} />,
+  ...(isDev ? [<Route key="style-guide" path="/style-guide/:section?" element={<Suspense fallback={<LazyFallback />}><StyleGuide /></Suspense>} />] : []),
+  <Route key="not-found" path="*" element={<Suspense fallback={<LazyFallback />}><PageNotFound /></Suspense>} />,
 ];

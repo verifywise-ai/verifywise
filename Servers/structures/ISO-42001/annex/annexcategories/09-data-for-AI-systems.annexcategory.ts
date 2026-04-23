@@ -77,4 +77,74 @@ export const DataForAISystems: Partial<
       "Data is securely stored, accessed, transmitted, and disposed per classification.",
     auditor_feedback: "Secure data handling procedures are in place.",
   },
+  {
+    sub_id: 7.1,
+    order_no: 7,
+    title: "Data labeling and annotation",
+    description:
+      "Managing data labeling and annotation processes for AI systems.",
+    guidance:
+      "Data labeling and annotation processes should be defined, documented, and quality-controlled to ensure labels are accurate, consistent, and appropriate for the intended AI system purpose. Labeler qualifications and inter-annotator agreement should be monitored.",
+    is_applicable: true,
+    implementation_description:
+      "Data labeling processes include defined guidelines, qualified annotators, and quality checks for consistency.",
+    auditor_feedback:
+      "Labeling processes are documented. Recommend measuring inter-annotator agreement formally.",
+  },
+  {
+    sub_id: 8.1,
+    order_no: 8,
+    title: "Data bias assessment",
+    description:
+      "Assessing and mitigating bias in data used for AI systems.",
+    guidance:
+      "Data used for AI systems should be assessed for potential biases that could lead to unfair, discriminatory, or harmful outcomes. Identified biases should be documented and mitigated through appropriate techniques.",
+    is_applicable: true,
+    implementation_description:
+      "Bias assessments are conducted on training and evaluation datasets. Identified biases are documented with mitigation strategies.",
+    auditor_feedback:
+      "Bias assessment processes exist. Ensure assessments are repeated when data sources change.",
+  },
+  {
+    sub_id: 9.1,
+    order_no: 9,
+    title: "Data retention",
+    description:
+      "Defining and implementing data retention policies for AI-related data.",
+    guidance:
+      "Retention periods for data used in AI systems — including training data, validation data, model outputs, and logs — should be defined based on legal, regulatory, and operational requirements, and enforced through documented procedures.",
+    is_applicable: true,
+    implementation_description:
+      "Data retention policies define periods for training data, model artifacts, and operational logs in compliance with regulatory requirements.",
+    auditor_feedback:
+      "Retention policies are documented. Verify automated enforcement of retention periods.",
+  },
+  {
+    sub_id: 10.1,
+    order_no: 10,
+    title: "Data deletion and disposal",
+    description:
+      "Secure deletion and disposal of AI-related data.",
+    guidance:
+      "Data used in AI systems should be securely deleted or disposed of when no longer needed or when retention periods expire, ensuring that deletion is complete and verifiable, particularly for personal or sensitive data.",
+    is_applicable: true,
+    implementation_description:
+      "Secure deletion procedures ensure complete removal of expired AI data with verification records.",
+    auditor_feedback:
+      "Deletion procedures exist. Recommend periodic verification that deletion is complete across all storage locations including backups.",
+  },
+  {
+    sub_id: 11.1,
+    order_no: 11,
+    title: "Data transfer",
+    description:
+      "Managing the transfer of data used in AI systems.",
+    guidance:
+      "Transfer of data used in AI systems — whether internal or to third parties — should be governed by documented procedures addressing authorization, encryption, contractual safeguards, and compliance with data protection regulations including cross-border transfer restrictions.",
+    is_applicable: true,
+    implementation_description:
+      "Data transfer procedures govern authorization, encryption, and contractual requirements for internal and external transfers.",
+    auditor_feedback:
+      "Transfer controls are in place. Ensure cross-border transfer assessments are documented for all AI data sharing arrangements.",
+  },
 ];

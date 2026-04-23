@@ -1,0 +1,42 @@
+{
+  "id": "colorado_sb169",
+  "name": "Colorado SB 21-169 (Insurance)",
+  "jurisdiction": "Colorado",
+  "effective_date": "2023-11-14",
+  "mode": "quantitative_audit",
+  "description": "Annual quantitative bias testing for Colorado life insurers' use of External Consumer Data and Information Sources (ECDIS), algorithms, and predictive models. Tests race/ethnicity disparities in approval rates and premium rates using the BIFSG methodology, flagging differences of 5 percentage points or more relative to White insureds per the Colorado Division of Insurance Quantitative Testing Regulation under C.R.S. \u00a7 10-3-1104.9 and Regulation 10-1-1.",
+  "categories": {
+    "race_ethnicity": {
+      "label": "Race/Ethnicity (BIFSG)",
+      "groups": [
+        "White",
+        "Hispanic",
+        "Black",
+        "Asian/Pacific Islander"
+      ]
+    }
+  },
+  "intersectional": {
+    "required": false,
+    "cross": []
+  },
+  "metrics": ["selection_rate", "impact_ratio"],
+  "threshold": 0.95,
+  "required_metadata": [
+    "audit_date",
+    "system_description",
+    "line_of_business",
+    "decision_point",
+    "ecdis_sources",
+    "testing_period_start",
+    "testing_period_end"
+  ],
+  "results_format": {
+    "sections": [
+      {
+        "type": "table",
+        "title": "Rate analysis by race/ethnicity (BIFSG-estimated)"
+      }
+    ]
+  }
+}

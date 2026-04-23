@@ -10,11 +10,11 @@ export const watchtowerContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Event Tracker gives you a live window into VerifyWise. It records every user action and system event, then lets you dive into the raw logs for deeper troubleshooting. Use it to see who did what, spot patterns, and keep your application running smoothly.',
+      text: 'Event Tracker gives you a live window into VerifyWise. It records every user action and system event, then lets you look at the raw logs for troubleshooting. Use it to see who did what, spot patterns and keep things running smoothly.',
     },
     {
       type: 'paragraph',
-      text: 'Whether you need to audit recent activity or debug an issue, Event Tracker provides the visibility you need to understand what is happening in your governance platform.',
+      text: 'Whether you\'re auditing recent activity or debugging an issue, Event Tracker shows you what\'s happening in your governance platform.',
     },
     {
       type: 'heading',

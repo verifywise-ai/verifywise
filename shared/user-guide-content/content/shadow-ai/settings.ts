@@ -10,7 +10,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Settings page is where you configure the data sources, access controls, and operational parameters for Shadow AI detection. It is divided into five sections: API keys, syslog sources, rate limiting, data retention, and risk score calculation.',
+      text: 'The Settings page is where you configure data sources, access controls and operational parameters for Shadow AI detection. It\'s divided into five sections: API keys, syslog sources, rate limiting, data retention and risk score calculation.',
     },
     {
       type: 'heading',
@@ -20,7 +20,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'API keys authenticate event ingestion from your network proxy, SIEM, browser extension, or any system that forwards traffic data to VerifyWise.',
+      text: 'API keys authenticate event ingestion from your network proxy, SIEM, browser extension or any system that forwards traffic data to VerifyWise.',
     },
     {
       type: 'heading',
@@ -34,7 +34,7 @@ export const settingsContent: ArticleContent = {
         { text: 'Click "Create API key"' },
         { text: 'Optionally enter a label (e.g., "Zscaler proxy")' },
         { text: 'Click "Create"' },
-        { text: 'Copy the full key immediately \u2014 it will not be shown again' },
+        { text: 'Copy the full key immediately, it won\'t be shown again' },
       ],
     },
     {
@@ -51,7 +51,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The API keys table shows each key\'s prefix, label, status (Active or Revoked), creation date, and last-used date. You can:',
+      text: 'The API keys table shows each key\'s prefix, label, status (Active or Revoked), creation date and last-used date. You can:',
     },
     {
       type: 'bullet-list',
@@ -68,7 +68,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Syslog sources define where network traffic data comes from. Each source has a unique identifier and a parser type that determines how the incoming log lines are interpreted.',
+      text: 'Syslog sources define where network traffic data comes from. Each source has a unique identifier and a parser type that determines how incoming log lines are interpreted.',
     },
     {
       type: 'heading',
@@ -91,7 +91,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To add a source, click "Add source", enter the source identifier (e.g., `proxy-01.corp.com`), and select the parser type. You can edit or delete sources at any time.',
+      text: 'To add a source, click "Add source", enter the source identifier (e.g., `proxy-01.corp.com`) and select the parser type. You can edit or delete sources at any time.',
     },
 
     // ─── Data Formats ──────────────────────────────────────────────────
@@ -150,7 +150,7 @@ export const settingsContent: ArticleContent = {
         { field: 'timestamp', required: 'Yes', description: 'ISO 8601 timestamp of the event' },
         { field: 'uri_path', required: 'No', description: 'URL path of the request (e.g., /v1/chat)' },
         { field: 'http_method', required: 'No', description: 'HTTP method (GET, POST, etc.)' },
-        { field: 'action', required: 'No', description: '"allowed" or "blocked" — whether the proxy permitted the request' },
+        { field: 'action', required: 'No', description: '"allowed" or "blocked", indicating whether the proxy permitted the request' },
         { field: 'department', required: 'No', description: 'Department of the user (e.g., Engineering, Finance)' },
         { field: 'job_title', required: 'No', description: 'Job title of the user' },
         { field: 'manager_email', required: 'No', description: 'Email address of the user\'s manager' },
@@ -172,7 +172,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Syslog messages are expected over UDP/TCP using RFC 3164 or RFC 5424 framing. The PRI, timestamp, and hostname header are stripped automatically before parsing. Below are example log lines for each supported parser.',
+      text: 'Syslog messages are expected over UDP/TCP using RFC 3164 or RFC 5424 framing. The PRI, timestamp and hostname header are stripped automatically before parsing. Below are example log lines for each supported parser.',
     },
     {
       type: 'heading',
@@ -327,9 +327,9 @@ export const settingsContent: ArticleContent = {
       ],
       rows: [
         { factor: 'Approval status', weight: '40%', description: 'Unapproved tools (not in model inventory or not approved) receive the maximum score.' },
-        { factor: 'Data & compliance', weight: '25%', description: 'Based on training-on-data policy, SOC 2, GDPR, SSO, and encryption at rest.' },
+        { factor: 'Data & compliance', weight: '25%', description: 'Based on training-on-data policy, SOC 2, GDPR, SSO and encryption at rest.' },
         { factor: 'Usage volume', weight: '15%', description: 'Normalized against the organization average. Higher usage increases the score.' },
-        { factor: 'Department sensitivity', weight: '20%', description: 'Uses the highest sensitivity among departments accessing the tool. Finance, Legal, and HR are rated highest (80).' },
+        { factor: 'Department sensitivity', weight: '20%', description: 'Uses the highest sensitivity among departments accessing the tool. Finance, Legal and HR are rated highest (80).' },
       ],
     },
     {

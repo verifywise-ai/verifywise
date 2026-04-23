@@ -1,0 +1,865 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise Tasks API
+  description: Task management endpoints for VerifyWise platform.
+  version: 1.0.0
+
+paths:
+  /tasks:
+    get:
+      summary: List all tasks
+      description: >
+        Retrieve tasks with filtering, sorting, and pagination.
+        Visibility is role-based: Admins see all tasks in the organization;
+        non-admins see only tasks they created or are assigned to.
+        Soft-deleted tasks are excluded unless `include_archived=true`.
+      operationId: getAllTasks
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by one or more task statuses.
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/TaskStatus"
+          style: form
+          explode: true
+        - name: priority
+          in: query
+          description: Filter by one or more priorities.
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/TaskPriority"
+          style: form
+          explode: true
+        - name: due_date_start
+          in: query
+          description: Return tasks with due_date on or after this date (ISO 8601).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: due_date_end
+          in: query
+          description: Return tasks with due_date on or before this date (ISO 8601).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: category
+          in: query
+          description: Filter by one or more category strings stored in the task's categories array.
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: assignee
+          in: query
+          description: Filter by one or more assignee user IDs.
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+          style: form
+          explode: true
+        - name: search
+          in: query
+          description: Case-insensitive substring search across title and description.
+          required: false
+          schema:
+            type: string
+        - name: include_archived
+          in: query
+          description: When `true`, includes soft-deleted (archived) tasks in results.
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "false"
+        - name: sort_by
+          in: query
+          description: Field to sort by.
+          required: false
+          schema:
+            type: string
+            enum: [due_date, priority, created_at]
+            default: created_at
+        - name: sort_order
+          in: query
+          description: Sort direction.
+          required: false
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: DESC
+        - name: page
+          in: query
+          description: Page number (1-based).
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Number of items per page (max 100).
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Paginated list of tasks.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tasks:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/TaskWithRelations"
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      summary: Create a task
+      description: >
+        Create a new task. The authenticated user becomes the creator.
+        Priority defaults to Medium, status defaults to Open.
+        Assignees receive in-app and email notifications.
+      operationId: createTask
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskRequest"
+      responses:
+        "201":
+          description: Task created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TaskWithAssignees"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tasks/{id}:
+    get:
+      summary: Get a task by ID
+      description: >
+        Retrieve a single task including assignees, assignee names,
+        creator name, and entity links. Visibility rules apply.
+      operationId: getTaskById
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task details.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TaskDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      summary: Update a task
+      description: >
+        Partially update a task. Only provided fields are changed.
+        Permission rules:
+        - Only admins and the task creator can update `due_date` and `priority`.
+        - Creator, assignee, or admin can update `status`.
+        - Newly assigned users receive a TASK_ASSIGNED notification;
+          existing assignees receive a TASK_UPDATED notification.
+      operationId: updateTask
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskRequest"
+      responses:
+        "200":
+          description: Task updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TaskWithAssignees"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      summary: Soft-delete (archive) a task
+      description: >
+        Sets the task status to "Deleted". Only the task creator or an admin
+        can perform this action. The task can be restored later.
+      operationId: deleteTask
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task archived.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: Task deleted successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tasks/{id}/restore:
+    put:
+      summary: Restore an archived task
+      description: >
+        Restores a soft-deleted task by setting its status back to "Open".
+        Only the task creator or an admin can restore.
+        The task must currently have status "Deleted".
+      operationId: restoreTask
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task restored.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TaskWithAssignees"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tasks/{id}/hard:
+    delete:
+      summary: Permanently delete a task
+      description: >
+        Permanently removes the task and its assignee records from the database.
+        This action cannot be undone. Only the task creator or an admin can perform this.
+      operationId: hardDeleteTask
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task permanently deleted.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: Task permanently deleted
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tasks/{id}/entities:
+    get:
+      summary: Get entity links for a task
+      description: >
+        Returns all entities linked to the specified task, enriched with
+        entity names resolved from their respective tables.
+      operationId: getTaskEntityLinks
+      tags: [Task Entity Links]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: List of entity links.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TaskEntityLink"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      summary: Add an entity link to a task
+      description: >
+        Links an entity (vendor, model, policy, compliance control, etc.)
+        to the specified task. Validates that both the task and entity exist
+        and that the link is not a duplicate.
+      operationId: addTaskEntityLink
+      tags: [Task Entity Links]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddEntityLinkRequest"
+      responses:
+        "201":
+          description: Entity link created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TaskEntityLink"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Duplicate link.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseEnvelope"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tasks/{id}/entities/{linkId}:
+    delete:
+      summary: Remove an entity link from a task
+      description: Removes a specific entity link by its ID from the specified task.
+      operationId: removeTaskEntityLink
+      tags: [Task Entity Links]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+        - name: linkId
+          in: path
+          required: true
+          description: ID of the entity link to remove.
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Entity link removed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: Entity link removed successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT access token. Payload contains `id` (user ID), `email`,
+        `organizationId`, `tenantId`, `roleName`, and `expire`.
+
+  parameters:
+    TaskId:
+      name: id
+      in: path
+      required: true
+      description: Task ID.
+      schema:
+        type: integer
+
+  schemas:
+    # ---------- Enums ----------
+
+    TaskPriority:
+      type: string
+      enum: [Low, Medium, High]
+      description: Task priority level.
+
+    TaskStatus:
+      type: string
+      enum: [Open, In Progress, Completed, Overdue, Deleted]
+      description: >
+        Task lifecycle status. "Deleted" represents a soft-deleted (archived) task.
+
+    EntityType:
+      type: string
+      enum:
+        - vendor
+        - model
+        - policy
+        - nist_subcategory
+        - iso42001_subclause
+        - iso42001_annexcategory
+        - iso27001_subclause
+        - iso27001_annexcontrol
+        - eu_control
+        - eu_subcontrol
+      description: Type of entity that can be linked to a task.
+
+    # ---------- Request Bodies ----------
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: Task title.
+          example: Review vendor risk assessment
+        description:
+          type: string
+          nullable: true
+          description: Detailed task description.
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Due date in ISO 8601 format.
+          example: "2026-05-15T00:00:00.000Z"
+        priority:
+          $ref: "#/components/schemas/TaskPriority"
+          default: Medium
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+          default: Open
+        categories:
+          type: array
+          items:
+            type: string
+          description: Free-form category tags.
+          example: ["compliance", "vendor"]
+        assignees:
+          type: array
+          items:
+            oneOf:
+              - type: integer
+                description: User ID directly.
+              - type: object
+                properties:
+                  user_id:
+                    type: integer
+                required:
+                  - user_id
+          description: >
+            Users to assign. Accepts an array of user IDs (integers)
+            or objects with a `user_id` property.
+          example: [1, 2, 3]
+        entity_links:
+          type: array
+          items:
+            type: object
+            properties:
+              entity_id:
+                type: integer
+              entity_type:
+                $ref: "#/components/schemas/EntityType"
+              entity_name:
+                type: string
+                description: Display name for the entity (optional, used in notifications).
+          description: >
+            Entity links passed for notification purposes only.
+            These are NOT persisted as entity links during task creation;
+            use POST /tasks/{id}/entities to persist links.
+
+    UpdateTaskRequest:
+      type: object
+      description: >
+        All fields are optional. Only provided fields are updated.
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set to null to clear the due date.
+        priority:
+          $ref: "#/components/schemas/TaskPriority"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        categories:
+          type: array
+          items:
+            type: string
+        assignees:
+          type: array
+          items:
+            type: integer
+          description: >
+            Full replacement of the assignee list. Pass the complete
+            set of user IDs; previous assignees not in the list are removed.
+        entity_links:
+          type: array
+          items:
+            type: object
+            properties:
+              entity_id:
+                type: integer
+              entity_type:
+                $ref: "#/components/schemas/EntityType"
+              entity_name:
+                type: string
+          description: Entity links passed for notification purposes only.
+
+    AddEntityLinkRequest:
+      type: object
+      required:
+        - entity_id
+        - entity_type
+      properties:
+        entity_id:
+          type: integer
+          description: ID of the entity to link.
+          example: 42
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_name:
+          type: string
+          description: Optional display name stored on the link for quick access.
+          example: Acme Corp
+
+    # ---------- Response Schemas ----------
+
+    ResponseEnvelope:
+      type: object
+      properties:
+        message:
+          type: string
+          description: HTTP status text.
+          example: OK
+        data:
+          description: Response payload (varies by endpoint).
+
+    Task:
+      type: object
+      description: Core task fields as stored in the database.
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Review vendor risk assessment
+        description:
+          type: string
+          nullable: true
+        creator_id:
+          type: integer
+          description: User ID of the task creator.
+        organization_id:
+          type: integer
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        priority:
+          $ref: "#/components/schemas/TaskPriority"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        categories:
+          type: array
+          items:
+            type: string
+          description: JSONB array of free-form category strings.
+        is_demo:
+          type: boolean
+          description: Whether this is demo/seed data.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TaskWithAssignees:
+      description: Task with the assignees array appended.
+      allOf:
+        - $ref: "#/components/schemas/Task"
+        - type: object
+          properties:
+            assignees:
+              type: array
+              items:
+                type: integer
+              description: Array of assigned user IDs.
+
+    TaskWithRelations:
+      description: Task with assignees and entity links (returned by list endpoint).
+      allOf:
+        - $ref: "#/components/schemas/Task"
+        - type: object
+          properties:
+            assignees:
+              type: array
+              items:
+                type: integer
+              description: Array of assigned user IDs.
+            entity_links:
+              type: array
+              items:
+                $ref: "#/components/schemas/EntityLinkSummary"
+
+    TaskDetail:
+      description: >
+        Full task detail returned by the get-by-ID endpoint. Includes
+        creator name, assignee names, and entity links.
+      allOf:
+        - $ref: "#/components/schemas/Task"
+        - type: object
+          properties:
+            assignees:
+              type: array
+              items:
+                type: integer
+              description: Array of assigned user IDs.
+            creator_name:
+              type: string
+              description: Full name of the task creator.
+              example: Jane Smith
+            assignee_names:
+              type: array
+              items:
+                type: string
+              description: Full names of assignees in the same order.
+              example: ["John Doe", "Alice Johnson"]
+            entity_links:
+              type: array
+              items:
+                $ref: "#/components/schemas/EntityLinkSummary"
+
+    EntityLinkSummary:
+      type: object
+      description: Abbreviated entity link included in task responses.
+      properties:
+        id:
+          type: integer
+        entity_id:
+          type: integer
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_name:
+          type: string
+          description: Resolved display name of the linked entity.
+
+    TaskEntityLink:
+      type: object
+      description: Full entity link record.
+      properties:
+        id:
+          type: integer
+        task_id:
+          type: integer
+        entity_id:
+          type: integer
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_name:
+          type: string
+          nullable: true
+          description: Display name, resolved from entity table or stored directly.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 25
+        total:
+          type: integer
+          description: Total number of tasks returned (current page count).
+          example: 25
+        totalPages:
+          type: integer
+          example: 4
+        hasNext:
+          type: boolean
+        hasPrev:
+          type: boolean
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Unauthorized
+
+    ValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ResponseEnvelope"
+
+    Forbidden:
+      description: Insufficient permissions for this action.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ResponseEnvelope"
+
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ResponseEnvelope"
+
+    InternalError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ResponseEnvelope"

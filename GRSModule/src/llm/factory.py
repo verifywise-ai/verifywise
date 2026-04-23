@@ -15,7 +15,7 @@ def build_client(spec: ModelSpec) -> ChatClient:
             raise ValueError(
                 f"Bedrock model '{spec.model_id}' requires a 'region' field in models.yaml"
             )
-        return BedrockChatClient(model_id=spec.model_id, region=spec.region)
+        return BedrockChatClient(model_id=spec.model_id, region=spec.region, profile=spec.profile)
     elif spec.provider == "mock":
         return MockChatClient(model_id=spec.model_id, provider=spec.provider)
     else:

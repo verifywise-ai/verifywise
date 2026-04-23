@@ -47,11 +47,9 @@ export const ResourcesForAISystems: Partial<
     description: "Managing system resources for AI.",
     guidance:
       "System resources required for AI systems, including tools and infrastructure, should be managed throughout their lifecycle.",
-    is_applicable: false,
-    justification_for_exclusion:
-      "Legacy systems used do not support detailed resource lifecycle management.",
+    is_applicable: true,
     implementation_description: "",
-    auditor_feedback: "Consider upgrading systems for better resource control.",
+    auditor_feedback: "",
   },
   {
     sub_id: 5.1,

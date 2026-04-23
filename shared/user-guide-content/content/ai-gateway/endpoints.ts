@@ -25,7 +25,7 @@ export const endpointsContent: ArticleContent = {
         { text: 'Enter a display name (e.g., "Production GPT-4o"). A URL-safe slug is generated automatically.' },
         { text: 'Select a model from the dropdown. Models are grouped by provider.' },
         { text: 'Select an API key to authenticate with the provider. If no keys are available, add one in Settings first.' },
-        { text: 'Optionally set max tokens, temperature, system prompt, and rate limit (RPM).' },
+        { text: 'Optionally set max tokens, temperature, system prompt and rate limit (RPM).' },
         { text: 'Optionally select a fallback endpoint (used if the primary provider is down).' },
         { text: 'Click "Create endpoint"' },
       ],
@@ -54,7 +54,7 @@ export const endpointsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The endpoint list shows each endpoint with its provider icon, display name, model, associated API key, guardrail status, and active/inactive state. You can:',
+      text: 'The endpoint list shows each endpoint with its provider icon, display name, model, associated API key, guardrail status and active/inactive state. You can:',
     },
     {
       type: 'bullet-list',
@@ -99,7 +99,7 @@ export const endpointsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each endpoint has an allowed roles list (defaults to all 4 roles: Admin, Reviewer, Editor, Auditor). When listing endpoints, users only see endpoints their role has access to. This applies to the Endpoints page, the Playground dropdown, and any API call that lists endpoints.',
+      text: 'Each endpoint has an allowed roles list (defaults to all 4 roles: Admin, Reviewer, Editor, Auditor). When listing endpoints, users only see endpoints their role has access to. This applies to the Endpoints page, the Playground dropdown and any API call that lists endpoints.',
     },
     {
       type: 'heading',

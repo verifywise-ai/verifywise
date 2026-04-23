@@ -21,7 +21,7 @@ let policyTemplates: PolicyTemplate[] = [];
 try {
   const templatesPath = path.join(
     __dirname,
-    "../../../../Clients/src/application/data/PolicyTemplates.json"
+    "../../../../Clients/public/data/PolicyTemplates.json"
   );
   const templatesContent = fs.readFileSync(templatesPath, "utf-8");
   policyTemplates = JSON.parse(templatesContent);

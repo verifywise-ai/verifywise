@@ -10,11 +10,11 @@ export const runningExperimentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'An experiment is a single evaluation run—you take a model, throw a dataset of prompts at it, and measure how well it performs. Each experiment captures a snapshot of your model\'s capabilities at a specific point in time, making it easy to track improvements (or regressions) as you iterate.',
+      text: 'An experiment is a single evaluation run. You take a model, throw a dataset of prompts at it and measure how well it performs. Each experiment captures a snapshot of your model\'s capabilities at a specific point in time, making it easy to track improvements (or regressions) as you iterate.',
     },
     {
       type: 'paragraph',
-      text: 'The experiment wizard walks you through four steps: configuring the model you want to test, selecting your dataset, choosing a judge LLM, and picking which metrics to measure. Most experiments take just a few minutes to set up and run.',
+      text: 'The experiment wizard walks you through four steps: configuring the model you want to test, selecting your dataset, choosing a judge LLM and picking which metrics to measure. Most experiments take just a few minutes to set up and run.',
     },
     {
       type: 'heading',
@@ -43,8 +43,8 @@ export const runningExperimentsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'OpenAI', text: 'GPT-4, GPT-4 Turbo, GPT-3.5 Turbo, and other OpenAI models. You\'ll need your OpenAI API key.' },
-        { bold: 'Anthropic', text: 'Claude 3 Opus, Sonnet, and Haiku. Great for testing against a different model family.' },
+        { bold: 'OpenAI', text: 'GPT-4, GPT-4 Turbo, GPT-3.5 Turbo and other OpenAI models. You\'ll need your OpenAI API key.' },
+        { bold: 'Anthropic', text: 'Claude 3 Opus, Sonnet and Haiku. Great for testing against a different model family.' },
         { bold: 'Google Gemini', text: 'Gemini Pro and Ultra. Useful if you\'re considering Google\'s offerings.' },
         { bold: 'xAI', text: 'Grok models for those exploring newer providers.' },
         { bold: 'Mistral', text: 'Mistral Large and Medium. Strong open-weight alternative to closed models.' },
@@ -105,7 +105,7 @@ export const runningExperimentsContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'For chatbots, conversational mode is marked as "Recommended" because real conversations rarely happen in isolation. Users reference previous messages, ask follow-ups, and expect the bot to remember context.',
+      text: 'For chatbots, conversational mode is marked as "Recommended" because real conversations rarely happen in isolation. Users reference previous messages, ask follow-ups and expect the bot to remember context.',
     },
     {
       type: 'heading',
@@ -126,7 +126,7 @@ export const runningExperimentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dataset preview shows you exactly which prompts will be included. You can expand any prompt to see its full content, expected output, and metadata.',
+      text: 'The dataset preview shows you exactly which prompts will be included. You can expand any prompt to see its full content, expected output and metadata.',
     },
     {
       type: 'heading',
@@ -136,7 +136,7 @@ export const runningExperimentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The judge LLM is the model that evaluates your model\'s responses. It looks at each output, compares it against the expected result, and assigns scores for each metric.',
+      text: 'The judge LLM is the model that evaluates your model\'s responses. It looks at each output, compares it against the expected result and assigns scores for each metric.',
     },
     {
       type: 'paragraph',
@@ -147,7 +147,7 @@ export const runningExperimentsContent: ArticleContent = {
       items: [
         { bold: 'A capable model', text: 'GPT-4, Claude 3 Opus, or similar frontier models make the best judges. They\'re better at nuanced evaluation.' },
         { bold: 'Consistency', text: 'Use the same judge across experiments if you\'re comparing results. Different judges may score differently.' },
-        { bold: 'Cost awareness', text: 'Judging can be expensive since every test case requires multiple API calls. Consider using GPT-4o-mini for initial testing.' },
+        { bold: 'Cost', text: 'Judging can get expensive since every test case requires multiple API calls. Consider using GPT-4o-mini for initial testing.' },
       ],
     },
     {
@@ -191,9 +191,9 @@ export const runningExperimentsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Chatbot', text: 'For conversational AI. Single-turn datasets show core metrics (relevancy, bias, toxicity). Multi-turn datasets unlock conversational metrics like turn relevancy, knowledge retention, coherence, helpfulness, task completion, and conversation safety.' },
-        { bold: 'RAG', text: 'For retrieval-augmented generation. Core metrics plus faithfulness (does it stick to the context?), hallucination detection, and contextual relevancy (was the right context retrieved?).' },
-        { bold: 'Agent', text: 'For AI assistants that take actions. Core metrics plus agent-specific evaluations for tool use, multi-step reasoning, and task execution.' },
+        { bold: 'Chatbot', text: 'For conversational AI. Single-turn datasets show core metrics (relevancy, bias, toxicity). Multi-turn datasets unlock conversational metrics like turn relevancy, knowledge retention, coherence, helpfulness, task completion and conversation safety.' },
+        { bold: 'RAG', text: 'For retrieval-augmented generation. Core metrics plus faithfulness (does it stick to the context?), hallucination detection and contextual relevancy (was the right context retrieved?).' },
+        { bold: 'Agent', text: 'For AI assistants that take actions. Core metrics plus agent-specific evaluations for tool use, multi-step reasoning and task execution.' },
       ],
     },
     {
@@ -206,7 +206,7 @@ export const runningExperimentsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Answer relevancy', text: 'Does the response actually address the question? A model that gives accurate but off-topic answers scores low here.' },
-        { bold: 'Bias detection', text: 'Flags responses containing gender, racial, political, or other forms of bias. Essential for user-facing applications.' },
+        { bold: 'Bias detection', text: 'Flags responses containing gender, racial, political or other forms of bias. Important for any user-facing application.' },
         { bold: 'Toxicity detection', text: 'Catches harmful, offensive, or inappropriate language. Turn this on for any model that interacts with users.' },
       ],
     },
@@ -262,7 +262,7 @@ export const runningExperimentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can navigate away while the experiment runs—it continues in the background. When it completes, the status changes to "Completed" and you can view the results.',
+      text: 'You can navigate away while the experiment runs, it continues in the background. When it completes, the status changes to "Completed" and you can view the results.',
     },
     {
       type: 'heading',
@@ -279,7 +279,7 @@ export const runningExperimentsContent: ArticleContent = {
       items: [
         { bold: 'Overall scores', text: 'Aggregate metrics across all prompts. A quick health check of model performance.' },
         { bold: 'Per-prompt breakdown', text: 'Drill into individual test cases to see exactly where the model succeeded or struggled.' },
-        { bold: 'Configuration details', text: 'What model, dataset, and judge were used. Helpful when comparing experiments later.' },
+        { bold: 'Configuration details', text: 'What model, dataset and judge were used. Helpful when comparing experiments later.' },
         { bold: 'Timestamps', text: 'When the experiment was created and completed. Track how long evaluations take.' },
       ],
     },
@@ -305,7 +305,7 @@ export const runningExperimentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Experiments tab includes a performance chart that plots your scores across all experiments. This is where patterns emerge: you can see if that prompt tweak actually helped, whether switching models improved quality, or if performance has been steadily declining.',
+      text: 'The Experiments tab includes a performance chart that plots your scores across all experiments. This is where patterns emerge: you can see if that prompt tweak actually helped, whether switching models improved quality or if performance has been steadily declining.',
     },
     {
       type: 'paragraph',

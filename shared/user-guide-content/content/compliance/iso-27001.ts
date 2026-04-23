@@ -10,11 +10,11 @@ export const iso27001Content: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'ISO/IEC 27001 is the leading international standard for information security management systems (ISMS). While not AI-specific, it provides essential security foundations that AI governance builds upon. Organizations with existing ISO 27001 certification can extend their ISMS to cover AI-specific security concerns.',
+      text: 'ISO/IEC 27001 is the leading international standard for information security management systems (ISMS). It isn\'t AI-specific, but it provides the security foundations that AI governance builds on. If you already have ISO 27001 certification, you can extend your ISMS to cover AI-specific security concerns.',
     },
     {
       type: 'paragraph',
-      text: 'AI systems introduce unique security challenges that traditional information security may not fully address. Training data can be poisoned, models can be stolen or reverse-engineered, and adversarial attacks can manipulate AI outputs. Integrating AI governance with ISO 27001 ensures these risks receive appropriate attention within your security framework.',
+      text: 'AI systems bring security challenges that traditional information security may not fully cover. Training data can be poisoned, models can be stolen or reverse-engineered and adversarial attacks can manipulate AI outputs. Integrating AI governance with ISO 27001 makes sure these risks get proper attention within your security framework.',
     },
     {
       type: 'heading',
@@ -25,10 +25,10 @@ export const iso27001Content: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Leverage existing investment', text: 'Build on your ISMS rather than creating parallel governance structures' },
+        { bold: 'Build on existing work', text: 'Extend your ISMS rather than creating parallel governance structures' },
         { bold: 'Unified security approach', text: 'Manage AI security alongside other information security risks' },
         { bold: 'Regulatory alignment', text: 'Both EU AI Act and ISO 42001 reference information security requirements' },
-        { bold: 'Audit efficiency', text: 'Combined audits reduce effort and demonstrate integrated governance' },
+        { bold: 'Audit efficiency', text: 'Combined audits reduce effort and show integrated governance' },
         { bold: 'Consistent risk treatment', text: 'Apply proven security controls to AI-specific threats' },
       ],
     },
@@ -53,7 +53,7 @@ export const iso27001Content: ArticleContent = {
         {
           icon: 'Database',
           title: 'Training data security',
-          description: 'Protecting the confidentiality, integrity, and availability of data used to train AI models.',
+          description: 'Protecting the confidentiality, integrity and availability of data used to train AI models.',
         },
         {
           icon: 'Brain',
@@ -73,7 +73,7 @@ export const iso27001Content: ArticleContent = {
         {
           icon: 'Activity',
           title: 'Supply chain risks',
-          description: 'Managing security risks from third-party models, data, and AI services.',
+          description: 'Managing security risks from third-party models, data and AI services.',
         },
       ],
     },
@@ -109,10 +109,10 @@ export const iso27001Content: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Access control', text: 'Extend to cover access to AI models, training pipelines, and inference APIs' },
-        { bold: 'Cryptography', text: 'Apply to model encryption, secure model serving, and federated learning' },
-        { bold: 'Supplier management', text: 'Include AI vendors, model providers, and training data suppliers' },
-        { bold: 'Change management', text: 'Cover model updates, retraining, and version management' },
+        { bold: 'Access control', text: 'Extend to cover access to AI models, training pipelines and inference APIs' },
+        { bold: 'Cryptography', text: 'Apply to model encryption, secure model serving and federated learning' },
+        { bold: 'Supplier management', text: 'Include AI vendors, model providers and training data suppliers' },
+        { bold: 'Change management', text: 'Cover model updates, retraining and version management' },
         { bold: 'Incident management', text: 'Address AI-specific incidents like model failures or adversarial attacks' },
       ],
     },

@@ -161,7 +161,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             {subControlTlts.map((_, index) => (
               <Tab
                 key={index}
-                label={`Subcontrol ${index + 1}`}
+                label={`Control ${index + 1}`}
                 sx={{ textTransform: "none" }}
               />
             ))}
@@ -256,19 +256,19 @@ const CustomModal: React.FC<ICustomModalProps> = ({
           >
             <Button
               variant="contained"
-              onClick={() => console.log("Previous Subcontrol clicked")}
+              onClick={() => console.log("Previous Control clicked")}
               sx={buttonStyle}
               disableRipple
             >
-              &lt;- Previous Subcontrol
+              &lt;- Previous Control
             </Button>
             <Button
               variant="contained"
-              onClick={() => console.log("Next Subcontrol clicked")}
+              onClick={() => console.log("Next Control clicked")}
               sx={buttonStyle}
               disableRipple
             >
-              Next Subcontrol -&gt;
+              Next Control -&gt;
             </Button>
           </Stack>
           <Button

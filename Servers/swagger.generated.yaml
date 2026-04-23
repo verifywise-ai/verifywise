@@ -1166,8 +1166,8 @@ paths:
     post:
       tags:
         - AI Trust Centre
-      summary: Unknown
-      operationId: unknown
+      summary: Upload Company Logo
+      operationId: uploadCompanyLogo
       security:
         - bearerAuth: []
       requestBody:
@@ -1591,8 +1591,8 @@ paths:
     post:
       tags:
         - Approval Workflows
-      summary: Unknown
-      operationId: approval_requests_unknown
+      summary: Withdraw Request
+      operationId: withdrawRequest
       security:
         - bearerAuth: []
       parameters:
@@ -2286,8 +2286,8 @@ paths:
     post:
       tags:
         - Datasets
-      summary: Handle Multer Error
-      operationId: handleMulterError
+      summary: Upload Dataset File
+      operationId: uploadDatasetFile
       security:
         - bearerAuth: []
       description: "Requires role: Admin or Editor"
@@ -3201,8 +3201,8 @@ paths:
     post:
       tags:
         - Files
-      summary: Handle Multer Error
-      operationId: file_manager_handleMulterError
+      summary: Upload File
+      operationId: uploadFile
       security:
         - bearerAuth: []
       description: "Requires role: Admin or Reviewer or Editor"
@@ -4885,8 +4885,8 @@ paths:
     post:
       tags:
         - Internal
-      summary: Unknown
-      operationId: internal_unknown
+      summary: Anonymous
+      operationId: anonymous
       requestBody:
         content:
           application/json:
@@ -5968,8 +5968,8 @@ paths:
     post:
       tags:
         - Mail
-      summary: Invite Limiter
-      operationId: inviteLimiter
+      summary: Anonymous
+      operationId: mail_anonymous
       security:
         - bearerAuth: []
       requestBody:
@@ -5988,8 +5988,8 @@ paths:
     post:
       tags:
         - Mail
-      summary: Email
-      operationId: email
+      summary: Anonymous
+      operationId: mail_anonymous
       requestBody:
         content:
           application/json:
@@ -6097,6 +6097,21 @@ paths:
           description: Unauthorized
         "500":
           description: Internal server error
+  /modelInventory/evaluations:
+    get:
+      tags:
+        - Model Inventory
+      summary: Get All Model Evaluations
+      operationId: getAllModelEvaluations
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
   /modelInventory/{id}:
     get:
       tags:
@@ -6159,6 +6174,27 @@ paths:
       responses:
         "200":
           description: Deleted successfully
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+  /modelInventory/{id}/evaluations:
+    get:
+      tags:
+        - Model Inventory
+      summary: Get Model Evaluations
+      operationId: getModelEvaluations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
         "401":
           description: Unauthorized
         "500":
@@ -7113,8 +7149,8 @@ paths:
     get:
       tags:
         - Plugins
-      summary: Unknown
-      operationId: plugins_unknown
+      summary: Anonymous
+      operationId: plugins_anonymous
       security:
         - bearerAuth: []
       parameters:
@@ -9659,7 +9695,53 @@ paths:
           description: Forbidden - insufficient role
         "500":
           description: Internal server error
+  /super-admin/users/count:
+    get:
+      tags:
+        - Super Admin
+      summary: Get User Count
+      operationId: getUserCount
+      security:
+        - bearerAuth: []
+      description: "Requires role: Super Admin"
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - insufficient role
+        "500":
+          description: Internal server error
   /super-admin/users/{id}:
+    patch:
+      tags:
+        - Super Admin
+      summary: Update User
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      description: "Requires role: Super Admin"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - insufficient role
+        "500":
+          description: Internal server error
     delete:
       tags:
         - Super Admin
@@ -10436,8 +10518,8 @@ paths:
     post:
       tags:
         - Users
-      summary: Unknown
-      operationId: users_unknown
+      summary: Upload User Profile Photo
+      operationId: uploadUserProfilePhoto
       security:
         - bearerAuth: []
       parameters:
@@ -10824,8 +10906,8 @@ paths:
     get:
       tags:
         - System
-      summary: Unknown
-      operationId: version_unknown
+      summary: Anonymous
+      operationId: version_anonymous
       responses:
         "200":
           description: Success

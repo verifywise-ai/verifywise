@@ -196,7 +196,7 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
       setCurrentFlashRow(control.id);
       setAlert({
         type: "success",
-        message: "Control updated successfully",
+        message: "Requirement updated successfully",
       });
 
       setTimeout(() => {
@@ -212,7 +212,7 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
   const handleSaveError = () => {
     setAlert({
       type: "error",
-      message: "Failed to save control changes. Please try again.",
+      message: "Failed to save requirement changes. Please try again.",
     });
     setTimeout(() => {
       setAlert(null);
@@ -344,7 +344,7 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
                       key={`noOfSubControls-${control.id}`}
                     >
                       <Typography component="span" variant="body2">
-                        {`${control.numberOfSubcontrols} Subcontrols`}
+                        {`${control.numberOfSubcontrols} Controls`}
                       </Typography>
                     </TableCell>
                     <TableCell

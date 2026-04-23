@@ -10,11 +10,11 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise integrations connect your AI governance platform with external tools and services. Integrations help streamline workflows, automate data synchronization, and keep your team informed through familiar channels.',
+      text: 'Integrations connect VerifyWise with external tools and services. They help you automate data sync and keep your team informed through channels they already use.',
     },
     {
       type: 'paragraph',
-      text: 'From the Integrations page, you can view available integrations, check their status, and configure connections to external services.',
+      text: 'From the Integrations page, you can see what\'s available, check connection status and configure each integration.',
     },
     {
       type: 'heading',
@@ -37,7 +37,7 @@ export const integrationOverviewContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Only users with the Admin role can access and configure integrations. If you do not see the Integrations menu item, contact your administrator.',
+      text: 'Only users with the Admin role can access and configure integrations. If you don\'t see the Integrations menu item, contact your administrator.',
     },
     {
       type: 'heading',
@@ -68,7 +68,7 @@ export const integrationOverviewContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/integrations.png',
       alt: 'Integrations page showing Slack and MLflow integration cards with configuration status and descriptions',
-      caption: 'The Integrations page displays available integrations with their current configuration status.',
+      caption: 'The Integrations page shows available integrations with their current status.',
     },
     {
       type: 'heading',
@@ -78,14 +78,14 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each integration card displays its current status:',
+      text: 'Each integration card shows its current status:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Not configured', text: 'The integration has not been set up yet. Click Configure to begin setup.' },
-        { bold: 'Configured', text: 'The integration is active and connected. Click Manage to view or modify settings.' },
-        { bold: 'Error', text: 'The integration encountered a problem. Click Manage to troubleshoot.' },
+        { bold: 'Not configured', text: 'The integration hasn\'t been set up yet. Click Configure to get started.' },
+        { bold: 'Configured', text: 'The integration is active and connected. Click Manage to view or change settings.' },
+        { bold: 'Error', text: 'Something went wrong. Click Manage to troubleshoot.' },
       ],
     },
     {
@@ -96,7 +96,7 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Slack integration enables VerifyWise to send notifications directly to your Slack workspace. You can route different types of notifications to specific channels, keeping your team informed about governance activities without leaving Slack.',
+      text: 'The Slack integration sends notifications directly to your Slack workspace. You can route different notification types to specific channels, so your team stays up to date on governance activities without leaving Slack.',
     },
     {
       type: 'paragraph',
@@ -119,7 +119,7 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The MLflow integration connects VerifyWise to your MLflow tracking server, enabling automatic synchronization of machine learning models. This helps maintain an up-to-date model inventory without manual data entry.',
+      text: 'The MLflow integration connects to your MLflow tracking server and automatically syncs machine learning models. This keeps your model inventory current without manual data entry.',
     },
     {
       type: 'paragraph',
@@ -128,7 +128,7 @@ export const integrationOverviewContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Automatic model synchronization' },
+        { text: 'Automatic model sync' },
         { text: 'Multiple authentication methods (none, basic auth, API token)' },
         { text: 'Scheduled sync every hour' },
         { text: 'Connection status monitoring' },
@@ -143,11 +143,11 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'In addition to pre-built integrations, VerifyWise provides API access for custom integrations. API keys allow you to programmatically interact with VerifyWise data and features from external applications or scripts.',
+      text: 'Beyond the built-in integrations, VerifyWise offers API access for custom integrations. API keys let you interact with VerifyWise data and features programmatically from external applications or scripts.',
     },
     {
       type: 'paragraph',
-      text: 'API keys are managed from Settings > API Keys. See the API access article for details on creating and managing API tokens.',
+      text: 'API keys are managed from Settings > API keys. See the API access article for details on creating and managing tokens.',
     },
     {
       type: 'heading',
@@ -157,16 +157,16 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When configuring integrations, keep these security practices in mind:',
+      text: 'Keep these practices in mind when configuring integrations:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Limit access', text: 'Only administrators can configure integrations, reducing the risk of unauthorized changes' },
-        { bold: 'Review permissions', text: 'Understand what permissions each integration requires before connecting' },
-        { bold: 'Monitor connections', text: 'Regularly review active integrations and disconnect any that are no longer needed' },
-        { bold: 'Protect credentials', text: 'Never share API keys or integration credentials with unauthorized users' },
-        { bold: 'Use SSL', text: 'Ensure external services use secure HTTPS connections' },
+        { bold: 'Limit access', text: 'Only admins can configure integrations, which reduces the risk of unauthorized changes' },
+        { bold: 'Review permissions', text: 'Understand what each integration needs before connecting' },
+        { bold: 'Monitor connections', text: 'Check active integrations regularly and disconnect any you no longer use' },
+        { bold: 'Protect credentials', text: 'Don\'t share API keys or integration credentials with unauthorized users' },
+        { bold: 'Use SSL', text: 'Make sure external services use secure HTTPS connections' },
       ],
     },
     {
@@ -177,7 +177,7 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If an integration is not working as expected:',
+      text: 'If an integration isn\'t working as expected:',
     },
     {
       type: 'ordered-list',
@@ -186,7 +186,7 @@ export const integrationOverviewContent: ArticleContent = {
         { text: 'Verify that connection credentials are correct' },
         { text: 'Test the connection using the built-in test feature' },
         { text: 'Check if the external service is accessible and running' },
-        { text: 'Review any error messages displayed in the integration settings' },
+        { text: 'Review any error messages in the integration settings' },
       ],
     },
     {
@@ -203,7 +203,7 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Only users with the Admin role can access the Integrations page and configure connections. This ensures that integration credentials and settings are managed by authorized personnel.',
+      text: 'Only users with the Admin role can access the Integrations page and set up connections. This keeps integration credentials and settings in the hands of authorized people.',
     },
     {
       type: 'heading',
@@ -213,7 +213,7 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Yes, you can add multiple Slack workspace connections. Each connection can be configured with its own notification routing rules.',
+      text: 'Yes. You can add multiple Slack workspace connections, each with its own notification routing rules.',
     },
     {
       type: 'heading',
@@ -223,7 +223,7 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to the integration\'s management page and look for disconnect or delete options. For Slack, you can remove individual workspace connections. For MLflow, you can clear the configuration to disconnect.',
+      text: 'Go to the integration\'s management page and look for disconnect or delete options. For Slack, you can remove individual workspace connections. For MLflow, clear the configuration to disconnect.',
     },
     {
       type: 'article-links',

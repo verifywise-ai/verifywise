@@ -45,6 +45,7 @@ export interface ISO42001Clause {
 export interface ISO42001SubClause {
   id: number;
   clause_id: number;
+  subclause_id?: string; // Canonical subclause label from the struct (e.g. "6.1.1", "6.3")
   index?: number | string; // Display index (e.g., 1, 2, 3)
   title: string;
   summary?: string;

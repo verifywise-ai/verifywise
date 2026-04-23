@@ -486,7 +486,7 @@ export const createNewSubControlsQuery = async (
     order_no: number;
     title: string;
     description: string;
-    implementation_details: string;
+    implementation_details?: string;
     evidence_description?: string;
     feedback_description?: string;
   }[],
@@ -511,7 +511,7 @@ export const createNewSubControlsQuery = async (
         control_id: controlId,
         order_no: subControl.order_no,
         implementation_details: enable_ai_data_insertion
-          ? subControl.implementation_details
+          ? subControl.implementation_details ?? null
           : null,
         evidence_description:
           enable_ai_data_insertion && subControl.evidence_description

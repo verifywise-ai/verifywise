@@ -114,7 +114,6 @@ import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyM
 import { checkStringValidation } from "../../../application/validations/stringValidation";
 import { useFormValidation } from "../../../application/hooks/useFormValidation";
 import { store } from "../../../application/redux/store";
-import policyTemplates from "../../../application/data/PolicyTemplates.json";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 
 // ── Auth image node view with resize ─────────────────────────────────
@@ -432,6 +431,19 @@ export default function PolicyEditorPage() {
   const isNew = !id;
   const templateId = searchParams.get("templateId");
 
+  // Policy templates (loaded dynamically)
+  const [policyTemplates, setPolicyTemplates] = useState<
+    { id: number; title: string; tags: string[]; content: string }[]
+  >([]);
+
+  useEffect(() => {
+    if (!templateId) return;
+    fetch("/data/PolicyTemplates.json")
+      .then((res) => res.json())
+      .then(setPolicyTemplates)
+      .catch(() => {});
+  }, [templateId]);
+
   // Data loading state
   const [policy, setPolicy] = useState<PolicyManagerModel | null>(null);
   const [tags, setTags] = useState<string[]>([]);
@@ -519,7 +531,7 @@ export default function PolicyEditorPage() {
     if (!templateId) return undefined;
     const t = policyTemplates.find((p) => p.id === Number(templateId));
     return t ? { title: t.title, tags: t.tags, content: t.content } : undefined;
-  }, [templateId]);
+  }, [templateId, policyTemplates]);
 
   // Prefetch change history for existing policies
   usePolicyChangeHistory(!isNew && policy?.id ? policy.id : undefined);

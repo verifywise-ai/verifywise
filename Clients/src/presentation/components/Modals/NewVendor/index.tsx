@@ -15,11 +15,8 @@
 
 import TabContext from "@mui/lab/TabContext";
 import {
-  Autocomplete,
-  AutocompleteRenderInputParams,
   Box,
   Stack,
-  TextField,
   Typography,
   useTheme,
 } from "@mui/material";
@@ -51,7 +48,7 @@ import {
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { User } from "../../../../domain/types/User";
 import { AddNewVendorProps } from "../../../../domain/interfaces/i.vendor";
-import { getAutocompleteStyles } from "../../../utils/inputStyles";
+import AutoCompleteField from "../../Inputs/Autocomplete";
 import { 
   DataSensitivity,
   BusinessCriticality,
@@ -460,133 +457,65 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           isRequired
           disabled={isEditingDisabled}
         />
-        <Stack sx={{ width: 454 }}>
-          <Typography
-            sx={{
-              fontSize: theme.typography.fontSize,
-              fontWeight: 500,
-              mb: 2,
-            }}
-          >
-            Use cases*
-          </Typography>
-          <Autocomplete
-            multiple
-            id="projects-input"
-            size="small"
-            disabled={isEditingDisabled}
-            value={
-              projectOptions?.filter((project) =>
-                values.projectIds?.includes(project._id)
-              ) || []
-            }
-            options={projectOptions || []}
-            noOptionsText={
-              values?.projectIds?.length ===
-              projectOptions?.length
-                ? "All use cases are selected"
-                : "No options"
-            }
-            onChange={(_event, newValue: { _id: number; name: string }[]) => {
-              handleOnChange(
-                "projectIds",
-                newValue.map((project) => project._id)
-              );
-            }}
-            getOptionLabel={(project: { _id: number; name: string }) =>
-              project.name
-            }
-            renderOption={(props, option: { _id: number; name: string }) => {
-              const { key, ...optionProps } = props;
-              return (
-                <Box key={`${option._id}-${key}`} component="li" {...optionProps}>
-                  <Typography sx={{ fontSize: "13px" }}>
-                    {option.name}
-                  </Typography>
-                </Box>
-              );
-            }}
-            filterSelectedOptions
-            popupIcon={<ChevronDown size={16} />}
-            renderInput={(params: AutocompleteRenderInputParams) => (
-              <TextField
-                {...params}
-                placeholder="Select use cases"
-                required
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    minHeight: "34px",
-                    height: "auto",
-                    alignItems: "flex-start",
-                    paddingY: "3px !important",
-                    flexWrap: "wrap",
-                    gap: "2px",
-                  },
-                  "& ::placeholder": {
-                    fontSize: "13px",
-                  },
-                }}
-              />
-            )}
-            sx={{
-              ...getAutocompleteStyles(theme, { hasError: !!errors.projectIds }),
-              width: "100%",
-              backgroundColor: theme.palette.background.main,
-              "& .MuiOutlinedInput-root": {
-                ...getAutocompleteStyles(theme, { hasError: !!errors.projectIds })["& .MuiOutlinedInput-root"],
-                borderRadius: "3px",
-                overflowY: "auto",
-                flexWrap: "wrap",
-                maxHeight: "115px",
-                alignItems: "flex-start",
+        <AutoCompleteField
+          multiple
+          id="projects-input"
+          label="Use cases"
+          isRequired
+          placeholder="Select use cases"
+          error={errors.projectIds}
+          disabled={isEditingDisabled}
+          value={
+            projectOptions?.filter((project) =>
+              values.projectIds?.includes(project._id)
+            ) || []
+          }
+          options={projectOptions || []}
+          noOptionsText={
+            values?.projectIds?.length === projectOptions?.length
+              ? "All use cases are selected"
+              : "No options"
+          }
+          onChange={(_event, newValue: { _id: number; name: string }[]) => {
+            handleOnChange(
+              "projectIds",
+              newValue.map((project) => project._id)
+            );
+          }}
+          getOptionLabel={(project: { _id: number; name: string }) =>
+            project.name
+          }
+          renderOption={(props, option: { _id: number; name: string }) => {
+            const { key, ...optionProps } = props;
+            return (
+              <Box key={`${option._id}-${key}`} component="li" {...optionProps}>
+                <Typography sx={{ fontSize: "13px" }}>
+                  {option.name}
+                </Typography>
+              </Box>
+            );
+          }}
+          filterSelectedOptions
+          popupIcon={<ChevronDown size={16} />}
+          sx={{
+            width: 454,
+            "& .MuiOutlinedInput-root": {
+              overflowY: "auto",
+              flexWrap: "wrap",
+              maxHeight: "115px",
+              alignItems: "flex-start",
+            },
+            "& .MuiAutocomplete-tag": {
+              margin: "2px",
+              maxWidth: "calc(100% - 25px)",
+              "& .MuiChip-label": {
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               },
-              "& .MuiAutocomplete-tag": {
-                margin: "2px",
-                maxWidth: "calc(100% - 25px)",
-                "& .MuiChip-label": {
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                },
-              },
-              "& .MuiChip-root": {
-                borderRadius: "4px",
-              },
-              borderRadius: "3px",
-            }}
-            slotProps={{
-              paper: {
-                sx: {
-                  "& .MuiAutocomplete-listbox": {
-                    "& .MuiAutocomplete-option": {
-                      fontSize: "13px",
-                      color: "#1c2130",
-                      paddingLeft: "9px",
-                      paddingRight: "9px",
-                    },
-                    "& .MuiAutocomplete-option.Mui-focused": {
-                      background: "background.accent",
-                    },
-                  },
-                  "& .MuiAutocomplete-noOptions": {
-                    fontSize: "13px",
-                    paddingLeft: "9px",
-                    paddingRight: "9px",
-                  },
-                },
-              },
-            }}
-          />
-          {errors.projectIds && (
-            <Typography
-              color="error"
-              variant="caption"
-              sx={{ mt: 0.5, ml: 1, color: "#f04438", opacity: 0.8 }}
-            >
-              {errors.projectIds}
-            </Typography>
-          )}
-        </Stack>
+            },
+          }}
+        />
       </Stack>
       <Stack
         direction={"row"}

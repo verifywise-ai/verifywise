@@ -50,11 +50,17 @@ import { ReactComponent as AnthropicLogo } from "../../assets/icons/anthropic_lo
 import { ReactComponent as GeminiLogo } from "../../assets/icons/gemini_logo.svg";
 import { ReactComponent as MistralLogo } from "../../assets/icons/mistral_logo.svg";
 import { ReactComponent as XAILogo } from "../../assets/icons/xai_logo.svg";
-import { ReactComponent as HuggingFaceLogo } from "../../assets/icons/huggingface_logo.svg";
 import { ReactComponent as OpenRouterLogo } from "../../assets/icons/openrouter_logo.svg";
 import { ReactComponent as OllamaLogo } from "../../assets/icons/ollama_logo.svg";
 import { ReactComponent as FolderFilledIcon } from "../../assets/icons/folder_filled.svg";
-import { ReactComponent as BuildIcon } from "../../assets/icons/build.svg";
+
+// Large SVGs loaded from public/ to avoid bundling
+const HuggingFaceLogo = (props: React.SVGProps<SVGSVGElement>) => (
+  <img src="/assets/icons/huggingface_logo.svg" alt="Hugging Face" width={props.width || 24} height={props.height || 24} style={{ display: "inline-block" }} />
+);
+const BuildIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <img src="/assets/icons/build.svg" alt="Build" width={props.width || 24} height={props.height || 24} style={{ display: "inline-block" }} />
+);
 import { ENV_VARs } from "../../../../env.vars";
 
 // Tab components

@@ -18,9 +18,9 @@ import ControlsTable from "./ControlsTable";
 import { border as borderPalette, status } from "../../../themes/palette";
 
 const Table_Columns = [
-  { id: 1, name: "Control Name" },
+  { id: 1, name: "Requirement Name" },
   { id: 2, name: "Owner" },
-  { id: 3, name: "# of Subcontrols" },
+  { id: 3, name: "# of Controls" },
   { id: 4, name: "Completion" },
 ];
 

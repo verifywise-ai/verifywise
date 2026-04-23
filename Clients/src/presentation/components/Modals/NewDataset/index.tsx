@@ -12,8 +12,6 @@ import {
   Stack,
   Box,
   FormControlLabel,
-  Autocomplete,
-  TextField,
   Typography,
 } from "@mui/material";
 import { TabContext } from "@mui/lab";
@@ -41,7 +39,7 @@ import { useFormValidation } from "../../../../application/hooks/useFormValidati
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import { Project } from "../../../../domain/types/Project";
-import { getAutocompleteStyles } from "../../../utils/inputStyles";
+import AutoCompleteField from "../../Inputs/Autocomplete";
 
 const initialState: NewDatasetFormValues = {
   name: "",
@@ -287,44 +285,6 @@ const NewDataset: FC<NewDatasetProps> = ({
       },
     }),
     [theme.palette.background.main]
-  );
-
-  const autocompleteRenderInputStyle = {
-    "& .MuiOutlinedInput-root": {
-      paddingTop: "3.8px !important",
-      paddingBottom: "3.8px !important",
-    },
-    "& ::placeholder": {
-      fontSize: 13,
-    },
-  };
-
-  const autocompleteSlotProps = useMemo(
-    () => ({
-      paper: {
-        sx: {
-          "& .MuiAutocomplete-listbox": {
-            "& .MuiAutocomplete-option": {
-              fontSize: 13,
-              fontWeight: 400,
-              color: theme.palette.text.primary,
-              paddingLeft: "9px",
-              paddingRight: "9px",
-            },
-            "& .MuiAutocomplete-option.Mui-focused": {
-              background: theme.palette.background.fill,
-            },
-          },
-          "& .MuiAutocomplete-noOptions": {
-            fontSize: 13,
-            fontWeight: 400,
-            paddingLeft: "9px",
-            paddingRight: "9px",
-          },
-        },
-      },
-    }),
-    [theme.palette.text.primary, theme.palette.background.fill]
   );
 
   const formContent = (
@@ -593,121 +553,67 @@ const NewDataset: FC<NewDatasetProps> = ({
       </Stack>
 
       {/* Used in Models */}
-      <Stack>
-        <Typography
-          sx={{
-            fontSize: "13px",
-            fontWeight: 500,
-            height: "22px",
-            mb: theme.spacing(2),
-            color: theme.palette.text.secondary,
-          }}
-        >
-          Used in models
-        </Typography>
-        <Autocomplete
-          multiple
-          id="models-input"
-          size="small"
-          value={modelsList.filter((m) => values.models.includes(m.id as number))}
-          options={modelsList}
-          onChange={handleSelectModelsChange}
-          getOptionLabel={(option) => option.name}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
-          noOptionsText={
-            values.models.length === modelsList.length
-              ? "All models selected"
-              : "No options"
-          }
-          renderOption={(props, option) => {
-            const { key, ...otherProps } = props;
-            return (
-              <Box component="li" key={key} {...otherProps}>
-                <Typography sx={{ fontSize: 13, fontWeight: 400 }}>
-                  {option.name}
-                </Typography>
-              </Box>
-            );
-          }}
-          filterSelectedOptions
-          popupIcon={<ChevronDown size={16} />}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder="Select models"
-              sx={autocompleteRenderInputStyle}
-            />
-          )}
-          sx={{
-            ...getAutocompleteStyles(theme, { hasError: false }),
-            backgroundColor: theme.palette.background.main,
-            "& .MuiChip-root": {
-              borderRadius: "4px",
-            },
-          }}
-          slotProps={autocompleteSlotProps}
-        />
-      </Stack>
+      <AutoCompleteField
+        multiple
+        id="models-input"
+        label="Used in models"
+        placeholder="Select models"
+        value={modelsList.filter((m) => values.models.includes(m.id as number))}
+        options={modelsList}
+        onChange={handleSelectModelsChange}
+        getOptionLabel={(option) => option.name}
+        isOptionEqualToValue={(option, value) => option.id === value.id}
+        noOptionsText={
+          values.models.length === modelsList.length
+            ? "All models selected"
+            : "No options"
+        }
+        renderOption={(props, option) => {
+          const { key, ...otherProps } = props;
+          return (
+            <Box component="li" key={key} {...otherProps}>
+              <Typography sx={{ fontSize: 13, fontWeight: 400 }}>
+                {option.name}
+              </Typography>
+            </Box>
+          );
+        }}
+        filterSelectedOptions
+        popupIcon={<ChevronDown size={16} />}
+      />
 
       {/* Used in Projects */}
-      <Stack>
-        <Typography
-          sx={{
-            fontSize: "13px",
-            fontWeight: 500,
-            height: "22px",
-            mb: theme.spacing(2),
-            color: theme.palette.text.secondary,
-          }}
-        >
-          Used in use cases
-        </Typography>
-        <Autocomplete
-          multiple
-          id="projects-input"
-          size="small"
-          value={
-            (values.projects || [])
-              .map((id) => projectList.find((p) => p.id === id)?.project_title)
-              .filter(Boolean) as string[]
-          }
-          options={projectsList}
-          onChange={handleSelectProjectsChange}
-          getOptionLabel={(option) => option}
-          noOptionsText={
-            (values.projects || []).length === projectsList.length
-              ? "All projects selected"
-              : "No options"
-          }
-          renderOption={(props, option) => {
-            const { key, ...otherProps } = props;
-            return (
-              <Box component="li" key={key} {...otherProps}>
-                <Typography sx={{ fontSize: 13, fontWeight: 400 }}>
-                  {option}
-                </Typography>
-              </Box>
-            );
-          }}
-          filterSelectedOptions
-          popupIcon={<ChevronDown size={16} />}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder="Select projects"
-              sx={autocompleteRenderInputStyle}
-            />
-          )}
-          sx={{
-            ...getAutocompleteStyles(theme, { hasError: false }),
-            backgroundColor: theme.palette.background.main,
-            "& .MuiChip-root": {
-              borderRadius: "4px",
-            },
-          }}
-          slotProps={autocompleteSlotProps}
-        />
-      </Stack>
+      <AutoCompleteField
+        multiple
+        id="projects-input"
+        label="Used in use cases"
+        placeholder="Select projects"
+        value={
+          (values.projects || [])
+            .map((id) => projectList.find((p) => p.id === id)?.project_title)
+            .filter(Boolean) as string[]
+        }
+        options={projectsList}
+        onChange={handleSelectProjectsChange}
+        getOptionLabel={(option) => option}
+        noOptionsText={
+          (values.projects || []).length === projectsList.length
+            ? "All projects selected"
+            : "No options"
+        }
+        renderOption={(props, option) => {
+          const { key, ...otherProps } = props;
+          return (
+            <Box component="li" key={key} {...otherProps}>
+              <Typography sx={{ fontSize: 13, fontWeight: 400 }}>
+                {option}
+              </Typography>
+            </Box>
+          );
+        }}
+        filterSelectedOptions
+        popupIcon={<ChevronDown size={16} />}
+      />
     </Stack>
   );
 

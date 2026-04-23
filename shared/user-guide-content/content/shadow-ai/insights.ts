@@ -10,7 +10,7 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Insights dashboard provides a high-level view of Shadow AI activity across your organization. It surfaces key metrics, risk rankings, and usage trends so you can quickly understand the scope and risk profile of unauthorized AI tool usage.',
+      text: 'The Insights dashboard gives you a high-level view of Shadow AI activity across your organization. It surfaces key metrics, risk rankings and usage trends so you can quickly understand the scope and risk profile of unauthorized AI tool usage.',
     },
     {
       type: 'heading',
@@ -39,12 +39,12 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'This panel lists the top 5 AI tools sorted by their risk score. Each entry shows the tool name, its numeric risk score, and the total number of network events recorded. Click "Go to AI tools" to view the full tool inventory.',
+      text: 'This panel lists the top 5 AI tools sorted by their risk score. Each entry shows the tool name, its numeric risk score and the total number of network events recorded. Click "Go to AI tools" to view the full tool inventory.',
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Risk scores range from 0 to 100 and are recalculated nightly. They factor in approval status (40%), data and compliance policies (25%), usage volume (15%), and department sensitivity (20%).',
+      text: 'Risk scores range from 0 to 100 and are recalculated nightly. They factor in approval status (40%), data and compliance policies (25%), usage volume (15%) and department sensitivity (20%).',
     },
     {
       type: 'heading',
@@ -81,7 +81,7 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use the period selector in the top-right corner to adjust the time window for all dashboard data. Available options are last 7 days, last 30 days, and last 90 days.',
+      text: 'Use the period selector in the top-right corner to adjust the time window for all dashboard data. Available options are last 7 days, last 30 days and last 90 days.',
     },
     {
       type: 'article-links',

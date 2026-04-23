@@ -1,37 +1,15 @@
 import { SubClauseISO } from "../../../../domain.layer/frameworks/ISO-42001/subClauseISO.model";
 import { SubClauseStructISO } from "../../../../domain.layer/frameworks/ISO-42001/subClauseStructISO.model";
 
+// NOTE: ISO 42001 Clause 6 in the standard uses a three-level hierarchy —
+// 6.1.1 General, 6.1.2 AI risk assessment, 6.1.3 AI risk treatment,
+// 6.1.4 AI system impact assessment, 6.2 AI objectives, 6.3 Planning of
+// changes. The three-level children (6.1.1-6.1.4) and 6.3 are populated by
+// dedicated migrations (20260420105041, 20260420105042) rather than this
+// struct file. The old 2-level "6.1 Actions to address risks and
+// opportunities" merged entry was removed to match the standard shape; its
+// companion cleanup lives in 20260421170142-iso42001-remove-old-merged-6-1.js.
 export const Planning: Partial<SubClauseStructISO & SubClauseISO>[] = [
-  {
-    title:
-      "Actions to address risks and opportunities (Includes Risk Assessment, Treatment, Impact Assessment)",
-    order_no: 1,
-    summary:
-      "Plan actions based on context, stakeholders, risks, and opportunities. Conduct AI risk assessments, plan risk treatments, and assess AI system impacts.",
-    questions: [
-      "Do we have a process for identifying risks and opportunities related to the AIMS?",
-      "Is there a defined AI risk assessment methodology?",
-      "Are risks related to AI systems (bias, fairness, transparency, security, societal impact etc.) systematically identified and assessed?",
-      "Is there a process for selecting risk treatment options and controls?",
-      "Is a Statement of Applicability (SoA) maintained?",
-      "Do we assess the potential positive and negative impacts of our AI systems on individuals and society?",
-      "How are risk assessment and impact assessment results used in planning?",
-    ],
-    evidence_examples: [
-      "Risk management framework/policy/procedure",
-      "AI Risk Assessment Methodology",
-      "Risk assessment reports per AI system",
-      "AI Risk Register",
-      "AI Risk Treatment Plan",
-      "Statement of Applicability (SoA)",
-      "AI Impact Assessment Methodology",
-      "AI Impact Assessment reports",
-    ],
-    implementation_description:
-      "The organization uses a documented AI risk assessment and impact assessment methodology, reviewed annually, with outputs stored in a central risk register and treatment plan.",
-    auditor_feedback:
-      "Comprehensive risk framework in place. Suggest improving traceability between specific AI systems and their associated risks and treatments.",
-  },
   {
     title: "AI objectives and planning to achieve them",
     order_no: 2,

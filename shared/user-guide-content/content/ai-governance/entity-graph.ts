@@ -1,4 +1,4 @@
-import type { ArticleContent } from '@user-guide-content/contentTypes';
+import type { ArticleContent } from '../../contentTypes';
 
 export const entityGraphContent: ArticleContent = {
   blocks: [
@@ -10,21 +10,21 @@ export const entityGraphContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Entity Graph provides an interactive visualization of relationships between entities in your AI governance system. It helps you understand how use cases, models, vendors, risks, and compliance frameworks are connected.',
+      text: 'The entity graph gives you an interactive view of how entities in your governance system relate to each other. You can see connections between use cases, models, vendors, risks and compliance frameworks at a glance.',
     },
     {
       type: 'paragraph',
-      text: 'The graph displays your governance data as an interactive network diagram. Each entity appears as a node, and the connections between them show their relationships. You can explore the graph by clicking, dragging, and zooming.',
+      text: 'Your governance data shows up as a network diagram. Each entity is a node, and lines between them show their relationships. Click, drag and zoom to explore.',
     },
     {
       type: 'heading',
       id: 'accessing',
       level: 2,
-      text: 'Accessing the Entity Graph',
+      text: 'Accessing the entity graph',
     },
     {
       type: 'paragraph',
-      text: 'The Entity Graph is accessed through the **View relationships** button, available on:',
+      text: 'You can open the entity graph through the **View relationships** button, available on:',
     },
     {
       type: 'bullet-list',
@@ -52,12 +52,12 @@ export const entityGraphContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Use cases', text: '(Green) — Your AI projects and initiatives' },
-        { bold: 'Models', text: '(Blue) — AI/ML models in your inventory' },
-        { bold: 'Vendors', text: '(Purple) — Third-party AI service providers' },
-        { bold: 'Risks', text: '(Red) — Identified project and vendor risks' },
-        { bold: 'Evidence', text: '(Orange) — Supporting documentation and files' },
-        { bold: 'Frameworks', text: '(Grey) — Compliance frameworks (EU AI Act, ISO, etc.)' },
+        { bold: 'Use cases', text: '(green): your AI projects and initiatives' },
+        { bold: 'Models', text: '(blue): AI/ML models in your inventory' },
+        { bold: 'Vendors', text: '(purple): third-party AI service providers' },
+        { bold: 'Risks', text: '(red): identified project and vendor risks' },
+        { bold: 'Evidence', text: '(orange): supporting documentation and files' },
+        { bold: 'Frameworks', text: '(grey): compliance frameworks (EU AI Act, ISO, etc.)' },
       ],
     },
     {
@@ -68,7 +68,7 @@ export const entityGraphContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use the toggle buttons in the top-left panel to show or hide specific entity types. By default, use cases, models, vendors, and risks are visible.',
+      text: 'Use the toggle buttons in the top-left panel to show or hide specific entity types. By default, use cases, models, vendors and risks are visible.',
     },
     {
       type: 'heading',
@@ -130,11 +130,11 @@ export const entityGraphContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Pan', text: '— Click and drag the background' },
-        { bold: 'Zoom', text: '— Scroll or use the zoom controls (bottom-left)' },
-        { bold: 'Mini-map', text: '— Use the overview in the bottom-right corner' },
-        { bold: 'Navigate to entity', text: '— Click a connected entity in the sidebar to focus on it' },
-        { bold: 'Go to full page', text: '— Click "Go to [entity]" to navigate to the entity\'s dedicated page' },
+        { bold: 'Pan', text: 'Click and drag the background' },
+        { bold: 'Zoom', text: 'Scroll or use the zoom controls (bottom-left)' },
+        { bold: 'Mini-map', text: 'Use the overview in the bottom-right corner' },
+        { bold: 'Navigate to entity', text: 'Click a connected entity in the sidebar to focus on it' },
+        { bold: 'Go to full page', text: 'Click "Go to [entity]" to open the entity\'s dedicated page' },
       ],
     },
     {
@@ -150,10 +150,10 @@ export const entityGraphContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Use case → Model', text: '— The use case uses this model' },
-        { bold: 'Use case → Vendor', text: '— The vendor provides services for this use case' },
-        { bold: 'Entity → Risk', text: '— A risk is associated with this entity' },
-        { bold: 'Model → Framework', text: '— The model complies with this framework' },
+        { bold: 'Use case → Model', text: 'The use case uses this model' },
+        { bold: 'Use case → Vendor', text: 'The vendor provides services for this use case' },
+        { bold: 'Entity → Risk', text: 'A risk is associated with this entity' },
+        { bold: 'Model → Framework', text: 'The model complies with this framework' },
       ],
     },
     {
@@ -170,7 +170,7 @@ export const entityGraphContent: ArticleContent = {
           collectionId: 'ai-governance',
           articleId: 'model-inventory',
           title: 'Model inventory',
-          description: 'Learn how to manage your AI model inventory',
+          description: 'Register and manage AI models in your inventory',
         },
         {
           collectionId: 'risk-management',
@@ -182,7 +182,7 @@ export const entityGraphContent: ArticleContent = {
           collectionId: 'risk-management',
           articleId: 'risk-assessment',
           title: 'Risk assessment',
-          description: 'Evaluate risks associated with your AI systems',
+          description: 'Evaluate risks tied to your AI systems',
         },
       ],
     },

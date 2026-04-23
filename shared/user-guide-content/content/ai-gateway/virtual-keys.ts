@@ -10,11 +10,11 @@ export const virtualKeysContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Virtual keys are API keys you hand out to developers so they can send LLM requests through the gateway with any OpenAI-compatible SDK. No VerifyWise account required. Your guardrails, budgets, and audit logs still apply to every request; the developer doesn\'t need to think about any of that.',
+      text: 'Virtual keys are API keys you hand out to developers so they can send LLM requests through the gateway with any OpenAI-compatible SDK. No VerifyWise account required. Your guardrails, budgets and audit logs still apply to every request; the developer doesn\'t need to think about any of that.',
     },
     {
       type: 'paragraph',
-      text: 'They\'re useful when you want application teams or external services to hit your LLM endpoints while you keep control over what gets spent, what content gets through, and what gets logged.',
+      text: 'They\'re useful when you want application teams or external services to hit your LLM endpoints while you keep control over what gets spent, what content gets through and what gets logged.',
     },
     {
       type: 'heading',
@@ -28,7 +28,7 @@ export const virtualKeysContent: ArticleContent = {
         { text: 'Open the **Virtual keys** page from the AI Gateway sidebar.' },
         { text: 'Click **Create key**.' },
         { text: 'Give it a name that tells you what it\'s for (e.g., "chatbot-prod" or "analytics-team").' },
-        { text: 'Optionally set a monthly budget, rate limit (RPM), and expiry date.' },
+        { text: 'Optionally set a monthly budget, rate limit (RPM) and expiry date.' },
         { text: 'Click **Create**. The full key appears once.' },
         { text: 'Copy it now. You won\'t see it again.' },
       ],
@@ -100,7 +100,7 @@ print(response.choices[0].message.content)`,
     },
     {
       type: 'paragraph',
-      text: 'Each key can have its own monthly spending cap. When a key hits its limit, only that key gets blocked. Other keys, Playground users, and the rest of the gateway keep running.',
+      text: 'Each key can have its own monthly spending cap. When a key hits its limit, only that key gets blocked. Other keys, Playground users and the rest of the gateway keep running.',
     },
     {
       type: 'bullet-list',

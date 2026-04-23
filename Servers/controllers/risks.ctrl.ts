@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
-  createRiskQuery,
   deleteRiskByIdQuery,
   getAllRisksQuery,
   getRiskByIdQuery,
@@ -19,7 +18,6 @@ import {
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import {
-  recordProjectRiskCreation,
   recordMultipleFieldChanges,
   trackProjectRiskChanges,
   recordProjectRiskDeletion,
@@ -31,6 +29,7 @@ import {
   recordPortfolioSnapshot,
 } from "../utils/quantitativeRisk.utils";
 import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
+import { createRiskService } from "../services/risk.service";
 
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
@@ -282,46 +281,17 @@ export async function createRisk(
   logger.debug("🛠️ Creating new project risk");
   try {
 
-    const projectRiskData = {
-      ...riskData,
-      risk_owner:
-        riskData.risk_owner && Number(riskData.risk_owner) !== 0
-          ? Number(riskData.risk_owner)
-          : null,
-    } as Partial<RiskModel & { projects: number[], frameworks: number[] }>;
-
-    // Validate and auto-compute FAIR quantitative fields if present
-    if (projectRiskData.event_frequency_min != null || projectRiskData.ale_estimate != null) {
-      const fairErrors = validateQuantitativeRiskFields(projectRiskData as Record<string, unknown>);
-      if (fairErrors.length > 0) {
-        await transaction.rollback();
-        return res.status(400).json(STATUS_CODE[400]({
-          message: "Quantitative risk validation failed",
-          errors: fairErrors,
-        }));
-      }
-      const derived = computeDerivedFields(projectRiskData);
-      Object.assign(projectRiskData, derived);
-    }
-
-    const newProjectRisk = await createRiskQuery(
-      { ...projectRiskData, projects: req.body.projects || [], frameworks: req.body.frameworks || [] },
-      req.organizationId!,
+    const newProjectRisk = await createRiskService(
+      {
+        ...riskData,
+        projects: req.body.projects || [],
+        frameworks: req.body.frameworks || [],
+      },
+      { userId: req.userId!, organizationId: req.organizationId! },
       transaction
     );
 
     if (newProjectRisk) {
-      // Record creation in change history
-      if (req.userId) {
-        await recordProjectRiskCreation(
-          newProjectRisk.id!,
-          req.userId,
-          req.organizationId!,
-          projectRiskData,
-          transaction
-        );
-      }
-
       await transaction.commit();
       logStructured(
         "successful",

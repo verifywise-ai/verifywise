@@ -10,11 +10,11 @@ export const ceMarkingContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'CE Marking is the EU\'s conformity certification for high-risk AI systems. Before you can market or deploy a high-risk AI system in the EU, you need to classify it, complete a conformity assessment, sign a declaration of conformity, and register it in the EU database.',
+      text: 'CE Marking is the EU\'s conformity certification for high-risk AI systems. Before you can market or deploy a high-risk AI system in the EU, you need to classify it, complete a conformity assessment, sign a declaration of conformity and register it in the EU database.',
     },
     {
       type: 'paragraph',
-      text: 'The CE Marking tab in VerifyWise walks you through this process step by step, tracking progress and linking the policies, evidence, and incidents that support your compliance claim.',
+      text: 'The CE Marking tab in VerifyWise walks you through this process step by step. It tracks progress and links the policies, evidence and incidents that support your compliance claim.',
     },
     {
       type: 'heading',
@@ -25,7 +25,7 @@ export const ceMarkingContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Open a project from your dashboard.' },
+        { text: 'Open a use case from your dashboard.' },
         { text: 'Click the **CE Marking** tab.' },
         { text: 'The first time you open this tab, a default record is created with all 7 conformity steps set to "Not started."' },
       ],
@@ -48,8 +48,8 @@ export const ceMarkingContent: ArticleContent = {
       ],
       rows: [
         { field: 'High-risk AI system', description: 'Yes or No. If Yes, the full conformity assessment workflow applies.' },
-        { field: 'Role in product', description: 'Is the AI system standalone, a safety component, part of a larger product, or a foundation model in a downstream system?' },
-        { field: 'Annex III category', description: 'Which of the 8 high-risk categories applies (biometric ID, critical infrastructure, education, employment, essential services, law enforcement, border control, or justice/democracy).' },
+        { field: 'Role in product', description: 'Is the AI system standalone, a safety component, part of a larger product or a foundation model in a downstream system?' },
+        { field: 'Annex III category', description: 'Which of the 8 high-risk categories applies (biometric ID, critical infrastructure, education, employment, essential services, law enforcement, border control or justice/democracy).' },
       ],
     },
     {
@@ -60,18 +60,18 @@ export const ceMarkingContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The conformity assessment is a 7-step process. Each step can be assigned to a team member with a due date, and tracked through these statuses: Not started, In progress, Completed, or Not needed.',
+      text: 'The conformity assessment is a 7-step process. Each step can be assigned to a team member with a due date and tracked through these statuses: Not started, In progress, Completed or Not needed.',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: '**Confirm high-risk classification** — Verify that the system falls under Annex III and requires conformity assessment.' },
-        { text: '**Complete EU AI Act checklist** — Work through the applicable controls and requirements.' },
-        { text: '**Compile technical documentation** — Assemble the required technical documentation file.' },
-        { text: '**Internal review and sign-off** — Internal stakeholders review and approve the documentation.' },
-        { text: '**Notified body review** — If required, submit documentation to a notified body for independent review.' },
-        { text: '**Sign declaration of conformity** — The authorized signatory signs the formal declaration.' },
-        { text: '**Register in EU database** — Submit the system\'s details to the EU database.' },
+        { text: '**Confirm high-risk classification**: verify that the system falls under Annex III and requires conformity assessment.' },
+        { text: '**Complete EU AI Act checklist**: work through the applicable controls and requirements.' },
+        { text: '**Compile technical documentation**: assemble the required technical documentation file.' },
+        { text: '**Internal review and sign-off**: internal stakeholders review and approve the documentation.' },
+        { text: '**Notified body review**: if required, submit documentation to a notified body for independent review.' },
+        { text: '**Sign declaration of conformity**: the authorized signatory signs the formal declaration.' },
+        { text: '**Register in EU database**: submit the system\'s details to the EU database.' },
       ],
     },
     {
@@ -137,9 +137,9 @@ export const ceMarkingContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Policies', text: 'Link governance policies that define how the system is managed and operated.' },
-        { bold: 'Evidence', text: 'Attach evidence files that demonstrate compliance with specific requirements.' },
-        { bold: 'Incidents', text: 'Connect any incidents that occurred during the system\'s operation.' },
+        { bold: 'Policies', text: 'Link governance policies that define how the system is managed and operated' },
+        { bold: 'Evidence', text: 'Attach evidence files that show compliance with specific requirements' },
+        { bold: 'Incidents', text: 'Connect any incidents that occurred during the system\'s operation' },
       ],
     },
     {

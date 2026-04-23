@@ -352,6 +352,21 @@ try {
       console.error("Data migration check failed:", error);
       // Server continues to start even if migration check fails
     }
+
+    // Dev-only auto-bootstrap — runs AFTER migration check completes
+    try {
+      const { devAutoBootstrap } = require("./utils/devAutoBootstrap");
+      await devAutoBootstrap();
+    } catch (error) {
+      console.error("❌ Dev auto-bootstrap failed:", error);
+      // When DEV_AUTO_BOOTSTRAP is explicitly on, fail fast so devs notice
+      if (
+        process.env.NODE_ENV !== "production" &&
+        process.env.DEV_AUTO_BOOTSTRAP === "true"
+      ) {
+        process.exit(1);
+      }
+    }
   })();
 
   const server = app.listen(port, () => {

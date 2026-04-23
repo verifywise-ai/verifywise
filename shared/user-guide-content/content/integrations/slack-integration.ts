@@ -10,7 +10,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Slack integration enables VerifyWise to send real-time notifications about AI governance activities directly to your Slack workspace. Keep your team informed about model updates, risk assessments, compliance changes, and more without leaving Slack.',
+      text: 'The Slack integration lets VerifyWise send real-time notifications about AI governance activities to your Slack workspace. Your team can stay on top of model updates, risk assessments, compliance changes and more without leaving Slack.',
     },
     {
       type: 'heading',
@@ -23,7 +23,7 @@ export const slackIntegrationContent: ArticleContent = {
       items: [
         { bold: 'Receive notifications', text: 'Get real-time alerts about governance events in Slack channels' },
         { bold: 'Route by channel', text: 'Send different notification types to specific channels' },
-        { bold: 'Multiple workspaces', text: 'Connect multiple Slack workspaces if needed' },
+        { bold: 'Multiple workspaces', text: 'Connect more than one Slack workspace if needed' },
         { bold: 'Stay informed', text: 'Keep your team updated without requiring them to log into VerifyWise' },
       ],
     },
@@ -35,23 +35,23 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To connect your Slack workspace to VerifyWise:',
+      text: 'To connect your Slack workspace:',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to Integrations from the main menu' },
+        { text: 'Go to Integrations from the main menu' },
         { text: 'Click Configure on the Slack integration card' },
-        { text: 'You will be redirected to Slack to authorize the connection' },
+        { text: 'You\'ll be redirected to Slack to authorize the connection' },
         { text: 'Select the Slack workspace you want to connect' },
-        { text: 'Review the permissions requested and click Allow' },
-        { text: 'You will be redirected back to VerifyWise with the connection active' },
+        { text: 'Review the permissions and click Allow' },
+        { text: 'You\'ll be sent back to VerifyWise with the connection active' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'You must have permission to install apps in your Slack workspace. If you see an error during authorization, contact your Slack workspace administrator.',
+      text: 'You need permission to install apps in your Slack workspace. If you see an error during authorization, contact your Slack workspace administrator.',
     },
     {
       type: 'heading',
@@ -74,7 +74,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'These permissions allow VerifyWise to send notifications but do not give access to read your messages or user data.',
+      text: 'These permissions let VerifyWise send notifications but don\'t give it access to read your messages or user data.',
     },
     {
       type: 'heading',
@@ -89,7 +89,7 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to Integrations' },
+        { text: 'Go to Integrations' },
         { text: 'Click Manage on the Slack integration card' },
         { text: 'View your connected workspaces and their status' },
       ],
@@ -102,7 +102,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The integrations table displays:',
+      text: 'The integrations table shows:',
     },
     {
       type: 'bullet-list',
@@ -121,7 +121,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Configure where different types of notifications are sent by setting up notification routing rules. This allows you to direct specific notifications to relevant channels.',
+      text: 'You can configure where different notification types go by setting up routing rules. This lets you direct specific notifications to relevant channels.',
     },
     {
       type: 'paragraph',
@@ -140,7 +140,7 @@ export const slackIntegrationContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/slack-notifications.png',
       alt: 'Notification routing modal showing different notification types like Membership and roles, Projects and organizations, Policy reminders, and Evidence alerts with channel selection dropdowns',
-      caption: 'Configure notification routing to send different types of alerts to specific Slack channels.',
+      caption: 'Configure notification routing to send different alert types to specific Slack channels.',
     },
     {
       type: 'heading',
@@ -150,12 +150,12 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can route the following notification types to specific channels:',
+      text: 'You can route these notification types to specific channels:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Model updates', text: 'New models added, status changes, or lifecycle events' },
+        { bold: 'Model updates', text: 'New models added, status changes or lifecycle events' },
         { bold: 'Risk alerts', text: 'New risks identified or risk severity changes' },
         { bold: 'Compliance updates', text: 'Assessment progress or control status changes' },
         { bold: 'Policy changes', text: 'Policy status updates or approaching review dates' },
@@ -176,8 +176,8 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to the Slack management page' },
-        { text: 'Click "Add to Slack" button' },
+        { text: 'Go to the Slack management page' },
+        { text: 'Click "Add to Slack"' },
         { text: 'Follow the authorization flow for the new workspace' },
         { text: 'Configure notification routing for the new connection' },
       ],
@@ -195,7 +195,7 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to the Slack management page' },
+        { text: 'Go to the Slack management page' },
         { text: 'Find the workspace connection in the table' },
         { text: 'Click the delete icon in the actions column' },
         { text: 'Confirm the removal when prompted' },
@@ -204,7 +204,7 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'warning',
-      text: 'Removing a Slack connection stops all notifications to that workspace immediately. You can reconnect at any time by going through the authorization flow again.',
+      text: 'Removing a Slack connection stops all notifications to that workspace right away. You can reconnect at any time by going through the authorization flow again.',
     },
     {
       type: 'heading',
@@ -221,10 +221,10 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Verify the Slack connection is active in the integrations table' },
-        { text: 'Check that notification routing is configured for the expected channel' },
-        { text: 'Ensure the VerifyWise app has not been removed from your Slack workspace' },
-        { text: 'Confirm that the target channel still exists' },
+        { text: 'Check that the Slack connection is active in the integrations table' },
+        { text: 'Verify notification routing is set up for the right channel' },
+        { text: 'Make sure the VerifyWise app hasn\'t been removed from your Slack workspace' },
+        { text: 'Confirm the target channel still exists' },
       ],
     },
     {
@@ -236,7 +236,7 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Ensure you have permission to install apps in your Slack workspace' },
+        { text: 'Make sure you have permission to install apps in your Slack workspace' },
         { text: 'Try again after clearing your browser cache' },
         { text: 'Contact your Slack workspace administrator if restrictions are in place' },
       ],
@@ -255,7 +255,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Yes, if you grant the appropriate permissions during authorization. The VerifyWise Slack app will need to be invited to private channels to send messages there.',
+      text: 'Yes, if you grant the appropriate permissions during authorization. The VerifyWise Slack app needs to be invited to private channels before it can send messages there.',
     },
     {
       type: 'heading',
@@ -265,7 +265,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Anyone with access to the Slack channel where notifications are sent can see the messages. Plan your notification routing accordingly to ensure appropriate visibility.',
+      text: 'Anyone with access to the Slack channel where notifications are sent can see them. Plan your routing accordingly so the right people have visibility.',
     },
     {
       type: 'heading',
@@ -275,7 +275,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Notification messages use standard formats designed to be clear and actionable. Custom message formatting is not currently available.',
+      text: 'Notification messages use standard formats designed to be clear and actionable. Custom message formatting isn\'t available right now.',
     },
     {
       type: 'heading',
@@ -285,7 +285,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Notifications are sent in real-time as events occur in VerifyWise. There is no batching or delay.',
+      text: 'Notifications go out in real-time as events happen in VerifyWise. There\'s no batching or delay.',
     },
     {
       type: 'article-links',

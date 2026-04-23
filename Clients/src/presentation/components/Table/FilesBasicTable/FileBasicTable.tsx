@@ -502,7 +502,11 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                             }}
                             onClick={(event) => handleRowClick(row, event)}
                           >
-                            {row.source}
+                            {row.source === "Compliance tracker group"
+                              ? "Requirements tracker group"
+                              : row.source === "Assessment tracker group"
+                              ? "Controls tracker group"
+                              : row.source}
                           </Box>
                         ) : (
                           <Typography

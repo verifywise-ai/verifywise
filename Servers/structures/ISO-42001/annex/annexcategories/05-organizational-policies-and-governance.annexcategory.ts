@@ -29,79 +29,11 @@ export const OrganizationalPoliciesAndGovernance: Partial<
       "A governance structure with defined roles and oversight committees has been established.",
     auditor_feedback: "Framework is robust; recommend more frequent audits.",
   },
-  {
-    sub_id: 3.1,
-    order_no: 3,
-    title: "AI roles and responsibilities",
-    description: "Defining and allocating AI responsibilities.",
-    guidance:
-      "All AI system related responsibilities should be defined and allocated.",
-    is_applicable: true,
-    implementation_description:
-      "All AI roles are documented with clear accountability matrices.",
-    auditor_feedback: "Role definitions are clear and well communicated.",
-  },
-  {
-    sub_id: 3.2,
-    order_no: 4,
-    title: "Segregation of duties",
-    description: "Separating conflicting duties related to AI.",
-    guidance:
-      "Conflicting duties and areas of responsibility should be segregated.",
-    is_applicable: false,
-    justification_for_exclusion:
-      "Small team size limits segregation of duties without significant resource burden.",
-    implementation_description: "",
-    auditor_feedback:
-      "Segregation is currently limited; recommend revisiting as the team grows.",
-  },
-  {
-    sub_id: 4.1,
-    order_no: 5,
-    title: "Accountability for AI systems",
-    description: "Assigning accountability for AI systems.",
-    guidance:
-      "Accountability should be assigned for the establishment, implementation, maintenance, monitoring, evaluation and improvement of the AIMS and for AI systems throughout their lifecycle.",
-    is_applicable: true,
-    implementation_description:
-      "Accountability assigned to AI project managers and system owners across lifecycle.",
-    auditor_feedback: "Good accountability tracking observed.",
-  },
-  {
-    sub_id: 5.1,
-    order_no: 6,
-    title: "Contact with authorities",
-    description: "Maintaining contact with relevant authorities.",
-    guidance:
-      "Appropriate contacts with relevant authorities should be maintained.",
-    is_applicable: true,
-    implementation_description:
-      "Regular communications maintained with regulatory bodies regarding AI compliance.",
-    auditor_feedback: "Effective liaison with authorities.",
-  },
-  {
-    sub_id: 5.2,
-    order_no: 7,
-    title: "Contact with special interest groups",
-    description: "Maintaining contact with special interest groups.",
-    guidance:
-      "Appropriate contacts with special interest groups and other specialist forums and professional associations should be maintained.",
-    is_applicable: false,
-    justification_for_exclusion:
-      "Organization has no active membership in AI special interest groups currently.",
-    implementation_description: "",
-    auditor_feedback: "No engagement noted; monitor for future opportunities.",
-  },
-  {
-    sub_id: 6.1,
-    order_no: 8,
-    title: "AI in project management",
-    description: "Integrating AI aspects into project management.",
-    guidance:
-      "AI should be integrated into the organization''s project management.",
-    is_applicable: true,
-    implementation_description:
-      "AI considerations integrated into project planning and risk management frameworks.",
-    auditor_feedback: "AI aspects are well embedded in projects.",
-  },
+  // NOTE: items previously at order_no 3-8 were de-duplicated / moved to A.6:
+  //   - 3.1 "AI roles and responsibilities" and 3.2 "Segregation of duties"
+  //     were duplicates of A.6.1.1 / A.6.1.2 and are removed.
+  //   - 4.1 "Accountability for AI systems", 5.1 "Contact with authorities",
+  //     5.2 "Contact with special interest groups", 6.1 "AI in project
+  //     management" belong under ISO A.3 (Internal organization = VW A.6) and
+  //     were reparented in migration 20260420105046-iso42001-dedupe-a5-move-to-a6.js
 ];

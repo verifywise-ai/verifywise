@@ -10,11 +10,11 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise provides API access for programmatic integration with external applications, scripts, and automation workflows. API keys allow authenticated access to VerifyWise features without requiring interactive login.',
+      text: 'VerifyWise offers API access so you can integrate with external applications, scripts and automation workflows. API keys let you authenticate requests without an interactive login.',
     },
     {
       type: 'paragraph',
-      text: 'Use API keys to build custom integrations, automate data synchronization, or connect VerifyWise with your existing tools and processes.',
+      text: 'Use API keys to build custom integrations, automate data sync or connect VerifyWise with your existing tools.',
     },
     {
       type: 'heading',
@@ -29,15 +29,15 @@ export const apiAccessContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to Settings from the main menu' },
-        { text: 'Select the API Keys tab' },
+        { text: 'Go to Settings from the bottom of the sidebar' },
+        { text: 'Select the API keys tab' },
         { text: 'View your existing keys or create new ones' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Only users with the Admin role can view and manage API keys. The API Keys tab is not visible to Editors or Viewers.',
+      text: 'Only users with the Admin role can view and manage API keys. The API keys tab isn\'t visible to other roles.',
     },
     {
       type: 'heading',
@@ -52,10 +52,10 @@ export const apiAccessContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click "Create new key" or "Create API key" button' },
-        { text: 'Enter a descriptive name for the key (e.g., "Production API Key", "CI/CD Pipeline")' },
+        { text: 'Click "Create new key" or "Create API key"' },
+        { text: 'Enter a descriptive name for the key (e.g., "Production API key", "CI/CD pipeline")' },
         { text: 'Click Create' },
-        { text: 'Copy the generated key immediately' },
+        { text: 'Copy the generated key right away' },
         { text: 'Click "I copied the key" to close the dialog' },
       ],
     },
@@ -63,13 +63,13 @@ export const apiAccessContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/create-api-key.png',
       alt: 'Create API key modal with a key name input field and Create button',
-      caption: 'Enter a descriptive name for your API key to help identify its purpose.',
+      caption: 'Enter a descriptive name to help identify the key\'s purpose.',
     },
     {
       type: 'callout',
       variant: 'warning',
       title: 'Important',
-      text: 'The API key is only shown once when created. Copy it immediately and store it securely. You cannot retrieve the key later. If you lose the key, you must create a new one.',
+      text: 'The API key is only shown once when created. Copy it immediately and store it somewhere safe. You can\'t retrieve the key later. If you lose it, you\'ll need to create a new one.',
     },
     {
       type: 'heading',
@@ -79,19 +79,19 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use descriptive names that indicate the key\'s purpose:',
+      text: 'Use descriptive names that make the key\'s purpose clear:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Environment-based', text: 'Production API Key, Staging API Key, Development Key' },
-        { bold: 'Purpose-based', text: 'Model Sync Key, Reporting Automation, CI/CD Integration' },
-        { bold: 'Application-based', text: 'Data Pipeline Key, Dashboard Integration' },
+        { bold: 'Environment-based', text: 'Production API key, Staging API key, Development key' },
+        { bold: 'Purpose-based', text: 'Model sync key, Reporting automation, CI/CD integration' },
+        { bold: 'Application-based', text: 'Data pipeline key, Dashboard integration' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'Key names must be between 3 and 50 characters. Each key name must be unique within your organization.',
+      text: 'Key names must be between 3 and 50 characters. Each name has to be unique within your organization.',
     },
     {
       type: 'heading',
@@ -101,12 +101,12 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The API keys list displays the following information for each key:',
+      text: 'The API keys list shows the following for each key:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Name', text: 'The descriptive name you assigned to the key' },
+        { bold: 'Name', text: 'The descriptive name you gave the key' },
         { bold: 'Status', text: 'Whether the key is Active or Expired' },
         { bold: 'Created', text: 'When the key was created' },
         { bold: 'Expires', text: 'When the key will expire' },
@@ -115,12 +115,12 @@ export const apiAccessContent: ArticleContent = {
     {
       type: 'image',
       src: '/images/user-guide/api-keys.png',
-      alt: 'API Keys settings tab showing a list of API keys with their names, status indicators, creation dates, and expiration dates',
-      caption: 'The API Keys tab displays all your API keys with their status and expiration information.',
+      alt: 'API keys settings tab showing a list of API keys with their names, status indicators, creation dates, and expiration dates',
+      caption: 'The API keys tab shows all your keys with their status and expiration info.',
     },
     {
       type: 'paragraph',
-      text: 'Active keys display a green status badge. Expired keys show a warning indicator and can no longer be used for API access.',
+      text: 'Active keys have a green status badge. Expired keys show a warning indicator and can no longer be used.',
     },
     {
       type: 'heading',
@@ -143,7 +143,7 @@ export const apiAccessContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'warning',
-      text: 'Deleting an API key immediately invalidates it. Any applications using the key will lose access. This action cannot be undone.',
+      text: 'Deleting an API key invalidates it immediately. Any applications using it will lose access. This can\'t be undone.',
     },
     {
       type: 'heading',
@@ -153,11 +153,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To authenticate API requests, include your API key in the request headers:',
-    },
-    {
-      type: 'paragraph',
-      text: 'Include the key in the Authorization header as a Bearer token:',
+      text: 'Include your API key in the request headers to authenticate:',
     },
     {
       type: 'bullet-list',
@@ -175,12 +171,12 @@ export const apiAccessContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Never share keys', text: 'Keep API keys confidential. Do not share them in emails, chat, or version control.' },
-        { bold: 'Use environment variables', text: 'Store keys in environment variables rather than hard-coding them in applications.' },
-        { bold: 'Rotate regularly', text: 'Periodically create new keys and delete old ones to limit exposure.' },
-        { bold: 'Use separate keys', text: 'Create separate keys for different environments and purposes.' },
-        { bold: 'Monitor usage', text: 'If you suspect a key has been compromised, delete it immediately and create a new one.' },
-        { bold: 'Limit access', text: 'Only administrators should have access to API key management.' },
+        { bold: 'Never share keys', text: 'Keep API keys confidential. Don\'t share them in emails, chat or version control.' },
+        { bold: 'Use environment variables', text: 'Store keys in environment variables rather than hard-coding them.' },
+        { bold: 'Rotate regularly', text: 'Create new keys periodically and delete old ones to limit exposure.' },
+        { bold: 'Use separate keys', text: 'Create different keys for different environments and purposes.' },
+        { bold: 'Act on compromises', text: 'If you suspect a key has been compromised, delete it right away and create a new one.' },
+        { bold: 'Limit access', text: 'Only admins should manage API keys.' },
       ],
     },
     {
@@ -191,7 +187,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'API keys have an expiration date set when created. Monitor your keys and create new ones before existing keys expire to maintain uninterrupted access.',
+      text: 'API keys have an expiration date set at creation. Keep an eye on your keys and create new ones before existing keys expire to avoid interruptions.',
     },
     {
       type: 'paragraph',
@@ -201,8 +197,8 @@ export const apiAccessContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { text: 'The key status changes to Expired' },
-        { text: 'API requests using the key will be rejected' },
-        { text: 'You must create a new key and update your applications' },
+        { text: 'API requests using the key get rejected' },
+        { text: 'You\'ll need to create a new key and update your applications' },
       ],
     },
     {
@@ -220,10 +216,10 @@ export const apiAccessContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Verify the API key is correct and complete' },
-        { text: 'Check that the key has not expired' },
-        { text: 'Ensure the Authorization header is properly formatted' },
-        { text: 'Confirm the key has not been deleted' },
+        { text: 'Check that the API key is correct and complete' },
+        { text: 'Verify the key hasn\'t expired' },
+        { text: 'Make sure the Authorization header is formatted properly' },
+        { text: 'Confirm the key hasn\'t been deleted' },
       ],
     },
     {
@@ -234,7 +230,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If you lose an API key, you cannot retrieve it. Create a new key and update your applications to use the new key. Delete the old key if it is no longer needed.',
+      text: 'If you lose an API key, there\'s no way to retrieve it. Create a new key, update your applications to use it and delete the old one.',
     },
     {
       type: 'heading',
@@ -250,7 +246,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'There is a limit on the number of API keys per organization. If you receive an error about reaching the maximum, delete unused keys before creating new ones.',
+      text: 'There\'s a limit on the number of API keys per organization. If you hit the maximum, delete unused keys before creating new ones.',
     },
     {
       type: 'heading',
@@ -260,7 +256,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each API key must have a unique name within your organization. If a key with that name already exists, choose a different name or delete the existing key first.',
+      text: 'Each API key needs a unique name within your organization. If a key with that name already exists, pick a different name or delete the existing key first.',
     },
     {
       type: 'heading',
@@ -270,7 +266,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'API keys provide access to VerifyWise API endpoints based on the permissions available to your organization. The specific endpoints and operations available are documented in the API reference.',
+      text: 'API keys give access to VerifyWise API endpoints based on your organization\'s permissions. The specific endpoints and operations available are documented in the API reference.',
     },
     {
       type: 'heading',
@@ -280,7 +276,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'API requests may be subject to rate limiting to ensure platform stability. If you encounter rate limit errors, reduce the frequency of your requests or contact support for guidance.',
+      text: 'API requests may be rate-limited to keep the platform stable. If you run into rate limit errors, reduce request frequency or contact support.',
     },
     {
       type: 'article-links',

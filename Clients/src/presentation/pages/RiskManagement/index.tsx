@@ -25,6 +25,7 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import PageTour from "../../components/PageTour";
 import RiskManagementSteps from "./RiskManagementSteps";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
+import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import AnalyticsDrawer from "../../components/AnalyticsDrawer";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { GroupBy } from "../../components/Table/GroupBy";
@@ -37,7 +38,6 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import { useEntityChangeHistory } from "../../../application/hooks/useEntityChangeHistory";
 import { PluginSlot } from "../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
-import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import {
   riskMainStackStyle,
@@ -47,18 +47,12 @@ import {
   riskPopoverStyle,
   riskPopoverContentStyle,
   riskMenuItemStyle,
+  riskMenuItemTextWrapStyle,
+  riskMenuItemTitleRowStyle,
   riskMenuItemTitleStyle,
   riskMenuItemSubtitleStyle,
-  riskDividerContainerStyle,
-  riskDividerLineStyle,
-  riskDividerTextStyle,
-  riskCardsGridStyle,
-  aiRiskCardBaseStyle,
-  aiRiskCardIbmStyle,
-  aiRiskCardRecommendedBadgeStyle,
-  aiRiskCardLogoStyle,
-  aiRiskCardTitleStyle,
-  aiRiskCardCaptionStyle,
+  riskMenuItemLogoStyle,
+  riskMenuItemRecommendedBadgeStyle,
 } from "./style";
 import { text } from "../../themes/palette";
 
@@ -131,10 +125,6 @@ const RiskManagement = () => {
   // Refs for form submission
   const onSubmitRef = useRef<(() => void) | null>(null);
   const onAiRiskSubmitRef = useRef<(() => void) | null>(null);
-
-  // Check if risk-import plugin is installed via plugin registry
-  const { getComponentsForSlot } = usePluginRegistry();
-  const hasRiskImportPlugin = getComponentsForSlot(PLUGIN_SLOTS.RISKS_ACTIONS).length > 0;
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
@@ -460,6 +450,28 @@ const RiskManagement = () => {
     setShowCustomizableSkeleton(true);
     fetchProjectRisks();
   }, [fetchProjectRisks, refreshKey]);
+
+  // Listen for AI action approvals for any risk-lifecycle tool. When an
+  // approval is granted in the RequestorApprovalModal, the executor runs
+  // inside the approve transaction so the affected row already reflects
+  // the change by the time the event fires — bumping refreshKey is
+  // enough to pull it in. This covers create, update, and delete.
+  useEffect(() => {
+    const RISK_TOOL_NAMES = new Set([
+      'agent_create_risk',
+      'agent_update_risk',
+      'agent_delete_risk',
+    ]);
+    return onAiActionCompleted((detail) => {
+      if (
+        detail?.status === 'approved' &&
+        detail?.toolName &&
+        RISK_TOOL_NAMES.has(detail.toolName)
+      ) {
+        setRefreshKey((k) => k + 1);
+      }
+    });
+  }, []);
 
   // Auto-open create risk popup when navigating from "Add new..." dropdown
   useEffect(() => {
@@ -836,7 +848,7 @@ const RiskManagement = () => {
                   aria-label="Add new risk menu"
                   sx={riskPopoverContentStyle}
                 >
-                  {/* Add new risk option */}
+                  {/* Manual entry */}
                   <Box
                     role="menuitem"
                     tabIndex={0}
@@ -854,35 +866,19 @@ const RiskManagement = () => {
                     }}
                     sx={riskMenuItemStyle}
                   >
-                    <Box>
-                      <Typography
-                        sx={riskMenuItemTitleStyle}
-                      >
-                        Add new risk
-                      </Typography>
-                      <Typography
-                        sx={riskMenuItemSubtitleStyle}
-                      >
+                    <Box sx={riskMenuItemTextWrapStyle}>
+                      <Box sx={riskMenuItemTitleRowStyle}>
+                        <Typography sx={riskMenuItemTitleStyle}>
+                          Add new risk
+                        </Typography>
+                      </Box>
+                      <Typography sx={riskMenuItemSubtitleStyle}>
                         Create a custom risk manually
                       </Typography>
                     </Box>
                   </Box>
 
-                  {/* Divider with text */}
-                  <Box
-                    sx={riskDividerContainerStyle}
-                  >
-                    <Box sx={riskDividerLineStyle} />
-                    <Typography sx={riskDividerTextStyle}>
-                      Or import from
-                    </Typography>
-                    <Box sx={riskDividerLineStyle} />
-                  </Box>
-
-                  {/* AI Risk databases grid */}
-                  <Box
-                    sx={riskCardsGridStyle(hasRiskImportPlugin)}
-                  >
+                  {/* IBM AI Risk database */}
                   <Box
                     role="menuitem"
                     tabIndex={0}
@@ -894,27 +890,25 @@ const RiskManagement = () => {
                         handleIBMModalOpen();
                       }
                     }}
-                    sx={aiRiskCardIbmStyle}
+                    sx={riskMenuItemStyle}
                   >
-                    <Box
-                      sx={aiRiskCardRecommendedBadgeStyle}
-                    >
-                      Recommended
+                    <Box sx={riskMenuItemTextWrapStyle}>
+                      <Box sx={riskMenuItemTitleRowStyle}>
+                        <Typography sx={riskMenuItemTitleStyle}>
+                          Import from IBM AI Risk database
+                        </Typography>
+                        <Box sx={riskMenuItemRecommendedBadgeStyle}>
+                          Recommended
+                        </Box>
+                      </Box>
+                      <Typography sx={riskMenuItemSubtitleStyle}>
+                        113 risks covering agentic AI, data privacy, inference attacks, and operational failures
+                      </Typography>
                     </Box>
-                    <img src={ibmLogo} alt="IBM Logo" style={aiRiskCardLogoStyle} />
-                    <Typography
-                      variant="body2"
-                      sx={aiRiskCardTitleStyle}
-                    >
-                      IBM AI Risk database
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={aiRiskCardCaptionStyle}
-                    >
-                      113 risks covering agentic AI, data privacy, inference attacks, and operational failures
-                    </Typography>
+                    <img src={ibmLogo} alt="" style={riskMenuItemLogoStyle} />
                   </Box>
+
+                  {/* MIT AI Risk database */}
                   <Box
                     role="menuitem"
                     tabIndex={0}
@@ -926,21 +920,19 @@ const RiskManagement = () => {
                         handleMITModalOpen();
                       }
                     }}
-                    sx={aiRiskCardBaseStyle}
+                    sx={riskMenuItemStyle}
                   >
-                    <img src={mitLogo} alt="MIT Logo" style={aiRiskCardLogoStyle} />
-                    <Typography
-                      variant="body2"
-                      sx={aiRiskCardTitleStyle}
-                    >
-                      MIT AI Risk database
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={aiRiskCardCaptionStyle}
-                    >
-                      Academic research-based risks covering AI safety, fairness, and societal impact
-                    </Typography>
+                    <Box sx={riskMenuItemTextWrapStyle}>
+                      <Box sx={riskMenuItemTitleRowStyle}>
+                        <Typography sx={riskMenuItemTitleStyle}>
+                          Import from MIT AI Risk Repository
+                        </Typography>
+                      </Box>
+                      <Typography sx={riskMenuItemSubtitleStyle}>
+                        Academic research-based risks covering AI safety, fairness, and societal impact
+                      </Typography>
+                    </Box>
+                    <img src={mitLogo} alt="" style={riskMenuItemLogoStyle} />
                   </Box>
 
                   {/* Plugin Slot for Risk Import menu items */}
@@ -957,7 +949,6 @@ const RiskManagement = () => {
                       },
                     }}
                   />
-                  </Box>
                 </Box>
               </Popover>
 

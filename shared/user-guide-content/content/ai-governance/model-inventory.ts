@@ -10,32 +10,31 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A model inventory is a comprehensive catalog of all AI models and systems used within your organization. Just as financial assets require tracking for accounting and compliance, AI models require similar oversight to ensure proper governance, risk management, and regulatory compliance.',
+      text: "The model inventory is where you register every AI model your organization uses, whether it's a third-party API, an open-source model you host, or something built in-house. Each model gets an approval status, an owner, and a record of changes over time.",
     },
     {
       type: 'paragraph',
-      text: 'Without a centralized inventory, organizations often lose track of which AI models are in use, who is responsible for them, and what data they process. This lack of visibility creates compliance risks, security blind spots, and operational inefficiencies. A well-maintained inventory answers fundamental questions: What AI do we have? Where is it deployed? Who owns it? What risks does it present?',
+      text: "The point is visibility. If you can't answer basic questions (what AI do we run? who owns it? what data does it touch? is it approved?) then you can't govern it. The inventory gives you that baseline.",
     },
     {
       type: 'heading',
       id: 'why-inventory',
       level: 2,
-      text: 'Why maintain a model inventory?',
+      text: 'Why bother?',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Regulatory compliance', text: 'The EU AI Act and other regulations require organizations to maintain records of AI systems, especially high-risk applications' },
-        { bold: 'Risk visibility', text: 'You cannot manage risks you do not know exist. An inventory surfaces all AI systems for risk assessment' },
-        { bold: 'Accountability', text: 'Clear ownership ensures someone is responsible for each model\'s performance, compliance, and maintenance' },
-        { bold: 'Audit readiness', text: 'When auditors or regulators ask about your AI use, you can provide immediate, accurate answers' },
-        { bold: 'Resource planning', text: 'Understanding your AI landscape helps allocate governance resources where they matter most' },
+        { bold: 'Regulatory requirement', text: 'The EU AI Act (Article 60) and ISO 42001 both require documented records of AI systems in use, especially high-risk ones' },
+        { bold: 'Risk visibility', text: 'You can\'t assess risks for models you don\'t know about. The inventory surfaces everything for review.' },
+        { bold: 'Accountability', text: 'Every model has an owner. When something goes wrong, there\'s a clear person responsible.' },
+        { bold: 'Audit readiness', text: 'Auditors ask "show me all your AI systems." With an inventory, you can answer in seconds instead of weeks.' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Maintaining an accurate model inventory is a core requirement for EU AI Act compliance and ISO 42001 certification. VerifyWise automatically tracks changes to your inventory for audit purposes.',
+      text: 'Every change to a model record is automatically logged with who, what and when. This audit trail persists even if the model is later deleted.',
     },
     {
       type: 'heading',
@@ -45,7 +44,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to **Model inventory** from the main sidebar. The inventory displays all registered models in a searchable table with filtering options for status, provider, and other attributes.',
+      text: 'Open **Model inventory** from the sidebar (under Inventory). You get a table of all registered models with search, filters for status and provider, and summary cards showing counts by approval status at the top.',
     },
     {
       type: 'image',
@@ -86,7 +85,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each model in your inventory can include detailed attributes to support governance and risk assessment:',
+      text: 'Beyond the basics, each model record supports these fields:',
     },
     {
       type: 'grid-cards',
@@ -141,7 +140,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The model inventory integrates with the Evidence Hub, allowing you to link supporting documentation to each model:',
+      text: 'You can attach evidence files to any model record. Typical examples:',
     },
     {
       type: 'checklist',
@@ -161,7 +160,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'For organizations using MLFlow for ML operations, VerifyWise can import model training data directly. This provides visibility into model development metrics including training timestamps, parameters, and lifecycle stages.',
+      text: 'If you use MLflow, VerifyWise can pull in model training metadata directly: training timestamps, parameters, metrics and lifecycle stage. This saves you from manually entering data that your ML platform already has.',
     },
     {
       type: 'heading',
@@ -184,7 +183,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'This history is essential for demonstrating governance practices during compliance audits and regulatory reviews.',
+      text: 'Auditors typically ask for this when reviewing how your organization tracks AI system changes over time.',
     },
     {
       type: 'heading',
@@ -194,7 +193,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The datasets tab within model inventory allows you to catalog and manage the data used for training, validating, and testing your AI models. Proper dataset management is essential for AI governance — understanding what data feeds your models helps ensure compliance, identify potential biases, and maintain data quality standards.',
+      text: "Datasets have their own page in the sidebar (Inventory → Datasets). You catalog the data used for training, validation, testing and production. Each dataset can be linked to models and use cases, so you can trace which data feeds which system.",
     },
     {
       type: 'heading',
@@ -204,7 +203,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to **Model inventory** from the main sidebar, then select the **Datasets** tab. The datasets view displays all registered datasets in a searchable table with status summary cards at the top.',
+      text: 'Navigate to **Datasets** from the main sidebar under Inventory. The page shows all registered datasets in a searchable table with status summary cards at the top.',
     },
     {
       type: 'heading',
@@ -323,7 +322,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When creating or editing a dataset, you can link it to one or more models in your inventory. This creates traceability between your data assets and the AI systems that use them — essential for impact assessments and understanding how data issues might propagate through your AI portfolio.',
+      text: 'When creating or editing a dataset, you can link it to one or more models in your inventory. This traceability matters when a data quality issue surfaces: you can immediately see which models are affected.',
     },
     {
       type: 'callout',

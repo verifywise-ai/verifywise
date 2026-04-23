@@ -33,7 +33,7 @@ export const REPORT_SECTION_GROUPS: ReportSectionGroup[] = [
     id: "complianceGovernance",
     label: "Compliance & Governance",
     sections: [
-      { id: "controls", label: "Controls", backendKey: "compliance" },
+      { id: "controls", label: "Requirements", backendKey: "compliance" },
       { id: "assessmentTracker", label: "Assessment Tracker", backendKey: "assessment" },
       { id: "clausesAndAnnexes", label: "Clauses & Annexes", backendKey: "clausesAndAnnexes" },
       { id: "nistSubcategories", label: "NIST Subcategories", backendKey: "nistSubcategories" },
@@ -193,8 +193,8 @@ export function selectionToBackendFormat(
  */
 export const EUAI_REPORT_TYPES = [
   "Use case risks report",
-  "Compliance tracker report",
-  "Assessment tracker report",
+  "Requirements tracker report",
+  "Controls tracker report",
   "Vendors and risks report",
   "Training registry report",
   "Policy manager report",

@@ -1,0 +1,1245 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise API - Evidence Hub, Datasets, Automations
+  version: 1.0.0
+  description: API documentation for Evidence Hub, Datasets, and Automations domains.
+
+servers:
+  - url: /
+    description: Base URL (no /api prefix)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Evidence Hub
+  # ─────────────────────────────────────────────────────────────────────────────
+  /evidences:
+    get:
+      tags: [Evidence Hub]
+      summary: Get all evidences
+      description: Returns all evidence records for the authenticated user's organization.
+      responses:
+        "200":
+          description: List of evidences (may be empty)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Evidence"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [Evidence Hub]
+      summary: Create new evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceCreateRequest"
+      responses:
+        "201":
+          description: Evidence created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Evidence"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /evidences/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      tags: [Evidence Hub]
+      summary: Get evidence by ID
+      responses:
+        "200":
+          description: Evidence found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Evidence"
+        "204":
+          description: No evidence found
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    patch:
+      tags: [Evidence Hub]
+      summary: Update evidence by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceUpdateRequest"
+      responses:
+        "200":
+          description: Evidence updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Evidence"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "404":
+          description: Evidence not found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      tags: [Evidence Hub]
+      summary: Delete evidence by ID
+      responses:
+        "200":
+          description: Evidence deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: string
+                        example: Evidence deleted successfully
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "404":
+          description: Evidence not found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Datasets
+  # ─────────────────────────────────────────────────────────────────────────────
+  /datasets:
+    get:
+      tags: [Datasets]
+      summary: Get all datasets
+      description: Returns all datasets for the authenticated user's organization.
+      responses:
+        "200":
+          description: List of datasets
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Dataset"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [Datasets]
+      summary: Create a new dataset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetCreateRequest"
+      responses:
+        "201":
+          description: Dataset created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Dataset"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /datasets/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      tags: [Datasets]
+      summary: Get dataset by ID
+      responses:
+        "200":
+          description: Dataset found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Dataset"
+        "204":
+          description: No dataset found
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    patch:
+      tags: [Datasets]
+      summary: Update dataset by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetUpdateRequest"
+      responses:
+        "200":
+          description: Dataset updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Dataset"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "404":
+          description: Dataset not found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      tags: [Datasets]
+      summary: Delete dataset by ID
+      responses:
+        "200":
+          description: Dataset deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: string
+                        example: Dataset deleted successfully
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "404":
+          description: Dataset not found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /datasets/by-model/{modelId}:
+    parameters:
+      - name: modelId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Model inventory ID
+    get:
+      tags: [Datasets]
+      summary: Get datasets by model ID
+      responses:
+        "200":
+          description: Datasets for the given model
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Dataset"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /datasets/by-project/{projectId}:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Project ID
+    get:
+      tags: [Datasets]
+      summary: Get datasets by project ID
+      responses:
+        "200":
+          description: Datasets for the given project
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Dataset"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /datasets/{id}/history:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Datasets]
+      summary: Get dataset change history
+      responses:
+        "200":
+          description: Change history entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/DatasetChangeHistoryEntry"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Automations
+  # ─────────────────────────────────────────────────────────────────────────────
+  /automations:
+    get:
+      tags: [Automations]
+      summary: Get all automations
+      description: Returns all automations for the authenticated user's organization.
+      responses:
+        "200":
+          description: List of automations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Automation"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [Automations]
+      summary: Create a new automation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutomationCreateRequest"
+      responses:
+        "201":
+          description: Automation created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/AutomationWithActions"
+        "400":
+          description: Missing required fields
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /automations/triggers:
+    get:
+      tags: [Automations]
+      summary: Get all automation triggers
+      description: Returns the catalog of available automation triggers (not org-scoped).
+      responses:
+        "200":
+          description: List of triggers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AutomationTrigger"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /automations/actions/by-triggerId/{triggerId}:
+    parameters:
+      - name: triggerId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Trigger ID
+    get:
+      tags: [Automations]
+      summary: Get available actions for a trigger
+      responses:
+        "200":
+          description: List of actions available for the trigger
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AutomationAction"
+        "400":
+          description: Invalid trigger ID
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /automations/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      tags: [Automations]
+      summary: Get automation by ID
+      responses:
+        "200":
+          description: Automation with actions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/AutomationWithActions"
+        "400":
+          description: Invalid automation ID
+        "404":
+          description: Automation not found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      tags: [Automations]
+      summary: Update automation by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutomationUpdateRequest"
+      responses:
+        "200":
+          description: Automation updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/AutomationWithActions"
+        "400":
+          description: Invalid automation ID
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      tags: [Automations]
+      summary: Delete automation by ID
+      responses:
+        "200":
+          description: Automation deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: Automation deleted successfully
+        "400":
+          description: Invalid automation ID
+        "404":
+          description: Automation not found
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /automations/{id}/history:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Automations]
+      summary: Get automation execution history
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Number of records to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of records to skip
+      responses:
+        "200":
+          description: Paginated execution logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/AutomationHistoryResponse"
+        "400":
+          description: Invalid automation ID
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /automations/{id}/stats:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Automations]
+      summary: Get automation execution stats
+      responses:
+        "200":
+          description: Execution statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/AutomationStats"
+        "400":
+          description: Invalid automation ID
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Resource ID
+
+  responses:
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InvalidParameter:
+      description: Invalid parameter
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: error
+              message:
+                type: string
+                example: Invalid ID
+              code:
+                type: string
+                example: INVALID_PARAMETER
+
+  schemas:
+    # ─── Generic wrappers ──────────────────────────────────────────────────────
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          description: Response payload (type varies per endpoint)
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        data:
+          type: string
+          description: Error message
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Dataset creation validation failed
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+              code:
+                type: string
+
+    # ─── Evidence Hub ──────────────────────────────────────────────────────────
+    Evidence:
+      type: object
+      properties:
+        id:
+          type: integer
+        evidence_name:
+          type: string
+        evidence_type:
+          type: string
+        description:
+          type: string
+          nullable: true
+        evidence_files:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileResponse"
+        expiry_date:
+          type: string
+          format: date-time
+          nullable: true
+        mapped_model_ids:
+          type: array
+          items:
+            type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FileResponse:
+      type: object
+      properties:
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+        filename:
+          type: string
+        size:
+          oneOf:
+            - type: number
+            - type: string
+        mimetype:
+          type: string
+        uploaded_by:
+          type: integer
+        upload_date:
+          type: string
+
+    EvidenceCreateRequest:
+      type: object
+      required:
+        - evidence_name
+        - evidence_type
+      properties:
+        evidence_name:
+          type: string
+          maxLength: 255
+        evidence_type:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+        evidence_files:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                oneOf:
+                  - type: string
+                  - type: integer
+          description: Array of file references (by ID) to link
+        expiry_date:
+          type: string
+          format: date-time
+          nullable: true
+        mapped_model_ids:
+          type: array
+          items:
+            type: integer
+          description: Model inventory IDs to map this evidence to
+
+    EvidenceUpdateRequest:
+      type: object
+      properties:
+        evidence_name:
+          type: string
+          maxLength: 255
+        evidence_type:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+        evidence_files:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                oneOf:
+                  - type: string
+                  - type: integer
+          description: New files to link
+        deleteFiles:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - type: integer
+          description: File IDs to unlink
+        expiry_date:
+          type: string
+          format: date-time
+          nullable: true
+        mapped_model_ids:
+          type: array
+          items:
+            type: integer
+
+    # ─── Datasets ──────────────────────────────────────────────────────────────
+    Dataset:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        version:
+          type: string
+        owner:
+          type: string
+        type:
+          type: string
+          enum: [training, validation, testing, production, reference, synthetic]
+        function:
+          type: string
+        source:
+          type: string
+        license:
+          type: string
+          nullable: true
+        format:
+          type: string
+          nullable: true
+        classification:
+          type: string
+          enum: [public, internal, confidential, restricted]
+        contains_pii:
+          type: boolean
+        pii_types:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [draft, active, deprecated, archived]
+        status_date:
+          type: string
+          format: date-time
+        known_biases:
+          type: string
+          nullable: true
+        bias_mitigation:
+          type: string
+          nullable: true
+        collection_method:
+          type: string
+          nullable: true
+        preprocessing_steps:
+          type: string
+          nullable: true
+        documentation_data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentationFile"
+        is_demo:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        models:
+          type: array
+          items:
+            type: integer
+          description: Related model inventory IDs
+        projects:
+          type: array
+          items:
+            type: integer
+          description: Related project IDs
+
+    DocumentationFile:
+      type: object
+      description: File metadata stored in JSONB documentation_data column
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        size:
+          type: number
+        mimetype:
+          type: string
+
+    DatasetCreateRequest:
+      type: object
+      required:
+        - name
+        - description
+        - version
+        - owner
+        - type
+        - function
+        - source
+        - classification
+        - contains_pii
+        - status
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        version:
+          type: string
+          maxLength: 50
+        owner:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+          enum: [training, validation, testing, production, reference, synthetic]
+        function:
+          type: string
+        source:
+          type: string
+          maxLength: 255
+        license:
+          type: string
+          maxLength: 255
+        format:
+          type: string
+          maxLength: 100
+        classification:
+          type: string
+          enum: [public, internal, confidential, restricted]
+        contains_pii:
+          type: boolean
+        pii_types:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, deprecated, archived]
+        status_date:
+          type: string
+          format: date-time
+          description: Defaults to current time if omitted
+        known_biases:
+          type: string
+        bias_mitigation:
+          type: string
+        collection_method:
+          type: string
+        preprocessing_steps:
+          type: string
+        documentation_data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentationFile"
+        is_demo:
+          type: boolean
+          default: false
+        models:
+          type: array
+          items:
+            type: integer
+          description: Model inventory IDs to associate
+        projects:
+          type: array
+          items:
+            type: integer
+          description: Project IDs to associate
+
+    DatasetUpdateRequest:
+      type: object
+      description: All fields optional. Only provided fields are updated.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        version:
+          type: string
+          maxLength: 50
+        owner:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+          enum: [training, validation, testing, production, reference, synthetic]
+        function:
+          type: string
+        source:
+          type: string
+          maxLength: 255
+        license:
+          type: string
+          maxLength: 255
+        format:
+          type: string
+          maxLength: 100
+        classification:
+          type: string
+          enum: [public, internal, confidential, restricted]
+        contains_pii:
+          type: boolean
+        pii_types:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, deprecated, archived]
+        status_date:
+          type: string
+          format: date-time
+        known_biases:
+          type: string
+        bias_mitigation:
+          type: string
+        collection_method:
+          type: string
+        preprocessing_steps:
+          type: string
+        documentation_data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentationFile"
+        is_demo:
+          type: boolean
+        models:
+          type: array
+          items:
+            type: integer
+          description: Replace model associations (provide full list)
+        projects:
+          type: array
+          items:
+            type: integer
+          description: Replace project associations (provide full list)
+        deleteModels:
+          type: boolean
+          description: If true, remove all model associations (even if models array is empty)
+        deleteProjects:
+          type: boolean
+          description: If true, remove all project associations (even if projects array is empty)
+
+    DatasetChangeHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        dataset_id:
+          type: integer
+        change_type:
+          type: string
+          description: "e.g. created, deleted, field_change"
+        field_name:
+          type: string
+          nullable: true
+        old_value:
+          type: string
+          nullable: true
+        new_value:
+          type: string
+          nullable: true
+        changed_by:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # ─── Automations ───────────────────────────────────────────────────────────
+    AutomationTrigger:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+          description: Machine-readable trigger identifier
+        label:
+          type: string
+          description: Human-readable name
+        event_name:
+          type: string
+        description:
+          type: string
+          nullable: true
+
+    AutomationAction:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+          description: Machine-readable action identifier
+        label:
+          type: string
+          description: Human-readable name
+        description:
+          type: string
+          nullable: true
+        default_params:
+          type: object
+          nullable: true
+          description: Default parameters for this action type
+
+    Automation:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        trigger_id:
+          type: integer
+        params:
+          type: object
+          description: Trigger-specific parameters (JSON)
+        is_active:
+          type: boolean
+        created_by:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AutomationWithActions:
+      allOf:
+        - $ref: "#/components/schemas/Automation"
+        - type: object
+          properties:
+            actions:
+              type: array
+              items:
+                $ref: "#/components/schemas/TenantAutomationAction"
+
+    TenantAutomationAction:
+      type: object
+      properties:
+        id:
+          type: integer
+        automation_id:
+          type: integer
+        action_type_id:
+          type: integer
+        params:
+          type: object
+          nullable: true
+          description: Action-specific parameters (JSON)
+        order:
+          type: integer
+          description: Execution order (1-based)
+
+    AutomationCreateRequest:
+      type: object
+      required:
+        - triggerId
+        - name
+        - actions
+      properties:
+        triggerId:
+          type: integer
+          description: ID of the automation trigger
+        name:
+          type: string
+          description: Automation name
+        params:
+          type: string
+          description: JSON-encoded trigger parameters (parsed server-side)
+          default: "{}"
+        actions:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - action_type_id
+            properties:
+              action_type_id:
+                type: integer
+                description: ID of the action type
+              params:
+                type: object
+                nullable: true
+                description: Action-specific parameters
+
+    AutomationUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        triggerId:
+          type: integer
+        params:
+          type: string
+          description: JSON-encoded trigger parameters
+          default: "{}"
+        is_active:
+          type: boolean
+        actions:
+          type: array
+          items:
+            type: object
+            required:
+              - action_type_id
+            properties:
+              action_type_id:
+                type: integer
+              params:
+                type: object
+                nullable: true
+          description: If provided, replaces all existing actions
+
+    AutomationHistoryResponse:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              automation_id:
+                type: integer
+              status:
+                type: string
+              triggered_at:
+                type: string
+                format: date-time
+              completed_at:
+                type: string
+                format: date-time
+                nullable: true
+              actions:
+                type: array
+                items:
+                  type: object
+                description: Per-action execution results
+        total:
+          type: integer
+          description: Total number of log entries
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    AutomationStats:
+      type: object
+      description: Aggregated execution statistics for an automation
+      properties:
+        total_executions:
+          type: integer
+        successful:
+          type: integer
+        failed:
+          type: integer
+        last_executed_at:
+          type: string
+          format: date-time
+          nullable: true

@@ -516,14 +516,6 @@ const FrameworkDashboard = ({
             gap: 1.5,
           }}
         >
-          <Box
-            sx={{
-              width: 4,
-              height: 20,
-              backgroundColor: "brand.primary",
-              borderRadius: 1,
-            }}
-          />
           <Typography
             sx={{
               fontSize: 15,

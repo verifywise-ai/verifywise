@@ -103,4 +103,6 @@ export interface IRisksViewProps {
   headerContent?: ReactNode;
   // Refresh key for forcing re-fetches
   refreshTrigger?: number;
+  // When true, hides edit/delete actions and shows guidance to use centralized risk management
+  readOnly?: boolean;
 }

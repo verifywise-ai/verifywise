@@ -265,7 +265,7 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
               />
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <Typography sx={progressStyle}>
-                  {`Subcontrols: ${
+                  {`Requirements: ${
                     complianceProgressData?.allDonesubControls ?? 0
                   } out of ${complianceProgressData?.allsubControls ?? 0}`}
                 </Typography>
@@ -303,7 +303,7 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
               />
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <Typography sx={progressStyle}>
-                  {`Assessments: ${
+                  {`Controls: ${
                     assessmentProgressData?.answeredQuestions ?? 0
                   } out of ${assessmentProgressData?.totalQuestions ?? 0}`}
                 </Typography>
@@ -373,7 +373,7 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                 />
                 <Stack direction="row" alignItems="center" spacing={0.5}>
                   <Typography sx={progressStyle}>
-                    {`Subcontrols: ${
+                    {`Requirements: ${
                       complianceProgressData?.allDonesubControls ?? 0
                     } out of ${complianceProgressData?.allsubControls ?? 0}`}
                   </Typography>
@@ -411,7 +411,7 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                 />
                 <Stack direction="row" alignItems="center" spacing={0.5}>
                   <Typography sx={progressStyle}>
-                    {`Assessments: ${
+                    {`Controls: ${
                       assessmentProgressData?.answeredQuestions ?? 0
                     } out of ${assessmentProgressData?.totalQuestions ?? 0}`}
                   </Typography>

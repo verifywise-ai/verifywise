@@ -5,6 +5,7 @@ Handles bias audit creation, background task execution,
 status polling, and result retrieval.
 """
 
+import asyncio
 import json
 import logging
 import traceback
@@ -12,7 +13,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 from fastapi import HTTPException, BackgroundTasks, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ from crud.bias_audits import (
     create_bias_audit,
     get_bias_audit,
     update_bias_audit_status,
+    update_bias_audit_system_name,
     list_bias_audits,
     delete_bias_audit,
     create_bias_audit_result_rows,
@@ -115,13 +117,13 @@ async def create_bias_audit_controller(
                 organization_id=organization_id,
                 db=db,
                 audit_id=audit_id,
-                org_id=effective_org_id,
                 project_id=config_data.get("projectId"),
                 preset_id=preset_id,
                 preset_name=preset_name,
                 mode=mode,
                 config=config_data,
                 created_by=user_id,
+                model_inventory_id=config_data.get("modelInventoryId"),
             )
             await db.commit()
     except Exception as e:
@@ -202,26 +204,42 @@ async def run_bias_audit_task(
             preset_id=config_data.get("presetId", "custom"),
             preset_name=preset["name"] if preset else "Custom",
             mode=preset["mode"] if preset else config_data.get("mode", "quantitative_audit"),
+            metric=config_data.get("metric", "selection_rate"),
             categories=categories,
             intersectional=intersectional,
             metrics=config_data.get("metrics") or (preset.get("metrics") if preset else ["selection_rate", "impact_ratio"]),
             threshold=config_data.get("threshold") if "threshold" in config_data else (preset.get("threshold") if preset else 0.80),
             small_sample_exclusion=config_data.get("smallSampleExclusion") if "smallSampleExclusion" in config_data else (preset.get("small_sample_exclusion") if preset else None),
             outcome_column=config_data.get("outcomeColumn", "selected"),
+            score_column=config_data.get("scoreColumn"),
+            prediction_column=config_data.get("predictionColumn"),
+            ground_truth_column=config_data.get("groundTruthColumn"),
             column_mapping=filtered_column_mapping,
             metadata=config_data.get("metadata", {}),
+            system_name=config_data.get("systemName"),
+            system_version=config_data.get("systemVersion"),
+            system_description=config_data.get("systemDescription"),
+            auditor_name=config_data.get("auditorName"),
+            auditor_role=config_data.get("auditorRole"),
+            auditor_independence=config_data.get("auditorIndependence"),
+            deployment_context=config_data.get("deploymentContext"),
+            data_source=config_data.get("dataSource"),
+            data_date_range_start=config_data.get("dataDateRangeStart"),
+            data_date_range_end=config_data.get("dataDateRangeEnd"),
         )
 
         # Parse CSV
+        logger.info(f"[BiasAudit] metric={audit_config.metric}")
         logger.info(f"[BiasAudit] column_mapping={audit_config.column_mapping}")
         logger.info(f"[BiasAudit] outcome_column={audit_config.outcome_column}")
-        logger.info(f"[BiasAudit] CSV bytes length={len(csv_bytes)}")
-        logger.info(f"[BiasAudit] CSV first 200 bytes: {csv_bytes[:200]}")
 
         records, unknown_count = parse_csv_dataset(
             csv_bytes=csv_bytes,
             column_mapping=audit_config.column_mapping,
             outcome_column=audit_config.outcome_column,
+            score_column=audit_config.score_column,
+            prediction_column=audit_config.prediction_column,
+            ground_truth_column=audit_config.ground_truth_column,
         )
 
         logger.info(f"[BiasAudit] parse_csv_dataset returned {len(records)} records, {unknown_count} unknown")
@@ -384,6 +402,73 @@ async def delete_bias_audit_controller(
     except Exception as e:
         logger.error(f"[BiasAudit] Failed to delete audit {audit_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete audit. Please try again.")
+
+
+async def update_bias_audit_name_controller(
+    audit_id: str,
+    organization_id: int,
+    system_name: str,
+) -> JSONResponse:
+    """Update the user-editable system name for an audit."""
+    name = (system_name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="System name cannot be empty")
+    if len(name) > 255:
+        raise HTTPException(status_code=400, detail="System name must be 255 characters or fewer")
+
+    try:
+        async with get_db() as db:
+            updated = await update_bias_audit_system_name(
+                organization_id=organization_id,
+                db=db,
+                audit_id=audit_id,
+                system_name=name,
+            )
+            await db.commit()
+    except Exception as e:
+        logger.error(f"[BiasAudit] Failed to update system name for {audit_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update audit name.")
+
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"Audit {audit_id} not found")
+
+    return JSONResponse(
+        status_code=200,
+        content={"auditId": audit_id, "systemName": name},
+    )
+
+
+async def get_bias_audit_report_controller(
+    audit_id: str,
+    organization_id: int,
+) -> Response:
+    """Generate and stream a PDF report for a completed bias audit."""
+    async with get_db() as db:
+        audit = await get_bias_audit(organization_id, db, audit_id)
+
+    if not audit:
+        raise HTTPException(status_code=404, detail=f"Audit {audit_id} not found")
+    if audit["status"] != "completed":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Audit is not completed (status: {audit['status']}). Reports are only available for completed audits.",
+        )
+
+    from engines.bias_audit.report_generator import generate_pdf_report
+    try:
+        # PDF rendering is CPU-bound and holds the GIL; run off the event loop
+        pdf_bytes = await asyncio.to_thread(generate_pdf_report, audit)
+    except Exception as e:
+        logger.error(f"[BiasAudit] Failed to generate report for {audit_id}: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Failed to generate PDF report.")
+
+    filename = f"bias_audit_{audit_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 async def get_csv_headers_controller(

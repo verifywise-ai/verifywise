@@ -14,7 +14,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The scanner checks source files, dependency manifests, CI/CD workflows, container definitions, and model files against 100+ AI/ML patterns (OpenAI, TensorFlow, PyTorch, LangChain, etc.). A 2-phase LLM vulnerability pipeline also checks for the 10 OWASP LLM Top 10 vulnerability types. All results are stored and can be reviewed from the scan results page.',
+      text: 'The scanner checks source files, dependency manifests, CI/CD workflows, container definitions and model files against 100+ AI/ML patterns (OpenAI, TensorFlow, PyTorch, LangChain, etc.). A 2-phase LLM vulnerability pipeline also checks for the 10 OWASP LLM Top 10 vulnerability types. All results are stored and can be reviewed from the scan results page.',
     },
     {
       type: 'heading',
@@ -45,7 +45,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The scan runs through a few stages. A progress indicator shows which file is being analyzed, how many files have been processed, and how many findings have been found so far.',
+      text: 'The scan runs through a few stages. A progress indicator shows which file is being analyzed, how many files have been processed and how many findings have been found so far.',
     },
     {
       type: 'bullet-list',
@@ -63,7 +63,7 @@ export const scanningContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/ai-detection-scan-progress.png',
       alt: 'Scan progress indicator showing files being analyzed',
-      caption: 'Real-time progress shows current file, total processed, and findings discovered',
+      caption: 'Real-time progress shows current file, total processed and findings discovered',
     },
     {
       type: 'heading',
@@ -123,7 +123,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Libraries tab lists all detected AI/ML technologies. Each row shows the library name, provider, risk level, confidence, and file count. Click a row to see specific file paths and line numbers. The scanner checks source imports, dependency manifests, Dockerfiles, and docker-compose files.',
+      text: 'The Libraries tab lists all detected AI/ML technologies. Each row shows the library name, provider, risk level, confidence and file count. Click a row to see specific file paths and line numbers. The scanner checks source imports, dependency manifests, Dockerfiles and docker-compose files.',
     },
     {
       type: 'paragraph',
@@ -171,7 +171,7 @@ export const scanningContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/ai-detection-libraries-tab.png',
       alt: 'Libraries tab showing detected AI/ML frameworks with risk and confidence levels',
-      caption: 'Detected AI/ML libraries with provider, risk level, confidence, and governance status',
+      caption: 'Detected AI/ML libraries with provider, risk level, confidence and governance status',
     },
     {
       type: 'heading',
@@ -204,12 +204,12 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each finding shows severity, confidence, a description, and a suggested fix. Findings that share file paths with library, agent, or security findings get a cross-reference badge so you can see related detections together.',
+      text: 'Each finding shows severity, confidence, a description and a suggested fix. Findings that share file paths with library, agent, or security findings get a cross-reference badge so you can see related detections together.',
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'LLM vulnerability detection needs an LLM key configured and vulnerability scanning enabled in **AI Detection → Settings**. Without it, only the regex pre-filter runs, and findings may be less accurate.',
+      text: 'LLM vulnerability detection needs an LLM key configured and vulnerability scanning turned on in **AI Detection → Settings**. Without it, only the regex pre-filter runs and findings may be less accurate.',
     },
     {
       type: 'heading',
@@ -230,7 +230,7 @@ export const scanningContent: ArticleContent = {
       items: [
         { bold: 'REST API endpoints', text: 'Direct HTTP calls to AI provider APIs (e.g., api.openai.com)' },
         { bold: 'SDK method calls', text: 'Usage of official SDKs (e.g., openai.chat.completions.create() or client.chat.completions.create())' },
-        { bold: 'Framework integrations', text: 'LangChain, LlamaIndex, and other framework API calls' },
+        { bold: 'Framework integrations', text: 'LangChain, LlamaIndex and other framework API calls' },
         { bold: 'CI/CD pipeline usage', text: 'AI service secrets referenced in GitHub Actions workflows (e.g., ${{ secrets.OPENAI_API_KEY }})' },
       ],
     },
@@ -259,7 +259,7 @@ export const scanningContent: ArticleContent = {
         { bold: 'OpenAI API keys', text: 'Keys starting with sk-...' },
         { bold: 'Anthropic API keys', text: 'Keys starting with sk-ant-...' },
         { bold: 'Google AI API keys', text: 'Keys starting with AIza...' },
-        { bold: 'Other provider keys', text: 'AWS, Azure, Cohere, and other AI service credentials' },
+        { bold: 'Other provider keys', text: 'AWS, Azure, Cohere and other AI service credentials' },
       ],
     },
     {
@@ -276,7 +276,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Security tab shows findings from model file analysis. Serialized model files (`.pkl`, `.pt`, `.h5`) can contain malicious code that runs when loaded. The scanner looks for system command execution, network access, and code injection patterns.',
+      text: 'The Security tab shows findings from model file analysis. Serialized model files (`.pkl`, `.pt`, `.h5`) can contain malicious code that runs when loaded. The scanner looks for system command execution, network access and code injection patterns.',
     },
     {
       type: 'paragraph',
@@ -311,12 +311,12 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Models tab lists AI/ML model file references found in your code: pre-trained models, checkpoints, and model loading patterns.',
+      text: 'The Models tab lists AI/ML model file references found in your code: pre-trained models, checkpoints and model loading patterns.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Pre-trained models', text: 'References to Hugging Face models, OpenAI models, and other hosted models' },
+        { bold: 'Pre-trained models', text: 'References to Hugging Face models, OpenAI models and other hosted models' },
         { bold: 'Local model files', text: 'Model weights stored in the repository (.pt, .h5, .onnx, etc.)' },
         { bold: 'Model loading code', text: 'Code that loads or initializes ML models' },
       ],
@@ -334,9 +334,9 @@ export const scanningContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Vector databases', text: 'Integrations with Pinecone, Qdrant, Chroma, Weaviate, and other vector stores' },
+        { bold: 'Vector databases', text: 'Integrations with Pinecone, Qdrant, Chroma, Weaviate and other vector stores' },
         { bold: 'Embedding models', text: 'Code that generates embeddings for documents or queries' },
-        { bold: 'Retrieval pipelines', text: 'LangChain retrievers, LlamaIndex query engines, and similar patterns' },
+        { bold: 'Retrieval pipelines', text: 'LangChain retrievers, LlamaIndex query engines and similar patterns' },
       ],
     },
     {
@@ -352,7 +352,7 @@ export const scanningContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Agent frameworks', text: 'LangChain agents, CrewAI (including @agent and @crew decorators), AutoGen, Swarm, and similar frameworks' },
+        { bold: 'Agent frameworks', text: 'LangChain agents, CrewAI (including @agent and @crew decorators), AutoGen, Swarm and similar frameworks' },
         { bold: 'MCP servers', text: 'Model Context Protocol server implementations and configuration files (mcp.json, claude_desktop_config.json)' },
         { bold: 'Tool usage', text: 'Code that defines or uses tools for AI agents' },
         { bold: 'Planning components', text: 'Task planning and execution orchestration code' },
@@ -381,7 +381,7 @@ export const scanningContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Transparency', text: 'Requirements for disclosing AI system usage and capabilities' },
-        { bold: 'Data governance', text: 'Requirements for data quality, bias prevention, and privacy' },
+        { bold: 'Data governance', text: 'Requirements for data quality, bias prevention and privacy' },
         { bold: 'Documentation', text: 'Technical documentation and record-keeping obligations' },
         { bold: 'Human oversight', text: 'Requirements for human supervision of AI systems' },
         { bold: 'Security', text: 'Cybersecurity and resilience requirements' },
@@ -405,7 +405,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'YAML workflow files (.yml, .yaml) are checked for AI service references: GitHub Actions that call AI providers, and secrets like OPENAI_API_KEY or ANTHROPIC_API_KEY in workflow environment variables.',
+      text: 'YAML workflow files (.yml, .yaml) are checked for AI service references: GitHub Actions that call AI providers and secrets like OPENAI_API_KEY or ANTHROPIC_API_KEY in workflow environment variables.',
     },
     {
       type: 'heading',
@@ -449,9 +449,9 @@ export const scanningContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Risk scoring', text: 'Calculate an AI Governance Risk Score (AGRS) across 5 risk dimensions. You can also enable LLM-enhanced analysis for written summaries, recommendations, and suggested risks to add to your risk register.' },
+        { bold: 'Risk scoring', text: 'Calculate an AI Governance Risk Score (AGRS) across 5 risk dimensions. You can also enable LLM-enhanced analysis for written summaries, recommendations and suggested risks to add to your risk register.' },
         { bold: 'View graph', text: 'Open an interactive dependency graph. Nodes are findings, edges are inferred dependencies based on shared files and providers.' },
-        { bold: 'Export AI-BOM', text: 'Download scan results as an AI Bill of Materials (AI-BOM) in JSON. The format is CycloneDX-inspired and includes all detected components, providers, risk levels, and file locations.' },
+        { bold: 'Export AI-BOM', text: 'Download scan results as an AI Bill of Materials (AI-BOM) in JSON. The format is CycloneDX-inspired and includes all detected components, providers, risk levels and file locations.' },
       ],
     },
     {

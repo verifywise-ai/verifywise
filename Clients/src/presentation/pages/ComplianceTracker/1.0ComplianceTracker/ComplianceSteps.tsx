@@ -15,8 +15,8 @@ const ComplianceSteps: IPageTourStep[] = [
   {
     target: '[data-joyride-id="control-groups"]',
     content: {
-      header: "Control groups",
-      body: "Controls are organized into logical groups and subcontrols for easier navigation. Complete each control to improve your compliance statistics and track progress by category.",
+      header: "Requirement groups",
+      body: "Requirements are organized into logical groups and their controls for easier navigation. Complete each requirement to improve your compliance statistics and track progress by category.",
       icon: <FolderTree size={20} color={background.main} />,
     },
     placement: "left",

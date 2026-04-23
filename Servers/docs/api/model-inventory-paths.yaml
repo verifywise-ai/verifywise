@@ -1,0 +1,672 @@
+# Model Inventory API — OpenAPI 3.0 Path Definitions
+# Paste into the `paths:` section of swagger.yaml
+# Base path: /api/model-inventories
+
+/model-inventories:
+  get:
+    tags:
+      - Model Inventory
+    summary: Get all model inventories
+    description: >
+      Returns every model inventory record belonging to the caller's organization,
+      ordered by created_at DESC, id ASC. Each record includes its associated
+      project and framework IDs.
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: List of model inventories (may be empty)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ModelInventoryResponse"
+      "401":
+        description: Missing or invalid JWT
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerError"
+
+  post:
+    tags:
+      - Model Inventory
+    summary: Create a new model inventory
+    description: >
+      Creates a model inventory record, links it to the supplied project and
+      framework IDs, records a change-history entry, fires any "model_added"
+      automations, and notifies the approver (if set).
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ModelInventoryCreateRequest"
+    responses:
+      "201":
+        description: Model inventory created
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Created
+                data:
+                  $ref: "#/components/schemas/ModelInventoryResponse"
+      "401":
+        description: Missing or invalid JWT
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerError"
+
+/model-inventories/{id}:
+  get:
+    tags:
+      - Model Inventory
+    summary: Get a model inventory by ID
+    description: >
+      Returns a single model inventory record with its associated project and
+      framework IDs. Returns 204 if the record does not exist.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Model inventory ID
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Model inventory found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  $ref: "#/components/schemas/ModelInventoryResponse"
+      "204":
+        description: No model inventory found for the given ID
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: No Content
+                data:
+                  nullable: true
+      "401":
+        description: Missing or invalid JWT
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerError"
+
+  patch:
+    tags:
+      - Model Inventory
+    summary: Update a model inventory by ID
+    description: >
+      Partially updates a model inventory record. All body fields are optional;
+      only provided fields are changed. Project and framework associations can be
+      replaced or cleared. Fires "model_updated" automations and notifies a new
+      approver if changed.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Model inventory ID
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ModelInventoryUpdateRequest"
+    responses:
+      "200":
+        description: Model inventory updated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  $ref: "#/components/schemas/ModelInventoryResponse"
+      "401":
+        description: Missing or invalid JWT
+      "404":
+        description: Model inventory not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Not Found
+                data:
+                  type: string
+                  example: Model inventory not found
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerError"
+
+  delete:
+    tags:
+      - Model Inventory
+    summary: Delete a model inventory by ID
+    description: >
+      Deletes a model inventory record and its project/framework associations.
+      Optionally deletes linked model risks when deleteRisks=true.
+      Records deletion in change history and fires "model_deleted" automations.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Model inventory ID
+        schema:
+          type: integer
+      - name: deleteRisks
+        in: query
+        required: false
+        description: >
+          When "true", also deletes associated rows from the model_risks table.
+        schema:
+          type: string
+          enum:
+            - "true"
+            - "false"
+          default: "false"
+    responses:
+      "200":
+        description: Model inventory deleted
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  type: string
+                  example: Model inventory deleted successfully
+      "401":
+        description: Missing or invalid JWT
+      "404":
+        description: Model inventory not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Not Found
+                data:
+                  type: string
+                  example: Model inventory not found
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerError"
+
+/model-inventories/by-projectId/{projectId}:
+  get:
+    tags:
+      - Model Inventory
+    summary: Get model inventories by project ID
+    description: >
+      Returns all model inventories associated with a project (via the
+      model_inventories_projects_frameworks join table where framework_id IS NULL).
+      Non-numeric project IDs (e.g. plugin-sourced) return an empty array.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        description: Project ID (integer). Non-numeric values return an empty array.
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: List of model inventories for the project (may be empty)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ModelInventoryResponse"
+      "401":
+        description: Missing or invalid JWT
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerError"
+
+/model-inventories/by-frameworkId/{frameworkId}:
+  get:
+    tags:
+      - Model Inventory
+    summary: Get model inventories by framework ID
+    description: >
+      Returns all model inventories associated with a framework (via the
+      model_inventories_projects_frameworks join table where framework_id matches).
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: frameworkId
+        in: path
+        required: true
+        description: Framework ID
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: List of model inventories for the framework (may be empty)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: OK
+                data:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ModelInventoryResponse"
+      "401":
+        description: Missing or invalid JWT
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerError"
+
+# ---------------------------------------------------------------------------
+# Schema Definitions — paste into components.schemas
+# ---------------------------------------------------------------------------
+components:
+  schemas:
+    ModelInventoryStatus:
+      type: string
+      enum:
+        - Approved
+        - Restricted
+        - Pending
+        - Blocked
+        - Rejected
+      description: Current approval/review status of the model
+
+    Filedata:
+      type: object
+      description: Metadata for an uploaded security-assessment file
+      properties:
+        id:
+          type: integer
+          description: File record ID
+        filename:
+          type: string
+          description: Original file name
+        size:
+          type: integer
+          description: File size in bytes
+        mimetype:
+          type: string
+          description: MIME type (e.g. application/pdf)
+        upload_date:
+          type: string
+          format: date-time
+          description: ISO 8601 upload timestamp
+        uploaded_by:
+          type: integer
+          description: User ID who uploaded the file
+      required:
+        - id
+        - filename
+        - size
+        - mimetype
+        - upload_date
+        - uploaded_by
+
+    ModelInventoryResponse:
+      type: object
+      description: Model inventory record as returned by the API
+      properties:
+        id:
+          type: integer
+          description: Auto-generated primary key
+          example: 42
+        provider_model:
+          type: string
+          nullable: true
+          description: Legacy combined provider+model field (backward compatibility)
+          example: "OpenAI / GPT-4"
+        provider:
+          type: string
+          description: Model provider name
+          example: OpenAI
+        model:
+          type: string
+          description: Model name
+          example: GPT-4
+        version:
+          type: string
+          description: Model version identifier
+          example: "turbo-2024-04-09"
+        approver:
+          type: integer
+          nullable: true
+          description: User ID of the assigned approver
+          example: 7
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: >
+            List of capability strings. Stored as comma-separated text in the DB,
+            returned as an array.
+          example: ["Text Generation", "Code Generation", "Reasoning"]
+        security_assessment:
+          type: boolean
+          description: Whether a security assessment has been completed
+          example: false
+        status:
+          $ref: "#/components/schemas/ModelInventoryStatus"
+        status_date:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of the last status change
+          example: "2026-04-15T10:30:00.000Z"
+        reference_link:
+          type: string
+          nullable: true
+          description: URL to external model documentation or model card
+          example: "https://platform.openai.com/docs/models/gpt-4"
+        biases:
+          type: string
+          description: Known biases of the model
+          example: "May reflect biases present in training data"
+        limitations:
+          type: string
+          description: Known limitations of the model
+          example: "Knowledge cutoff, potential hallucinations"
+        hosting_provider:
+          type: string
+          description: Where the model is hosted
+          example: "Azure OpenAI"
+        security_assessment_data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Filedata"
+          description: Uploaded security assessment file metadata
+        is_demo:
+          type: boolean
+          description: Whether this is a demo/sample record
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 creation timestamp
+          example: "2026-04-10T08:00:00.000Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 last-updated timestamp
+          example: "2026-04-15T10:30:00.000Z"
+        projects:
+          type: array
+          items:
+            type: integer
+          description: IDs of projects this model is associated with
+          example: [1, 3]
+        frameworks:
+          type: array
+          items:
+            type: integer
+          description: IDs of frameworks this model is associated with
+          example: [5]
+
+    ModelInventoryCreateRequest:
+      type: object
+      description: Request body for creating a new model inventory record
+      required:
+        - provider
+        - model
+        - version
+        - capabilities
+        - status
+        - status_date
+        - reference_link
+        - biases
+        - limitations
+        - hosting_provider
+      properties:
+        provider_model:
+          type: string
+          description: Legacy combined provider+model field (optional, backward compatibility)
+          example: "OpenAI / GPT-4"
+        provider:
+          type: string
+          description: Model provider name
+          example: OpenAI
+        model:
+          type: string
+          description: Model name
+          example: GPT-4
+        version:
+          type: string
+          description: Model version identifier
+          example: "turbo-2024-04-09"
+        approver:
+          type: integer
+          nullable: true
+          description: User ID of the assigned approver
+          example: 7
+        capabilities:
+          oneOf:
+            - type: string
+              description: Comma-separated capabilities
+            - type: array
+              items:
+                type: string
+              description: Array of capability strings
+          description: >
+            Accepted as either a comma-separated string or an array of strings.
+            Arrays are joined with ", " before storage.
+          example: ["Text Generation", "Code Generation"]
+        security_assessment:
+          type: boolean
+          description: Whether a security assessment has been completed
+          default: false
+        status:
+          $ref: "#/components/schemas/ModelInventoryStatus"
+        status_date:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp for the status
+          example: "2026-04-15T10:30:00.000Z"
+        reference_link:
+          type: string
+          description: URL to external model documentation or model card
+          example: "https://platform.openai.com/docs/models/gpt-4"
+        biases:
+          type: string
+          description: Known biases of the model
+          example: "May reflect biases present in training data"
+        limitations:
+          type: string
+          description: Known limitations of the model
+          example: "Knowledge cutoff, potential hallucinations"
+        hosting_provider:
+          type: string
+          description: Where the model is hosted
+          example: "Azure OpenAI"
+        security_assessment_data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Filedata"
+          description: Uploaded security assessment file metadata
+          default: []
+        is_demo:
+          type: boolean
+          description: Whether this is a demo/sample record
+          default: false
+        projects:
+          type: array
+          items:
+            type: integer
+          description: Project IDs to associate with this model
+          default: []
+          example: [1, 3]
+        frameworks:
+          type: array
+          items:
+            type: integer
+          description: Framework IDs to associate with this model
+          default: []
+          example: [5]
+
+    ModelInventoryUpdateRequest:
+      type: object
+      description: >
+        Request body for updating a model inventory record. All fields are
+        optional; only provided fields are modified.
+      properties:
+        provider_model:
+          type: string
+          description: Legacy combined provider+model field
+        provider:
+          type: string
+          description: Model provider name
+        model:
+          type: string
+          description: Model name
+        version:
+          type: string
+          description: Model version identifier
+        approver:
+          type: integer
+          nullable: true
+          description: User ID of the assigned approver
+        capabilities:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+          description: Capabilities (string or array)
+        security_assessment:
+          type: boolean
+          description: Whether a security assessment has been completed
+        status:
+          $ref: "#/components/schemas/ModelInventoryStatus"
+        status_date:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp for the status
+        reference_link:
+          type: string
+          description: URL to external model documentation
+        biases:
+          type: string
+          description: Known biases of the model
+        limitations:
+          type: string
+          description: Known limitations of the model
+        hosting_provider:
+          type: string
+          description: Where the model is hosted
+        security_assessment_data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Filedata"
+          description: Uploaded security assessment file metadata
+        is_demo:
+          type: boolean
+          description: Whether this is a demo/sample record
+        projects:
+          type: array
+          items:
+            type: integer
+          description: >
+            Project IDs to associate. When provided (even empty), replaces all
+            existing project associations.
+        frameworks:
+          type: array
+          items:
+            type: integer
+          description: >
+            Framework IDs to associate. When provided (even empty), replaces all
+            existing framework associations.
+        deleteProjects:
+          type: boolean
+          description: >
+            When true, clears all project associations even if projects array is
+            empty. Used to force-delete associations without providing replacements.
+          default: false
+        deleteFrameworks:
+          type: boolean
+          description: >
+            When true, clears all framework associations even if frameworks array
+            is empty. Used to force-delete associations without providing replacements.
+          default: false
+
+    ServerError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Internal Server Error
+        error:
+          type: string
+          description: Error message from the caught exception

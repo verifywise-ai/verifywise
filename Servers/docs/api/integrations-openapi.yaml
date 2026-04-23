@@ -1,0 +1,963 @@
+openapi: "3.0.3"
+info:
+  title: VerifyWise Integrations & Webhooks API
+  description: |
+    API endpoints for managing Slack integrations, GitHub token management,
+    and incoming GitHub webhooks.
+  version: "1.0.0"
+
+tags:
+  - name: Slack Webhooks
+    description: Manage Slack OAuth integrations and send messages
+  - name: GitHub Integration
+    description: Manage GitHub Personal Access Token for private repository access (Admin only)
+  - name: Webhooks
+    description: Incoming webhook endpoints (public, HMAC-secured)
+
+paths:
+  # ===========================================================================
+  # Slack Webhooks — /slackWebhooks
+  # ===========================================================================
+  /slackWebhooks:
+    get:
+      tags: [Slack Webhooks]
+      summary: List Slack webhooks for a user
+      description: |
+        Returns all Slack webhook integrations for the given user.
+        Optionally filters by channel name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          description: Numeric user ID whose webhooks to retrieve
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          description: Filter by Slack channel name
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of Slack webhooks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse_SlackWebhookArray"
+        "400":
+          description: Missing userId query parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse400"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse500"
+
+    post:
+      tags: [Slack Webhooks]
+      summary: Create a new Slack webhook via OAuth
+      description: |
+        Exchanges a Slack OAuth authorization code for tokens, creates the
+        webhook record, and invites the bot to the channel.
+        Rate-limited to 10 requests per hour per IP.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSlackWebhookRequest"
+      responses:
+        "201":
+          description: Slack webhook created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedResponse_SlackWebhookFull"
+        "400":
+          description: Validation error or creation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse400"
+        "403":
+          description: Business logic error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse403"
+        "429":
+          description: Rate limit exceeded (10 per hour)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Too many webhook creation requests from this IP, please try again after an hour."
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse500"
+
+  /slackWebhooks/{id}:
+    get:
+      tags: [Slack Webhooks]
+      summary: Get a Slack webhook by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SlackWebhookId"
+      responses:
+        "200":
+          description: Slack webhook found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse_SlackWebhookJSON"
+        "400":
+          description: Invalid ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse400"
+        "404":
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse404"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse500"
+
+    patch:
+      tags: [Slack Webhooks]
+      summary: Update a Slack webhook
+      description: |
+        Updates the routing_type and/or is_active fields of an existing
+        Slack webhook.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SlackWebhookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSlackWebhookRequest"
+      responses:
+        "202":
+          description: Webhook updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptedResponse_SlackWebhookFull"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse400"
+        "403":
+          description: Business logic error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse403"
+        "404":
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse404"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse500"
+
+    delete:
+      tags: [Slack Webhooks]
+      summary: Delete a Slack webhook
+      description: |
+        Deletes a Slack webhook. Only the user who created it (user_id match)
+        can delete it.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SlackWebhookId"
+      responses:
+        "204":
+          description: Webhook deleted (no content)
+        "403":
+          description: Unauthorized (user_id mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse403"
+        "404":
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse404"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse500"
+
+  /slackWebhooks/{id}/send:
+    post:
+      tags: [Slack Webhooks]
+      summary: Send a Slack message via a webhook
+      description: |
+        Sends a message to the Slack channel associated with the webhook.
+        The webhook must be active (is_active = true).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SlackWebhookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendSlackMessageRequest"
+      responses:
+        "200":
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse_SlackMessageSent"
+        "400":
+          description: Validation error (invalid ID)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse400"
+        "404":
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse404"
+        "500":
+          description: Internal server error or channel inactive/archived
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "This slack channel is no longer active"
+
+  # ===========================================================================
+  # GitHub Integration — /integrations/github
+  # ===========================================================================
+  /integrations/github/token:
+    get:
+      tags: [GitHub Integration]
+      summary: Get GitHub token status
+      description: |
+        Returns whether a GitHub PAT is configured for the organization.
+        Does NOT return the actual token. Admin role required.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse_GitHubTokenStatus"
+        "403":
+          description: Forbidden (non-Admin role)
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse500"
+
+    post:
+      tags: [GitHub Integration]
+      summary: Save or update GitHub token
+      description: |
+        Saves (or replaces) the GitHub Personal Access Token for the
+        organization. The token is encrypted at rest with AES-256-CBC.
+        Admin role required.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveGitHubTokenRequest"
+      responses:
+        "201":
+          description: Token saved, returns updated status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedResponse_GitHubTokenStatus"
+        "400":
+          description: |
+            Token missing or format invalid. Accepted formats:
+            - Classic PAT: `ghp_` prefix, >= 40 chars
+            - Fine-grained PAT: `github_pat_` prefix, >= 30 chars
+            - Legacy OAuth: 40-char hex string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse400"
+        "403":
+          description: Forbidden (non-Admin role)
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse500"
+
+    delete:
+      tags: [GitHub Integration]
+      summary: Delete GitHub token
+      description: |
+        Removes the GitHub PAT for the organization. Admin role required.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse_GitHubTokenDeleted"
+        "403":
+          description: Forbidden (non-Admin role)
+        "404":
+          description: No token found for organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse404"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse500"
+
+  /integrations/github/token/test:
+    post:
+      tags: [GitHub Integration]
+      summary: Test a GitHub token
+      description: |
+        Validates the token format and tests it against the GitHub API
+        (GET /user). Returns validity, scopes, and rate limit info.
+        Admin role required.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestGitHubTokenRequest"
+      responses:
+        "200":
+          description: Test result (may be valid or invalid)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse_GitHubTokenTest"
+        "400":
+          description: Token missing or format invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse400"
+        "403":
+          description: Forbidden (non-Admin role)
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse500"
+
+  # ===========================================================================
+  # Incoming Webhooks — /webhooks
+  # ===========================================================================
+  /webhooks/github:
+    post:
+      tags: [Webhooks]
+      summary: Receive GitHub webhook events
+      description: |
+        Public endpoint for GitHub webhook delivery. Security is via HMAC
+        signature verification (X-Hub-Signature-256 header) against the
+        per-repository webhook_secret.
+
+        Supported events: `ping`, `push`, `pull_request`.
+        Unsupported events return 200 with `triggered: false`.
+
+        The endpoint always returns 200 (even on internal errors) to prevent
+        GitHub from retrying.
+      security: []
+      parameters:
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          description: HMAC-SHA256 signature of the raw request body
+          schema:
+            type: string
+            example: "sha256=abc123..."
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          description: GitHub event type
+          schema:
+            type: string
+            enum: [ping, push, pull_request]
+        - name: X-GitHub-Delivery
+          in: header
+          required: false
+          description: Unique delivery ID from GitHub
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GitHubWebhookPayload"
+      responses:
+        "200":
+          description: |
+            Webhook processed. Check `triggered` field to see if a scan
+            was initiated.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/GitHubWebhookResult"
+                  - $ref: "#/components/schemas/GitHubWebhookPong"
+                  - $ref: "#/components/schemas/GitHubWebhookSkipped"
+        "400":
+          description: Missing event header, invalid JSON, or missing repo info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse400"
+        "401":
+          description: Missing or invalid HMAC signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse401"
+
+# =============================================================================
+# Components
+# =============================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token from /auth/login
+
+  parameters:
+    SlackWebhookId:
+      name: id
+      in: path
+      required: true
+      description: Numeric Slack webhook ID
+      schema:
+        type: integer
+        minimum: 1
+
+  schemas:
+    # -------------------------------------------------------------------------
+    # Shared response wrappers
+    # -------------------------------------------------------------------------
+    StandardResponse:
+      type: object
+      description: |
+        All responses use STATUS_CODE wrapper: `{ message: "<status text>", data: <payload> }`.
+        5xx errors use `error` instead of `data`.
+      properties:
+        message:
+          type: string
+        data:
+          description: Response payload (present on 1xx-4xx)
+        error:
+          description: Error detail (present on 5xx)
+          type: string
+
+    ErrorResponse400:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Bad Request"
+        data:
+          type: string
+          example: "userId query parameter is required"
+
+    ErrorResponse401:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Unauthorized"
+        data:
+          type: string
+
+    ErrorResponse403:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Forbidden"
+        data:
+          type: string
+
+    ErrorResponse404:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Not Found"
+        data:
+          type: string
+
+    ErrorResponse500:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Internal Server Error"
+        error:
+          type: string
+
+    # -------------------------------------------------------------------------
+    # Slack Webhook schemas
+    # -------------------------------------------------------------------------
+    SlackNotificationRoutingType:
+      type: string
+      enum:
+        - "Membership and roles"
+        - "Projects and organizations"
+        - "Policy reminders and status"
+        - "Evidence and task alerts"
+        - "Control or policy changes"
+
+    SlackWebhookFull:
+      type: object
+      description: Full Slack webhook record as stored in the database
+      properties:
+        id:
+          type: integer
+          example: 1
+        access_token:
+          type: string
+          description: Encrypted access token (stored, not returned in toJSON)
+        access_token_iv:
+          type: string
+          description: AES IV for access_token
+        scope:
+          type: string
+          example: "incoming-webhook,chat:write"
+        user_id:
+          type: integer
+          example: 5
+        team_name:
+          type: string
+          example: "Acme Corp"
+        team_id:
+          type: string
+          example: "T01234ABC"
+        channel:
+          type: string
+          example: "#general"
+        channel_id:
+          type: string
+          example: "C01234ABC"
+        configuration_url:
+          type: string
+          format: uri
+          example: "https://acme.slack.com/services/B01234"
+        url:
+          type: string
+          description: Encrypted webhook URL
+        url_iv:
+          type: string
+          description: AES IV for url
+        is_active:
+          type: boolean
+          example: true
+        routing_type:
+          type: array
+          items:
+            $ref: "#/components/schemas/SlackNotificationRoutingType"
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SlackWebhookJSON:
+      type: object
+      description: Slack webhook as returned by toJSON() (sensitive fields stripped)
+      properties:
+        id:
+          type: integer
+        scope:
+          type: string
+        user_id:
+          type: integer
+        team_name:
+          type: string
+        team_id:
+          type: string
+        channel:
+          type: string
+        channel_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+        routing_type:
+          type: array
+          items:
+            $ref: "#/components/schemas/SlackNotificationRoutingType"
+          nullable: true
+
+    CreateSlackWebhookRequest:
+      type: object
+      required:
+        - code
+        - userId
+      properties:
+        code:
+          type: string
+          description: Slack OAuth authorization code (exchanged for tokens server-side)
+          example: "1234567890.abcdef"
+        userId:
+          type: integer
+          description: ID of the user creating this integration
+          example: 5
+
+    UpdateSlackWebhookRequest:
+      type: object
+      description: At least one field should be provided
+      properties:
+        is_active:
+          type: boolean
+          description: Enable or disable the webhook
+          example: false
+        routing_type:
+          type: array
+          description: Notification categories to route to this channel
+          items:
+            $ref: "#/components/schemas/SlackNotificationRoutingType"
+          example:
+            - "Membership and roles"
+            - "Evidence and task alerts"
+
+    SendSlackMessageRequest:
+      type: object
+      required:
+        - title
+        - message
+      properties:
+        title:
+          type: string
+          description: Message header text (plain_text block)
+          example: "New policy update"
+        message:
+          type: string
+          description: Message body (mrkdwn block)
+          example: "Policy *Data Retention* has been updated."
+
+    SlackMessageSentResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        messageId:
+          type: string
+          description: Slack message timestamp ID
+          example: "1234567890.123456"
+        channel:
+          type: string
+          description: Channel ID the message was posted to
+          example: "C01234ABC"
+
+    # -------------------------------------------------------------------------
+    # GitHub Integration schemas
+    # -------------------------------------------------------------------------
+    GitHubTokenStatus:
+      type: object
+      properties:
+        configured:
+          type: boolean
+          description: Whether a GitHub PAT is stored for this organization
+          example: true
+        token_name:
+          type: string
+          description: Friendly name (only present when configured = true)
+          example: "GitHub Personal Access Token"
+        last_used_at:
+          type: string
+          format: date-time
+          description: Last time the token was used (only present when configured = true)
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          description: When the token was first saved (only present when configured = true)
+
+    SaveGitHubTokenRequest:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          description: |
+            GitHub Personal Access Token. Accepted formats:
+            - Classic: starts with `ghp_`, >= 40 characters
+            - Fine-grained: starts with `github_pat_`, >= 30 characters
+            - Legacy OAuth: 40-character hexadecimal string
+          example: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        token_name:
+          type: string
+          description: Optional friendly name for the token
+          default: "GitHub Personal Access Token"
+          example: "CI/CD Scanner Token"
+
+    TestGitHubTokenRequest:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          description: Plain-text GitHub PAT to test against the GitHub API
+          example: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+    GitHubTokenTestResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          example: true
+        scopes:
+          type: array
+          description: OAuth scopes granted (only present when valid = true)
+          items:
+            type: string
+          example: ["repo", "read:org"]
+        rate_limit:
+          type: object
+          description: GitHub API rate limit info (only present when valid = true)
+          properties:
+            limit:
+              type: integer
+              example: 5000
+            remaining:
+              type: integer
+              example: 4999
+            reset:
+              type: string
+              format: date-time
+              description: When the rate limit resets
+        error:
+          type: string
+          description: Error message (only present when valid = false)
+          example: "Invalid or expired token"
+
+    # -------------------------------------------------------------------------
+    # GitHub Webhook (incoming) schemas
+    # -------------------------------------------------------------------------
+    GitHubWebhookPayload:
+      type: object
+      description: |
+        Standard GitHub webhook payload. Only `repository` is required
+        for routing; the full payload structure depends on X-GitHub-Event.
+      required:
+        - repository
+      properties:
+        repository:
+          type: object
+          required:
+            - owner
+            - name
+          properties:
+            owner:
+              type: object
+              required:
+                - login
+              properties:
+                login:
+                  type: string
+                  example: "verifywise-ai"
+            name:
+              type: string
+              example: "verifywise"
+        ref:
+          type: string
+          description: Git ref (push events)
+          example: "refs/heads/main"
+        action:
+          type: string
+          description: Action type (pull_request events)
+          example: "opened"
+        pull_request:
+          type: object
+          description: Pull request object (pull_request events)
+
+    GitHubWebhookResult:
+      type: object
+      properties:
+        triggered:
+          type: boolean
+          description: Whether a scan was triggered
+        reason:
+          type: string
+          description: Human-readable explanation
+          example: "Scan triggered for push to main"
+
+    GitHubWebhookPong:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "pong"
+
+    GitHubWebhookSkipped:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Repository not registered or CI not enabled"
+
+    # -------------------------------------------------------------------------
+    # Wrapped response types
+    # -------------------------------------------------------------------------
+    SuccessResponse_SlackWebhookArray:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "OK"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SlackWebhookFull"
+
+    SuccessResponse_SlackWebhookJSON:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "OK"
+        data:
+          $ref: "#/components/schemas/SlackWebhookJSON"
+
+    CreatedResponse_SlackWebhookFull:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Created"
+        data:
+          $ref: "#/components/schemas/SlackWebhookFull"
+
+    AcceptedResponse_SlackWebhookFull:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Accepted"
+        data:
+          $ref: "#/components/schemas/SlackWebhookFull"
+
+    SuccessResponse_SlackMessageSent:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "OK"
+        data:
+          $ref: "#/components/schemas/SlackMessageSentResult"
+
+    SuccessResponse_GitHubTokenStatus:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "OK"
+        data:
+          $ref: "#/components/schemas/GitHubTokenStatus"
+
+    CreatedResponse_GitHubTokenStatus:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Created"
+        data:
+          $ref: "#/components/schemas/GitHubTokenStatus"
+
+    SuccessResponse_GitHubTokenDeleted:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "OK"
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "GitHub token deleted successfully"
+
+    SuccessResponse_GitHubTokenTest:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "OK"
+        data:
+          $ref: "#/components/schemas/GitHubTokenTestResult"

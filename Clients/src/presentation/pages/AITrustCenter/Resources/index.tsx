@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, Suspense, useCallback, useEffect, useRef } from "react";
+import React, { useState, Suspense, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Box,
@@ -35,12 +35,14 @@ import { TABLE_COLUMNS, WARNING_MESSAGES } from "./constants";
 import { AITrustCentreOverviewData } from "../../../../application/hooks/useAITrustCentreOverview";
 import { useTheme } from "@mui/material/styles";
 import AITrustCenterTable from "../../../components/Table/AITrustCenterTable";
-import { Resource } from "../../../../domain/interfaces/i.aiTrustCenter";
+import { EditResourceFormValues, NewResourceFormValues, Resource, FormData } from "../../../../domain/interfaces/i.aiTrustCenter";
 import { GroupBy } from "../../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../../components/Table/GroupedTableView";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { text, background, border as borderPalette } from "../../../themes/palette";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { checkStringValidation } from "../../../../application/validations/stringValidation";
 
 // Helper component for Resource Table Row
 const ResourceTableRow: React.FC<{
@@ -139,16 +141,6 @@ const ResourceTableRow: React.FC<{
   );
 };
 
-interface FormData {
-  intro?: Record<string, unknown>;
-  compliance_badges?: Record<string, unknown>;
-  company_description?: Record<string, unknown>;
-  terms_and_contact?: Record<string, unknown>;
-  info?: {
-    resources_visible?: boolean;
-  };
-}
-
 const TrustCenterResources: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
@@ -168,6 +160,45 @@ const TrustCenterResources: React.FC = () => {
   const deleteResourceMutation = useDeleteAITrustCentreResourceMutation();
   const theme = useTheme();
   const styles = useStyles(theme);
+
+  // Add resource form validation
+  const addResourceValidators = useMemo(() => ({
+    name: (v: unknown) => {
+      const r = checkStringValidation("Resource name", v as string, 1, 256);
+      return r.accepted ? "" : r.message;
+    },
+    description: (v: unknown) => {
+      const r = checkStringValidation("Type or purpose of resource", v as string, 10, 512);
+      return r.accepted ? "" : r.message;
+    },
+    file: (v: unknown) => (!v ? "A file is required." : ""),
+  }), []);
+
+  const {
+    errors: addErrors,
+    validateAll: validateAdd,
+    clearFieldError: clearAddFieldError,
+    resetErrors: resetAddErrors,
+  } = useFormValidation<NewResourceFormValues>(addResourceValidators);
+
+  // Edit resource form validation
+  const editResourceValidators = useMemo(() => ({
+    name: (v: unknown) => {
+      const r = checkStringValidation("Resource name", v as string, 1, 256);
+      return r.accepted ? "" : r.message;
+    },
+    description: (v: unknown) => {
+      const r = checkStringValidation("Type or purpose of resource", v as string, 10, 512);
+      return r.accepted ? "" : r.message;
+    },
+  }), []);
+
+  const {
+    errors: editErrors,
+    validateAll: validateEdit,
+    clearFieldError: clearEditFieldError,
+    resetErrors: resetEditErrors,
+  } = useFormValidation<EditResourceFormValues>(editResourceValidators);
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
@@ -286,12 +317,14 @@ const TrustCenterResources: React.FC = () => {
     setAddModalOpen(true);
     setNewResource({ name: "", description: "", file: null });
     setAddResourceError(null);
+    resetAddErrors();
   };
 
   const handleCloseAddModal = () => {
     setAddModalOpen(false);
     setNewResource({ name: "", description: "", file: null });
     setAddResourceError(null);
+    resetAddErrors();
   };
 
   const handleOpenEditModal = (resource: any) => {
@@ -307,6 +340,7 @@ const TrustCenterResources: React.FC = () => {
     });
     setEditModalOpen(true);
     setEditResourceError(null);
+    resetEditErrors();
   };
 
   const handleCloseEditModal = () => {
@@ -321,31 +355,18 @@ const TrustCenterResources: React.FC = () => {
       file_id: undefined,
     });
     setEditResourceError(null);
+    resetEditErrors();
   };
 
   // Resource operations
   const handleAddResource = async () => {
-    if (
-      !formData?.info?.resources_visible ||
-      !newResource.name ||
-      !newResource.description ||
-      !newResource.file
-    ) {
-      setAddResourceError("Please fill in all fields and upload a file");
-      return;
-    }
-  
-    // Check if description is at least 10 characters
-    if (newResource.description.length < 10) {
-      setAddResourceError("Description must be at least 10 characters long");
-      return;
-    }
-    // Proceed with adding the resource
-    setAddResourceError(""); 
+    if (!formData?.info?.resources_visible) return;
+
+    if (!validateAdd(newResource)) return;
 
     try {
       await createResourceMutation.mutateAsync({
-        file: newResource.file,
+        file: newResource.file!,
         name: newResource.name,
         description: newResource.description,
         visible: true,
@@ -364,23 +385,9 @@ const TrustCenterResources: React.FC = () => {
   };
 
   const handleSaveEditResource = async () => {
-    if (
-      !formData?.info?.resources_visible ||
-      !editResource.name ||
-      !editResource.description 
-    ) {
-      setEditResourceError("Please fill in all fields and upload a file");
-      return;
-    }
-  
-    // Check if description is at least 10 characters
-    if (editResource.description.length < 10) {
-      setEditResourceError("Description must be at least 10 characters long");
-      return;
-    }
-  
-    // Proceed with adding the resource
-    setEditResourceError(""); 
+    if (!formData?.info?.resources_visible) return;
+
+    if (!validateEdit(editResource)) return;
 
     try {
       // Pass the old file ID only when a new file is being uploaded
@@ -660,21 +667,18 @@ const TrustCenterResources: React.FC = () => {
           description="Upload a resource document for your AI Trust Center"
           onSubmit={handleAddResource}
           submitButtonText="Add resource"
-          isSubmitting={
-            !formData?.info?.resources_visible ||
-            !newResource.name ||
-            !newResource.description ||
-            !newResource.file
-          }
+          isSubmitting={!formData?.info?.resources_visible}
         >
           <Stack spacing={6}>
             <Field
               id="resource-name"
               label="Resource name"
               value={newResource.name}
-              onChange={(e) =>
-                setNewResource((r) => ({ ...r, name: e.target.value }))
-              }
+              onChange={(e) => {
+                setNewResource((r) => ({ ...r, name: e.target.value }));
+                clearAddFieldError("name");
+              }}
+              error={addErrors.name}
               disabled={!formData?.info?.resources_visible}
               isRequired
               sx={styles.fieldStyle}
@@ -684,9 +688,11 @@ const TrustCenterResources: React.FC = () => {
               id="resource-description"
               label="Type or purpose of resource"
               value={newResource.description}
-              onChange={(e) =>
-                setNewResource((r) => ({ ...r, description: e.target.value }))
-              }
+              onChange={(e) => {
+                setNewResource((r) => ({ ...r, description: e.target.value }));
+                clearAddFieldError("description");
+              }}
+              error={addErrors.description}
               disabled={!formData?.info?.resources_visible}
               isRequired
               sx={styles.fieldStyle}
@@ -712,6 +718,15 @@ const TrustCenterResources: React.FC = () => {
                   {newResource.file.name}
                 </Typography>
               )}
+              {addErrors.file && (
+                <Typography
+                  component="span"
+                  color="error"
+                  sx={styles.fileErrorText}
+                >
+                  {addErrors.file}
+                </Typography>
+              )}
             </Box>
           </Stack>
         </StandardModal>
@@ -728,6 +743,7 @@ const TrustCenterResources: React.FC = () => {
             if (files[0]) {
               setNewResource((r) => ({ ...r, file: files[0] }));
               setAddResourceError(null);
+              clearAddFieldError("file");
             }
             setAddFileModalOpen(false);
           }}
@@ -741,20 +757,18 @@ const TrustCenterResources: React.FC = () => {
           description="Update resource details and manage visibility"
           onSubmit={handleSaveEditResource}
           submitButtonText="Save"
-          isSubmitting={
-            !formData?.info?.resources_visible ||
-            !editResource.name ||
-            !editResource.description
-          }
+          isSubmitting={!formData?.info?.resources_visible}
         >
           <Stack spacing={6}>
             <Field
               id="edit-resource-name"
               label="Resource name"
               value={editResource.name}
-              onChange={(e) =>
-                setEditResource((r) => ({ ...r, name: e.target.value }))
-              }
+              onChange={(e) => {
+                setEditResource((r) => ({ ...r, name: e.target.value }));
+                clearEditFieldError("name");
+              }}
+              error={editErrors.name}
               disabled={!formData?.info?.resources_visible}
               isRequired
               sx={styles.fieldStyle}
@@ -764,12 +778,14 @@ const TrustCenterResources: React.FC = () => {
               id="edit-resource-description"
               label="Type or purpose of resource"
               value={editResource.description}
-              onChange={(e) =>
+              onChange={(e) => {
                 setEditResource((r) => ({
                   ...r,
                   description: e.target.value,
-                }))
-              }
+                }));
+                clearEditFieldError("description");
+              }}
+              error={editErrors.description}
               disabled={!formData?.info?.resources_visible}
               isRequired
               sx={styles.fieldStyle}

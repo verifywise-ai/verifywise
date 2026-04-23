@@ -10,15 +10,30 @@ export interface IAdvisorMessage {
 }
 
 /**
- * Interface for an advisor conversation
+ * Interface for an advisor conversation row.
  */
 export interface IAdvisorConversation {
-  id?: number;
+  id: number;
   user_id: number;
   domain: string;
+  title: string | null;
   messages: IAdvisorMessage[];
+  last_message_at: Date | null;
   created_at?: Date;
   updated_at?: Date;
+}
+
+/**
+ * Lightweight shape returned by the list endpoint — omits the full messages
+ * payload so listing is cheap even for conversations with many turns.
+ */
+export interface IAdvisorConversationSummary {
+  id: number;
+  title: string | null;
+  last_message_at: Date | null;
+  message_count: number;
+  created_at: Date;
+  updated_at: Date;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 /**
  * Playwright configuration for VerifyWise E2E tests.
@@ -18,7 +18,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: process.env.CI ? "github" : "html",
+  // In CI pair `list` with `github`: `github` emits PR annotations, `list`
+  // streams pass/fail lines to the job log so cancellations (timeouts)
+  // still leave a readable trail of what passed and what failed.
+  reporter: process.env.CI
+    ? [["list"], ["github"]]
+    : "html",
   timeout: 60_000,
 
   use: {

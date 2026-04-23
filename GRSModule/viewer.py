@@ -19,6 +19,7 @@ pg = st.navigation(
         st.Page("pages/GRS_Scenario_Viewer.py", title="GRS Scenario Viewer", icon="🔍"),
         st.Page("pages/1_Scenario_Inspector.py", title="Scenario Inspector", icon="🔬"),
         st.Page("pages/2_Validation_Playground.py", title="Validation Playground", icon="🧪"),
+        st.Page("pages/3_Debug_Inference_Viewer.py", title="Debug Inference Viewer", icon="🐛"),
     ]
 )
 pg.run()

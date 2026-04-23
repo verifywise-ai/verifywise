@@ -2,6 +2,7 @@ import { Box, useTheme, Typography, Paper, CircularProgress, SxProps, Theme } fr
 import { AssistantRuntimeProvider } from '@assistant-ui/react';
 import { useAdvisorRuntime } from './useAdvisorRuntime';
 import { CustomThread } from './CustomThread';
+import { AdvisorHeader } from './AdvisorHeader';
 import { AdvisorDomain } from './advisorConfig';
 import { useAdvisorConversationSafe } from '../../../application/contexts/AdvisorConversation.context';
 import { useEffect, useRef, useMemo, memo } from 'react';
@@ -36,7 +37,9 @@ interface AdvisorChatProps {
   isLoadingLLMKeys?: boolean;
 }
 
-// Inner component that uses the runtime - only rendered when conversation is loaded
+// Inner component that uses the runtime - only rendered when conversation is loaded.
+// Keyed by (pageContext, activeId) upstream so switching conversations forces a
+// clean remount of the assistant-ui runtime with fresh initial messages.
 const AdvisorChatInner = ({
   selectedLLMKeyId,
   pageContext,
@@ -94,18 +97,24 @@ const AdvisorChat = ({
   const paperStyles = useMemo(() => createPaperStyles(theme), [theme]);
   const centeredBoxStyles = useMemo(() => createCenteredBoxStyles(theme), [theme]);
 
-  // Trigger conversation load when domain changes (fire-and-forget)
+  // Trigger domain load (list + most-recent conversation) on first mount
+  // for this domain. Fire-and-forget — context tracks its own loading flag.
   useEffect(() => {
     if (!conversationContext || !pageContext) return;
     if (conversationContext.isLoaded(pageContext)) return;
     if (loadAttemptedRef.current.has(pageContext)) return;
 
     loadAttemptedRef.current.add(pageContext);
-    conversationContext.loadConversation(pageContext);
+    void conversationContext.loadDomain(pageContext);
   }, [conversationContext, pageContext]);
 
   // Derive readiness from context state — no local isReady state to go stale
   const isConversationReady = !conversationContext || !pageContext || conversationContext.isLoaded(pageContext);
+
+  // Active conversation id is used as part of the inner component key so
+  // switching conversations or starting a new one forces a clean remount
+  // of the assistant-ui runtime with fresh initial messages.
+  const activeId = conversationContext && pageContext ? conversationContext.getActiveId(pageContext) : null;
 
   // Show message when no LLM keys are configured (only after loading completes)
   if (!isLoadingLLMKeys && hasLLMKeys === false) {
@@ -191,12 +200,16 @@ const AdvisorChat = ({
     );
   }
 
-  // Only render the inner component (with runtime) after everything is ready
-  // Using key to force remount when pageContext changes
+  // Only render the inner component (with runtime) after everything is ready.
+  // The key includes `activeId` so that switching between past conversations
+  // or starting a new chat remounts the runtime with fresh initial messages.
+  const innerKey = `${pageContext ?? 'none'}:${activeId ?? 'new'}`;
+
   return (
     <Paper elevation={0} sx={paperStyles}>
+      <AdvisorHeader pageContext={pageContext} />
       <AdvisorChatInner
-        key={pageContext}
+        key={innerKey}
         selectedLLMKeyId={selectedLLMKeyId}
         pageContext={pageContext}
       />

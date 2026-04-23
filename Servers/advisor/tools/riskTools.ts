@@ -117,5 +117,9 @@ export const toolsDefinition: any[] = [
                 required: ["parameter", "timeframe"]
             }
         }
-    }
+    },
+    // NOTE: agent_create_risk (AI WRITE tool) used to live here. It has
+    // moved to `advisor/aiActions/createRisk/definition.ts` and is merged
+    // into the LLM's tool list by the advisor controller via the AI
+    // Actions registry. This file only holds read-only risk tools now.
 ];

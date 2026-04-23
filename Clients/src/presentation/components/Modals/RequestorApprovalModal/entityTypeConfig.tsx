@@ -18,11 +18,13 @@ import {
     PackageOpen,
     File,
     HardDrive,
+    Bot,
+    Wrench,
 } from "lucide-react";
 import dayjs from "dayjs";
 
 // Supported entity types
-export type EntityTypeKey = 'use_case' | 'file';
+export type EntityTypeKey = 'use_case' | 'file' | 'ai_action';
 
 // Detail field configuration
 export interface DetailFieldConfig {
@@ -79,6 +81,17 @@ export const ENTITY_TYPE_CONFIGS: Record<EntityTypeKey, EntityTypeConfig> = {
             { key: 'fileSize', label: 'File size', icon: <HardDrive size={14} />, format: formatFileSize },
             { key: 'fileUploader', label: 'Uploaded by', icon: <User size={14} /> },
             { key: 'fileUploadedTime', label: 'Upload date', icon: <Calendar size={14} />, format: formatDate },
+        ],
+    },
+    ai_action: {
+        title: "AI Action Details",
+        deletedMessage: "The AI action payload for this request is missing.",
+        noDataMessage: "No AI action details available",
+        fields: [
+            { key: 'aiToolName', label: 'Tool', icon: <Wrench size={14} /> },
+            { key: 'aiPreview', label: 'Proposed action', icon: <Bot size={14} /> },
+            { key: 'aiInputParamsJson', label: 'Parameters', icon: <FileText size={14} /> },
+            { key: 'aiRequestedVia', label: 'Requested via', icon: <FileText size={14} /> },
         ],
     },
 };
@@ -142,6 +155,28 @@ export function extractEntityDetails(requestData: any): Record<string, any> {
                 fileUploadedTime: requestData.file_uploaded_time,
                 fileUploader: fileUploaderName,
             };
+
+        case 'ai_action': {
+            // AI action payloads live entirely inside entity_data (JSONB).
+            // Postgres returns JSONB as a parsed object, but guard for string.
+            const raw = requestData.entity_data;
+            const payload = typeof raw === 'string'
+                ? (() => { try { return JSON.parse(raw); } catch { return {}; } })()
+                : (raw || {});
+            const toolName = payload.tool_name as string | undefined;
+            return {
+                ...baseDetails,
+                // Use preview as the primary identifier so isEntityDeleted works
+                entityName: payload.preview || toolName || 'AI action',
+                aiToolName: toolName,
+                aiPreview: payload.preview,
+                aiRequestedVia: payload.requested_via,
+                aiInputParamsJson: payload.input_params
+                    ? JSON.stringify(payload.input_params, null, 2)
+                    : undefined,
+                aiResult: payload.result,
+            };
+        }
 
         case 'use_case':
         default:

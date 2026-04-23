@@ -1,5 +1,5 @@
 import { streamText, tool, stepCountIs } from "ai";
-import type { ToolSet } from "ai";
+import type { ModelMessage, ToolSet } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
@@ -16,9 +16,22 @@ interface AiSdkAdvisorParams {
   apiKey: string;
   baseURL: string;
   model: string;
+  /**
+   * Single-turn prompt. Used by the legacy `/advisor` and `/advisor/stream`
+   * endpoints, which do not pass conversation history. Ignored when
+   * `messages` is provided.
+   */
   userPrompt: string;
+  /**
+   * Full multi-turn history. Used by `/advisor/chat` (streamAdvisorV2) so the
+   * LLM sees prior user + assistant turns. When set, this takes precedence
+   * over `userPrompt`.
+   */
+  messages?: ModelMessage[];
   tenant: number;
-  availableTools: Record<string, (params: Record<string, unknown>, tenant: number) => Promise<unknown>>;
+  /** Requesting user id — required by write tools so actions can be attributed. */
+  userId?: number;
+  availableTools: Record<string, (params: Record<string, unknown>, tenant: number, userId?: number) => Promise<unknown>>;
   toolsDefinition: Array<{
     type: string;
     function: {
@@ -84,14 +97,28 @@ const generateChartTool = tool({
 });
 
 /**
+ * Pick the `messages` array for streamText. Prefers full multi-turn history
+ * when the caller supplies it; otherwise falls back to a single-turn
+ * `[{role: "user", content: userPrompt}]` for backward compatibility with
+ * the legacy `/advisor` and `/advisor/stream` endpoints.
+ */
+function selectMessages(params: AiSdkAdvisorParams): ModelMessage[] {
+  if (params.messages && params.messages.length > 0) {
+    return params.messages;
+  }
+  return [{ role: "user", content: params.userPrompt }];
+}
+
+/**
  * Build the complete tools record: bridged legacy tools + native generate_chart.
  */
 function buildTools(
   toolsDefinition: AiSdkAdvisorParams["toolsDefinition"],
   availableTools: AiSdkAdvisorParams["availableTools"],
-  tenant: number
+  tenant: number,
+  userId?: number
 ): ToolSet {
-  const bridged = bridgeTools(toolsDefinition, availableTools, tenant);
+  const bridged = bridgeTools(toolsDefinition, availableTools, tenant, userId);
   return {
     ...bridged,
     generate_chart: generateChartTool,
@@ -110,12 +137,12 @@ export async function* streamAdvisorAiSdk(
   logger.debug(`[AI-SDK] streamAdvisor started for ${params.provider} with model ${params.model}`);
 
   const model = createModel(params);
-  const tools = buildTools(params.toolsDefinition, params.availableTools, params.tenant);
+  const tools = buildTools(params.toolsDefinition, params.availableTools, params.tenant, params.userId);
 
   const result = streamText({
     model,
     system: getAdvisorPrompt(),
-    messages: [{ role: "user", content: params.userPrompt }],
+    messages: selectMessages(params),
     tools,
     stopWhen: stepCountIs(5),
     maxOutputTokens: 4096,
@@ -168,12 +195,12 @@ export async function runAdvisorAiSdk(params: AiSdkAdvisorParams): Promise<strin
   logger.debug(`[AI-SDK] runAdvisor started for ${params.provider} with model ${params.model}`);
 
   const model = createModel(params);
-  const tools = buildTools(params.toolsDefinition, params.availableTools, params.tenant);
+  const tools = buildTools(params.toolsDefinition, params.availableTools, params.tenant, params.userId);
 
   const result = streamText({
     model,
     system: getAdvisorPrompt(),
-    messages: [{ role: "user", content: params.userPrompt }],
+    messages: selectMessages(params),
     tools,
     stopWhen: stepCountIs(5),
     maxOutputTokens: 4096,
@@ -197,12 +224,12 @@ export function getStreamTextResult(params: AiSdkAdvisorParams) {
   logger.debug(`[AI-SDK] getStreamTextResult started for ${params.provider} with model ${params.model}`);
 
   const model = createModel(params);
-  const tools = buildTools(params.toolsDefinition, params.availableTools, params.tenant);
+  const tools = buildTools(params.toolsDefinition, params.availableTools, params.tenant, params.userId);
 
   return streamText({
     model,
     system: getAdvisorPrompt(),
-    messages: [{ role: "user", content: params.userPrompt }],
+    messages: selectMessages(params),
     tools,
     stopWhen: stepCountIs(5),
     maxOutputTokens: 4096,

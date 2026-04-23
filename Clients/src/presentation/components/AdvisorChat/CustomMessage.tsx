@@ -2,6 +2,7 @@ import { FC, useContext, useEffect, useState, useRef, useCallback, memo } from '
 import { Stack, Box, useTheme, Avatar, Typography, Theme } from '@mui/material';
 import { MessagePrimitive, useMessagePartText, useAssistantState } from '@assistant-ui/react';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { Bot, Copy, Check } from 'lucide-react';
 import { ChartRenderer } from './ChartRenderer';
@@ -21,29 +22,93 @@ const formatTimestamp = (date: Date): string => {
   });
 };
 
-// Create markdown heading styles with theme
-const createMarkdownHeadingStyles = (theme: Theme) => ({
-  h1: { marginTop: 0, fontSize: theme.typography.body1.fontSize, fontWeight: 600 },
-  h2: { marginTop: 0, fontSize: theme.typography.body1.fontSize, fontWeight: 700 },
-  h3: { marginTop: 0, fontSize: theme.typography.body2.fontSize, fontWeight: 600 },
-});
+// Create markdown styles with theme. Tables follow the VerifyWise list
+// conventions (thin borders, subtle header fill, 13/12px type) so an
+// inline GFM table from the LLM reads like a native VW table rather
+// than raw browser defaults.
+const createMarkdownStyles = (theme: Theme) => {
+  const borderColor =
+    theme.palette.border?.light ?? theme.palette.divider ?? '#e5e5e5';
+  const headerBg = theme.palette.background.alt ?? 'rgba(0, 0, 0, 0.03)';
+
+  return {
+    h1: { marginTop: 0, fontSize: theme.typography.body1.fontSize, fontWeight: 600 } as React.CSSProperties,
+    h2: { marginTop: 0, fontSize: theme.typography.body1.fontSize, fontWeight: 700 } as React.CSSProperties,
+    h3: { marginTop: 0, fontSize: theme.typography.body2.fontSize, fontWeight: 600 } as React.CSSProperties,
+    tableWrapper: {
+      overflowX: 'auto' as const,
+      margin: '8px 0',
+      borderRadius: '4px',
+      border: `1px solid ${borderColor}`,
+    } as React.CSSProperties,
+    table: {
+      borderCollapse: 'collapse' as const,
+      width: '100%',
+      minWidth: 'max-content' as const,
+      fontSize: '12px',
+    } as React.CSSProperties,
+    thead: {
+      backgroundColor: headerBg,
+    } as React.CSSProperties,
+    th: {
+      textAlign: 'left' as const,
+      padding: '8px 12px',
+      fontSize: '11px',
+      fontWeight: 600,
+      letterSpacing: '0.02em',
+      textTransform: 'uppercase' as const,
+      color: theme.palette.text.secondary,
+      borderBottom: `1px solid ${borderColor}`,
+      whiteSpace: 'nowrap' as const,
+    } as React.CSSProperties,
+    td: {
+      padding: '8px 12px',
+      fontSize: '13px',
+      color: theme.palette.text.primary,
+      borderBottom: `1px solid ${borderColor}`,
+      verticalAlign: 'top' as const,
+      whiteSpace: 'nowrap' as const,
+    } as React.CSSProperties,
+  };
+};
 
 const MessageText: FC = () => {
   const theme = useTheme();
   const data = useMessagePartText();
-  const headingStyles = createMarkdownHeadingStyles(theme);
+  const styles = createMarkdownStyles(theme);
 
   if (!data.text) {
     return null;
   }
 
   return (
-    <Markdown components={{
-      p: 'div',
-      h1: ({ node: _node, ...rest }) => <h1 style={headingStyles.h1} {...rest} />,
-      h2: ({ node: _node, ...rest }) => <h2 style={headingStyles.h2} {...rest} />,
-      h3: ({ node: _node, ...rest }) => <h3 style={headingStyles.h3} {...rest} />,
-    }}>{data.text}</Markdown>
+    <Markdown
+      // GFM unlocks tables, task lists, strikethrough, and autolinks —
+      // most relevant here is tables, because the advisor's system
+      // prompt tells the LLM to emit markdown tables for item
+      // listings. Without GFM, react-markdown renders them as literal
+      // "| col | col |" text and the output looks broken.
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: 'div',
+        h1: ({ node: _node, ...rest }) => <h1 style={styles.h1} {...rest} />,
+        h2: ({ node: _node, ...rest }) => <h2 style={styles.h2} {...rest} />,
+        h3: ({ node: _node, ...rest }) => <h3 style={styles.h3} {...rest} />,
+        // GFM table elements — scope the styles here rather than in a
+        // global stylesheet so the advisor chat owns its own table
+        // conventions independent of any other markdown surface.
+        table: ({ node: _node, ...rest }) => (
+          <div style={styles.tableWrapper}>
+            <table style={styles.table} {...rest} />
+          </div>
+        ),
+        thead: ({ node: _node, ...rest }) => <thead style={styles.thead} {...rest} />,
+        th: ({ node: _node, ...rest }) => <th style={styles.th} {...rest} />,
+        td: ({ node: _node, ...rest }) => <td style={styles.td} {...rest} />,
+      }}
+    >
+      {data.text}
+    </Markdown>
   );
 };
 

@@ -270,7 +270,7 @@ const AssessmentTracker = ({
             <StatsCard
               total={assessmentProgress.totalQuestions}
               completed={assessmentProgress.answeredQuestions}
-              title="Questions"
+              title="Controls"
               progressbarColor={brand.primary}
             />
           ) : (
@@ -280,7 +280,7 @@ const AssessmentTracker = ({
           )}
         </Stack>
         <Typography sx={{ ...pageHeadingStyle, mt: 4 }}>
-          Assessments status overview
+          Controls status overview
         </Typography>
         <Divider sx={{ marginY: 2 }} />
         <Box sx={{ display: "flex", width: "100%", height: "100vh", paddingLeft: "8px", paddingRight: 0 }}>
@@ -290,7 +290,7 @@ const AssessmentTracker = ({
               data-joyride-id="assessment-topics"
               ref={refs[1]}
             >
-              High risk conformity assessment
+              High risk conformity controls
             </Typography>
             <List>
               {loadingAssessmentTopics ? (

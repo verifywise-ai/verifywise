@@ -84,7 +84,7 @@ const ISO42001Clauses = ({
       setLoadingSubClauses((prev) => ({ ...prev, [clauseId]: true }));
       try {
         const response = await GetSubClausesById({
-          routeUrl: `/iso-42001/subClauses/byClauseId/${clauseId}`,
+          routeUrl: `/iso-42001/subClauses/byClauseId/${clauseId}?projectFrameworkId=${projectFrameworkId}`,
         });
 
         const detailedSubClauses = response.data;

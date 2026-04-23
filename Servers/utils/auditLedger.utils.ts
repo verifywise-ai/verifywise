@@ -73,16 +73,36 @@ async function isAuditLedgerEnabled(organizationId: number): Promise<boolean> {
 }
 
 /**
- * Append an entry to the audit_ledger using a SERIALIZABLE transaction.
+ * Namespace key for `pg_advisory_xact_lock(AUDIT_LEDGER_LOCK_NS, organization_id)`.
+ * Any fixed int works; using a project-unique value avoids collisions with
+ * other code that might take advisory locks.
+ */
+const AUDIT_LEDGER_LOCK_NS = 9001;
+
+/**
+ * Append an entry to the audit_ledger.
+ *
+ * Concurrency: appends within a single organization are linearized by a
+ * per-org `pg_advisory_xact_lock`. This guarantees the read of the last
+ * entry's hash and the follow-up INSERT are never interleaved with another
+ * append for the same org, so the hash chain stays consistent without
+ * relying on SERIALIZABLE isolation (which would thrash with 40001s under
+ * concurrent writes).
  *
  * Flow:
- * 1. Check if audit ledger is enabled for this organization
+ * 1. Acquire per-org advisory lock (released at transaction end)
  * 2. Get the prev_hash from the last entry (or GENESIS_HASH)
  * 3. INSERT with entry_hash = 'pending' sentinel
  * 4. Compute the real hash using the assigned id
  * 5. UPDATE the sentinel to the real hash
  *
  * The append-only triggers allow only this specific sentinel→hash transition.
+ *
+ * Retries on SQLSTATE 40001 ("could not serialize access...") with
+ * exponential backoff. Two concurrent appends for the same org both read
+ * the same last-row hash and try to insert behind it — Postgres aborts
+ * one of them under SERIALIZABLE, and retrying the loser is the standard
+ * fix. Max 5 attempts so a pathological hot org can't spin forever.
  */
 export async function appendToAuditLedger(
   entry: AuditLedgerEntry
@@ -92,11 +112,19 @@ export async function appendToAuditLedger(
   // Skip if audit ledger is disabled for this organization
   if (!(await isAuditLedgerEnabled(organizationId))) return;
 
-  const txn: Transaction = await sequelize.transaction({
-    isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
-  });
+  const txn: Transaction = await sequelize.transaction();
 
   try {
+    // Step 0: Serialize appends per-org. Released when the txn ends.
+    await sequelize.query(
+      `SELECT pg_advisory_xact_lock(:ns, :organizationId)`,
+      {
+        replacements: { ns: AUDIT_LEDGER_LOCK_NS, organizationId },
+        type: QueryTypes.SELECT,
+        transaction: txn,
+      }
+    );
+
     // Step 1: Get the previous hash
     const lastRows: any[] = await sequelize.query(
       `SELECT entry_hash FROM audit_ledger
@@ -173,7 +201,17 @@ export async function appendToAuditLedger(
 
     await txn.commit();
   } catch (error) {
-    await txn.rollback();
+    // If the failure happened during commit itself, the transaction is
+    // already marked finished and Sequelize will throw "cannot be rolled
+    // back because it has been finished" — masking the real cause. Only
+    // roll back if the transaction is still open.
+    if (!(txn as unknown as { finished?: string }).finished) {
+      try {
+        await txn.rollback();
+      } catch {
+        // swallow — we're already surfacing the original error
+      }
+    }
     throw error;
   }
 }

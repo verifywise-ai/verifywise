@@ -60,6 +60,7 @@ import DetailField from "./DetailField";
 import EntityDetailsSection from "./EntityDetailsSection";
 import { extractEntityDetails } from "./entityTypeConfig";
 import { dispatchFileApprovalChanged } from "../../../../application/events/fileEvents";
+import { dispatchAiActionCompleted } from "../../../../application/events/aiActionEvents";
 import { background } from "../../../themes/palette";
 
 
@@ -204,6 +205,17 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
                 dispatchFileApprovalChanged({ status: 'approved' });
             }
 
+            // If this was an AI write action (e.g. agent_create_risk), tell
+            // any background page showing that entity's table to refetch.
+            // The AI executor runs inside the same approve transaction, so
+            // by the time approveRequest resolves the new row exists.
+            if (requestDetails?.entityType === 'ai_action') {
+                dispatchAiActionCompleted({
+                    toolName: requestDetails?.aiToolName,
+                    status: 'approved',
+                });
+            }
+
             if (requestStatus === 'approved') {
                 onClose();
             }
@@ -235,6 +247,15 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
             // If this was a file rejection, dispatch event to refresh file lists
             if (requestDetails?.entityType === 'file') {
                 dispatchFileApprovalChanged({ status: 'rejected' });
+            }
+
+            // Rejected AI actions still dispatch — the toolName lets a
+            // listener clear any "pending" UI state if it kept any.
+            if (requestDetails?.entityType === 'ai_action') {
+                dispatchAiActionCompleted({
+                    toolName: requestDetails?.aiToolName,
+                    status: 'rejected',
+                });
             }
 
             fetchRequestsData();

@@ -54,36 +54,34 @@ describe("Test project mappers functions", () => {
       expect(result).toBe(HighRiskRole.DEPLOYER);
       result = mapHighRiskRole(1);
       expect(result).toBe(HighRiskRole.PROVIDER);
-      result = mapHighRiskRole(2);
-      expect(result).toBe(HighRiskRole.DISTRIBUTOR);
-      result = mapHighRiskRole(3);
-      expect(result).toBe(HighRiskRole.IMPORTER);
-      result = mapHighRiskRole(4);
-      expect(result).toBe(HighRiskRole.PRODUCT_MANUFACTURER);
-      result = mapHighRiskRole(5);
-      expect(result).toBe(HighRiskRole.AUTHORIZED_REPRESENTATIVE);
     });
     it("should receive a valid string and return the mapped value", () => {
       let result = mapHighRiskRole("Deployer");
       expect(result).toBe(HighRiskRole.DEPLOYER);
       result = mapHighRiskRole("Provider");
       expect(result).toBe(HighRiskRole.PROVIDER);
-      result = mapHighRiskRole("Distributor");
-      expect(result).toBe(HighRiskRole.DISTRIBUTOR);
-      result = mapHighRiskRole("Importer");
-      expect(result).toBe(HighRiskRole.IMPORTER);
-      result = mapHighRiskRole("Product Manufacturer");
-      expect(result).toBe(HighRiskRole.PRODUCT_MANUFACTURER);
-      result = mapHighRiskRole("Authorized Representative");
-      expect(result).toBe(HighRiskRole.AUTHORIZED_REPRESENTATIVE);
     });
-    it("should receive an invalid number and return the default value", () => {
+    it("should collapse legacy provider-tier strings onto PROVIDER", () => {
+      // Pre-reduction values (Distributor/Importer/Product manufacturer/
+      // Authorized representative) now map to Provider.
+      expect(mapHighRiskRole("Distributor")).toBe(HighRiskRole.PROVIDER);
+      expect(mapHighRiskRole("Importer")).toBe(HighRiskRole.PROVIDER);
+      expect(mapHighRiskRole("Product Manufacturer")).toBe(HighRiskRole.PROVIDER);
+      expect(mapHighRiskRole("Authorized Representative")).toBe(HighRiskRole.PROVIDER);
+    });
+    it("should collapse legacy 'not_applicable' onto DEPLOYER", () => {
+      expect(mapHighRiskRole("not_applicable")).toBe(HighRiskRole.DEPLOYER);
+    });
+    it("should receive an invalid number and return DEPLOYER (anything but 1)", () => {
+      // Implementation: value === 1 ? PROVIDER : DEPLOYER
       const result = mapHighRiskRole(99);
       expect(result).toBe(HighRiskRole.DEPLOYER);
     });
-    it("should receive an invalid string and return the default value", () => {
+    it("should receive an invalid string and return PROVIDER (non-matching fallback)", () => {
+      // Implementation: only "deployer" or "not_applicable" map to DEPLOYER;
+      // any other string (including unknown inputs) collapses onto PROVIDER.
       const result = mapHighRiskRole("InvalidString");
-      expect(result).toBe(HighRiskRole.DEPLOYER);
+      expect(result).toBe(HighRiskRole.PROVIDER);
     });
   });
   describe("mapProjectResponseDTOToProject", () => {

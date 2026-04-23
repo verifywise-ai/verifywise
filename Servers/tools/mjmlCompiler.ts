@@ -13,7 +13,12 @@ export const compileMjmlToHtml = (
     );
   });
 
-  // Convert MJML to HTML
-  const { html } = mjml2html(compiledTemplate);
+  // Convert MJML to HTML. `mjml@4.x` runtime is synchronous; newer
+  // `@types/mjml-core` published on DefinitelyTyped types the return as
+  // `Promise<MJMLParseResults>`, which breaks the build when Docker resolves
+  // fresh (Dockerfile intentionally skips the lockfile). Cast through
+  // `unknown` so the code works under both the old sync and newer Promise-typed
+  // signatures — the actual runtime shape is sync.
+  const { html } = mjml2html(compiledTemplate) as unknown as { html: string };
   return html;
 };

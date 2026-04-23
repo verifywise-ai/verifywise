@@ -10,11 +10,11 @@ export const assessmentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise supports multiple compliance frameworks to help you meet regulatory requirements and demonstrate responsible AI governance. Each framework provides a structured approach to evaluating your AI systems against specific standards or regulations.',
+      text: 'VerifyWise supports multiple compliance frameworks to help you meet regulatory requirements and show responsible AI governance. Each framework gives you a structured way to evaluate your AI systems against specific standards or regulations.',
     },
     {
       type: 'paragraph',
-      text: 'Rather than treating compliance as a one-time event, VerifyWise enables continuous assessment and improvement. You can track progress over time, identify gaps, and demonstrate to auditors exactly where you stand on each requirement.',
+      text: 'Compliance isn\'t a one-time event. VerifyWise lets you track progress over time, spot gaps and show auditors exactly where you stand on each requirement.',
     },
     {
       type: 'heading',
@@ -32,7 +32,7 @@ export const assessmentsContent: ArticleContent = {
         {
           icon: 'Scale',
           title: 'EU AI Act',
-          description: 'The European Union\'s comprehensive regulation governing AI systems with risk-based requirements.',
+          description: 'The European Union\'s regulation governing AI systems with risk-based requirements.',
         },
         {
           icon: 'Award',
@@ -59,7 +59,7 @@ export const assessmentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The right framework depends on your regulatory obligations, business needs, and AI governance maturity:',
+      text: 'The right framework depends on your regulatory obligations, business needs and AI governance maturity:',
     },
     {
       type: 'bullet-list',
@@ -125,7 +125,7 @@ export const assessmentsContent: ArticleContent = {
     {
       type: 'image',
       src: '/images/user-guide/use-case-assessments.png',
-      alt: 'Use case general view showing the Frameworks/regulations tab with EU AI Act assessment questions, progress tracking, and rich text editor for responses',
+      alt: 'Use case general view showing the Frameworks/regulations tab with EU AI Act assessment questions, progress tracking and rich text editor for responses',
       caption: 'The use case assessments view shows compliance progress and allows you to answer assessment questions directly.',
     },
     {
@@ -143,10 +143,10 @@ export const assessmentsContent: ArticleContent = {
       items: [
         { bold: 'Requirements', text: 'Controls, subclauses, or subcategories that define what you need to address' },
         { bold: 'Status tracking', text: 'Progress from not started through implementation to completion' },
-        { bold: 'Assignments', text: 'Owner, reviewer, and approver roles for accountability' },
+        { bold: 'Assignments', text: 'Owner, reviewer and approver roles for accountability' },
         { bold: 'Evidence linking', text: 'Attach documents from your Evidence Hub to demonstrate compliance' },
         { bold: 'Risk linking', text: 'Connect use case risks to show how controls address identified risks' },
-        { bold: 'Progress metrics', text: 'Track completion, assignments, and overdue items' },
+        { bold: 'Progress metrics', text: 'Track completion, assignments and overdue items' },
       ],
     },
     {
@@ -157,7 +157,7 @@ export const assessmentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Compliance is not a one-time achievement. VerifyWise supports ongoing compliance management:',
+      text: 'Compliance isn\'t something you finish once. VerifyWise supports ongoing compliance management:',
     },
     {
       type: 'bullet-list',

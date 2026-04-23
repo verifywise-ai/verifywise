@@ -10,7 +10,7 @@ export const automationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Automations let you set up rules that run automatically when certain conditions are met. Instead of manually performing repetitive governance tasks, you define a trigger, set conditions, and choose an action. VerifyWise handles the rest.',
+      text: 'Automations let you set up rules that run when certain conditions are met. Instead of doing repetitive governance tasks by hand, you define a trigger, set conditions and choose an action. VerifyWise handles the rest.',
     },
     {
       type: 'heading',
@@ -44,7 +44,7 @@ export const automationsContent: ArticleContent = {
         { text: 'Give it a name and description.' },
         { text: 'Select a trigger event from the dropdown.' },
         { text: 'Optionally add conditions to filter when the automation runs.' },
-        { text: 'Choose the action to perform and configure its parameters.' },
+        { text: 'Choose the action and configure its parameters.' },
         { text: 'Toggle the automation **Active** and click **Save**.' },
       ],
     },
@@ -56,7 +56,7 @@ export const automationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The automations list shows all your rules with their name, trigger, status (active or inactive), and last run time. You can toggle automations on/off without deleting them, edit their configuration, or delete them entirely.',
+      text: 'The automations list shows all your rules with their name, trigger, status (active or inactive) and last run time. You can toggle automations on and off without deleting them, edit their configuration or remove them entirely.',
     },
     {
       type: 'callout',
@@ -78,7 +78,7 @@ export const automationsContent: ArticleContent = {
       ],
       rows: [
         { action: 'View automations', roles: 'Any authenticated user' },
-        { action: 'Create, edit, or delete automations', roles: 'Admin' },
+        { action: 'Create, edit or delete automations', roles: 'Admin' },
         { action: 'Toggle automations on/off', roles: 'Admin' },
       ],
     },

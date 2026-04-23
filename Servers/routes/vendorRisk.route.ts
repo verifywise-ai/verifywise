@@ -7,8 +7,9 @@ import {
   getAllVendorRisks,
   getVendorRiskById,
   updateVendorRiskById,
-  getAllVendorRisksAllProjects, 
-  getAllVendorRisksByVendorId
+  getAllVendorRisksAllProjects,
+  getAllVendorRisksByVendorId,
+  getVendorRisksByFrameworkId,
 } from "../controllers/vendorRisk.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
@@ -16,7 +17,8 @@ import authenticateJWT from "../middleware/auth.middleware";
 // GET requests
 router.get("/by-projid/:id", authenticateJWT, getAllVendorRisks);
 router.get("/by-vendorid/:id", authenticateJWT, getAllVendorRisksByVendorId);
-router.get("/all",authenticateJWT,  getAllVendorRisksAllProjects);
+router.get("/by-frameworkid/:id", authenticateJWT, getVendorRisksByFrameworkId);
+router.get("/all", authenticateJWT, getAllVendorRisksAllProjects);
 router.get("/:id", authenticateJWT, getVendorRiskById);
 
 // POST, PUT, DELETE requests

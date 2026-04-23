@@ -1,8 +1,9 @@
-import {
+import React, {
   FC,
   useState,
   useCallback,
   useMemo,
+  useEffect,
   lazy,
   Suspense,
   Dispatch,
@@ -16,7 +17,10 @@ import {
   useTheme,
 } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
-import { MitigationFormValues, MitigationFormErrors } from "../interface";
+import { MitigationFormValues } from "../interface";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { checkStringValidation } from "../../../../application/validations/stringValidation";
+import selectValidation from "../../../../application/validations/selectValidation";
 import styles from "../styles.module.css";
 import useUsers from "../../../../application/hooks/useUsers";
 import {
@@ -60,7 +64,7 @@ const Alert = lazy(() => import("../../Alert"));
 interface MitigationSectionProps {
   mitigationValues: MitigationFormValues;
   setMitigationValues: Dispatch<SetStateAction<MitigationFormValues>>;
-  mitigationErrors?: MitigationFormErrors;
+  validateRef?: React.MutableRefObject<((values: MitigationFormValues) => boolean) | null>;
   userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
@@ -82,7 +86,7 @@ interface MitigationSectionProps {
 const MitigationSection: FC<MitigationSectionProps> = ({
   mitigationValues,
   setMitigationValues,
-  mitigationErrors = {},
+  validateRef,
   userRoleName,
   disableInternalScroll = false,
   compactMode = false,
@@ -109,6 +113,61 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     width: contentWidth,
   };
 
+  const validators = useMemo(
+    () => ({
+      mitigationStatus: (v: unknown) => {
+        const r = selectValidation("Mitigation status", v as number);
+        return r.accepted ? "" : r.message;
+      },
+      currentRiskLevel: (v: unknown) => {
+        const r = selectValidation("Current risk level", v as number);
+        return r.accepted ? "" : r.message;
+      },
+      deadline: (v: unknown) => {
+        const r = checkStringValidation("Deadline", v as string, 1);
+        return r.accepted ? "" : r.message;
+      },
+      mitigationPlan: (v: unknown) => {
+        const r = checkStringValidation("Mitigation plan", v as string, 1, 1024);
+        return r.accepted ? "" : r.message;
+      },
+      implementationStrategy: (v: unknown) => {
+        const r = checkStringValidation("Implementation strategy", v as string, 1, 1024);
+        return r.accepted ? "" : r.message;
+      },
+      approver: (v: unknown) => {
+        const r = selectValidation("Approver", v as number);
+        return r.accepted ? "" : r.message;
+      },
+      approvalStatus: (v: unknown) => {
+        const r = selectValidation("Approval status", v as number);
+        return r.accepted ? "" : r.message;
+      },
+      dateOfAssessment: (v: unknown) => {
+        const r = checkStringValidation("Date of assessment", v as string, 1);
+        return r.accepted ? "" : r.message;
+      },
+      recommendations: (v: unknown) => {
+        const s = v as string;
+        if (!s || s.length === 0) return "";
+        const r = checkStringValidation("Recommendation", s, 1, 1024);
+        return r.accepted ? "" : r.message;
+      },
+    }),
+    []
+  );
+
+  const { errors, validateAll, clearFieldError } =
+    useFormValidation<MitigationFormValues>(validators);
+
+  useEffect(() => {
+    if (validateRef) {
+      validateRef.current = validateAll;
+    }
+    // No cleanup: TabPanel unmounts inactive tabs, so clearing the ref here
+    // would break parent validation when the user is on a different tab.
+  }, [validateRef, validateAll]);
+
   // Memoized values
   const userOptions = useMemo(
     () =>
@@ -134,8 +193,9 @@ const MitigationSection: FC<MitigationSectionProps> = ({
           ...prevValues,
           [prop]: event.target.value,
         }));
+        clearFieldError(prop);
       },
-    [setMitigationValues]
+    [setMitigationValues, clearFieldError]
   );
 
   const handleDateChange = useCallback(
@@ -148,11 +208,12 @@ const MitigationSection: FC<MitigationSectionProps> = ({
           ...prevValues,
           [field]: newDate.toISOString(),
         }));
+        clearFieldError(field);
       } else {
         console.warn(`Invalid date provided for field: ${field}`);
       }
     },
-    [setMitigationValues]
+    [setMitigationValues, clearFieldError]
   );
 
   const handleOnTextFieldChange = useCallback(
@@ -162,8 +223,9 @@ const MitigationSection: FC<MitigationSectionProps> = ({
           ...prevValues,
           [prop]: event.target.value,
         }));
+        clearFieldError(prop);
       },
-    [setMitigationValues]
+    [setMitigationValues, clearFieldError]
   );
 
   return (
@@ -211,7 +273,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   items={mitigationStatusItems}
                   sx={formFieldStyles}
                   isRequired
-                  error={mitigationErrors?.mitigationStatus}
+                  error={errors.mitigationStatus}
                   disabled={isEditingDisabled}
                 />
                 {/* Current Risk Level */}
@@ -228,7 +290,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   items={riskLevelItems}
                   sx={formFieldStyles}
                   isRequired
-                  error={mitigationErrors?.currentRiskLevel}
+                  error={errors.currentRiskLevel}
                   disabled={isEditingDisabled}
                 />
                 {/* Deadline */}
@@ -242,7 +304,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   handleDateChange={(e) => handleDateChange("deadline", e)}
                   sx={{ width: fieldWidth }}
                   isRequired
-                  error={mitigationErrors?.deadline}
+                  error={errors.deadline}
                   disabled={isEditingDisabled}
                 />
               </Stack>
@@ -258,7 +320,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   onChange={handleOnTextFieldChange("mitigationPlan")}
                   sx={{ width: fieldWidth }}
                   isRequired
-                  error={mitigationErrors?.mitigationPlan}
+                  error={errors.mitigationPlan}
                   disabled={isEditingDisabled}
                   placeholder="Write mitigation plan"
                 />
@@ -272,7 +334,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   onChange={handleOnTextFieldChange("implementationStrategy")}
                   sx={{ width: twoColumnWidth }}
                   isRequired
-                  error={mitigationErrors?.implementationStrategy}
+                  error={errors.implementationStrategy}
                   disabled={isEditingDisabled}
                   placeholder="Write implementation strategy"
                 />
@@ -318,7 +380,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
               items={userOptions}
               sx={formFieldStyles}
               isRequired
-              error={mitigationErrors?.approver}
+              error={errors.approver}
               disabled={isEditingDisabled || usersLoading}
             />
             <Select
@@ -334,7 +396,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
               items={approvalStatusItems}
               sx={formFieldStyles}
               isRequired
-              error={mitigationErrors?.approvalStatus}
+              error={errors.approvalStatus}
               disabled={isEditingDisabled}
             />
             <DatePicker
@@ -347,7 +409,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
               handleDateChange={(e) => handleDateChange("dateOfAssessment", e)}
               sx={{ width: fieldWidth }}
               isRequired
-              error={mitigationErrors?.dateOfAssessment}
+              error={errors.dateOfAssessment}
               disabled={isEditingDisabled}
             />
           </Stack>

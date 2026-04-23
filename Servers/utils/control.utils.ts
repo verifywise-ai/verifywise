@@ -183,12 +183,12 @@ export const createNewControlsQuery = async (
     order_no: number;
     title: string;
     description: string;
-    implementation_details: string;
+    implementation_details?: string;
     subControls: {
       order_no: number;
       title: string;
       description: string;
-      implementation_details: string;
+      implementation_details?: string;
       evidence_description?: string;
       feedback_description?: string;
     }[];
@@ -214,7 +214,7 @@ export const createNewControlsQuery = async (
         order_no: controlStruct.order_no,
         control_category_id: controlCategoryId,
         implementation_details: enable_ai_data_insertion
-          ? controlStruct.implementation_details
+          ? controlStruct.implementation_details ?? null
           : null,
         status: enable_ai_data_insertion ? "Waiting" : null,
       },

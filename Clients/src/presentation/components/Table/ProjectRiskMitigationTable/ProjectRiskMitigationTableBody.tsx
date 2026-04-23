@@ -124,12 +124,12 @@ export const ProjectRiskMitigationTableBody: React.FC<
                     : row.type === "subclause"
                     ? "ISO42001: Sub-Clause"
                     : row.type === "assessment"
-                    ? "EU-AI-Act: Assessment"
+                    ? "EU-AI-Act: Control"
                     : row.type === "annexcontrol_27001"
                     ? "ISO27001: Annex Control"
                     : row.type === "annexsubclause_27001"
                     ? "ISO27001: Sub-Clause"
-                    : "EU-AI-Act: Control"}
+                    : "EU-AI-Act: Requirement"}
                 </TableCell>
                 <TableCell>
                   <CustomizableButton

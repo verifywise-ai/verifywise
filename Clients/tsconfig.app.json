@@ -29,7 +29,8 @@
       "@user-guide-content/*": [
         "../shared/user-guide-content/*"
       ]
-    }
+    },
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "src",

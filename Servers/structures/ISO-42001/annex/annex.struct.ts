@@ -5,6 +5,8 @@ import { AISystemLifecycle } from "./annexcategories/08-AI-system-lifecycle.anne
 import { DataForAISystems } from "./annexcategories/09-data-for-AI-systems.annexcategory";
 import { ICT } from "./annexcategories/10-ict.annexcategory";
 import { ThirdPartyRelationships } from "./annexcategories/11-third-party-relationships.annexcategory";
+import { InterestedParties } from "./annexcategories/12-interested-parties.annexcategory";
+import { UseOfAISystems } from "./annexcategories/13-use-of-AI-systems.annexcategory";
 import { AnnexStructISO } from "../../../domain.layer/frameworks/ISO-42001/annexStructISO.model";
 
 export const Annex: AnnexStructISO[] = [
@@ -42,5 +44,15 @@ export const Annex: AnnexStructISO[] = [
     title: "A.11 Third party relationships",
     annex_no: 11,
     annexcategories: ThirdPartyRelationships,
+  },
+  {
+    title: "A.12 Interested parties",
+    annex_no: 12,
+    annexcategories: InterestedParties,
+  },
+  {
+    title: "A.13 Use of AI systems",
+    annex_no: 13,
+    annexcategories: UseOfAISystems,
   },
 ];

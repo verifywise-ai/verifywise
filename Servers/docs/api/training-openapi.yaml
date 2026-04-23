@@ -1,0 +1,627 @@
+openapi: 3.0.3
+info:
+  title: VerifyWise Training API
+  description: >
+    Training Registry and Training Change History endpoints.
+    All endpoints require JWT authentication via Bearer token.
+    All responses are wrapped in a standard envelope: `{ message, data }` for
+    2xx/4xx and `{ message, error }` for 5xx.
+  version: 1.0.0
+
+paths:
+  # ---------------------------------------------------------------------------
+  # Training Registry
+  # ---------------------------------------------------------------------------
+  /training:
+    get:
+      summary: List all training records
+      description: >
+        Returns every training record belonging to the authenticated user's
+        organization, ordered by id ascending.
+      operationId: getAllTrainingRegistar
+      tags: [Training Registry]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Training records found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingListResponse"
+        "204":
+          description: No training records exist for this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeEmpty"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    post:
+      summary: Create a new training record
+      operationId: createNewTrainingRegistar
+      tags: [Training Registry]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingCreateRequest"
+      responses:
+        "201":
+          description: Training record created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingSingleResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          description: Service unavailable — creation failed without error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeError"
+
+  /training/training-id/{id}:
+    get:
+      summary: Get a training record by ID
+      operationId: getTrainingRegistarById
+      tags: [Training Registry]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TrainingId"
+      responses:
+        "200":
+          description: Training record found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingSingleResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Training record not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /training/{id}:
+    patch:
+      summary: Update a training record by ID
+      description: >
+        Accepts a partial or full update body. The `numberOfPeople` field is
+        mapped to the `people` database column internally. Only provided fields
+        are updated.
+      operationId: updateTrainingRegistarById
+      tags: [Training Registry]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TrainingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingUpdateRequest"
+      responses:
+        "202":
+          description: Training record updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingSingleResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Training record not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    delete:
+      summary: Delete a training record by ID
+      operationId: deleteTrainingRegistarById
+      tags: [Training Registry]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TrainingId"
+      responses:
+        "202":
+          description: Training record deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/EnvelopeBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: boolean
+                        example: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Training record not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ---------------------------------------------------------------------------
+  # Training Change History
+  # ---------------------------------------------------------------------------
+  /training-change-history/{id}:
+    get:
+      summary: Get change history for a training record
+      description: >
+        Returns a paginated list of field-level change history entries for the
+        specified training record, ordered newest-first.
+      operationId: getTrainingChangeHistoryById
+      tags: [Training Change History]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TrainingId"
+        - name: limit
+          in: query
+          required: false
+          description: >
+            Maximum number of history entries to return. Clamped to 1-500.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          required: false
+          description: Number of entries to skip (for pagination). Minimum 0.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Change history retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangeHistoryResponse"
+        "400":
+          description: Invalid training ID (not a positive integer)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  # -------------------------------------------------------------------------
+  # Security
+  # -------------------------------------------------------------------------
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from `/api/users/login`
+
+  # -------------------------------------------------------------------------
+  # Parameters
+  # -------------------------------------------------------------------------
+  parameters:
+    TrainingId:
+      name: id
+      in: path
+      required: true
+      description: Numeric ID of the training record
+      schema:
+        type: integer
+        minimum: 1
+        example: 42
+
+  # -------------------------------------------------------------------------
+  # Reusable Responses
+  # -------------------------------------------------------------------------
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Unauthorized
+
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/EnvelopeError"
+
+  # -------------------------------------------------------------------------
+  # Schemas
+  # -------------------------------------------------------------------------
+  schemas:
+    # -- Envelope wrappers --------------------------------------------------
+    EnvelopeBase:
+      type: object
+      properties:
+        message:
+          type: string
+          description: HTTP status text
+      required:
+        - message
+
+    EnvelopeEmpty:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          properties:
+            message:
+              example: No Content
+            data:
+              type: array
+              items: {}
+              example: []
+
+    EnvelopeNotFound:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          properties:
+            message:
+              example: Not Found
+            data:
+              nullable: true
+              example: null
+
+    EnvelopeBadRequest:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          properties:
+            message:
+              example: Bad Request
+            data:
+              type: string
+              example: Invalid training ID
+
+    EnvelopeError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Internal Server Error
+        error:
+          type: string
+          description: Error message string
+      required:
+        - message
+        - error
+
+    # -- Training entity ----------------------------------------------------
+    Training:
+      type: object
+      description: >
+        Training record as returned by the API. The `toJSON()` method on the
+        model produces this shape, mapping the DB `people` column to
+        `numberOfPeople`.
+      properties:
+        id:
+          type: integer
+          description: Auto-generated primary key
+          example: 42
+        training_name:
+          type: string
+          description: Name of the training programme
+          minLength: 2
+          maxLength: 255
+          example: AI Governance Fundamentals
+        duration:
+          type: string
+          description: Human-readable duration (e.g. "2 hours", "3 days")
+          maxLength: 1000
+          example: 2 hours
+        provider:
+          type: string
+          description: Training provider name or type
+          maxLength: 255
+          example: Internal
+        department:
+          type: string
+          description: Target department
+          maxLength: 100
+          example: Compliance
+        status:
+          type: string
+          enum:
+            - Planned
+            - In Progress
+            - Completed
+          description: Current status of the training
+          example: Planned
+        numberOfPeople:
+          type: integer
+          description: Number of participants
+          minimum: 1
+          maximum: 1000
+          example: 25
+        description:
+          type: string
+          description: Free-text description of the training (optional)
+          maxLength: 2000
+          example: Introductory course on EU AI Act compliance
+        progressPercentage:
+          type: integer
+          description: >
+            Derived progress value — 0 for Planned, 50 for In Progress, 100
+            for Completed. Computed by the model's `toJSON()`.
+          enum: [0, 50, 100]
+          example: 0
+        createdAt:
+          type: string
+          format: date-time
+          description: Record creation timestamp
+          example: "2026-04-18T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2026-04-19T14:15:00.000Z"
+      required:
+        - id
+        - training_name
+        - duration
+        - provider
+        - department
+        - status
+        - numberOfPeople
+        - description
+        - progressPercentage
+
+    # -- Request bodies -----------------------------------------------------
+    TrainingCreateRequest:
+      type: object
+      description: Request body for creating a new training record
+      properties:
+        training_name:
+          type: string
+          description: Name of the training programme
+          minLength: 2
+          maxLength: 255
+          example: AI Governance Fundamentals
+        duration:
+          type: string
+          description: >
+            Human-readable duration. Should contain time units such as "hours",
+            "days", "weeks", etc.
+          minLength: 1
+          maxLength: 1000
+          example: 2 hours
+        provider:
+          type: string
+          description: Training provider name or type
+          minLength: 1
+          maxLength: 255
+          example: Internal
+        department:
+          type: string
+          description: Target department
+          minLength: 1
+          maxLength: 100
+          example: Compliance
+        status:
+          type: string
+          enum:
+            - Planned
+            - In Progress
+            - Completed
+          description: Initial status of the training
+          example: Planned
+        numberOfPeople:
+          type: integer
+          description: Number of participants (mapped to `people` column in DB)
+          minimum: 1
+          maximum: 1000
+          example: 25
+        description:
+          type: string
+          description: Free-text description (optional)
+          maxLength: 2000
+          example: Introductory course on EU AI Act compliance
+        is_demo:
+          type: boolean
+          description: Mark as demo/sample data. Defaults to false.
+          default: false
+      required:
+        - training_name
+        - duration
+        - provider
+        - department
+        - status
+        - numberOfPeople
+
+    TrainingUpdateRequest:
+      type: object
+      description: >
+        Request body for updating a training record. All fields are accepted;
+        only fields with non-null, non-undefined values are applied.
+        `numberOfPeople` is mapped to the `people` DB column.
+      properties:
+        training_name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          example: Advanced AI Risk Management
+        duration:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          example: 3 days
+        provider:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: External
+        department:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Engineering
+        status:
+          type: string
+          enum:
+            - Planned
+            - In Progress
+            - Completed
+          example: In Progress
+        numberOfPeople:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          example: 30
+        description:
+          type: string
+          maxLength: 2000
+          example: Updated scope to cover ISO 42001
+
+    # -- Response wrappers --------------------------------------------------
+    TrainingListResponse:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          properties:
+            message:
+              example: OK
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Training"
+
+    TrainingSingleResponse:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          properties:
+            message:
+              example: OK
+            data:
+              $ref: "#/components/schemas/Training"
+
+    # -- Change History -----------------------------------------------------
+    ChangeHistoryEntry:
+      type: object
+      description: A single field-level change record
+      properties:
+        id:
+          type: integer
+          description: Change history entry ID
+          example: 101
+        entity_type:
+          type: string
+          description: Always "training" for this endpoint
+          example: training
+        entity_id:
+          type: integer
+          description: ID of the training record
+          example: 42
+        field_name:
+          type: string
+          description: Name of the changed field
+          example: status
+        old_value:
+          type: string
+          nullable: true
+          description: Previous value (null for creation entries)
+          example: Planned
+        new_value:
+          type: string
+          nullable: true
+          description: New value (null for deletion entries)
+          example: In Progress
+        change_type:
+          type: string
+          description: Type of change
+          enum:
+            - created
+            - updated
+            - deleted
+          example: updated
+        changed_by:
+          type: integer
+          description: User ID of the person who made the change
+          example: 5
+        user_name:
+          type: string
+          description: First name of the user who made the change
+          example: Gorkem
+        user_surname:
+          type: string
+          description: Last name of the user who made the change
+          example: Cetin
+        organization_id:
+          type: integer
+          description: Organization ID
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          description: When the change was recorded
+          example: "2026-04-19T14:15:00.000Z"
+
+    ChangeHistoryData:
+      type: object
+      description: Paginated change history result
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChangeHistoryEntry"
+        hasMore:
+          type: boolean
+          description: Whether more entries exist beyond the current page
+          example: false
+        total:
+          type: integer
+          description: Total number of change history entries for this training
+          example: 5
+      required:
+        - data
+        - hasMore
+        - total
+
+    ChangeHistoryResponse:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          properties:
+            message:
+              example: OK
+            data:
+              $ref: "#/components/schemas/ChangeHistoryData"

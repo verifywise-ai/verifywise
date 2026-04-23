@@ -2,6 +2,8 @@ import React, {
   FC,
   useState,
   useCallback,
+  useMemo,
+  useEffect,
   Suspense,
   Dispatch,
   SetStateAction,
@@ -19,7 +21,7 @@ import { ChevronDown as GreyDownArrowIcon } from "lucide-react";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
 import Alert from "../../Alert";
-import { RiskFormValues, RiskFormErrors } from "../interface";
+import { RiskFormValues } from "../interface";
 import { aiLifecyclePhase, riskCategoryItems } from "../projectRiskValue";
 import { alertState } from "../../../../domain/interfaces/i.alert";
 import useUsers from "../../../../application/hooks/useUsers";
@@ -28,6 +30,9 @@ import useFrameworks from "../../../../application/hooks/useFrameworks";
 import allowedRoles from "../../../../application/constants/permissions";
 import styles from "../styles.module.css";
 import { getAutocompleteStyles as getCentralizedAutocompleteStyles } from "../../../utils/inputStyles";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { checkStringValidation } from "../../../../application/validations/stringValidation";
+import selectValidation from "../../../../application/validations/selectValidation";
 
 const RiskLevel = React.lazy(() => import("../../RiskLevel"));
 
@@ -63,7 +68,7 @@ const FORM_STYLES = {
 interface RiskSectionProps {
   riskValues: RiskFormValues;
   setRiskValues: Dispatch<SetStateAction<RiskFormValues>>;
-  riskErrors: RiskFormErrors;
+  validateRef?: React.MutableRefObject<((values: RiskFormValues) => boolean) | null>;
   userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
@@ -79,14 +84,13 @@ interface RiskSectionProps {
  * @param {RiskSectionProps} props - The props for the RiskSection component
  * @param {RiskFormValues} props.riskValues - Current form values
  * @param {Dispatch<SetStateAction<RiskFormValues>>} props.setRiskValues - Function to update form values
- * @param {RiskFormErrors} props.riskErrors - Current form validation errors
  * @param {string} props.userRoleName - Current user's role name for permissions
  * @returns {JSX.Element} The rendered RiskSection component
  */
 const RiskSection: FC<RiskSectionProps> = ({
   riskValues,
   setRiskValues,
-  riskErrors,
+  validateRef,
   userRoleName,
   disableInternalScroll = false,
   compactMode = false,
@@ -115,6 +119,52 @@ const RiskSection: FC<RiskSectionProps> = ({
   const { approvedProjects, isLoading: projectsLoading } = useProjects();
   const { allFrameworks: frameworks, loading: frameworksLoading } = useFrameworks({ listOfFrameworks: [] });
 
+  const validators = useMemo(
+    () => ({
+      riskName: (v: unknown) => {
+        const r = checkStringValidation("Risk name", v as string, 3, 255);
+        return r.accepted ? "" : r.message;
+      },
+      riskDescription: (v: unknown) => {
+        const r = checkStringValidation("Risk description", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      potentialImpact: (v: unknown) => {
+        const r = checkStringValidation("Potential impact", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      reviewNotes: (v: unknown) => {
+        const s = v as string;
+        if (!s || s.length === 0) return "";
+        const r = checkStringValidation("Review notes", s, 0, 1024);
+        return r.accepted ? "" : r.message;
+      },
+      aiLifecyclePhase: (v: unknown) => {
+        const r = selectValidation("AI lifecycle phase", v as number);
+        return r.accepted ? "" : r.message;
+      },
+      riskCategory: (v: unknown) => {
+        const categories = v as number[];
+        if (!categories || categories.length === 0) return "Risk category is required.";
+        for (const category of categories) {
+          const r = selectValidation("Risk category", category);
+          if (!r.accepted) return r.message;
+        }
+        return "";
+      },
+    }),
+    []
+  );
+
+  const { errors, validateAll, clearFieldError } =
+    useFormValidation<RiskFormValues>(validators);
+
+  useEffect(() => {
+    if (validateRef) {
+      validateRef.current = validateAll;
+    }
+  }, [validateRef, validateAll]);
+
   const handleOnSelectChange = useCallback(
     (prop: keyof RiskFormValues) =>
       (event: SelectChangeEvent<string | number>) => {
@@ -122,8 +172,9 @@ const RiskSection: FC<RiskSectionProps> = ({
           ...prevValues,
           [prop]: event.target.value,
         }));
+        clearFieldError(prop);
       },
-    [setRiskValues]
+    [setRiskValues, clearFieldError]
   );
 
   const handleOnMultiselectChange = useCallback(
@@ -137,8 +188,9 @@ const RiskSection: FC<RiskSectionProps> = ({
           ...prevValues,
           [prop]: newValue.map((item) => Number(item._id || item.id)),
         }));
+        clearFieldError(prop);
       },
-    [setRiskValues]
+    [setRiskValues, clearFieldError]
   );
 
   const handleOnTextFieldChange = useCallback(
@@ -148,8 +200,9 @@ const RiskSection: FC<RiskSectionProps> = ({
           ...prevValues,
           [prop]: event.target.value,
         }));
+        clearFieldError(prop);
       },
-    [setRiskValues]
+    [setRiskValues, clearFieldError]
   );
 
   return (
@@ -264,7 +317,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 )}
                 onChange={handleOnMultiselectChange("applicableProjects")}
                 sx={{
-                  ...getCentralizedAutocompleteStyles(theme, { hasError: !!riskErrors.applicableProjects }),
+                  ...getCentralizedAutocompleteStyles(theme, { hasError: !!errors.applicableProjects }),
                   width: "100%",
                   backgroundColor: theme.palette.background.main,
                   "& .MuiChip-root": {
@@ -297,7 +350,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 }}
                 disabled={projectsLoading}
               />
-              {riskErrors.applicableProjects && (
+              {errors.applicableProjects && (
                 <Typography
                   sx={{
                     color: theme.palette.error.main,
@@ -306,7 +359,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                     ml: 1.75,
                   }}
                 >
-                  {riskErrors.applicableProjects}
+                  {errors.applicableProjects}
                 </Typography>
               )}
             </Stack>
@@ -371,7 +424,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 )}
                 onChange={handleOnMultiselectChange("applicableFrameworks")}
                 sx={{
-                  ...getCentralizedAutocompleteStyles(theme, { hasError: !!riskErrors.applicableFrameworks }),
+                  ...getCentralizedAutocompleteStyles(theme, { hasError: !!errors.applicableFrameworks }),
                   width: "100%",
                   backgroundColor: theme.palette.background.main,
                   "& .MuiChip-root": {
@@ -404,7 +457,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 }}
                 disabled={frameworksLoading}
               />
-              {riskErrors.applicableFrameworks && (
+              {errors.applicableFrameworks && (
                 <Typography
                   sx={{
                     color: theme.palette.error.main,
@@ -413,7 +466,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                     ml: 1.75,
                   }}
                 >
-                  {riskErrors.applicableFrameworks}
+                  {errors.applicableFrameworks}
                 </Typography>
               )}
             </Stack>
@@ -431,7 +484,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 value={riskValues.riskName}
                 onChange={handleOnTextFieldChange("riskName")}
                 isRequired
-                error={riskErrors.riskName}
+                error={errors.riskName}
                 sx={{
                   width: fieldWidth,
                 }}
@@ -456,7 +509,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                   })) || []
                 }
                 // isRequired
-                // error={riskErrors.actionOwner}
+                // error={errors.actionOwner}
                 sx={{
                   width: fieldWidth,
                 }}
@@ -474,7 +527,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 onChange={handleOnSelectChange("aiLifecyclePhase")}
                 items={aiLifecyclePhase}
                 isRequired
-                error={riskErrors.aiLifecyclePhase}
+                error={errors.aiLifecyclePhase}
                 sx={{
                   width: fieldWidth,
                 }}
@@ -482,7 +535,7 @@ const RiskSection: FC<RiskSectionProps> = ({
               />
             </Stack>
 
-            {/* Row 2 */}
+            {/* Row 2 */ }
             <Stack sx={formRowStyles}>
               <Field
                 id="risk-description-input"
@@ -491,7 +544,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 value={riskValues.riskDescription}
                 onChange={handleOnTextFieldChange("riskDescription")}
                 isRequired
-                error={riskErrors.riskDescription}
+                error={errors.riskDescription}
                 sx={{
                   width: fieldWidth,
                 }}
@@ -547,7 +600,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                   )}
                   onChange={handleOnMultiselectChange("riskCategory")}
                   sx={{
-                    ...getCentralizedAutocompleteStyles(theme, { hasError: !!riskErrors.riskCategory }),
+                    ...getCentralizedAutocompleteStyles(theme, { hasError: !!errors.riskCategory }),
                     width: "100%",
                     backgroundColor: theme.palette.background.main,
                     "& .MuiChip-root": {
@@ -588,7 +641,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                     },
                   }}
                 />
-                {riskErrors.riskCategory && (
+                {errors.riskCategory && (
                   <Typography
                     sx={{
                       color: theme.palette.error.main,
@@ -597,7 +650,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                       ml: 1.75,
                     }}
                   >
-                    {riskErrors.riskCategory}
+                    {errors.riskCategory}
                   </Typography>
                 )}
               </Stack>
@@ -608,7 +661,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 value={riskValues.potentialImpact}
                 onChange={handleOnTextFieldChange("potentialImpact")}
                 isRequired
-                error={riskErrors.potentialImpact}
+                error={errors.potentialImpact}
                 sx={{
                   width: fieldWidth,
                 }}
@@ -652,7 +705,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 maxHeight: FORM_CONSTANTS.TEXT_AREA_MAX_HEIGHT,
               },
             }}
-            error={riskErrors.reviewNotes}
+            error={errors.reviewNotes}
             disabled={isEditingDisabled}
           />
         </Stack>

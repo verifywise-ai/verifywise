@@ -1,0 +1,1116 @@
+# Projects API — OpenAPI 3.0 path definitions
+# Paste into the `paths:` section of swagger.yaml
+# All endpoints are prefixed with /api/projects (set via app.use in index.ts)
+
+paths:
+  /api/projects:
+    get:
+      summary: Get all projects
+      description: >
+        Returns all projects visible to the authenticated user. Admins and SuperAdmins
+        see all projects in the organization; other roles see only projects they own or
+        are members of. Includes approval status and any plugin-sourced use cases.
+      operationId: getAllProjects
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectListItem"
+        "401":
+          description: Unauthorized — missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+    post:
+      summary: Create a new project (use case)
+      description: >
+        Creates a new project with associated members and frameworks. If an
+        approval_workflow_id is provided, framework creation is deferred until
+        the approval request is approved. Triggers automation actions and
+        notifications on success.
+      operationId: createProject
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Created
+                  data:
+                    type: object
+                    properties:
+                      project:
+                        $ref: "#/components/schemas/Project"
+                      frameworks:
+                        type: object
+                        description: >
+                          Map of framework key to framework data. Keys are
+                          "eu", "iso42001", "iso27001", "nist_ai_rmf".
+                          Empty object when approval workflow defers creation.
+                        additionalProperties: true
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Business logic error (e.g. framework not allowed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+        "503":
+          description: Service unavailable — project creation returned null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/projects/{id}:
+    get:
+      summary: Get a project by ID
+      description: >
+        Returns a single project with its frameworks, owner name, members,
+        and approval status fields.
+      operationId: getProjectById
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: "#/components/schemas/ProjectDetail"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+    patch:
+      summary: Update a project by ID
+      description: >
+        Partially updates a project and its member list. Only provided fields
+        are updated. Tracks changes in use case change history. Triggers
+        automation actions and member notifications on success.
+      operationId: updateProjectById
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectRequest"
+      responses:
+        "202":
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Accepted
+                  data:
+                    $ref: "#/components/schemas/ProjectWithMembers"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Business logic error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+    delete:
+      summary: Delete a project by ID
+      description: >
+        Deletes a project and all dependent entities (files, risks, members,
+        framework data). Withdraws any pending approval request. Records
+        deletion in change history before removing the project.
+      operationId: deleteProjectById
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "202":
+          description: Project deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Accepted
+                  data:
+                    type: boolean
+                    example: true
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+  /api/projects/{id}/status:
+    patch:
+      summary: Update project status
+      description: >
+        Updates only the status field of a project. Records the status change
+        in use case change history.
+      operationId: updateProjectStatus
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  $ref: "#/components/schemas/ProjectStatus"
+      responses:
+        "200":
+          description: Project status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: "#/components/schemas/ProjectWithMembers"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+  /api/projects/stats/{id}:
+    get:
+      summary: Get project statistics by ID
+      description: >
+        Returns owner details and last-updated metadata for a project.
+      operationId: getProjectStatsById
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "202":
+          description: Project stats retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Accepted
+                  data:
+                    $ref: "#/components/schemas/ProjectStats"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+  /api/projects/calculateProjectRisks/{id}:
+    get:
+      summary: Calculate project risk distribution
+      description: >
+        Returns the count of risks grouped by auto-calculated risk level for
+        a given project.
+      operationId: getProjectRisksCalculations
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Risk calculations returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectRiskCount"
+        "204":
+          description: No risk data available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: No Content
+                  data:
+                    nullable: true
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+  /api/projects/calculateVendorRisks/{id}:
+    get:
+      summary: Calculate vendor risk distribution
+      description: >
+        Returns the count of vendor risks grouped by risk level for a given project.
+      operationId: getVendorRisksCalculations
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Vendor risk calculations returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/VendorRiskCount"
+        "204":
+          description: No vendor risk data available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: No Content
+                  data:
+                    nullable: true
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+  /api/projects/complainces/{projid}:
+    get:
+      summary: Get compliance data for a project
+      description: >
+        Returns all control categories with their controls and sub-controls
+        for a given project. Each control includes sub-control counts and
+        completion status.
+      operationId: getCompliances
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projid
+          in: path
+          required: true
+          description: The project ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Compliance data returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ControlCategory"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+  /api/projects/compliance/progress/{id}:
+    get:
+      summary: Get compliance progress for a single project
+      description: >
+        Returns the total number of sub-controls and how many are marked as
+        "Done" for a specific project.
+      operationId: projectComplianceProgress
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Compliance progress returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: "#/components/schemas/ComplianceProgress"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+  /api/projects/assessment/progress/{id}:
+    get:
+      summary: Get assessment progress for a single project
+      description: >
+        Returns the total number of assessment questions and how many have
+        been answered (status = "Done") for a specific project.
+      operationId: projectAssessmentProgress
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Assessment progress returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: "#/components/schemas/AssessmentProgress"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+  /api/projects/all/compliance/progress:
+    get:
+      summary: Get compliance progress across all projects
+      description: >
+        Aggregates compliance progress (total and done sub-controls) across
+        all projects visible to the authenticated user.
+      operationId: allProjectsComplianceProgress
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Aggregated compliance progress returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: "#/components/schemas/ComplianceProgress"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No projects found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+  /api/projects/all/assessment/progress:
+    get:
+      summary: Get assessment progress across all projects
+      description: >
+        Aggregates assessment progress (total and answered questions) across
+        all projects visible to the authenticated user.
+      operationId: allProjectsAssessmentProgress
+      tags: [Projects]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Aggregated assessment progress returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    $ref: "#/components/schemas/AssessmentProgress"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No projects found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT token obtained from /api/auth/login. Token payload includes
+        id, email, organizationId, tenantId, roleName, and expire fields.
+
+  parameters:
+    ProjectId:
+      name: id
+      in: path
+      required: true
+      description: The numeric project ID
+      schema:
+        type: integer
+        example: 1
+
+  schemas:
+    # --- Enums ---
+    AiRiskClassification:
+      type: string
+      enum:
+        - Prohibited
+        - High risk
+        - Limited risk
+        - Minimal risk
+      description: EU AI Act risk classification level
+
+    HighRiskRole:
+      type: string
+      enum:
+        - Deployer
+        - Provider
+        - Distributor
+        - Importer
+        - Product manufacturer
+        - Authorized representative
+      description: Role of the organization under the EU AI Act for high-risk systems
+
+    ProjectStatus:
+      type: string
+      enum:
+        - Not started
+        - In progress
+        - Under review
+        - Completed
+        - Closed
+        - On hold
+        - Rejected
+      description: Current lifecycle status of the project
+
+    # --- Request Schemas ---
+    CreateProjectRequest:
+      type: object
+      required:
+        - project_title
+        - owner
+        - start_date
+        - framework
+      properties:
+        project_title:
+          type: string
+          description: Display name of the project / use case
+          example: Customer Support Chatbot
+        owner:
+          type: integer
+          description: User ID of the project owner
+          example: 1
+        start_date:
+          type: string
+          format: date-time
+          description: Project start date
+          example: "2026-01-15T00:00:00.000Z"
+        geography:
+          type: integer
+          description: Geography identifier (defaults to 1)
+          default: 1
+          example: 1
+        ai_risk_classification:
+          $ref: "#/components/schemas/AiRiskClassification"
+        type_of_high_risk_role:
+          $ref: "#/components/schemas/HighRiskRole"
+        goal:
+          type: string
+          nullable: true
+          description: Project goal or objective
+          example: Automate tier-1 support queries
+        target_industry:
+          type: string
+          nullable: true
+          description: Target industry for the AI system
+          example: Financial Services
+        description:
+          type: string
+          nullable: true
+          description: Detailed project description
+          example: An LLM-powered chatbot for handling customer inquiries
+        status:
+          $ref: "#/components/schemas/ProjectStatus"
+        is_organizational:
+          type: boolean
+          default: false
+          description: >
+            Whether this is an organizational-level project. Determines
+            which frameworks are allowed (organizational vs. non-organizational).
+        members:
+          type: array
+          items:
+            type: integer
+          description: List of user IDs to add as project members
+          example: [2, 3, 5]
+        framework:
+          type: array
+          items:
+            type: integer
+          description: >
+            List of framework IDs to associate with the project.
+            Known IDs: 1 = EU AI Act, 2 = ISO 42001, 3 = ISO 27001, 4 = NIST AI RMF.
+          example: [1, 2]
+        approval_workflow_id:
+          type: integer
+          nullable: true
+          description: >
+            ID of an approval workflow to assign. When set, framework creation
+            is deferred until the approval request is approved.
+          example: null
+        enable_ai_data_insertion:
+          type: boolean
+          default: false
+          description: >
+            Whether to enable AI-assisted data insertion when creating
+            framework structures. Only used when approval_workflow_id is not set
+            (or after approval).
+
+    UpdateProjectRequest:
+      type: object
+      description: >
+        Partial update — only provided fields are modified. Members array
+        replaces the full member list (add/remove is computed by diff).
+      properties:
+        project_title:
+          type: string
+          description: Display name of the project
+        owner:
+          type: integer
+          description: User ID of the project owner
+        start_date:
+          type: string
+          format: date-time
+          description: Project start date
+        geography:
+          type: integer
+          description: Geography identifier
+        ai_risk_classification:
+          $ref: "#/components/schemas/AiRiskClassification"
+        type_of_high_risk_role:
+          $ref: "#/components/schemas/HighRiskRole"
+        goal:
+          type: string
+          nullable: true
+        target_industry:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ProjectStatus"
+        last_updated:
+          type: string
+          format: date-time
+          description: Timestamp of last update (auto-set if not provided)
+        last_updated_by:
+          type: integer
+          description: User ID who last updated the project
+        members:
+          type: array
+          items:
+            type: integer
+          description: >
+            Full replacement list of member user IDs. Members not in this
+            list are removed; new IDs are added.
+          example: [2, 3, 5]
+
+    # --- Response Schemas ---
+    ProjectFramework:
+      type: object
+      properties:
+        project_framework_id:
+          type: integer
+          description: ID of the projects_frameworks join record
+        framework_id:
+          type: integer
+          description: Framework ID (1=EU AI Act, 2=ISO 42001, 3=ISO 27001, 4=NIST AI RMF)
+        name:
+          type: string
+          description: Framework display name
+          example: EU AI Act
+
+    Project:
+      type: object
+      description: Base project record as stored in the database
+      properties:
+        id:
+          type: integer
+          example: 42
+        uc_id:
+          type: string
+          description: Auto-generated use case ID
+          example: UC-7
+        project_title:
+          type: string
+          example: Customer Support Chatbot
+        owner:
+          type: integer
+          description: User ID of the project owner
+          example: 1
+        start_date:
+          type: string
+          format: date-time
+        geography:
+          type: integer
+          example: 1
+        ai_risk_classification:
+          $ref: "#/components/schemas/AiRiskClassification"
+        type_of_high_risk_role:
+          $ref: "#/components/schemas/HighRiskRole"
+        goal:
+          type: string
+          nullable: true
+        target_industry:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ProjectStatus"
+        last_updated:
+          type: string
+          format: date-time
+        last_updated_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        is_organizational:
+          type: boolean
+        is_demo:
+          type: boolean
+        approval_workflow_id:
+          type: integer
+          nullable: true
+        pending_frameworks:
+          type: string
+          nullable: true
+          description: JSON-encoded array of framework IDs pending approval
+        enable_ai_data_insertion:
+          type: boolean
+        organization_id:
+          type: integer
+        framework:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectFramework"
+          description: Associated frameworks
+        members:
+          type: array
+          items:
+            type: integer
+          description: User IDs of project members
+
+    ProjectListItem:
+      allOf:
+        - $ref: "#/components/schemas/Project"
+        - type: object
+          properties:
+            has_pending_approval:
+              type: boolean
+              description: Whether the project has a pending approval request
+            approval_status:
+              type: string
+              nullable: true
+              description: Current approval status (pending, rejected, or null)
+              enum:
+                - pending
+                - rejected
+                - null
+            _source:
+              type: string
+              nullable: true
+              description: Plugin source identifier for externally-sourced use cases
+              example: jira-assets
+
+    ProjectDetail:
+      allOf:
+        - $ref: "#/components/schemas/Project"
+        - type: object
+          properties:
+            owner_name:
+              type: string
+              description: Full name of the project owner
+              example: John Doe
+            has_pending_approval:
+              type: boolean
+            approval_status:
+              type: string
+              nullable: true
+              enum:
+                - pending
+                - rejected
+                - null
+
+    ProjectWithMembers:
+      allOf:
+        - $ref: "#/components/schemas/Project"
+        - type: object
+          properties:
+            members:
+              type: array
+              items:
+                type: integer
+              description: Updated list of member user IDs
+
+    ProjectStats:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Owner first name
+            surname:
+              type: string
+              description: Owner surname
+            email:
+              type: string
+              format: email
+              description: Owner email address
+            project_last_updated:
+              type: string
+              format: date-time
+              description: Timestamp of last project update
+            userWhoUpdated:
+              type: object
+              description: User object of the person who last updated the project
+              properties:
+                id:
+                  type: integer
+                name:
+                  type: string
+                surname:
+                  type: string
+                email:
+                  type: string
+                  format: email
+
+    ProjectRiskCount:
+      type: object
+      properties:
+        risk_level_autocalculated:
+          type: string
+          description: Auto-calculated risk level label
+          example: High
+        count:
+          type: string
+          description: Number of risks at this level (returned as string from SQL COUNT)
+          example: "3"
+
+    VendorRiskCount:
+      type: object
+      properties:
+        risk_level:
+          type: string
+          description: Vendor risk level label
+          example: Critical
+        count:
+          type: string
+          description: Number of vendor risks at this level
+          example: "2"
+
+    ComplianceProgress:
+      type: object
+      properties:
+        allsubControls:
+          oneOf:
+            - type: string
+            - type: integer
+          description: Total number of sub-controls
+          example: "45"
+        allDonesubControls:
+          oneOf:
+            - type: string
+            - type: integer
+          description: Number of sub-controls with status "Done"
+          example: "12"
+
+    AssessmentProgress:
+      type: object
+      properties:
+        totalQuestions:
+          oneOf:
+            - type: string
+            - type: integer
+          description: Total number of assessment questions
+          example: "80"
+        answeredQuestions:
+          oneOf:
+            - type: string
+            - type: integer
+          description: Number of questions with status "Done"
+          example: "35"
+
+    ControlCategory:
+      type: object
+      description: A control category with nested controls and sub-controls
+      properties:
+        id:
+          type: integer
+        project_id:
+          type: integer
+        name:
+          type: string
+        organization_id:
+          type: integer
+        controls:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              control_category_id:
+                type: integer
+              title:
+                type: string
+              description:
+                type: string
+              status:
+                type: string
+              numberOfSubcontrols:
+                type: integer
+                description: Total sub-controls under this control
+              numberOfDoneSubcontrols:
+                type: integer
+                description: Sub-controls with status "Done"
+              subControls:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    control_id:
+                      type: integer
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    status:
+                      type: string
+                      enum: [Draft, In progress, Done]
+                    organization_id:
+                      type: integer
+
+    # --- Error Schemas ---
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: HTTP status text
+          example: Not Found
+        data:
+          description: Error details or empty object
+          example: {}
+
+    ServerError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Internal Server Error
+        error:
+          type: string
+          description: Error message string
+          example: "Unexpected error occurred"
