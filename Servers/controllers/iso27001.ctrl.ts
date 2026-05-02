@@ -66,15 +66,14 @@ async function notifyIso27001Assignment(
     let description: string | undefined;
 
     if (entityType === "ISO 27001 Subclause") {
-      // Query for parent clause info, subclause order_no for full identifier (e.g., "4.1 Understanding the organization"), and subclause description
       const result = await sequelize.query<{
         clause_id: number;
-        clause_arrangement: number;
+        clause_arrangement: string;
         clause_title: string;
         subclause_order_no: number;
         requirement_summary: string;
       }>(
-        `SELECT scs.clause_id, c.arrangement as clause_arrangement, c.title as clause_title, scs.order_no as subclause_order_no, scs.requirement_summary
+        `SELECT scs.clause_id, c.clause_id as clause_arrangement, c.title as clause_title, scs.order_no as subclause_order_no, scs.requirement_summary
          FROM subclauses_iso27001 sc
          JOIN subclauses_struct_iso27001 scs ON sc.subclause_meta_id = scs.id
          JOIN clauses_struct_iso27001 c ON scs.clause_id = c.id
